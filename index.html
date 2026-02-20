@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudarshan Chakra - Find Service Providers Near You</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        .map-container { height: 500px; width: 100%; border-radius: 12px; }
+        .reg-map { height: 350px; width: 100%; border-radius: 8px; margin-top: 10px; }
+        .lang-option { cursor: pointer; padding: 20px; border-radius: 12px; transition: all 0.3s; }
+        .lang-option:hover { transform: scale(1.05); }
+        .category-card { cursor: pointer; transition: all 0.3s; }
+        .category-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .category-card.selected { border: 3px solid #ea580c; background: #fff7ed; }
+        .star-rating { color: #fbbf24; }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- LANGUAGE SELECTOR MODAL -->
+    <div id="languageModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 class="text-3xl font-bold text-center mb-2">🌏 Select Your Language</h2>
+            <p class="text-center text-gray-600 mb-8">अपनी भाषा चुनें / Choose Your Language</p>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="lang-option bg-gradient-to-br from-orange-500 to-orange-600 text-white text-center" onclick="selectLanguage('en')">
+                    <div class="text-4xl mb-2">🇬🇧</div>
+                    <div class="font-bold text-lg">English</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-green-500 to-green-600 text-white text-center" onclick="selectLanguage('hi')">
+                    <div class="text-4xl mb-2">🇮🇳</div>
+                    <div class="font-bold text-lg">हिंदी</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-blue-500 to-blue-600 text-white text-center" onclick="selectLanguage('bn')">
+                    <div class="text-4xl mb-2">🇮🇳</div>
+                    <div class="font-bold text-lg">বাংলা</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-yellow-500 to-yellow-600 text-white text-center" onclick="selectLanguage('gu')">
+                    <div class="text-4xl mb-2">🇮🇳</div>
+                    <div class="font-bold text-lg">ગુજરાતી</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-red-500 to-red-600 text-white text-center" onclick="selectLanguage('mr')">
+                    <div class="text-4xl mb-2">🇮🇳</div>
+                    <div class="font-bold text-lg">मराठी</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-purple-500 to-purple-600 text-white text-center" onclick="selectLanguage('kn')">
+                    <div class="text-4xl mb-2">🇮🇳</div>
+                    <div class="font-bold text-lg">ಕನ್ನಡ</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <nav class="bg-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="showPage('home')">
+                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg">SC</div>
+                <span class="text-2xl font-bold text-orange-600">Sudarshan Chakra</span>
+            </div>
+            <div class="flex gap-2 flex-wrap items-center">
+                <button data-i18n="home" onclick="showPage('home')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Home</button>
+                <button data-i18n="browse" onclick="showPage('browse')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Browse</button>
+                <button data-i18n="map" onclick="showPage('map')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Map</button>
+                <button onclick="showPage('myProfile')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">My Profile</button>
+                <button data-i18n="registerProvider" onclick="showPage('register')" class="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">Register Provider</button>
+                <button data-i18n="registerSeeker" onclick="showPage('seeker')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Register Seeker</button>
+                <button data-i18n="admin" onclick="showPage('admin')" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">🔐 Admin</button>
+                <button onclick="changeLang()" class="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">🌏 <span id="currentLang">EN</span></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HOME PAGE -->
+    <div id="page-home" class="page">
+        <div class="max-w-7xl mx-auto px-4 py-12">
+            <div class="text-center mb-12">
+                <h1 class="text-5xl font-bold text-gray-800 mb-4">Find the Perfect Service Provider Near You</h1>
+                <p class="text-xl text-gray-600 mb-8">Rated, verified professionals in your area</p>
+                <div class="flex gap-4 justify-center flex-wrap">
+                    <button data-i18n="browseServices" onclick="showPage('browse')" class="bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-700 text-lg">Browse Services</button>
+                    <button data-i18n="becomeProvider" onclick="showPage('register')" class="bg-white text-orange-600 border-2 border-orange-600 px-8 py-3 rounded-lg font-semibold hover:bg-orange-50 text-lg">Become a Provider</button>
+                    
+                    <!-- PHASE C: Voice Search Button -->
+                    <button data-i18n="voiceSearch" onclick="startVoiceSearch()" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 text-lg">
+                        🎤 Voice Search
+                    </button>
+                </div>
+                
+                <!-- Voice Search Status -->
+                <div id="voiceStatus" class="hidden mt-4 text-center">
+                    <div class="inline-block bg-red-100 border border-red-300 rounded-lg px-6 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="animate-pulse">🔴</div>
+                            <span id="voiceStatusText" class="font-medium text-red-800">Listening...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 data-i18n="serviceCategories" class="text-2xl font-bold text-gray-800 mb-6 text-center">Service Categories</h2>
+            <div id="categoriesGridHome" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+        </div>
+    </div>
+
+    <!-- NEW BROWSE PAGE WITH GRID VIEW -->
+    <div id="page-browse" class="page hidden">
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Find Service Providers Near You</h1>
+            
+            <!-- Step 1: Category Selection Grid -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-700 mb-4">1️⃣ Select Category</h2>
+                <div id="browseCategoriesGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            </div>
+            
+            <!-- Step 2: Subcategory Selection Grid -->
+            <div id="subcategorySection" class="mb-8 hidden">
+                <h2 class="text-xl font-bold text-gray-700 mb-4">2️⃣ Select Subcategory</h2>
+                <div id="browseSubcategoriesGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            </div>
+            
+            <!-- Step 3: Service Type Selection Grid -->
+            <div id="serviceSection" class="mb-8 hidden">
+                <h2 class="text-xl font-bold text-gray-700 mb-4">3️⃣ Select Service Type</h2>
+                <div id="browseServicesGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+            </div>
+            
+            <!-- Providers List (Sorted intelligently) -->
+            <div id="providersSection" class="hidden">
+                <!-- PHASE B: Sort & Filter Controls -->
+                <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                    <div class="flex flex-wrap gap-4 items-center">
+                        <!-- Sort Dropdown -->
+                        <div class="flex items-center gap-2">
+                            <label data-i18n="sortBy" class="font-medium text-gray-700">Sort By</label>
+                            <select id="sortSelect" onchange="applySortAndFilter()" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                                <option value="rating" data-i18n="rating">Rating (High to Low)</option>
+                                <option value="price" data-i18n="priceLowToHigh">Price (Low to High)</option>
+                                <option value="distance" data-i18n="distanceNearToFar">Distance (Near to Far)</option>
+                                <option value="experience" data-i18n="experienceHighToLow">Experience (High to Low)</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Filter Button -->
+                        <button data-i18n="filters" onclick="toggleFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                            🔍 Filters
+                        </button>
+                        
+                        <!-- Results Count -->
+                        <div id="resultsCount" class="ml-auto text-sm text-gray-600 font-medium"></div>
+                    </div>
+                    
+                    <!-- Filter Panel (Hidden by default) -->
+                    <div id="filterPanel" class="hidden mt-4 pt-4 border-t">
+                        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <!-- Language Filter -->
+                            <div>
+                                <label data-i18n="languageFilter" class="block text-sm font-medium text-gray-700 mb-2">Language</label>
+                                <select id="filterLanguage" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="" data-i18n="anyLanguage">Any Language</option>
+                                    <option value="English">English</option>
+                                    <option value="Hindi">हिंदी (Hindi)</option>
+                                    <option value="Bengali">বাংলা (Bengali)</option>
+                                    <option value="Gujarati">ગુજરાતી (Gujarati)</option>
+                                    <option value="Marathi">मराठी (Marathi)</option>
+                                    <option value="Kannada">ಕನ್ನಡ (Kannada)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Religion Filter -->
+                            <div>
+                                <label data-i18n="religionFilter" class="block text-sm font-medium text-gray-700 mb-2">Religion</label>
+                                <select id="filterReligion" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="" data-i18n="anyReligion">Any Religion</option>
+                                    <option value="Hindu">Hindu 🕉️</option>
+                                    <option value="Muslim">Muslim ☪️</option>
+                                    <option value="Christian">Christian ✝️</option>
+                                    <option value="Sikh">Sikh ☬</option>
+                                    <option value="Buddhist">Buddhist ☸️</option>
+                                    <option value="Jain">Jain ☸️</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Price Range Filter -->
+                            <div>
+                                <label data-i18n="priceRange" class="block text-sm font-medium text-gray-700 mb-2">Price Range (₹/hr)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="filterPriceMin" placeholder="Min" class="w-full px-3 py-2 border rounded-lg" min="0" value="0">
+                                    <span>-</span>
+                                    <input type="number" id="filterPriceMax" placeholder="Max" class="w-full px-3 py-2 border rounded-lg" min="0" value="2000">
+                                </div>
+                            </div>
+                            
+                            <!-- Distance Filter -->
+                            <div>
+                                <label data-i18n="maxDistanceFilter" class="block text-sm font-medium text-gray-700 mb-2">Maximum Distance</label>
+                                <select id="filterDistance" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="999">Any Distance</option>
+                                    <option value="5">Within 5 km</option>
+                                    <option value="10">Within 10 km</option>
+                                    <option value="20">Within 20 km</option>
+                                    <option value="50">Within 50 km</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Filter Action Buttons -->
+                        <div class="flex gap-3 mt-4">
+                            <button data-i18n="applyFilters" onclick="applySortAndFilter()" class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium">
+                                Apply Filters
+                            </button>
+                            <button data-i18n="clearFilters" onclick="clearFilters()" class="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium">
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Provider Results -->
+                <div id="providersGridNew" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Other pages remain similar, will add them below -->
+    <!-- MAP PAGE (unchanged) -->
+    <div id="page-map" class="page hidden">
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">Service Providers & Seekers Map</h1>
+                <button onclick="showPage('home')" class="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 font-semibold">
+                    ← Back to Home
+                </button>
+            </div>
+            <div id="mainMap" class="map-container bg-white rounded-xl shadow-md"></div>
+        </div>
+    </div>
+
+    <!-- PROFILE, REGISTRATION PAGES - Simplified versions below -->
+    <div id="page-myProfile" class="page hidden">
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">My Profile</h1>
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div id="profileInfo"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTER PROVIDER (with rating field) -->
+    <div id="page-register" class="page hidden">
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Register as Service Provider</h1>
+            
+            <form id="providerForm" class="bg-white rounded-xl shadow-md p-6">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Full Name *</label>
+                        <input type="text" id="providerName" required class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Mobile Number *</label>
+                        <input type="tel" id="providerMobile" required pattern="[0-9]{10}" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Category (Optional)</label>
+                        <select id="providerCategory" class="w-full px-4 py-2 border rounded-lg" onchange="updateProviderSubcategories()"></select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Subcategory (Optional)</label>
+                        <select id="providerSubcategory" class="w-full px-4 py-2 border rounded-lg" onchange="updateProviderSubSubcategories()"></select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Service Type (Optional)</label>
+                        <select id="providerSubSubcategory" class="w-full px-4 py-2 border rounded-lg"></select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Religion *</label>
+                        <select id="providerReligion" required class="w-full px-4 py-2 border rounded-lg">
+                            <option value="">Select Religion</option>
+                            <option value="Hindu">Hindu 🕉️</option>
+                            <option value="Muslim">Muslim ☪️</option>
+                            <option value="Christian">Christian ✝️</option>
+                            <option value="Sikh">Sikh ☬</option>
+                            <option value="Buddhist">Buddhist ☸️</option>
+                            <option value="Jain">Jain ☸️</option>
+                        </select>
+                    </div>
+                    
+                    <!-- PHASE B: Language Field -->
+                    <div>
+                        <label data-i18n="providerLanguage" class="block text-gray-700 font-medium mb-2">Provider Language *</label>
+                        <select id="providerLanguage" required class="w-full px-4 py-2 border rounded-lg">
+                            <option value="">Select Language</option>
+                            <option value="English">English</option>
+                            <option value="Hindi">हिंदी (Hindi)</option>
+                            <option value="Bengali">বাংলা (Bengali)</option>
+                            <option value="Gujarati">ગુજરાતી (Gujarati)</option>
+                            <option value="Marathi">मराठी (Marathi)</option>
+                            <option value="Kannada">ಕನ್ನಡ (Kannada)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Experience (years) *</label>
+                        <input type="number" id="providerExperience" required min="0" max="50" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Rate (₹/hour) *</label>
+                        <input type="number" id="providerRate" required min="50" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+                
+                <!-- PHASE B: Working Hours -->
+                <div class="mt-6">
+                    <label data-i18n="workingHours" class="block text-gray-700 font-medium mb-3">Working Hours *</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="workingHours" value="mon-fri" required class="mr-2">
+                            <span data-i18n="monFri" class="font-medium">Mon-Fri (9 AM - 6 PM)</span>
+                        </label>
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="workingHours" value="weekends" class="mr-2">
+                            <span data-i18n="weekends" class="font-medium">Weekends Only</span>
+                        </label>
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="workingHours" value="all-days" class="mr-2">
+                            <span data-i18n="allDays" class="font-medium">All Days (7 days/week)</span>
+                        </label>
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="workingHours" value="24x7" class="mr-2">
+                            <span data-i18n="available24x7" class="font-medium">24×7 Available</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- PHASE B: Service Area -->
+                <div class="mt-6">
+                    <label data-i18n="serviceArea" class="block text-gray-700 font-medium mb-3">Service Area *</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="serviceArea" value="10km" required class="mr-2">
+                            <span data-i18n="within10km" class="font-medium">Within 10 km</span>
+                        </label>
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="serviceArea" value="city" class="mr-2">
+                            <span data-i18n="withinCity" class="font-medium">Within City</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">Location/Address *</label>
+                    <input type="text" id="providerLocation" required class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                
+                <div class="mt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-gray-700 font-medium">Set Your Location on Map</label>
+                        <button type="button" onclick="useMyLocation('provider')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">
+                            📍 Use My Location
+                        </button>
+                    </div>
+                    <div id="registerMap" class="reg-map bg-gray-100"></div>
+                    <p class="text-sm text-gray-600 mt-2">Click "Use My Location" to auto-detect, or click/drag marker on map</p>
+                    <input type="hidden" id="providerLat">
+                    <input type="hidden" id="providerLng">
+                </div>
+                
+                <div class="mt-6">
+                    <button type="submit" class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 text-lg">Register Now</button>
+                </div>
+            </form>
+            
+            <div id="providerSuccess" class="hidden mt-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                ✓ Registration successful!
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTER SEEKER (with location) -->
+    <div id="page-seeker" class="page hidden">
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Register as Service Seeker</h1>
+            
+            <form id="seekerForm" class="bg-white rounded-xl shadow-md p-6">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Full Name *</label>
+                        <input type="text" id="seekerName" required class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Mobile Number *</label>
+                        <input type="tel" id="seekerMobile" required pattern="[0-9]{10}" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Religion *</label>
+                        <select id="seekerReligion" required class="w-full px-4 py-2 border rounded-lg">
+                            <option value="">Select Religion</option>
+                            <option value="Hindu">Hindu 🕉️</option>
+                            <option value="Muslim">Muslim ☪️</option>
+                            <option value="Christian">Christian ✝️</option>
+                            <option value="Sikh">Sikh ☬</option>
+                            <option value="Buddhist">Buddhist ☸️</option>
+                            <option value="Jain">Jain ☸️</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">Location/Address *</label>
+                    <input type="text" id="seekerLocation" required class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                
+                <div class="mt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-gray-700 font-medium">Set Your Location on Map</label>
+                        <button type="button" onclick="useMyLocation('seeker')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">
+                            📍 Use My Location
+                        </button>
+                    </div>
+                    <div id="seekerMap" class="reg-map bg-gray-100"></div>
+                    <p class="text-sm text-gray-600 mt-2">Click "Use My Location" to auto-detect, or click/drag marker on map</p>
+                    <input type="hidden" id="seekerLat">
+                    <input type="hidden" id="seekerLng">
+                </div>
+                
+                <div class="mt-6">
+                    <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 text-lg">Register Now</button>
+                </div>
+            </form>
+            
+            <div id="seekerSuccess" class="hidden mt-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                ✓ Registration successful!
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN PAGE -->
+    <div id="page-admin" class="page hidden">
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <div id="adminLogin" class="max-w-md mx-auto">
+                <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">🔐 Admin Login</h1>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <input type="password" id="adminPassword" placeholder="Password: admin123" class="w-full px-4 py-2 border rounded-lg mb-4">
+                    <button onclick="adminLogin()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">Login</button>
+                </div>
+            </div>
+            
+            <div id="adminDashboard" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+                    <button onclick="adminLogout()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">Logout</button>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div class="grid md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
+                        <div class="text-4xl font-bold" id="totalProviders">0</div>
+                        <div class="mt-2 opacity-90">Total Providers</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+                        <div class="text-4xl font-bold" id="totalSeekers">0</div>
+                        <div class="mt-2 opacity-90">Total Seekers</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
+                        <div class="text-4xl font-bold" id="totalCategories">0</div>
+                        <div class="mt-2 opacity-90">Total Categories</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                        <div class="text-4xl font-bold" id="totalRestricted">0</div>
+                        <div class="mt-2 opacity-90">Restricted Users</div>
+                    </div>
+                </div>
+                
+                <!-- Tabs for different sections -->
+                <div class="bg-white rounded-xl shadow-lg mb-6">
+                    <div class="flex border-b">
+                        <button onclick="showAdminTab('users')" id="tab-users" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            👥 User Management
+                        </button>
+                        <button onclick="showAdminTab('categories')" id="tab-categories" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-orange-600">
+                            📋 Category Management
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- USER MANAGEMENT TAB -->
+                <div id="adminTab-users" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-800">👥 Providers Management</h2>
+                            <input type="text" id="searchProviders" placeholder="Search providers..." class="px-4 py-2 border rounded-lg" onkeyup="filterProvidersList()">
+                        </div>
+                        <div id="providersListAdmin" class="space-y-3"></div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-800">👤 Seekers Management</h2>
+                            <input type="text" id="searchSeekers" placeholder="Search seekers..." class="px-4 py-2 border rounded-lg" onkeyup="filterSeekersList()">
+                        </div>
+                        <div id="seekersListAdmin" class="space-y-3"></div>
+                    </div>
+                </div>
+                
+                <!-- CATEGORY MANAGEMENT TAB -->
+                <div id="adminTab-categories" class="">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800">📋 Category Management</h2>
+                            <div class="flex gap-2">
+                                <button onclick="resetToDefaults()" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 font-medium">
+                                    🔄 Reset to Defaults
+                                </button>
+                                <button onclick="showAddCategoryModal()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold shadow">
+                                    ➕ Add New Category
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="categoriesListAdmin" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODALS FOR ADMIN -->
+    
+    <!-- Add/Edit Category Modal -->
+    <div id="categoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 class="text-2xl font-bold mb-4" id="categoryModalTitle">Add Category</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Category Name (English)</label>
+                    <input type="text" id="modalCategoryName" class="w-full px-4 py-2 border rounded-lg" placeholder="e.g., Home Services">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Emoji Icon</label>
+                    <input type="text" id="modalCategoryIcon" class="w-full px-4 py-2 border rounded-lg text-center text-3xl" placeholder="🏠" maxlength="2">
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveCategoryModal()" class="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-semibold">Save</button>
+                    <button onclick="closeCategoryModal()" class="flex-1 bg-gray-400 text-white py-3 rounded-lg hover:bg-gray-500 font-semibold">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Subcategory Modal -->
+    <div id="subcategoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 class="text-2xl font-bold mb-4" id="subcategoryModalTitle">Add Subcategory</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Subcategory Name (English)</label>
+                    <input type="text" id="modalSubcategoryName" class="w-full px-4 py-2 border rounded-lg" placeholder="e.g., Plumbing">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Emoji Icon</label>
+                    <input type="text" id="modalSubcategoryIcon" class="w-full px-4 py-2 border rounded-lg text-center text-3xl" placeholder="🔧" maxlength="2">
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveSubcategoryModal()" class="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold">Save</button>
+                    <button onclick="closeSubcategoryModal()" class="flex-1 bg-gray-400 text-white py-3 rounded-lg hover:bg-gray-500 font-semibold">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Service Modal -->
+    <div id="serviceModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 class="text-2xl font-bold mb-4" id="serviceModalTitle">Add Service Type</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Service Name (English)</label>
+                    <input type="text" id="modalServiceName" class="w-full px-4 py-2 border rounded-lg" placeholder="e.g., Pipe Repair">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Emoji Icon</label>
+                    <input type="text" id="modalServiceIcon" class="w-full px-4 py-2 border rounded-lg text-center text-3xl" placeholder="🔧" maxlength="2">
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveServiceModal()" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-semibold">Save</button>
+                    <button onclick="closeServiceModal()" class="flex-1 bg-gray-400 text-white py-3 rounded-lg hover:bg-gray-500 font-semibold">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== DATA & INITIALIZATION ====================
+        let currentLanguage = localStorage.getItem('language') || 'en';
+        let providers = JSON.parse(localStorage.getItem('providers')) || [];
+        let seekers = JSON.parse(localStorage.getItem('seekers')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+        let maps = {};
+        
+        // Selected browsing state
+        let selectedCategoryId = null;
+        let selectedSubcategoryIdx = null;
+        let selectedServiceIdx = null;
+        
+        const ADMIN_PASSWORD = 'admin123';
+        
+        // Religion icons
+        const religionIcons = {
+            'Hindu': '🕉️',
+            'Muslim': '☪️',
+            'Christian': '✝️',
+            'Sikh': '☬',
+            'Buddhist': '☸️',
+            'Jain': '☸️'
+        };
+        
+        // ==================== TRANSLATIONS ====================
+        const translations = {
+            // Navigation
+            'home': { en: 'Home', hi: 'होम', bn: 'হোম', gu: 'હોમ', mr: 'होम', kn: 'ಮನೆ' },
+            'browse': { en: 'Browse', hi: 'ब्राउज़', bn: 'ব্রাউজ', gu: 'બ્રાઉઝ', mr: 'ब्राउझ', kn: 'ಬ್ರೌಸ್' },
+            'map': { en: 'Map', hi: 'मैप', bn: 'মানচিত্র', gu: 'નકશો', mr: 'नकाशा', kn: 'ನಕ್ಷೆ' },
+            'registerProvider': { en: 'Register Provider', hi: 'प्रदाता पंजीकरण', bn: 'প্রদানকারী নিবন্ধন', gu: 'પ્રદાતા નોંધણી', mr: 'प्रदाता नोंदणी', kn: 'ಪೂರೈಕೆದಾರ ನೋಂದಣಿ' },
+            'registerSeeker': { en: 'Register Seeker', hi: 'साधक पंजीकरण', bn: 'অনুসন্ধানকারী নিবন্ধন', gu: 'શોધનાર નોંધણી', mr: 'शोधक नोंदणी', kn: 'ಹುಡುಕುವವರ ನೋಂದಣಿ' },
+            'admin': { en: 'Admin', hi: 'व्यवस्थापक', bn: 'প্রশাসক', gu: 'વ્યવસ્થાપક', mr: 'प्रशासक', kn: 'ನಿರ್ವಾಹಕ' },
+            
+            // Form fields
+            'fullName': { en: 'Full Name *', hi: 'पूरा नाम *', bn: 'সম্পূর্ণ নাম *', gu: 'પૂરું નામ *', mr: 'संपूर्ण नाव *', kn: 'ಪೂರ್ಣ ಹೆಸರು *' },
+            'mobile': { en: 'Mobile Number *', hi: 'मोबाइल नंबर *', bn: 'মোবাইল নম্বর *', gu: 'મોબાઇલ નંબર *', mr: 'मोबाईल नंबर *', kn: 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ *' },
+            'category': { en: 'Category (Optional)', hi: 'श्रेणी (वैकल्पिक)', bn: 'বিভাগ (ঐচ্ছিক)', gu: 'કેટેગરી (વૈકલ્પિક)', mr: 'श्रेणी (पर्यायी)', kn: 'ವರ್ಗ (ಐಚ್ಛಿಕ)' },
+            'subcategory': { en: 'Subcategory (Optional)', hi: 'उपश्रेणी (वैकल्पिक)', bn: 'উপবিভাগ (ঐচ্ছিক)', gu: 'ઉપકેટેગરી (વૈકલ્પિક)', mr: 'उपश्रेणी (पर्यायी)', kn: 'ಉಪವರ್ಗ (ಐಚ್ಛಿಕ)' },
+            'serviceType': { en: 'Service Type (Optional)', hi: 'सेवा प्रकार (वैकल्पिक)', bn: 'সেবা প্রকার (ঐচ্ছিক)', gu: 'સેવા પ્રકાર (વૈકલ્પિક)', mr: 'सेवा प्रकार (पर्यायी)', kn: 'ಸೇವೆ ಪ್ರಕಾರ (ಐಚ್ಛಿಕ)' },
+            'religion': { en: 'Religion *', hi: 'धर्म *', bn: 'ধর্ম *', gu: 'ધર્મ *', mr: 'धर्म *', kn: 'ಧರ್ಮ *' },
+            'selectReligion': { en: 'Select Religion', hi: 'धर्म चुनें', bn: 'ধর্ম নির্বাচন করুন', gu: 'ધર્મ પસંદ કરો', mr: 'धर्म निवडा', kn: 'ಧರ್ಮ ಆಯ್ಕೆಮಾಡಿ' },
+            'experience': { en: 'Experience (years) *', hi: 'अनुभव (वर्ष) *', bn: 'অভিজ্ঞতা (বছর) *', gu: 'અનુભવ (વર્ષ) *', mr: 'अनुभव (वर्षे) *', kn: 'ಅನುಭವ (ವರ್ಷಗಳು) *' },
+            'rate': { en: 'Rate (₹/hour) *', hi: 'दर (₹/घंटा) *', bn: 'হার (₹/ঘন্টা) *', gu: 'દર (₹/કલાક) *', mr: 'दर (₹/तास) *', kn: 'ದರ (₹/ಗಂಟೆ) *' },
+            'location': { en: 'Location/Address *', hi: 'स्थान/पता *', bn: 'অবস্থান/ঠিকানা *', gu: 'સ્થાન/સરનામું *', mr: 'स्थान/पत्ता *', kn: 'ಸ್ಥಳ/ವಿಳಾಸ *' },
+            'setLocation': { en: 'Set Your Location on Map', hi: 'मानचित्र पर अपना स्थान सेट करें', bn: 'মানচিত্রে আপনার অবস্থান সেট করুন', gu: 'નકશા પર તમારું સ્થાન સેટ કરો', mr: 'नकाशावर तुमचे स्थान सेट करा', kn: 'ನಕ್ಷೆಯಲ್ಲಿ ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಹೊಂದಿಸಿ' },
+            'useMyLocation': { en: 'Use My Location', hi: 'मेरा स्थान उपयोग करें', bn: 'আমার অবস্থান ব্যবহার করুন', gu: 'મારું સ્થાન વાપરો', mr: 'माझे स्थान वापरा', kn: 'ನನ್ನ ಸ್ಥಳ ಬಳಸಿ' },
+            'registerNow': { en: 'Register Now', hi: 'अभी पंजीकरण करें', bn: 'এখনই নিবন্ধন করুন', gu: 'હમણાં નોંધણી કરો', mr: 'आता नोंदणी करा', kn: 'ಈಗ ನೋಂದಣಿ ಮಾಡಿ' },
+            
+            // Headings
+            'findProviders': { en: 'Find Verified Service Providers Near You', hi: 'अपने पास सत्यापित सेवा प्रदाता खोजें', bn: 'আপনার কাছে যাচাইকৃত সেবা প্রদানকারী খুঁজুন', gu: 'તમારી નજીક ચકાસાયેલ સેવા પ્રદાતાઓ શોધો', mr: 'तुमच्या जवळ सत्यापित सेवा प्रदाते शोधा', kn: 'ನಿಮ್ಮ ಸಮೀಪದಲ್ಲಿ ಪರಿಶೀಲಿತ ಸೇವಾ ಪೂರೈಕೆದಾರರನ್ನು ಹುಡುಕಿ' },
+            'serviceCategories': { en: 'Service Categories', hi: 'सेवा श्रेणियाँ', bn: 'সেবা বিভাগ', gu: 'સેવા શ્રેણીઓ', mr: 'सेवा श्रेण्या', kn: 'ಸೇವಾ ವರ್ಗಗಳು' },
+            'browseServices': { en: 'Browse Services', hi: 'सेवाएं ब्राउज़ करें', bn: 'সেবা ব্রাউজ করুন', gu: 'સેવાઓ બ્રાઉઝ કરો', mr: 'सेवा ब्राउझ करा', kn: 'ಸೇವೆಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ' },
+            'becomeProvider': { en: 'Become a Provider', hi: 'प्रदाता बनें', bn: 'প্রদানকারী হন', gu: 'પ્રદાતા બનો', mr: 'प्रदाता व्हा', kn: 'ಪೂರೈಕೆದಾರರಾಗಿ' },
+            
+            // Buttons
+            'call': { en: '📞 Call', hi: '📞 कॉल करें', bn: '📞 কল করুন', gu: '📞 કૉલ કરો', mr: '📞 कॉल करा', kn: '📞 ಕರೆ ಮಾಡಿ' },
+            'directions': { en: '🗺️ Directions', hi: '🗺️ दिशा-निर्देश', bn: '🗺️ দিকনির্দেশ', gu: '🗺️ દિશાઓ', mr: '🗺️ दिशानिर्देश', kn: '🗺️ ನಿರ್ದೇಶನಗಳು' },
+            'backToHome': { en: '← Back to Home', hi: '← होम पर वापस जाएं', bn: '← হোমে ফিরে যান', gu: '← હોમ પર પાછા જાઓ', mr: '← होमवर परत जा', kn: '← ಮನೆಗೆ ಹಿಂತಿರುಗಿ' },
+            
+            // Phase B: Sorting & Filtering
+            'sortBy': { en: 'Sort By', hi: 'क्रमबद्ध करें', bn: 'সাজান', gu: 'ક્રમબદ્ધ કરો', mr: 'क्रमवारी लावा', kn: 'ವಿಂಗಡಿಸಿ' },
+            'filters': { en: '🔍 Filters', hi: '🔍 फ़िल्टर', bn: '🔍 ফিল্টার', gu: '🔍 ફિલ્ટર', mr: '🔍 फिल्टर', kn: '🔍 ಫಿಲ್ಟರ್‌ಗಳು' },
+            'rating': { en: 'Rating (High to Low)', hi: 'रेटिंग (उच्च से निम्न)', bn: 'রেটিং (উচ্চ থেকে নিম্ন)', gu: 'રેટિંગ (ઉચ્ચથી નીચું)', mr: 'रेटिंग (उच्च ते कमी)', kn: 'ರೇಟಿಂಗ್ (ಹೆಚ್ಚು ರಿಂದ ಕಡಿಮೆ)' },
+            'priceLowToHigh': { en: 'Price (Low to High)', hi: 'मूल्य (कम से अधिक)', bn: 'মূল্য (কম থেকে বেশি)', gu: 'કિંમત (ઓછીથી વધારે)', mr: 'किंमत (कमी ते जास्त)', kn: 'ಬೆಲೆ (ಕಡಿಮೆ ರಿಂದ ಹೆಚ್ಚು)' },
+            'distanceNearToFar': { en: 'Distance (Near to Far)', hi: 'दूरी (पास से दूर)', bn: 'দূরত্ব (কাছ থেকে দূর)', gu: 'અંતર (નજીકથી દૂર)', mr: 'अंतर (जवळून दूर)', kn: 'ಅಂತರ (ಸಮೀಪದಿಂದ ದೂರ)' },
+            'experienceHighToLow': { en: 'Experience (High to Low)', hi: 'अनुभव (अधिक से कम)', bn: 'অভিজ্ঞতা (বেশি থেকে কম)', gu: 'અનુભવ (વધુથી ઓછું)', mr: 'अनुभव (जास्त ते कमी)', kn: 'ಅನುಭವ (ಹೆಚ್ಚು ರಿಂದ ಕಡಿಮೆ)' },
+            'applyFilters': { en: 'Apply Filters', hi: 'फ़िल्टर लागू करें', bn: 'ফিল্টার প্রয়োগ করুন', gu: 'ફિલ્ટર લાગુ કરો', mr: 'फिल्टर लागू करा', kn: 'ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಅನ್ವಯಿಸಿ' },
+            'clearFilters': { en: 'Clear All', hi: 'सभी साफ़ करें', bn: 'সব সাফ করুন', gu: 'બધું સાફ કરો', mr: 'सर्व साफ करा', kn: 'ಎಲ್ಲವನ್ನೂ ತೆರವುಗೊಳಿಸಿ' },
+            'languageFilter': { en: 'Language', hi: 'भाषा', bn: 'ভাষা', gu: 'ભાષા', mr: 'भाषा', kn: 'ಭಾಷೆ' },
+            'religionFilter': { en: 'Religion', hi: 'धर्म', bn: 'ধর্ম', gu: 'ધર્મ', mr: 'धर्म', kn: 'ಧರ್ಮ' },
+            'priceRange': { en: 'Price Range (₹/hr)', hi: 'मूल्य सीमा (₹/घंटा)', bn: 'মূল্য সীমা (₹/ঘন্টা)', gu: 'કિંમત શ્રેણી (₹/કલાક)', mr: 'किंमत श्रेणी (₹/तास)', kn: 'ಬೆಲೆ ವ್ಯಾಪ್ತಿ (₹/ಗಂಟೆ)' },
+            'maxDistanceFilter': { en: 'Maximum Distance', hi: 'अधिकतम दूरी', bn: 'সর্বোচ্চ দূরত্ব', gu: 'મહત્તમ અંતર', mr: 'कमाल अंतर', kn: 'ಗರಿಷ್ಠ ಅಂತರ' },
+            'anyLanguage': { en: 'Any Language', hi: 'कोई भी भाषा', bn: 'যেকোনো ভাষা', gu: 'કોઈપણ ભાષા', mr: 'कोणतीही भाषा', kn: 'ಯಾವುದೇ ಭಾಷೆ' },
+            'anyReligion': { en: 'Any Religion', hi: 'कोई भी धर्म', bn: 'যেকোনো ধর্ম', gu: 'કોઈપણ ધર્મ', mr: 'कोणताही धर्म', kn: 'ಯಾವುದೇ ಧರ್ಮ' },
+            'providerLanguage': { en: 'Provider Language *', hi: 'प्रदाता भाषा *', bn: 'প্রদানকারী ভাষা *', gu: 'પ્રદાતા ભાષા *', mr: 'प्रदाता भाषा *', kn: 'ಪೂರೈಕೆದಾರ ಭಾಷೆ *' },
+            'workingHours': { en: 'Working Hours *', hi: 'कार्य समय *', bn: 'কাজের সময় *', gu: 'કામના કલાકો *', mr: 'कामाचे तास *', kn: 'ಕೆಲಸದ ಗಂಟೆಗಳು *' },
+            'serviceArea': { en: 'Service Area *', hi: 'सेवा क्षेत्र *', bn: 'সেবা এলাকা *', gu: 'સેવા વિસ્તાર *', mr: 'सेवा क्षेत्र *', kn: 'ಸೇವಾ ಪ್ರದೇಶ *' },
+            'monFri': { en: 'Mon-Fri (9 AM - 6 PM)', hi: 'सोम-शुक्र (9 AM - 6 PM)', bn: 'সোম-শুক্র (9 AM - 6 PM)', gu: 'સોમ-શુક્ર (9 AM - 6 PM)', mr: 'सोम-शुक्र (9 AM - 6 PM)', kn: 'ಸೋಮ-ಶುಕ್ರ (9 AM - 6 PM)' },
+            'weekends': { en: 'Weekends Only', hi: 'केवल सप्ताहांत', bn: 'শুধু সপ্তাহান্তে', gu: 'માત્ર સપ્તાહાંત', mr: 'फक्त आठवड्याचा शेवट', kn: 'ವಾರಾಂತ್ಯಗಳು ಮಾತ್ರ' },
+            'allDays': { en: 'All Days (7 days/week)', hi: 'सभी दिन (7 दिन/सप्ताह)', bn: 'সব দিন (7 দিন/সপ্তাহ)', gu: 'બધા દિવસો (7 દિવસ/અઠવાડિયું)', mr: 'सर्व दिवस (7 दिवस/आठवडा)', kn: 'ಎಲ್ಲಾ ದಿನಗಳು (7 ದಿನಗಳು/ವಾರ)' },
+            'available24x7': { en: '24×7 Available', hi: '24×7 उपलब्ध', bn: '24×7 উপলব্ধ', gu: '24×7 ઉપલબ્ધ', mr: '24×7 उपलब्ध', kn: '24×7 ಲಭ್ಯವಿದೆ' },
+            'within10km': { en: 'Within 10 km', hi: '10 किमी के भीतर', bn: '10 কিমির মধ্যে', gu: '10 કિમીની અંદર', mr: '10 किमीच्या आत', kn: '10 ಕಿಮೀ ಒಳಗೆ' },
+            'withinCity': { en: 'Within City', hi: 'शहर के भीतर', bn: 'শহরের মধ্যে', gu: 'શહેરની અંદર', mr: 'शहराच्या आत', kn: 'ನಗರದೊಳಗೆ' },
+            'showingResults': { en: 'Showing {count} providers', hi: '{count} प्रदाता दिखा रहे हैं', bn: '{count} প্রদানকারী দেখাচ্ছে', gu: '{count} પ્રદાતાઓ બતાવી રહ્યા છીએ', mr: '{count} प्रदाते दाखवत आहे', kn: '{count} ಪೂರೈಕೆದಾರರನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ' },
+            
+            // Phase C: Voice Commands
+            'voiceSearch': { en: '🎤 Voice Search', hi: '🎤 ध्वनि खोज', bn: '🎤 ভয়েস সার্চ', gu: '🎤 વૉઇસ સર્ચ', mr: '🎤 व्हॉइस शोध', kn: '🎤 ಧ್ವನಿ ಹುಡುಕಾಟ' },
+            'listening': { en: 'Listening...', hi: 'सुन रहे हैं...', bn: 'শুনছি...', gu: 'સાંભળી રહ્યા છીએ...', mr: 'ऐकत आहे...', kn: 'ಆಲಿಸುತ್ತಿದೆ...' },
+            'speak': { en: 'Speak now', hi: 'अभी बोलें', bn: 'এখন বলুন', gu: 'હમણાં બોલો', mr: 'आता बोला', kn: 'ಈಗ ಮಾತನಾಡಿ' },
+            'voiceSearchFor': { en: 'Say: "Find a plumber" or "Show electricians"', hi: 'कहें: "प्लंबर खोजें" या "इलेक्ट्रीशियन दिखाएं"', bn: 'বলুন: "প্লাম্বার খুঁজুন" বা "ইলেকট্রিশিয়ান দেখান"', gu: 'કહો: "પ્લમ્બર શોધો" અથવા "ઇલેક્ટ્રિશિયન બતાવો"', mr: 'म्हणा: "प्लंबर शोधा" किंवा "इलेक्ट्रिशियन दाखवा"', kn: 'ಹೇಳಿ: "ಪ್ಲಂಬರ್ ಹುಡುಕಿ" ಅಥವಾ "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್ ತೋರಿಸಿ"' },
+            'noSpeechDetected': { en: 'No speech detected. Please try again.', hi: 'कोई आवाज़ नहीं सुनी। कृपया पुनः प्रयास करें।', bn: 'কোনো কথা শোনা যায়নি। আবার চেষ্টা করুন।', gu: 'કોઈ વાણી સાંભળાઈ નહીં. ફરી પ્રયાસ કરો.', mr: 'आवाज ऐकू आला नाही. पुन्हा प्रयत्न करा.', kn: 'ಯಾವುದೇ ಭಾಷಣ ಪತ್ತೆಯಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.' },
+            'searchingFor': { en: 'Searching for {service}...', hi: '{service} खोज रहे हैं...', bn: '{service} খুঁজছি...', gu: '{service} શોધી રહ્યા છીએ...', mr: '{service} शोधत आहे...', kn: '{service} ಹುಡುಕುತ್ತಿದೆ...' }
+        };
+        
+        // Translation helper function with variable substitution
+        function t(key, vars = {}) {
+            let text = translations[key] ? (translations[key][currentLanguage] || translations[key].en) : key;
+            // Replace variables like {count}
+            Object.keys(vars).forEach(varKey => {
+                text = text.replace(`{${varKey}}`, vars[varKey]);
+            });
+            return text;
+        }
+        
+        
+        // Default categories
+        let categories = JSON.parse(localStorage.getItem('categories')) || [
+            {
+                id: 'cat1',
+                name: { en: 'Home Services' },
+                icon: '🏠',
+                subcategories: [
+                    {
+                        name: { en: 'Plumbing' },
+                        icon: '🔧',
+                        subsubcategories: [
+                            { name: { en: 'Pipe Repair' }, icon: '🔧' },
+                            { name: { en: 'Tank Installation' }, icon: '💧' },
+                            { name: { en: 'Bathroom Fitting' }, icon: '🚿' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Electrical' },
+                        icon: '⚡',
+                        subsubcategories: [
+                            { name: { en: 'Wiring' }, icon: '🔌' },
+                            { name: { en: 'Appliance Repair' }, icon: '🔧' }
+                        ]
+                    }
+                ]
+            }
+        ];
+        
+        // ==================== UTILITY FUNCTIONS ====================
+        function getTranslated(obj, defaultText = '') {
+            if (!obj) return defaultText;
+            if (typeof obj === 'string') return obj;
+            return obj[currentLanguage] || obj.en || defaultText;
+        }
+        
+        // Haversine formula for distance calculation
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; // Distance in km
+        }
+        
+        function generateStars(rating) {
+            const fullStars = Math.floor(rating);
+            const halfStar = rating % 1 >= 0.5 ? 1 : 0;
+            const emptyStars = 5 - fullStars - halfStar;
+            
+            let stars = '⭐'.repeat(fullStars);
+            if (halfStar) stars += '⭐';
+            stars += '☆'.repeat(emptyStars);
+            return stars;
+        }
+        
+        // ==================== LANGUAGE ====================
+        function selectLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            document.getElementById('languageModal').classList.add('hidden');
+            
+            // Update language button
+            const langNames = {
+                'en': 'EN',
+                'hi': 'हिं',
+                'bn': 'বাং',
+                'gu': 'ગુજ',
+                'mr': 'मरा',
+                'kn': 'ಕನ್ನ'
+            };
+            document.getElementById('currentLang').textContent = langNames[lang] || 'EN';
+            
+            // Update ALL UI text
+            updateAllUIText();
+            
+            // Reload content in new language (categories)
+            loadHomeCategories();
+            loadBrowseCategories();
+            updateProviderCategorySelects();
+            
+            console.log('Language changed to:', lang);
+        }
+        
+        function initializeTranslations() {
+            // Add data-i18n attributes to elements that need translation
+            // This runs once on page load to mark translatable elements
+            
+            // Already done in HTML: Navigation buttons
+            
+            // Mark headings
+            document.querySelectorAll('h1, h2, h3').forEach(heading => {
+                const text = heading.textContent.trim();
+                if (text.includes('Find') && text.includes('Perfect')) heading.setAttribute('data-i18n', 'findProviders');
+                if (text === 'Service Categories') heading.setAttribute('data-i18n', 'serviceCategories');
+                if (text.includes('Register as Service Provider')) heading.setAttribute('data-i18n', 'registerAsProvider');
+                if (text.includes('Register as Service Seeker')) heading.setAttribute('data-i18n', 'registerAsSeeker');
+                if (text === '1️⃣ Select Category') heading.setAttribute('data-i18n', 'selectCategory');
+                if (text === '2️⃣ Select Subcategory') heading.setAttribute('data-i18n', 'selectSubcategory');
+                if (text === '3️⃣ Select Service Type') heading.setAttribute('data-i18n', 'selectService');
+                if (text === 'Providers Near You') heading.setAttribute('data-i18n', 'providersNearYou');
+                if (text.includes('Find Service Providers Near You')) heading.setAttribute('data-i18n', 'findServiceProviders');
+            });
+            
+            // Mark form labels
+            document.querySelectorAll('label').forEach(label => {
+                const text = label.textContent.trim();
+                if (text === 'Full Name *') label.setAttribute('data-i18n', 'fullName');
+                if (text === 'Mobile Number *') label.setAttribute('data-i18n', 'mobile');
+                if (text === 'Category (Optional)') label.setAttribute('data-i18n', 'category');
+                if (text === 'Subcategory (Optional)') label.setAttribute('data-i18n', 'subcategory');
+                if (text === 'Service Type (Optional)') label.setAttribute('data-i18n', 'serviceType');
+                if (text === 'Religion *') label.setAttribute('data-i18n', 'religion');
+                if (text === 'Experience (years) *') label.setAttribute('data-i18n', 'experience');
+                if (text.includes('Rate') && text.includes('*')) label.setAttribute('data-i18n', 'rate');
+                if (text === 'Location/Address *') label.setAttribute('data-i18n', 'location');
+                if (text === 'Set Your Location on Map') label.setAttribute('data-i18n', 'setLocation');
+            });
+            
+            // Mark buttons
+            document.querySelectorAll('button').forEach(btn => {
+                const text = btn.textContent.trim();
+                if (text.includes('Use My Location')) btn.setAttribute('data-i18n', 'useMyLocation');
+                if (text === 'Register Now') btn.setAttribute('data-i18n', 'registerNow');
+                if (text === 'Browse Services') btn.setAttribute('data-i18n', 'browseServices');
+                if (text === 'Become a Provider') btn.setAttribute('data-i18n', 'becomeProvider');
+                if (text.includes('Back to Home')) btn.setAttribute('data-i18n', 'backToHome');
+            });
+            
+            console.log('Translation attributes initialized');
+        }
+        
+        function updateAllUIText() {
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                element.textContent = t(key);
+            });
+            
+            // Update Select Religion dropdown
+            const religionSelects = document.querySelectorAll('#providerReligion, #seekerReligion');
+            religionSelects.forEach(select => {
+                if (select && select.options[0]) {
+                    select.options[0].text = t('selectReligion');
+                }
+            });
+            
+            console.log('UI text updated to language:', currentLanguage);
+        }
+        
+        function changeLang() {
+            document.getElementById('languageModal').classList.remove('hidden');
+        }
+        
+        // ==================== NAVIGATION ====================
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(page => page.classList.add('hidden'));
+            document.getElementById('page-' + pageName).classList.remove('hidden');
+            
+            if (pageName === 'home') {
+                loadHomeCategories();
+            } else if (pageName === 'browse') {
+                loadBrowseCategories();
+            } else if (pageName === 'map') {
+                setTimeout(initMainMap, 100);
+            } else if (pageName === 'register') {
+                setTimeout(initRegisterMap, 100);
+            } else if (pageName === 'seeker') {
+                setTimeout(initSeekerMap, 100);
+            }
+        }
+        
+        // ==================== BROWSE PAGE WITH GRID VIEW ====================
+        function loadBrowseCategories() {
+            const grid = document.getElementById('browseCategoriesGrid');
+            grid.innerHTML = categories.map(cat => `
+                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectCategory('${cat.id}')">
+                    <div class="text-5xl mb-3">${cat.icon}</div>
+                    <div class="font-bold text-gray-800">${getTranslated(cat.name)}</div>
+                </div>
+            `).join('');
+            
+            // Reset selection
+            document.getElementById('subcategorySection').classList.add('hidden');
+            document.getElementById('serviceSection').classList.add('hidden');
+            document.getElementById('providersSection').classList.add('hidden');
+        }
+        
+        function selectCategory(catId) {
+            selectedCategoryId = catId;
+            selectedSubcategoryIdx = null;
+            selectedServiceIdx = null;
+            
+            const category = categories.find(c => c.id === catId);
+            if (!category || !category.subcategories) return;
+            
+            // Update UI - highlight selected
+            document.querySelectorAll('#browseCategoriesGrid .category-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            // Show subcategories
+            const grid = document.getElementById('browseSubcategoriesGrid');
+            grid.innerHTML = category.subcategories.map((sub, idx) => `
+                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectSubcategory(${idx})">
+                    <div class="text-4xl mb-3">${sub.icon}</div>
+                    <div class="font-bold text-gray-800">${getTranslated(sub.name)}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('subcategorySection').classList.remove('hidden');
+            document.getElementById('serviceSection').classList.add('hidden');
+            document.getElementById('providersSection').classList.add('hidden');
+        }
+        
+        function selectSubcategory(subIdx) {
+            selectedSubcategoryIdx = subIdx;
+            selectedServiceIdx = null;
+            
+            const category = categories.find(c => c.id === selectedCategoryId);
+            const subcategory = category.subcategories[subIdx];
+            
+            if (!subcategory.subsubcategories) return;
+            
+            // Update UI
+            document.querySelectorAll('#browseSubcategoriesGrid .category-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            // Show services
+            const grid = document.getElementById('browseServicesGrid');
+            grid.innerHTML = subcategory.subsubcategories.map((service, idx) => `
+                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectService(${idx})">
+                    <div class="text-4xl mb-3">${service.icon}</div>
+                    <div class="font-bold text-gray-800">${getTranslated(service.name)}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('serviceSection').classList.remove('hidden');
+            document.getElementById('providersSection').classList.add('hidden');
+        }
+        
+        function selectService(serviceIdx) {
+            selectedServiceIdx = serviceIdx;
+            
+            // Update UI
+            document.querySelectorAll('#browseServicesGrid .category-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            // Load and display providers
+            applySortAndFilter();
+        }
+        
+        // ==================== PHASE B: SORT & FILTER FUNCTIONS ====================
+        function toggleFilters() {
+            const panel = document.getElementById('filterPanel');
+            panel.classList.toggle('hidden');
+        }
+        
+        function clearFilters() {
+            document.getElementById('filterLanguage').value = '';
+            document.getElementById('filterReligion').value = '';
+            document.getElementById('filterPriceMin').value = '0';
+            document.getElementById('filterPriceMax').value = '2000';
+            document.getElementById('filterDistance').value = '999';
+            document.getElementById('sortSelect').value = 'rating';
+            applySortAndFilter();
+        }
+        
+        function applySortAndFilter() {
+            // Get current filtered providers (by service)
+            const category = categories.find(c => c.id === selectedCategoryId);
+            if (!category) {
+                console.log('❌ Category not found:', selectedCategoryId);
+                return;
+            }
+            
+            const subcategory = category.subcategories[selectedSubcategoryIdx];
+            if (!subcategory) {
+                console.log('❌ Subcategory not found at index:', selectedSubcategoryIdx);
+                return;
+            }
+            
+            const service = subcategory.subsubcategories[selectedServiceIdx];
+            if (!service) {
+                console.log('❌ Service not found at index:', selectedServiceIdx);
+                return;
+            }
+            
+            const serviceNameEnglish = service.name.en || service.name;
+            console.log('🔍 Looking for providers with service:', serviceNameEnglish);
+            console.log('📋 Target indices - Category:', selectedCategoryId, 'Sub:', selectedSubcategoryIdx, 'Service:', selectedServiceIdx);
+            console.log('📋 Total providers in system:', providers.length);
+            
+            // Start with service filter - BACKWARD COMPATIBLE
+            let filteredProviders = providers.filter(p => {
+                // NEW: Exact match for providers with service name
+                const exactMatch = p.service === serviceNameEnglish;
+                
+                // BACKWARD COMPATIBLE: For old providers without service field or with "undefined"
+                // Check if they match by category/subcategory/service indices
+                const hasValidService = p.service && p.service !== 'undefined' && p.service !== 'General Service Provider';
+                const backwardCompatible = !hasValidService && 
+                                          p.categoryId === selectedCategoryId && 
+                                          p.subcategoryIdx == selectedSubcategoryIdx &&
+                                          p.subsubcategoryIdx == selectedServiceIdx;
+                
+                const matchesService = exactMatch || backwardCompatible;
+                const isActive = (!p.status || p.status === 'active');
+                
+                console.log('  Provider:', p.name);
+                console.log('    Service:', p.service, '| CategoryId:', p.categoryId, '| SubIdx:', p.subcategoryIdx, '| ServiceIdx:', p.subsubcategoryIdx);
+                console.log('    ExactMatch:', exactMatch, '| BackwardMatch:', backwardCompatible, '| FinalMatch:', matchesService, '| Active:', isActive);
+                
+                return matchesService && isActive;
+            });
+            
+            console.log('✅ Providers matching service:', filteredProviders.length);
+            
+            // Apply Phase B filters
+            const filterLang = document.getElementById('filterLanguage').value;
+            const filterRel = document.getElementById('filterReligion').value;
+            const filterPriceMin = parseInt(document.getElementById('filterPriceMin').value) || 0;
+            const filterPriceMax = parseInt(document.getElementById('filterPriceMax').value) || 99999;
+            const filterDist = parseFloat(document.getElementById('filterDistance').value) || 999;
+            
+            filteredProviders = filteredProviders.filter(p => {
+                // Language filter
+                if (filterLang && p.language && p.language !== filterLang) return false;
+                
+                // Religion filter
+                if (filterRel && p.religion !== filterRel) return false;
+                
+                // Price filter
+                if (p.rate < filterPriceMin || p.rate > filterPriceMax) return false;
+                
+                // Distance filter (calculate if needed)
+                if (currentUser && currentUser.lat && currentUser.lng && p.lat && p.lng) {
+                    const dist = calculateDistance(currentUser.lat, currentUser.lng, p.lat, p.lng);
+                    p.distance = dist;
+                    if (dist > filterDist) return false;
+                } else {
+                    p.distance = 9999;
+                }
+                
+                return true;
+            });
+            
+            // Apply sorting
+            const sortBy = document.getElementById('sortSelect').value;
+            
+            filteredProviders.sort((a, b) => {
+                switch(sortBy) {
+                    case 'rating':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'price':
+                        return (a.rate || 0) - (b.rate || 0);
+                    case 'distance':
+                        return (a.distance || 9999) - (b.distance || 9999);
+                    case 'experience':
+                        return (b.experience || 0) - (a.experience || 0);
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Update results count
+            document.getElementById('resultsCount').textContent = t('showingResults', { count: filteredProviders.length });
+            
+            // Render providers
+            renderProviders(filteredProviders);
+        }
+        
+        function renderProviders(filteredProviders) {
+            if (filteredProviders.length === 0) {
+                document.getElementById('providersGridNew').innerHTML = `
+                    <div class="text-center py-12 bg-white rounded-xl shadow">
+                        <p class="text-xl text-gray-500">No providers found matching your filters</p>
+                        <p class="text-gray-400 mt-2">Try adjusting your filters</p>
+                    </div>
+                `;
+                document.getElementById('providersSection').classList.remove('hidden');
+                return;
+            }
+            
+            // Render provider cards (existing code from loadProviders)
+            const grid = document.getElementById('providersGridNew');
+            grid.innerHTML = filteredProviders.map(p => `
+                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">${p.name}</h3>
+                            <div class="text-orange-600 font-medium">${p.service}</div>
+                            ${p.language ? `<div class="text-sm text-gray-600 mt-1">🗣️ ${p.language}</div>` : ''}
+                            ${p.workingHours ? `<div class="text-sm text-green-600 mt-1">${getWorkingHoursLabel(p.workingHours)}</div>` : ''}
+                        </div>
+                        <div class="text-right">
+                            <div class="star-rating text-xl">${generateStars(p.rating || 4.0)}</div>
+                            <div class="text-sm text-gray-600">${(p.rating || 4.0).toFixed(1)}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+                        <div class="flex items-center gap-2">
+                            <span>📍</span>
+                            <span class="text-gray-700">${p.distance < 100 ? p.distance.toFixed(1) + ' km' : p.location}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>🕐</span>
+                            <span class="text-gray-700">${p.experience} ${currentLanguage === 'en' ? 'years' : currentLanguage === 'hi' ? 'वर्ष' : currentLanguage === 'bn' ? 'বছর' : currentLanguage === 'gu' ? 'વર્ષ' : currentLanguage === 'mr' ? 'वर्षे' : 'ವರ್ಷಗಳು'}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>${religionIcons[p.religion] || '🙏'}</span>
+                            <span class="text-gray-700">${p.religion}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>💰</span>
+                            <span class="text-gray-700 font-semibold">₹${p.rate}/${currentLanguage === 'en' ? 'hr' : currentLanguage === 'hi' ? 'घंटा' : currentLanguage === 'bn' ? 'ঘন্টা' : currentLanguage === 'gu' ? 'કલાક' : currentLanguage === 'mr' ? 'तास' : 'ಗಂಟೆ'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <a href="tel:${p.mobile}" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg hover:bg-green-700 font-medium" style="text-decoration: none;">
+                            ${t('call')}
+                        </a>
+                        ${p.lat && p.lng ? `
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="flex-1 bg-blue-600 text-white text-center py-2 rounded-lg hover:bg-blue-700 font-medium" style="text-decoration: none;">
+                                ${t('directions')}
+                            </a>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('providersSection').classList.remove('hidden');
+        }
+        
+        function getWorkingHoursLabel(hours) {
+            const labels = {
+                'mon-fri': '📅 Mon-Fri',
+                'weekends': '📅 Weekends',
+                'all-days': '📅 All Days',
+                '24x7': '⏰ 24×7'
+            };
+            return labels[hours] || hours;
+        }
+        
+        // ==================== PHASE C: VOICE SEARCH ====================
+        let recognition = null;
+        let recognitionTimeout = null;
+        
+        function startVoiceSearch() {
+            // Check browser support
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Voice search is not supported in your browser. Please use Chrome, Edge, or Safari.');
+                return;
+            }
+            
+            // Initialize speech recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            // Configure recognition based on current language
+            const langCodes = {
+                'en': 'en-IN',
+                'hi': 'hi-IN',
+                'bn': 'bn-IN',
+                'gu': 'gu-IN',
+                'mr': 'mr-IN',
+                'kn': 'kn-IN'
+            };
+            recognition.lang = langCodes[currentLanguage] || 'en-IN';
+            recognition.continuous = false;
+            recognition.interimResults = true; // CHANGED: Enable interim results
+            recognition.maxAlternatives = 1;
+            
+            // Show listening indicator
+            document.getElementById('voiceStatus').classList.remove('hidden');
+            document.getElementById('voiceStatusText').textContent = t('speak');
+            
+            // Set timeout to auto-stop after 10 seconds
+            recognitionTimeout = setTimeout(() => {
+                if (recognition) {
+                    recognition.stop();
+                    document.getElementById('voiceStatus').classList.add('hidden');
+                }
+            }, 10000);
+            
+            recognition.onstart = function() {
+                console.log('Speech recognition started');
+                document.getElementById('voiceStatusText').textContent = t('listening');
+            };
+            
+            recognition.onspeechstart = function() {
+                console.log('Speech detected');
+                document.getElementById('voiceStatusText').textContent = t('listening');
+            };
+            
+            recognition.onspeechend = function() {
+                console.log('Speech ended');
+            };
+            
+            recognition.onresult = function(event) {
+                // Clear the timeout since we got a result
+                if (recognitionTimeout) {
+                    clearTimeout(recognitionTimeout);
+                }
+                
+                // Get the final transcript
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        transcript = event.results[i][0].transcript;
+                        break;
+                    }
+                }
+                
+                // If no final result yet, use interim
+                if (!transcript && event.results.length > 0) {
+                    transcript = event.results[event.results.length - 1][0].transcript;
+                }
+                
+                console.log('Voice input:', transcript);
+                
+                if (transcript.trim()) {
+                    document.getElementById('voiceStatusText').textContent = t('searchingFor', { service: transcript });
+                    
+                    // Process the voice command
+                    setTimeout(() => {
+                        processVoiceCommand(transcript.toLowerCase());
+                    }, 500);
+                    
+                    // Hide status after 2 seconds
+                    setTimeout(() => {
+                        document.getElementById('voiceStatus').classList.add('hidden');
+                    }, 2000);
+                } else {
+                    document.getElementById('voiceStatus').classList.add('hidden');
+                    alert(t('noSpeechDetected'));
+                }
+            };
+            
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                
+                // Clear timeout
+                if (recognitionTimeout) {
+                    clearTimeout(recognitionTimeout);
+                }
+                
+                document.getElementById('voiceStatus').classList.add('hidden');
+                
+                if (event.error === 'no-speech') {
+                    alert(t('noSpeechDetected'));
+                } else if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                    alert('Microphone access denied. Please allow microphone access in your browser settings.');
+                } else if (event.error === 'aborted') {
+                    // Silent error, likely user cancelled
+                    console.log('Recognition aborted');
+                } else {
+                    alert('Voice recognition error: ' + event.error);
+                }
+            };
+            
+            recognition.onend = function() {
+                console.log('Speech recognition ended');
+                if (recognitionTimeout) {
+                    clearTimeout(recognitionTimeout);
+                }
+            };
+            
+            // Start listening
+            try {
+                recognition.start();
+                console.log('Recognition started successfully');
+            } catch (e) {
+                console.error('Error starting recognition:', e);
+                document.getElementById('voiceStatus').classList.add('hidden');
+                alert('Could not start voice recognition. Please try again.');
+            }
+        }
+        
+        function processVoiceCommand(transcript) {
+            console.log('Processing command:', transcript);
+            
+            // Clean up the transcript - remove filler words
+            const fillerWords = ['find', 'show', 'get', 'need', 'want', 'search', 'looking for', 'i need', 'get me', 'show me'];
+            let cleanedTranscript = transcript.toLowerCase().trim();
+            
+            // Remove filler words to extract the actual service
+            fillerWords.forEach(filler => {
+                cleanedTranscript = cleanedTranscript.replace(filler, '').trim();
+            });
+            
+            // Also remove articles
+            cleanedTranscript = cleanedTranscript.replace(/\b(a|an|the)\b/g, '').trim();
+            
+            console.log('Cleaned transcript:', cleanedTranscript);
+            
+            // Service keywords in multiple languages (expanded list)
+            const serviceKeywords = {
+                // English - Plumbing
+                'plumber': 'Pipe Repair',
+                'plumbing': 'Pipe Repair',
+                'pipe': 'Pipe Repair',
+                'tap': 'Tap Installation',
+                'tank': 'Tank Installation',
+                'drainage': 'Drainage Cleaning',
+                
+                // English - Electrical
+                'electrician': 'Wiring',
+                'electrical': 'Wiring',
+                'electricity': 'Wiring',
+                'wiring': 'Wiring',
+                'wire': 'Wiring',
+                'light': 'Light Installation',
+                'lights': 'Light Installation',
+                'fan': 'Fan Installation',
+                'ac': 'AC Installation',
+                'air conditioning': 'AC Installation',
+                
+                // English - Carpentry
+                'carpenter': 'Furniture Repair',
+                'carpentry': 'Furniture Repair',
+                'furniture': 'Furniture Repair',
+                'wood': 'Wood Polishing',
+                
+                // English - Cleaning
+                'cleaner': 'House Cleaning',
+                'cleaning': 'House Cleaning',
+                'clean': 'House Cleaning',
+                'maid': 'House Cleaning',
+                'housekeeping': 'House Cleaning',
+                
+                // English - Painting
+                'painter': 'Wall Painting',
+                'painting': 'Wall Painting',
+                'paint': 'Wall Painting',
+                
+                // English - Other
+                'mechanic': 'Car Repair',
+                'car': 'Car Repair',
+                'vehicle': 'Car Repair',
+                
+                // Hindi
+                'प्लंबर': 'Pipe Repair',
+                'नल': 'Tap Installation',
+                'इलेक्ट्रीशियन': 'Wiring',
+                'बढ़ई': 'Furniture Repair',
+                'सफाई': 'House Cleaning',
+                'पेंटर': 'Wall Painting'
+            };
+            
+            // Find matching service - first try the cleaned transcript
+            let matchedService = null;
+            let matchedCategory = null;
+            let matchedSubcategory = null;
+            
+            // Try both original and cleaned transcript
+            const transcriptsToTry = [cleanedTranscript, transcript];
+            
+            for (const testTranscript of transcriptsToTry) {
+                // Try to match keywords
+                for (const keyword in serviceKeywords) {
+                    // Check if keyword is in the transcript (exact match or contains)
+                    if (testTranscript === keyword || testTranscript.includes(keyword)) {
+                        const targetServiceName = serviceKeywords[keyword];
+                        console.log('Matched keyword:', keyword, 'Target service:', targetServiceName);
+                        
+                        // Search through categories for this exact service
+                        outerLoop: for (const cat of categories) {
+                            for (let subIdx = 0; subIdx < cat.subcategories.length; subIdx++) {
+                                const sub = cat.subcategories[subIdx];
+                                for (let serviceIdx = 0; serviceIdx < sub.subsubcategories.length; serviceIdx++) {
+                                    const service = sub.subsubcategories[serviceIdx];
+                                    const serviceNameEn = service.name.en || service.name;
+                                    
+                                    console.log('Checking service:', serviceNameEn, 'vs target:', targetServiceName);
+                                    
+                                    // Exact match or contains check
+                                    if (serviceNameEn === targetServiceName || serviceNameEn.includes(targetServiceName) || targetServiceName.includes(serviceNameEn)) {
+                                        matchedCategory = cat.id;
+                                        matchedSubcategory = subIdx;
+                                        matchedService = serviceIdx;
+                                        console.log('✅ MATCHED! Category:', cat.id, 'Sub:', subIdx, 'Service:', serviceIdx, 'Name:', serviceNameEn);
+                                        break outerLoop;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (matchedService !== null) break;
+                    }
+                }
+                
+                if (matchedService !== null) break;
+            }
+            
+            // If service found, navigate to browse and show results
+            if (matchedService !== null) {
+                console.log('🎯 Final navigation:', matchedCategory, matchedSubcategory, matchedService);
+                
+                // Navigate programmatically to the service
+                navigateToService(matchedCategory, matchedSubcategory, matchedService);
+            } else {
+                // If no match found, provide helpful error
+                console.log('No service matched for:', transcript, '(cleaned:', cleanedTranscript + ')');
+                
+                // Show helpful message with examples
+                const exampleServices = ['plumber', 'electrician', 'carpenter', 'cleaner', 'painter'];
+                const randomExample = exampleServices[Math.floor(Math.random() * exampleServices.length)];
+                
+                alert(`Could not find "${transcript}". \n\nTry saying just the service name:\n• "${randomExample}"\n• "find a ${randomExample}"\n• "show ${randomExample}"`);
+                showPage('browse');
+            }
+        }
+        
+        // ==================== PROGRAMMATIC NAVIGATION FOR VOICE ====================
+        function navigateToService(catId, subIdx, serviceIdx) {
+            // Set the selected values
+            selectedCategoryId = catId;
+            selectedSubcategoryIdx = subIdx;
+            selectedServiceIdx = serviceIdx;
+            
+            // Navigate to browse page
+            showPage('browse');
+            
+            // Wait for page to load, then populate everything
+            setTimeout(() => {
+                // Load browse categories first
+                loadBrowseCategories();
+                
+                // Find and display the category
+                const category = categories.find(c => c.id === catId);
+                if (!category) {
+                    console.error('Category not found:', catId);
+                    return;
+                }
+                
+                // Show subcategories
+                const subcatGrid = document.getElementById('browseSubcategoriesGrid');
+                subcatGrid.innerHTML = category.subcategories.map((sub, idx) => `
+                    <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === subIdx ? 'ring-4 ring-orange-500' : ''}" onclick="selectSubcategory(${idx})">
+                        <div class="text-4xl mb-3">${sub.icon}</div>
+                        <div class="font-bold text-gray-800">${getTranslated(sub.name)}</div>
+                    </div>
+                `).join('');
+                document.getElementById('subcategorySection').classList.remove('hidden');
+                
+                // Show services
+                const subcategory = category.subcategories[subIdx];
+                const serviceGrid = document.getElementById('browseServicesGrid');
+                serviceGrid.innerHTML = subcategory.subsubcategories.map((service, idx) => `
+                    <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === serviceIdx ? 'ring-4 ring-orange-500' : ''}" onclick="selectService(${idx})">
+                        <div class="text-4xl mb-3">${service.icon}</div>
+                        <div class="font-bold text-gray-800">${getTranslated(service.name)}</div>
+                    </div>
+                `).join('');
+                document.getElementById('serviceSection').classList.remove('hidden');
+                
+                // Load providers immediately
+                setTimeout(() => {
+                    console.log('Voice navigation: Loading providers for service');
+                    applySortAndFilter();
+                    
+                    // Scroll to providers section
+                    setTimeout(() => {
+                        const providersSection = document.getElementById('providersSection');
+                        if (providersSection && !providersSection.classList.contains('hidden')) {
+                            providersSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 300);
+                }, 200);
+            }, 300);
+        }
+        
+        function getDirections(lat, lng) {
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+        }
+        
+        // ==================== HOME PAGE ====================
+        function loadHomeCategories() {
+            const grid = document.getElementById('categoriesGridHome');
+            grid.innerHTML = categories.map(cat => `
+                <div class="bg-white p-6 rounded-xl shadow-md text-center hover:shadow-lg transition cursor-pointer" onclick="goToBrowse('${cat.id}')">
+                    <div class="text-4xl mb-2">${cat.icon}</div>
+                    <div class="font-semibold">${getTranslated(cat.name)}</div>
+                </div>
+            `).join('');
+        }
+        
+        function goToBrowse(catId) {
+            showPage('browse');
+            setTimeout(() => selectCategory(catId), 100);
+        }
+        
+        // ==================== MAPS ====================
+        function initRegisterMap() {
+            if (maps.register) return;
+            
+            maps.register = L.map('registerMap').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(maps.register);
+            
+            const marker = L.marker([20.5937, 78.9629], { draggable: true }).addTo(maps.register);
+            
+            marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('providerLat').value = pos.lat;
+                document.getElementById('providerLng').value = pos.lng;
+            });
+            
+            maps.register.on('click', function(e) {
+                marker.setLatLng(e.latlng);
+                document.getElementById('providerLat').value = e.latlng.lat;
+                document.getElementById('providerLng').value = e.latlng.lng;
+            });
+            
+            document.getElementById('providerLat').value = 20.5937;
+            document.getElementById('providerLng').value = 78.9629;
+        }
+        
+        function initSeekerMap() {
+            if (maps.seeker) return;
+            
+            maps.seeker = L.map('seekerMap').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(maps.seeker);
+            
+            const marker = L.marker([20.5937, 78.9629], { draggable: true }).addTo(maps.seeker);
+            
+            marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('seekerLat').value = pos.lat;
+                document.getElementById('seekerLng').value = pos.lng;
+            });
+            
+            maps.seeker.on('click', function(e) {
+                marker.setLatLng(e.latlng);
+                document.getElementById('seekerLat').value = e.latlng.lat;
+                document.getElementById('seekerLng').value = e.latlng.lng;
+            });
+            
+            document.getElementById('seekerLat').value = 20.5937;
+            document.getElementById('seekerLng').value = 78.9629;
+        }
+        
+        function initMainMap() {
+            if (maps.main) maps.main.remove();
+            
+            maps.main = L.map('mainMap').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(maps.main);
+            
+            providers.forEach(p => {
+                if (p.lat && p.lng) {
+                    const icon = L.divIcon({ html: '<div style="font-size: 30px;">🔧</div>', className: '', iconSize: [30, 30] });
+                    const marker = L.marker([p.lat, p.lng], { icon }).addTo(maps.main);
+                    marker.bindPopup(`<strong>${p.name}</strong><br>${p.service}<br>₹${p.rate}/hr`);
+                }
+            });
+        }
+        
+        // ==================== CATEGORY SELECTS ====================
+        function updateProviderCategorySelects() {
+            const select = document.getElementById('providerCategory');
+            if (select) {
+                select.innerHTML = '<option value="">Select Category</option>' + 
+                    categories.map(cat => `<option value="${cat.id}">${getTranslated(cat.name)}</option>`).join('');
+            }
+        }
+        
+        function updateProviderSubcategories() {
+            const catId = document.getElementById('providerCategory').value;
+            const subSelect = document.getElementById('providerSubcategory');
+            const category = categories.find(c => c.id === catId);
+            
+            if (category && category.subcategories) {
+                subSelect.innerHTML = '<option value="">Select Subcategory</option>' + 
+                    category.subcategories.map((sub, idx) => `<option value="${idx}">${getTranslated(sub.name)}</option>`).join('');
+            } else {
+                subSelect.innerHTML = '<option value="">Select Subcategory</option>';
+            }
+            document.getElementById('providerSubSubcategory').innerHTML = '<option value="">Select Service Type</option>';
+        }
+        
+        function updateProviderSubSubcategories() {
+            const catId = document.getElementById('providerCategory').value;
+            const subIdx = document.getElementById('providerSubcategory').value;
+            const subSubSelect = document.getElementById('providerSubSubcategory');
+            
+            const category = categories.find(c => c.id === catId);
+            if (category && category.subcategories && category.subcategories[subIdx] && category.subcategories[subIdx].subsubcategories) {
+                subSubSelect.innerHTML = '<option value="">Select Service Type</option>' + 
+                    category.subcategories[subIdx].subsubcategories.map((subsub, idx) => 
+                        `<option value="${idx}">${getTranslated(subsub.name)}</option>`
+                    ).join('');
+            } else {
+                subSubSelect.innerHTML = '<option value="">Select Service Type</option>';
+            }
+        }
+        
+        // ==================== FORM SUBMISSIONS ====================
+        document.getElementById('providerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const catId = document.getElementById('providerCategory').value;
+            const subIdx = document.getElementById('providerSubcategory').value;
+            const subSubIdx = document.getElementById('providerSubSubcategory').value;
+            
+            // Service is now optional - provider can register without it
+            let serviceName = 'General Service Provider';
+            if (catId && subIdx && subSubIdx) {
+                const category = categories.find(c => c.id === catId);
+                const subcategory = category?.subcategories[subIdx];
+                const subsubcategory = subcategory?.subsubcategories[subSubIdx];
+                serviceName = getTranslated(subsubcategory?.name) || serviceName;
+            }
+            
+            const provider = {
+                id: 'p_' + Date.now(),
+                name: document.getElementById('providerName').value,
+                mobile: document.getElementById('providerMobile').value,
+                categoryId: catId || null,
+                subcategoryIdx: subIdx || null,
+                subsubcategoryIdx: subSubIdx || null,
+                service: serviceName,
+                religion: document.getElementById('providerReligion').value,
+                language: document.getElementById('providerLanguage').value, // PHASE B
+                experience: parseInt(document.getElementById('providerExperience').value),
+                rate: parseInt(document.getElementById('providerRate').value),
+                workingHours: document.querySelector('input[name="workingHours"]:checked')?.value || 'mon-fri', // PHASE B
+                serviceArea: document.querySelector('input[name="serviceArea"]:checked')?.value || '10km', // PHASE B
+                location: document.getElementById('providerLocation').value,
+                lat: parseFloat(document.getElementById('providerLat').value),
+                lng: parseFloat(document.getElementById('providerLng').value),
+                rating: 4.0 + Math.random(),
+                status: 'active',
+                registered: new Date().toISOString()
+            };
+            
+            providers.push(provider);
+            localStorage.setItem('providers', JSON.stringify(providers));
+            
+            document.getElementById('providerSuccess').classList.remove('hidden');
+            document.getElementById('providerForm').reset();
+            
+            setTimeout(() => {
+                document.getElementById('providerSuccess').classList.add('hidden');
+                showPage('browse');
+            }, 2000);
+        });
+        
+        document.getElementById('seekerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const seeker = {
+                id: 's_' + Date.now(),
+                name: document.getElementById('seekerName').value,
+                mobile: document.getElementById('seekerMobile').value,
+                religion: document.getElementById('seekerReligion').value,
+                location: document.getElementById('seekerLocation').value,
+                lat: parseFloat(document.getElementById('seekerLat').value),
+                lng: parseFloat(document.getElementById('seekerLng').value),
+                status: 'active', // active, paused, restricted
+                registered: new Date().toISOString()
+            };
+            
+            seekers.push(seeker);
+            localStorage.setItem('seekers', JSON.stringify(seekers));
+            
+            currentUser = seeker;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            document.getElementById('seekerSuccess').classList.remove('hidden');
+            document.getElementById('seekerForm').reset();
+            
+            setTimeout(() => {
+                document.getElementById('seekerSuccess').classList.add('hidden');
+                showPage('browse');
+            }, 2000);
+        });
+        
+        // ==================== ADMIN ====================
+        let currentEditCategoryIdx = null;
+        let currentEditSubcategoryIdx = null;
+        let currentEditServiceIdx = null;
+        let modalMode = 'add';
+        
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('adminLogin').classList.add('hidden');
+                document.getElementById('adminDashboard').classList.remove('hidden');
+                updateAdminStats();
+                showAdminTab('categories'); // Default tab
+            } else {
+                alert('Incorrect password!');
+            }
+        }
+        
+        function adminLogout() {
+            document.getElementById('adminLogin').classList.remove('hidden');
+            document.getElementById('adminDashboard').classList.add('hidden');
+            document.getElementById('adminPassword').value = '';
+        }
+        
+        function showAdminTab(tabName) {
+            // Hide all tabs
+            document.getElementById('adminTab-users').classList.add('hidden');
+            document.getElementById('adminTab-categories').classList.add('hidden');
+            
+            // Remove active state from all tab buttons
+            document.getElementById('tab-users').classList.remove('border-orange-600', 'text-orange-600');
+            document.getElementById('tab-categories').classList.remove('border-orange-600', 'text-orange-600');
+            
+            // Show selected tab
+            document.getElementById('adminTab-' + tabName).classList.remove('hidden');
+            document.getElementById('tab-' + tabName).classList.add('border-orange-600', 'text-orange-600');
+            
+            // Load data for the tab
+            if (tabName === 'users') {
+                loadProvidersList();
+                loadSeekersList();
+            } else if (tabName === 'categories') {
+                loadAdminCategories();
+            }
+        }
+        
+        function updateAdminStats() {
+            const restrictedCount = providers.filter(p => p.status === 'restricted').length + 
+                                   seekers.filter(s => s.status === 'restricted').length;
+            
+            document.getElementById('totalProviders').textContent = providers.length;
+            document.getElementById('totalSeekers').textContent = seekers.length;
+            document.getElementById('totalCategories').textContent = categories.length;
+            document.getElementById('totalRestricted').textContent = restrictedCount;
+        }
+        
+        // ==================== PROVIDER MANAGEMENT ====================
+        function loadProvidersList() {
+            const list = document.getElementById('providersListAdmin');
+            if (!list) return;
+            
+            if (providers.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 text-gray-500">No providers registered yet</div>';
+                return;
+            }
+            
+            renderProvidersList(providers);
+        }
+        
+        function renderProvidersList(providersList) {
+            const list = document.getElementById('providersListAdmin');
+            
+            list.innerHTML = providersList.map(p => {
+                const statusColor = {
+                    'active': 'bg-green-100 text-green-800',
+                    'paused': 'bg-yellow-100 text-yellow-800',
+                    'restricted': 'bg-red-100 text-red-800'
+                };
+                const status = p.status || 'active';
+                
+                return `
+                    <div class="border rounded-lg p-4 ${status === 'restricted' ? 'bg-red-50 border-red-200' : status === 'paused' ? 'bg-yellow-50 border-yellow-200' : 'bg-white'}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="font-bold text-lg">${p.name}</h3>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${statusColor[status]}">${status.toUpperCase()}</span>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
+                                    <div>📞 ${p.mobile}</div>
+                                    <div>🔧 ${p.service}</div>
+                                    <div>📍 ${p.location}</div>
+                                    <div>⭐ ${(p.rating || 4.0).toFixed(1)} | 🕐 ${p.experience} yrs | 💰 ₹${p.rate}/hr</div>
+                                    <div>${religionIcons[p.religion] || '🙏'} ${p.religion}</div>
+                                    <div>📅 ${new Date(p.registered).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 ml-4">
+                                ${status === 'active' ? `
+                                    <button onclick="pauseProvider('${p.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm" title="Pause">⏸️ Pause</button>
+                                    <button onclick="restrictProvider('${p.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm" title="Restrict">🚫 Restrict</button>
+                                ` : ''}
+                                ${status === 'paused' ? `
+                                    <button onclick="activateProvider('${p.id}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" title="Activate">▶️ Activate</button>
+                                    <button onclick="restrictProvider('${p.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm" title="Restrict">🚫 Restrict</button>
+                                ` : ''}
+                                ${status === 'restricted' ? `
+                                    <button onclick="activateProvider('${p.id}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" title="Activate">✅ Activate</button>
+                                ` : ''}
+                                <button onclick="deleteProvider('${p.id}')" class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800 text-sm" title="Delete">🗑️ Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function filterProvidersList() {
+            const search = document.getElementById('searchProviders').value.toLowerCase();
+            const filtered = providers.filter(p => 
+                p.name.toLowerCase().includes(search) ||
+                p.mobile.includes(search) ||
+                p.service.toLowerCase().includes(search) ||
+                p.location.toLowerCase().includes(search)
+            );
+            renderProvidersList(filtered);
+        }
+        
+        function pauseProvider(providerId) {
+            if (confirm('⏸️ Pause this provider? They will not appear in search results until reactivated.')) {
+                const provider = providers.find(p => p.id === providerId);
+                if (provider) {
+                    provider.status = 'paused';
+                    localStorage.setItem('providers', JSON.stringify(providers));
+                    loadProvidersList();
+                    updateAdminStats();
+                }
+            }
+        }
+        
+        function restrictProvider(providerId) {
+            if (confirm('🚫 Restrict this provider? They will be blocked from the platform.')) {
+                const provider = providers.find(p => p.id === providerId);
+                if (provider) {
+                    provider.status = 'restricted';
+                    localStorage.setItem('providers', JSON.stringify(providers));
+                    loadProvidersList();
+                    updateAdminStats();
+                }
+            }
+        }
+        
+        function activateProvider(providerId) {
+            const provider = providers.find(p => p.id === providerId);
+            if (provider) {
+                provider.status = 'active';
+                localStorage.setItem('providers', JSON.stringify(providers));
+                loadProvidersList();
+                updateAdminStats();
+            }
+        }
+        
+        function deleteProvider(providerId) {
+            if (confirm('🗑️ PERMANENTLY DELETE this provider? This action cannot be undone!')) {
+                providers = providers.filter(p => p.id !== providerId);
+                localStorage.setItem('providers', JSON.stringify(providers));
+                loadProvidersList();
+                updateAdminStats();
+            }
+        }
+        
+        // ==================== SEEKER MANAGEMENT ====================
+        function loadSeekersList() {
+            const list = document.getElementById('seekersListAdmin');
+            if (!list) return;
+            
+            if (seekers.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 text-gray-500">No seekers registered yet</div>';
+                return;
+            }
+            
+            renderSeekersList(seekers);
+        }
+        
+        function renderSeekersList(seekersList) {
+            const list = document.getElementById('seekersListAdmin');
+            
+            list.innerHTML = seekersList.map(s => {
+                const statusColor = {
+                    'active': 'bg-green-100 text-green-800',
+                    'paused': 'bg-yellow-100 text-yellow-800',
+                    'restricted': 'bg-red-100 text-red-800'
+                };
+                const status = s.status || 'active';
+                
+                return `
+                    <div class="border rounded-lg p-4 ${status === 'restricted' ? 'bg-red-50 border-red-200' : status === 'paused' ? 'bg-yellow-50 border-yellow-200' : 'bg-white'}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="font-bold text-lg">${s.name}</h3>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${statusColor[status]}">${status.toUpperCase()}</span>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
+                                    <div>📞 ${s.mobile}</div>
+                                    <div>📍 ${s.location}</div>
+                                    <div>${religionIcons[s.religion] || '🙏'} ${s.religion}</div>
+                                    <div>📅 ${new Date(s.registered).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 ml-4">
+                                ${status === 'active' ? `
+                                    <button onclick="pauseSeeker('${s.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm" title="Pause">⏸️ Pause</button>
+                                    <button onclick="restrictSeeker('${s.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm" title="Restrict">🚫 Restrict</button>
+                                ` : ''}
+                                ${status === 'paused' ? `
+                                    <button onclick="activateSeeker('${s.id}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" title="Activate">▶️ Activate</button>
+                                    <button onclick="restrictSeeker('${s.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm" title="Restrict">🚫 Restrict</button>
+                                ` : ''}
+                                ${status === 'restricted' ? `
+                                    <button onclick="activateSeeker('${s.id}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" title="Activate">✅ Activate</button>
+                                ` : ''}
+                                <button onclick="deleteSeeker('${s.id}')" class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800 text-sm" title="Delete">🗑️ Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function filterSeekersList() {
+            const search = document.getElementById('searchSeekers').value.toLowerCase();
+            const filtered = seekers.filter(s => 
+                s.name.toLowerCase().includes(search) ||
+                s.mobile.includes(search) ||
+                s.location.toLowerCase().includes(search)
+            );
+            renderSeekersList(filtered);
+        }
+        
+        function pauseSeeker(seekerId) {
+            if (confirm('⏸️ Pause this seeker? They will not be able to use the platform until reactivated.')) {
+                const seeker = seekers.find(s => s.id === seekerId);
+                if (seeker) {
+                    seeker.status = 'paused';
+                    localStorage.setItem('seekers', JSON.stringify(seekers));
+                    loadSeekersList();
+                    updateAdminStats();
+                }
+            }
+        }
+        
+        function restrictSeeker(seekerId) {
+            if (confirm('🚫 Restrict this seeker? They will be blocked from the platform.')) {
+                const seeker = seekers.find(s => s.id === seekerId);
+                if (seeker) {
+                    seeker.status = 'restricted';
+                    localStorage.setItem('seekers', JSON.stringify(seekers));
+                    loadSeekersList();
+                    updateAdminStats();
+                }
+            }
+        }
+        
+        function activateSeeker(seekerId) {
+            const seeker = seekers.find(s => s.id === seekerId);
+            if (seeker) {
+                seeker.status = 'active';
+                localStorage.setItem('seekers', JSON.stringify(seekers));
+                loadSeekersList();
+                updateAdminStats();
+            }
+        }
+        
+        function deleteSeeker(seekerId) {
+            if (confirm('🗑️ PERMANENTLY DELETE this seeker? This action cannot be undone!')) {
+                seekers = seekers.filter(s => s.id !== seekerId);
+                localStorage.setItem('seekers', JSON.stringify(seekers));
+                loadSeekersList();
+                updateAdminStats();
+            }
+        }
+        
+        function loadAdminCategories() {
+            const list = document.getElementById('categoriesListAdmin');
+            if (!list) return;
+            
+            if (categories.length === 0) {
+                list.innerHTML = '<div class="text-center py-12 text-gray-500"><p class="text-lg">No categories yet. Click "Add New Category" to get started!</p></div>';
+                return;
+            }
+            
+            list.innerHTML = categories.map((cat, catIdx) => `
+                <div class="border-2 border-gray-200 rounded-xl p-4 hover:border-orange-300 transition">
+                    <div class="flex items-center justify-between bg-orange-50 p-4 rounded-lg mb-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-4xl">${cat.icon}</span>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-800">${cat.name.en || cat.name}</h3>
+                                <p class="text-sm text-gray-500">${(cat.subcategories || []).length} subcategories</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editCategory(${catIdx})" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 font-medium">✏️ Edit</button>
+                            <button onclick="showAddSubcategoryModal(${catIdx})" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 font-medium">➕ Add Subcategory</button>
+                            <button onclick="deleteCategory(${catIdx})" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 font-medium">🗑️ Delete</button>
+                        </div>
+                    </div>
+                    
+                    <div class="ml-8 space-y-3">
+                        ${(cat.subcategories || []).map((sub, subIdx) => `
+                            <div class="border-l-4 border-blue-400 bg-blue-50 p-3 rounded-r-lg">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-2xl">${sub.icon}</span>
+                                        <div>
+                                            <h4 class="font-bold text-gray-800">${sub.name.en || sub.name}</h4>
+                                            <p class="text-xs text-gray-500">${(sub.subsubcategories || []).length} services</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="editSubcategory(${catIdx}, ${subIdx})" class="bg-blue-400 text-white px-3 py-1 rounded hover:bg-blue-500 text-sm">✏️ Edit</button>
+                                        <button onclick="showAddServiceModal(${catIdx}, ${subIdx})" class="bg-green-400 text-white px-3 py-1 rounded hover:bg-green-500 text-sm">➕ Add Service</button>
+                                        <button onclick="deleteSubcategory(${catIdx}, ${subIdx})" class="bg-red-400 text-white px-3 py-1 rounded hover:bg-red-500 text-sm">🗑️</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="ml-6 space-y-1">
+                                    ${(sub.subsubcategories || []).map((service, serviceIdx) => `
+                                        <div class="flex items-center justify-between bg-white p-2 rounded hover:bg-gray-50">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-lg">${service.icon}</span>
+                                                <span class="text-sm text-gray-700">${service.name.en || service.name}</span>
+                                            </div>
+                                            <div class="flex gap-1">
+                                                <button onclick="editService(${catIdx}, ${subIdx}, ${serviceIdx})" class="bg-blue-300 text-white px-2 py-1 rounded hover:bg-blue-400 text-xs">✏️</button>
+                                                <button onclick="deleteService(${catIdx}, ${subIdx}, ${serviceIdx})" class="bg-red-300 text-white px-2 py-1 rounded hover:bg-red-400 text-xs">🗑️</button>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function resetToDefaults() {
+            if (confirm('⚠️ This will delete all categories and restore defaults. Continue?')) {
+                categories = [
+                    {
+                        id: 'cat1',
+                        name: { en: 'Home Services' },
+                        icon: '🏠',
+                        subcategories: [
+                            {
+                                name: { en: 'Plumbing' },
+                                icon: '🔧',
+                                subsubcategories: [
+                                    { name: { en: 'Pipe Repair' }, icon: '🔧' },
+                                    { name: { en: 'Tank Installation' }, icon: '💧' },
+                                    { name: { en: 'Bathroom Fitting' }, icon: '🚿' }
+                                ]
+                            },
+                            {
+                                name: { en: 'Electrical' },
+                                icon: '⚡',
+                                subsubcategories: [
+                                    { name: { en: 'Wiring' }, icon: '🔌' },
+                                    { name: { en: 'Appliance Repair' }, icon: '🔧' }
+                                ]
+                            }
+                        ]
+                    }
+                ];
+                localStorage.setItem('categories', JSON.stringify(categories));
+                loadAdminCategories();
+                updateAdminStats();
+                updateProviderCategorySelects();
+                alert('✅ Categories reset to defaults!');
+            }
+        }
+        
+        // Category Modal Functions
+        function showAddCategoryModal() {
+            modalMode = 'add';
+            currentEditCategoryIdx = null;
+            document.getElementById('categoryModalTitle').textContent = 'Add New Category';
+            document.getElementById('modalCategoryName').value = '';
+            document.getElementById('modalCategoryIcon').value = '';
+            document.getElementById('categoryModal').classList.remove('hidden');
+        }
+        
+        function editCategory(catIdx) {
+            modalMode = 'edit';
+            currentEditCategoryIdx = catIdx;
+            const cat = categories[catIdx];
+            document.getElementById('categoryModalTitle').textContent = 'Edit Category';
+            document.getElementById('modalCategoryName').value = cat.name.en || cat.name;
+            document.getElementById('modalCategoryIcon').value = cat.icon;
+            document.getElementById('categoryModal').classList.remove('hidden');
+        }
+        
+        function saveCategoryModal() {
+            const name = document.getElementById('modalCategoryName').value.trim();
+            const icon = document.getElementById('modalCategoryIcon').value.trim();
+            
+            if (!name || !icon) {
+                alert('Please fill in both fields');
+                return;
+            }
+            
+            if (modalMode === 'add') {
+                categories.push({
+                    id: 'cat' + Date.now(),
+                    name: { en: name },
+                    icon: icon,
+                    subcategories: []
+                });
+            } else {
+                if (typeof categories[currentEditCategoryIdx].name === 'string') {
+                    categories[currentEditCategoryIdx].name = { en: name };
+                } else {
+                    categories[currentEditCategoryIdx].name.en = name;
+                }
+                categories[currentEditCategoryIdx].icon = icon;
+            }
+            
+            localStorage.setItem('categories', JSON.stringify(categories));
+            loadAdminCategories();
+            updateAdminStats();
+            updateProviderCategorySelects();
+            closeCategoryModal();
+        }
+        
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.add('hidden');
+        }
+        
+        function deleteCategory(catIdx) {
+            if (confirm('⚠️ Delete this entire category including all subcategories and services?')) {
+                categories.splice(catIdx, 1);
+                localStorage.setItem('categories', JSON.stringify(categories));
+                loadAdminCategories();
+                updateAdminStats();
+                updateProviderCategorySelects();
+            }
+        }
+        
+        // Subcategory Modal Functions
+        function showAddSubcategoryModal(catIdx) {
+            modalMode = 'add';
+            currentEditCategoryIdx = catIdx;
+            currentEditSubcategoryIdx = null;
+            document.getElementById('subcategoryModalTitle').textContent = 'Add New Subcategory';
+            document.getElementById('modalSubcategoryName').value = '';
+            document.getElementById('modalSubcategoryIcon').value = '';
+            document.getElementById('subcategoryModal').classList.remove('hidden');
+        }
+        
+        function editSubcategory(catIdx, subIdx) {
+            modalMode = 'edit';
+            currentEditCategoryIdx = catIdx;
+            currentEditSubcategoryIdx = subIdx;
+            const sub = categories[catIdx].subcategories[subIdx];
+            document.getElementById('subcategoryModalTitle').textContent = 'Edit Subcategory';
+            document.getElementById('modalSubcategoryName').value = sub.name.en || sub.name;
+            document.getElementById('modalSubcategoryIcon').value = sub.icon;
+            document.getElementById('subcategoryModal').classList.remove('hidden');
+        }
+        
+        function saveSubcategoryModal() {
+            const name = document.getElementById('modalSubcategoryName').value.trim();
+            const icon = document.getElementById('modalSubcategoryIcon').value.trim();
+            
+            if (!name || !icon) {
+                alert('Please fill in both fields');
+                return;
+            }
+            
+            if (modalMode === 'add') {
+                if (!categories[currentEditCategoryIdx].subcategories) {
+                    categories[currentEditCategoryIdx].subcategories = [];
+                }
+                categories[currentEditCategoryIdx].subcategories.push({
+                    name: { en: name },
+                    icon: icon,
+                    subsubcategories: []
+                });
+            } else {
+                const sub = categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx];
+                if (typeof sub.name === 'string') {
+                    sub.name = { en: name };
+                } else {
+                    sub.name.en = name;
+                }
+                sub.icon = icon;
+            }
+            
+            localStorage.setItem('categories', JSON.stringify(categories));
+            loadAdminCategories();
+            updateProviderCategorySelects();
+            closeSubcategoryModal();
+        }
+        
+        function closeSubcategoryModal() {
+            document.getElementById('subcategoryModal').classList.add('hidden');
+        }
+        
+        function deleteSubcategory(catIdx, subIdx) {
+            if (confirm('⚠️ Delete this subcategory including all its services?')) {
+                categories[catIdx].subcategories.splice(subIdx, 1);
+                localStorage.setItem('categories', JSON.stringify(categories));
+                loadAdminCategories();
+                updateProviderCategorySelects();
+            }
+        }
+        
+        // Service Modal Functions
+        function showAddServiceModal(catIdx, subIdx) {
+            modalMode = 'add';
+            currentEditCategoryIdx = catIdx;
+            currentEditSubcategoryIdx = subIdx;
+            currentEditServiceIdx = null;
+            document.getElementById('serviceModalTitle').textContent = 'Add New Service Type';
+            document.getElementById('modalServiceName').value = '';
+            document.getElementById('modalServiceIcon').value = '';
+            document.getElementById('serviceModal').classList.remove('hidden');
+        }
+        
+        function editService(catIdx, subIdx, serviceIdx) {
+            modalMode = 'edit';
+            currentEditCategoryIdx = catIdx;
+            currentEditSubcategoryIdx = subIdx;
+            currentEditServiceIdx = serviceIdx;
+            const service = categories[catIdx].subcategories[subIdx].subsubcategories[serviceIdx];
+            document.getElementById('serviceModalTitle').textContent = 'Edit Service Type';
+            document.getElementById('modalServiceName').value = service.name.en || service.name;
+            document.getElementById('modalServiceIcon').value = service.icon;
+            document.getElementById('serviceModal').classList.remove('hidden');
+        }
+        
+        function saveServiceModal() {
+            const name = document.getElementById('modalServiceName').value.trim();
+            const icon = document.getElementById('modalServiceIcon').value.trim();
+            
+            if (!name || !icon) {
+                alert('Please fill in both fields');
+                return;
+            }
+            
+            if (modalMode === 'add') {
+                if (!categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx].subsubcategories) {
+                    categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx].subsubcategories = [];
+                }
+                categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx].subsubcategories.push({
+                    name: { en: name },
+                    icon: icon
+                });
+            } else {
+                const service = categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx].subsubcategories[currentEditServiceIdx];
+                if (typeof service.name === 'string') {
+                    service.name = { en: name };
+                } else {
+                    service.name.en = name;
+                }
+                service.icon = icon;
+            }
+            
+            localStorage.setItem('categories', JSON.stringify(categories));
+            loadAdminCategories();
+            updateProviderCategorySelects();
+            closeServiceModal();
+        }
+        
+        function closeServiceModal() {
+            document.getElementById('serviceModal').classList.add('hidden');
+        }
+        
+        function deleteService(catIdx, subIdx, serviceIdx) {
+            if (confirm('⚠️ Delete this service type?')) {
+                categories[catIdx].subcategories[subIdx].subsubcategories.splice(serviceIdx, 1);
+                localStorage.setItem('categories', JSON.stringify(categories));
+                loadAdminCategories();
+                updateProviderCategorySelects();
+            }
+        }
+        
+        // ==================== AUTO-LOCATION ====================
+        function useMyLocation(type) {
+            if (!navigator.geolocation) {
+                alert('❌ Geolocation not supported by your browser.\n\nPlease click on the map to set your location manually.');
+                return;
+            }
+            
+            const button = event.target;
+            button.innerHTML = '⏳ Detecting...';
+            button.disabled = true;
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    console.log('Location detected:', lat, lng);
+                    
+                    if (type === 'provider') {
+                        document.getElementById('providerLat').value = lat;
+                        document.getElementById('providerLng').value = lng;
+                        
+                        if (maps.register) {
+                            maps.register.setView([lat, lng], 13);
+                            maps.register.eachLayer(layer => {
+                                if (layer instanceof L.Marker) {
+                                    layer.setLatLng([lat, lng]);
+                                }
+                            });
+                        }
+                    } else if (type === 'seeker') {
+                        document.getElementById('seekerLat').value = lat;
+                        document.getElementById('seekerLng').value = lng;
+                        
+                        if (maps.seeker) {
+                            maps.seeker.setView([lat, lng], 13);
+                            maps.seeker.eachLayer(layer => {
+                                if (layer instanceof L.Marker) {
+                                    layer.setLatLng([lat, lng]);
+                                }
+                            });
+                        }
+                    }
+                    
+                    button.innerHTML = '✓ Location Detected!';
+                    setTimeout(() => {
+                        button.innerHTML = '📍 Use My Location';
+                        button.disabled = false;
+                    }, 2000);
+                    
+                    alert('✓ Your location has been detected and set on the map!');
+                },
+                function(error) {
+                    console.error('Geolocation error:', error);
+                    
+                    let errorMsg = '❌ Could not detect location.\n\n';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg += 'Please allow location access in your browser settings.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg += 'Location information unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg += 'Location request timed out.';
+                            break;
+                        default:
+                            errorMsg += 'An unknown error occurred.';
+                    }
+                    errorMsg += '\n\nPlease click on the map to set location manually.';
+                    
+                    alert(errorMsg);
+                    
+                    button.innerHTML = '📍 Use My Location';
+                    button.disabled = false;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+        
+        // ==================== INITIALIZATION ====================
+        function initializeApp() {
+            if (!localStorage.getItem('categories')) {
+                localStorage.setItem('categories', JSON.stringify(categories));
+            }
+            
+            initializeTranslations(); // Mark translatable elements
+            updateProviderCategorySelects();
+            updateAllUIText(); // Apply translations on init
+            showPage('home');
+        }
+        
+        window.onload = function() {
+            const langNames = {
+                'en': 'EN',
+                'hi': 'हिं',
+                'bn': 'বাং',
+                'gu': 'ગુજ',
+                'mr': 'मरा',
+                'kn': 'ಕನ್ನ'
+            };
+            
+            if (!localStorage.getItem('language')) {
+                // First time - show language selector
+                document.getElementById('languageModal').classList.remove('hidden');
+            } else {
+                // Language already selected - load it
+                currentLanguage = localStorage.getItem('language');
+                document.getElementById('currentLang').textContent = langNames[currentLanguage] || 'EN';
+                initializeApp();
+            }
+        };
+    </script>
+</body>
+</html>
