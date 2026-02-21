@@ -378,6 +378,22 @@
             <h1 class="text-3xl font-bold text-gray-800 mb-6">Register as Service Provider</h1>
             
             <form id="providerForm" class="bg-white rounded-xl shadow-md p-6">
+
+                <!-- PHASE E: Profile Photo Upload -->
+                <div class="flex flex-col items-center mb-6">
+                    <div class="relative">
+                        <div id="photoPreviewContainer" class="w-28 h-28 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 border-4 border-orange-400 flex items-center justify-center overflow-hidden shadow-lg">
+                            <span id="photoPlaceholder" class="text-5xl">👤</span>
+                            <img id="photoPreview" class="hidden w-full h-full object-cover" alt="Profile Photo">
+                        </div>
+                        <label for="providerPhoto" class="absolute bottom-0 right-0 bg-orange-600 text-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer shadow-md hover:bg-orange-700 transition">
+                            📷
+                        </label>
+                        <input type="file" id="providerPhoto" accept="image/*" capture="user" class="hidden" onchange="previewProviderPhoto(this)">
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">Upload your profile photo (optional)</p>
+                </div>
+
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Full Name *</label>
@@ -386,6 +402,15 @@
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Mobile Number *</label>
                         <input type="tel" id="providerMobile" required pattern="[0-9]{10}" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <!-- PHASE E: WhatsApp Number -->
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">WhatsApp Number <span class="text-gray-400 font-normal">(if different from mobile)</span></label>
+                        <div class="flex items-center border rounded-lg overflow-hidden">
+                            <span class="bg-green-500 text-white px-3 py-2 text-lg">💬</span>
+                            <input type="tel" id="providerWhatsapp" pattern="[0-9]{10}" placeholder="10-digit number" class="flex-1 px-3 py-2 outline-none">
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Leave blank to use mobile number for WhatsApp</p>
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Category (Optional)</label>
@@ -474,6 +499,13 @@
                     </div>
                 </div>
                 
+                <!-- PHASE E: Short Bio -->
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">About You / Bio <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <textarea id="providerBio" rows="3" maxlength="250" placeholder="Tell customers about your skills, experience and what makes you special... (max 250 characters)" class="w-full px-4 py-2 border rounded-lg resize-none" oninput="document.getElementById('bioCount').textContent=this.value.length"></textarea>
+                    <p class="text-xs text-gray-400 text-right"><span id="bioCount">0</span>/250</p>
+                </div>
+
                 <div class="mt-4">
                     <label class="block text-gray-700 font-medium mb-2">Location/Address *</label>
                     <input type="text" id="providerLocation" required class="w-full px-4 py-2 border rounded-lg">
@@ -596,6 +628,10 @@
                         <div class="text-4xl font-bold" id="totalRestricted">0</div>
                         <div class="mt-2 opacity-90">Restricted Users</div>
                     </div>
+                    <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-xl shadow-lg">
+                        <div class="text-4xl font-bold" id="totalReviews">0</div>
+                        <div class="mt-2 opacity-90">⭐ Total Reviews</div>
+                    </div>
                 </div>
                 
                 <!-- Tabs for different sections -->
@@ -695,6 +731,50 @@
         </div>
     </div>
     
+    <!-- ===== PHASE E: REVIEW MODAL ===== -->
+    <div id="reviewModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">⭐ Write a Review</h3>
+                <button onclick="closeReviewModal()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            </div>
+            <div id="reviewProviderName" class="text-orange-600 font-semibold mb-4 text-center text-lg"></div>
+
+            <!-- Star Rating Selector -->
+            <div class="text-center mb-5">
+                <p class="text-gray-600 mb-3 font-medium">Your Rating *</p>
+                <div id="starSelector" class="flex justify-center gap-2 text-4xl cursor-pointer">
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="1">★</span>
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="2">★</span>
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="3">★</span>
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="4">★</span>
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="5">★</span>
+                </div>
+                <p id="ratingLabel" class="text-sm text-gray-400 mt-2">Tap to rate</p>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-2">Your Name *</label>
+                <input type="text" id="reviewerName" placeholder="Your name" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-400 outline-none">
+            </div>
+            <div class="mb-5">
+                <label class="block text-gray-700 font-medium mb-2">Your Review *</label>
+                <textarea id="reviewText" rows="3" maxlength="300" placeholder="Share your experience with this provider..." class="w-full px-4 py-2 border rounded-lg resize-none focus:ring-2 focus:ring-orange-400 outline-none"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="submitReview()" class="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 font-semibold">Submit Review</button>
+                <button onclick="closeReviewModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-semibold">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PHASE E: PROVIDER PROFILE MODAL ===== -->
+    <div id="profileModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div id="profileModalContent"></div>
+        </div>
+    </div>
+
     <!-- Add/Edit Service Modal -->
     <div id="serviceModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full">
@@ -2036,6 +2116,27 @@
             renderProviders(filteredProviders);
         }
         
+        // ==================== PHASE E: PROVIDER CARD RENDERER ====================
+        function getProviderAvatar(p) {
+            if (p.photo) return `<img src="${p.photo}" alt="${p.name}" class="w-full h-full object-cover">`;
+            const initials = p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+            const colors = ['#ea580c','#2563eb','#16a34a','#9333ea','#dc2626','#0891b2'];
+            const color = colors[p.name.charCodeAt(0) % colors.length];
+            return `<div class="w-full h-full flex items-center justify-center text-white text-xl font-bold" style="background:${color}">${initials}</div>`;
+        }
+
+        function getVerifiedBadge(p) {
+            if (p.verified) return `<span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">✅ Verified</span>`;
+            return '';
+        }
+
+        function getAvgRating(p) {
+            const reviews = p.reviews ? Object.values(p.reviews) : [];
+            if (reviews.length === 0) return { avg: p.rating || 4.0, count: 0 };
+            const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+            return { avg: Math.round(avg * 10) / 10, count: reviews.length };
+        }
+
         function renderProviders(filteredProviders) {
             if (filteredProviders.length === 0) {
                 document.getElementById('providersGridNew').innerHTML = `
@@ -2047,60 +2148,57 @@
                 document.getElementById('providersSection').classList.remove('hidden');
                 return;
             }
-            
-            // Render provider cards (existing code from loadProviders)
+
+            const hrLabel = {'hi':'घंटा','bn':'ঘন্টা','gu':'કलाक','mr':'तास','kn':'ಗಂಟೆ'}[currentLanguage] || 'hr';
+            const yrsLabel = {'hi':'वर्ष','bn':'বছর','gu':'વર્ષ','mr':'वर्षे','kn':'ವರ್ಷಗಳು'}[currentLanguage] || 'yrs';
+
             const grid = document.getElementById('providersGridNew');
-            grid.innerHTML = filteredProviders.map(p => `
-                <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-xl font-bold text-gray-800">${p.name}</h3>
-                            <div class="text-orange-600 font-medium">${p.service}</div>
-                            ${p.language ? `<div class="text-sm text-gray-600 mt-1">🗣️ ${p.language}</div>` : ''}
-                            ${p.workingHours ? `<div class="text-sm text-green-600 mt-1">${getWorkingHoursLabel(p.workingHours)}</div>` : ''}
+            grid.innerHTML = filteredProviders.map(p => {
+                const { avg, count } = getAvgRating(p);
+                const waNum = p.whatsapp || p.mobile;
+                const waMsg = encodeURIComponent(`Hi ${p.name}, I found you on Sudarshan Chakra. I need your ${p.service} service. Can we discuss?`);
+                const distText = (p.distance !== undefined && p.distance < 100) ? p.distance.toFixed(1) + ' km away' : p.location;
+                const stars = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
+
+                return `
+                <div class="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+                    <div class="flex items-start gap-4 p-5 pb-3">
+                        <div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 shadow-md border-2 border-orange-200 cursor-pointer" onclick="openProviderProfile('${p.id}')">
+                            ${getProviderAvatar(p)}
                         </div>
-                        <div class="text-right">
-                            <div class="star-rating text-xl">${generateStars(p.rating || 4.0)}</div>
-                            <div class="text-sm text-gray-600">${(p.rating || 4.0).toFixed(1)}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="text-lg font-bold text-gray-800 cursor-pointer hover:text-orange-600 transition" onclick="openProviderProfile('${p.id}')">${p.name}</h3>
+                                ${getVerifiedBadge(p)}
+                            </div>
+                            <div class="text-orange-600 font-medium text-sm">${p.service}</div>
+                            ${p.language ? `<div class="text-xs text-gray-500 mt-0.5">🗣️ ${p.language}${p.workingHours ? ' &nbsp;|&nbsp; ' + getWorkingHoursLabel(p.workingHours) : ''}</div>` : ''}
                         </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-3 text-sm mb-4">
-                        <div class="flex items-center gap-2">
-                            <span>📍</span>
-                            <span class="text-gray-700">${p.distance < 100 ? p.distance.toFixed(1) + ' km' : p.location}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span>🕐</span>
-                            <span class="text-gray-700">${p.experience} ${currentLanguage === 'en' ? 'years' : currentLanguage === 'hi' ? 'वर्ष' : currentLanguage === 'bn' ? 'বছর' : currentLanguage === 'gu' ? 'વર્ષ' : currentLanguage === 'mr' ? 'वर्षे' : 'ವರ್ಷಗಳು'}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span>${religionIcons[p.religion] || '🙏'}</span>
-                            <span class="text-gray-700">${p.religion}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span>💰</span>
-                            <span class="text-gray-700 font-semibold">₹${p.rate}/${currentLanguage === 'en' ? 'hr' : currentLanguage === 'hi' ? 'घंटा' : currentLanguage === 'bn' ? 'ঘন্টা' : currentLanguage === 'gu' ? 'કલાક' : currentLanguage === 'mr' ? 'तास' : 'ಗಂಟೆ'}</span>
+                        <div class="text-right flex-shrink-0">
+                            <div class="text-yellow-400 text-base leading-none">${stars}</div>
+                            <div class="text-sm font-bold text-gray-700">${avg.toFixed(1)}</div>
+                            <div class="text-xs text-gray-400">${count} review${count !== 1 ? 's' : ''}</div>
                         </div>
                     </div>
-                    
-                    <div class="flex gap-2">
-                        <a href="tel:${p.mobile}" class="flex-1 bg-green-600 text-white text-center py-2 rounded-lg hover:bg-green-700 font-medium" style="text-decoration: none;">
-                            ${t('call')}
-                        </a>
-                        ${p.lat && p.lng ? `
-                            <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="flex-1 bg-blue-600 text-white text-center py-2 rounded-lg hover:bg-blue-700 font-medium" style="text-decoration: none;">
-                                ${t('directions')}
-                            </a>
-                        ` : ''}
+                    ${p.bio ? `<div class="px-5 pb-2 text-sm text-gray-500 italic line-clamp-2">"${p.bio}"</div>` : ''}
+                    <div class="px-5 pb-3 grid grid-cols-3 gap-2 text-xs text-gray-600 border-t border-gray-50 pt-3">
+                        <div class="flex items-center gap-1"><span>📍</span><span class="truncate">${distText}</span></div>
+                        <div class="flex items-center gap-1"><span>🕐</span><span>${p.experience} ${yrsLabel}</span></div>
+                        <div class="flex items-center gap-1"><span>💰</span><span class="font-semibold text-gray-800">₹${p.rate}/${hrLabel}</span></div>
                     </div>
-                </div>
-            `).join('');
-            
+                    <div class="px-4 pb-4 grid grid-cols-2 gap-2">
+                        <a href="tel:${p.mobile}" class="bg-green-600 text-white text-center py-2.5 rounded-xl hover:bg-green-700 font-medium text-sm transition" style="text-decoration:none;">📞 Call</a>
+                        <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-2.5 rounded-xl hover:bg-green-600 font-medium text-sm transition" style="text-decoration:none;">💬 WhatsApp</a>
+                        ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-2.5 rounded-xl hover:bg-blue-700 font-medium text-sm transition" style="text-decoration:none;">🗺️ Directions</a>` : '<div></div>'}
+                        <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">⭐ Review</button>
+                    </div>
+                </div>`;
+            }).join('');
+
             document.getElementById('providersSection').classList.remove('hidden');
         }
-        
-        function getWorkingHoursLabel(hours) {
+
+                function getWorkingHoursLabel(hours) {
             const labels = {
                 'mon-fri': '📅 Mon-Fri',
                 'weekends': '📅 Weekends',
@@ -2579,24 +2677,33 @@
                 serviceName = getTranslated(subsubcategory?.name) || serviceName;
             }
             
+            // PHASE E: get photo as base64
+            const photoDataUrl = document.getElementById('photoPreview')?.src || null;
+            const photoToSave = (photoDataUrl && !document.getElementById('photoPreview').classList.contains('hidden')) ? photoDataUrl : null;
+
             const provider = {
                 id: 'p_' + Date.now(),
                 name: document.getElementById('providerName').value,
                 mobile: document.getElementById('providerMobile').value,
+                whatsapp: document.getElementById('providerWhatsapp').value || null, // PHASE E
+                bio: document.getElementById('providerBio').value.trim() || null,    // PHASE E
+                photo: photoToSave,                                                   // PHASE E
+                verified: false,                                                      // PHASE E (admin sets this)
                 categoryId: catId || null,
                 subcategoryIdx: subIdx || null,
                 subsubcategoryIdx: subSubIdx || null,
                 service: serviceName,
                 religion: document.getElementById('providerReligion').value,
-                language: document.getElementById('providerLanguage').value, // PHASE B
+                language: document.getElementById('providerLanguage').value,
                 experience: parseInt(document.getElementById('providerExperience').value),
                 rate: parseInt(document.getElementById('providerRate').value),
-                workingHours: document.querySelector('input[name="workingHours"]:checked')?.value || 'mon-fri', // PHASE B
-                serviceArea: document.querySelector('input[name="serviceArea"]:checked')?.value || '10km', // PHASE B
+                workingHours: document.querySelector('input[name="workingHours"]:checked')?.value || 'mon-fri',
+                serviceArea: document.querySelector('input[name="serviceArea"]:checked')?.value || '10km',
                 location: document.getElementById('providerLocation').value,
                 lat: parseFloat(document.getElementById('providerLat').value),
                 lng: parseFloat(document.getElementById('providerLng').value),
-                rating: 4.0 + Math.random(),
+                rating: 4.0 + Math.random() * 0.5,
+                reviews: {},
                 status: 'active',
                 registered: new Date().toISOString()
             };
@@ -2611,6 +2718,9 @@
                 if (success) {
                     document.getElementById('providerSuccess').classList.remove('hidden');
                     document.getElementById('providerForm').reset();
+                    // Reset photo preview
+                    document.getElementById('photoPreview').classList.add('hidden');
+                    document.getElementById('photoPlaceholder').classList.remove('hidden');
                     showFirebaseStatus('✅ Provider registered successfully!', 'success');
                     
                     setTimeout(() => {
@@ -2712,10 +2822,12 @@
             const restrictedCount = providers.filter(p => p.status === 'restricted').length + 
                                    seekers.filter(s => s.status === 'restricted').length;
             
+            const totalReviews = providers.reduce((sum, p) => sum + (p.reviews ? Object.keys(p.reviews).length : 0), 0);
             document.getElementById('totalProviders').textContent = providers.length;
             document.getElementById('totalSeekers').textContent = seekers.length;
             document.getElementById('totalCategories').textContent = categories.length;
             document.getElementById('totalRestricted').textContent = restrictedCount;
+            if (document.getElementById('totalReviews')) document.getElementById('totalReviews').textContent = totalReviews;
         }
         
         // ==================== PROVIDER MANAGEMENT ====================
@@ -2771,6 +2883,7 @@
                                 ${status === 'restricted' ? `
                                     <button onclick="activateProvider('${p.id}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" title="Activate">✅ Activate</button>
                                 ` : ''}
+                                <button onclick="toggleVerified('${p.id}', ${!!p.verified})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm" title="Toggle Verified">${p.verified ? '✅ Verified' : '☑️ Verify'}</button>
                                 <button onclick="deleteProvider('${p.id}')" class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800 text-sm" title="Delete">🗑️ Delete</button>
                             </div>
                         </div>
@@ -3349,6 +3462,203 @@
                 initializeApp();
             }
         };
+        // ==================== PHASE E: PHOTO PREVIEW ====================
+        function previewProviderPhoto(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Max 1MB check
+            if (file.size > 1.5 * 1024 * 1024) {
+                alert('Photo too large! Please choose an image under 1.5MB.');
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Compress to max 300x300 for Firebase storage efficiency
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 300;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+                    else { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.75);
+
+                    document.getElementById('photoPreview').src = compressed;
+                    document.getElementById('photoPreview').classList.remove('hidden');
+                    document.getElementById('photoPlaceholder').classList.add('hidden');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ==================== PHASE E: REVIEW SYSTEM ====================
+        let currentReviewProviderId = null;
+        let currentReviewRating = 0;
+
+        function openReviewModal(providerId) {
+            const provider = providers.find(p => p.id === providerId);
+            if (!provider) return;
+            currentReviewProviderId = providerId;
+            currentReviewRating = 0;
+
+            document.getElementById('reviewProviderName').textContent = provider.name + ' — ' + provider.service;
+            document.getElementById('reviewerName').value = currentUser ? currentUser.name : '';
+            document.getElementById('reviewText').value = '';
+            updateStarUI(0);
+            document.getElementById('reviewModal').classList.remove('hidden');
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.add('hidden');
+            currentReviewProviderId = null;
+            currentReviewRating = 0;
+        }
+
+        function updateStarUI(rating) {
+            const labels = ['', 'Poor 😞', 'Fair 😐', 'Good 🙂', 'Very Good 😊', 'Excellent 🌟'];
+            document.querySelectorAll('.star-btn').forEach(star => {
+                const val = parseInt(star.dataset.val);
+                star.style.color = val <= rating ? '#f59e0b' : '#d1d5db';
+            });
+            document.getElementById('ratingLabel').textContent = rating ? labels[rating] : 'Tap to rate';
+        }
+
+        // Star click handlers
+        document.getElementById('starSelector').addEventListener('click', (e) => {
+            const star = e.target.closest('.star-btn');
+            if (!star) return;
+            currentReviewRating = parseInt(star.dataset.val);
+            updateStarUI(currentReviewRating);
+        });
+
+        document.getElementById('starSelector').addEventListener('mouseover', (e) => {
+            const star = e.target.closest('.star-btn');
+            if (star) updateStarUI(parseInt(star.dataset.val));
+        });
+
+        document.getElementById('starSelector').addEventListener('mouseleave', () => {
+            updateStarUI(currentReviewRating);
+        });
+
+        async function submitReview() {
+            if (!currentReviewRating) { alert('Please select a star rating!'); return; }
+            const name = document.getElementById('reviewerName').value.trim();
+            const text = document.getElementById('reviewText').value.trim();
+            if (!name) { alert('Please enter your name!'); return; }
+            if (!text) { alert('Please write your review!'); return; }
+
+            const review = {
+                id: 'r_' + Date.now(),
+                reviewerName: name,
+                text: text,
+                rating: currentReviewRating,
+                date: new Date().toISOString()
+            };
+
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _set(_ref(_db, `providers/${currentReviewProviderId}/reviews/${review.id}`), review);
+                closeReviewModal();
+                showFirebaseStatus('⭐ Review submitted! Thank you.', 'success');
+            } catch (err) {
+                console.error('Review save error:', err);
+                alert('Could not save review. Please check your connection.');
+            }
+        }
+
+        // ==================== PHASE E: PROVIDER PROFILE MODAL ====================
+        function openProviderProfile(providerId) {
+            const p = providers.find(pr => pr.id === providerId);
+            if (!p) return;
+
+            const { avg, count } = getAvgRating(p);
+            const reviews = p.reviews ? Object.values(p.reviews).sort((a,b) => new Date(b.date) - new Date(a.date)) : [];
+            const waNum = p.whatsapp || p.mobile;
+            const waMsg = encodeURIComponent(`Hi ${p.name}, I found you on Sudarshan Chakra. I need your ${p.service} service.`);
+            const stars = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
+
+            document.getElementById('profileModalContent').innerHTML = `
+                <!-- Header -->
+                <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-6 rounded-t-2xl text-white relative">
+                    <button onclick="document.getElementById('profileModal').classList.add('hidden')" class="absolute top-4 right-4 text-white text-2xl opacity-75 hover:opacity-100">✕</button>
+                    <div class="flex items-center gap-4">
+                        <div class="w-20 h-20 rounded-full overflow-hidden border-3 border-white shadow-xl flex-shrink-0">
+                            ${getProviderAvatar(p)}
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h2 class="text-2xl font-bold">${p.name}</h2>
+                                ${p.verified ? '<span class="bg-white text-blue-600 text-xs font-bold px-2 py-0.5 rounded-full">✅ Verified</span>' : ''}
+                            </div>
+                            <div class="opacity-90 font-medium">${p.service}</div>
+                            <div class="flex items-center gap-1 mt-1">
+                                <span class="text-yellow-300">${stars}</span>
+                                <span class="text-sm opacity-80">${avg.toFixed(1)} (${count} reviews)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class="p-5 space-y-4">
+                    ${p.bio ? `<div class="bg-orange-50 rounded-xl p-4 text-gray-700 italic">"${p.bio}"</div>` : ''}
+
+                    <!-- Info grid -->
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Service</div><div class="font-semibold">${p.service}</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Rate</div><div class="font-semibold text-green-600">₹${p.rate}/hr</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Experience</div><div class="font-semibold">${p.experience} years</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Language</div><div class="font-semibold">${p.language || 'N/A'}</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Religion</div><div class="font-semibold">${religionIcons[p.religion] || ''} ${p.religion}</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Working Hours</div><div class="font-semibold">${getWorkingHoursLabel(p.workingHours || '')}</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3 col-span-2"><div class="text-gray-400 text-xs mb-1">📍 Location</div><div class="font-semibold">${p.location}</div></div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <a href="tel:${p.mobile}" class="bg-green-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-700 transition" style="text-decoration:none;">📞 Call Now</a>
+                        <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-600 transition" style="text-decoration:none;">💬 WhatsApp</a>
+                        ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-blue-700 transition" style="text-decoration:none;">🗺️ Get Directions</a>` : '<div></div>'}
+                        <button onclick="document.getElementById('profileModal').classList.add('hidden'); openReviewModal('${p.id}')" class="bg-orange-100 text-orange-700 py-3 rounded-xl font-semibold hover:bg-orange-200 transition border border-orange-200">⭐ Write Review</button>
+                    </div>
+
+                    <!-- Reviews section -->
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-3">Customer Reviews ${count > 0 ? `(${count})` : ''}</h3>
+                        ${reviews.length === 0 
+                            ? '<div class="text-center py-6 text-gray-400">No reviews yet. Be the first to review!</div>'
+                            : reviews.map(r => `
+                                <div class="border rounded-xl p-4 mb-3 bg-gray-50">
+                                    <div class="flex justify-between items-start">
+                                        <div class="font-semibold text-gray-800">${r.reviewerName}</div>
+                                        <div class="text-yellow-400 text-sm">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+                                    </div>
+                                    <div class="text-gray-600 text-sm mt-1">${r.text}</div>
+                                    <div class="text-xs text-gray-400 mt-1">${new Date(r.date).toLocaleDateString()}</div>
+                                </div>`).join('')
+                        }
+                    </div>
+                </div>
+            `;
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
+
+        // ==================== PHASE E: ADMIN VERIFIED BADGE ====================
+        function toggleVerified(providerId, currentState) {
+            const action = currentState ? 'Remove Verified badge from' : 'Mark as Verified';
+            if (confirm(`${action} this provider?`)) {
+                updateProviderInFirebase(providerId, { verified: !currentState }).then(success => {
+                    if (success) showFirebaseStatus(`✅ Verified status updated!`, 'success');
+                });
+            }
+        }
+
         // ==================== PWA INSTALL PROMPT ====================
         let deferredInstallPrompt = null;
 
