@@ -58,7 +58,8 @@
         // ==================== FIREBASE SETUP ====================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getDatabase, ref, set, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-        
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
             authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
@@ -68,18 +69,24 @@
             messagingSenderId: "357210144411",
             appId: "1:357210144411:web:b440a94cf78b04b58b103e"
         };
-        
+
         const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        
-        // Expose Firebase functions to global scope for use in the main script
+        const db  = getDatabase(app);
+        const auth = getAuth(app);
+
+        // Expose to global scope
         window._firebase = { db, ref, set, push, onValue, update, remove, get };
+        window._auth = { auth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged };
         window._firebaseReady = true;
-        
-        // Dispatch event so main script knows Firebase is ready
+
+        // Auth state listener — fires whenever user logs in or out
+        onAuthStateChanged(auth, (user) => {
+            window._firebaseUser = user || null;
+            window.dispatchEvent(new CustomEvent('authStateChanged', { detail: user }));
+        });
+
         window.dispatchEvent(new Event('firebaseReady'));
-        
-        console.log('✅ Firebase initialized successfully');
+        console.log('✅ Firebase + Auth initialized');
     </script>
     <style>
         .map-container { height: 500px; width: 100%; border-radius: 12px; }
@@ -192,6 +199,10 @@
                 <button data-i18n="registerSeeker" onclick="showPage('seeker')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Register Seeker</button>
                 <button data-i18n="admin" onclick="showPage('admin')" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">🔐 Admin</button>
                 <button onclick="changeLang()" class="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">🌏 <span id="currentLang">EN</span></button>
+                <!-- PHASE F: Auth Button -->
+                <div id="navAuthBtn">
+                    <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>
+                </div>
             </div>
         </div>
     </nav>
@@ -365,9 +376,142 @@
     <!-- PROFILE, REGISTRATION PAGES - Simplified versions below -->
     <div id="page-myProfile" class="page hidden">
         <div class="max-w-4xl mx-auto px-4 py-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-6">My Profile</h1>
-            <div class="bg-white rounded-xl shadow-md p-6">
-                <div id="profileInfo"></div>
+            <!-- Not logged in state -->
+            <div id="profileNotLoggedIn" class="text-center py-16">
+                <div class="text-7xl mb-4">🔱</div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Your Sudarshan Chakra Account</h2>
+                <p class="text-gray-500 mb-6">Login to manage your profile, save favourites and write reviews</p>
+                <button onclick="openLoginModal()" class="bg-orange-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-orange-700 text-lg transition">
+                    🔑 Login with Mobile OTP
+                </button>
+            </div>
+
+            <!-- Logged in state -->
+            <div id="profileLoggedIn" class="hidden">
+                <!-- Profile Header -->
+                <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white mb-6 shadow-lg">
+                    <div class="flex items-center gap-4">
+                        <div id="myProfileAvatar" class="w-20 h-20 rounded-full bg-white bg-opacity-20 flex items-center justify-center text-3xl font-bold border-3 border-white overflow-hidden flex-shrink-0"></div>
+                        <div class="flex-1">
+                            <h1 id="myProfileName" class="text-2xl font-bold"></h1>
+                            <p id="myProfilePhone" class="text-orange-100 mt-1"></p>
+                            <p id="myProfileRole" class="text-orange-200 text-sm mt-1"></p>
+                        </div>
+                        <button onclick="logoutUser()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-xl text-sm font-medium transition">Logout</button>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="bg-white rounded-2xl shadow-md mb-6 overflow-hidden">
+                    <div class="flex border-b">
+                        <button onclick="showProfileTab('myDetails')" id="ptab-myDetails" class="flex-1 px-4 py-3 font-semibold text-sm text-orange-600 border-b-2 border-orange-600">👤 My Details</button>
+                        <button onclick="showProfileTab('favourites')" id="ptab-favourites" class="flex-1 px-4 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent">❤️ Favourites</button>
+                        <button onclick="showProfileTab('myReviews')" id="ptab-myReviews" class="flex-1 px-4 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent">⭐ My Reviews</button>
+                        <button onclick="showProfileTab('myReports')" id="ptab-myReports" class="flex-1 px-4 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent">🚨 Reports</button>
+                    </div>
+                </div>
+
+                <!-- Tab: My Details -->
+                <div id="profileTab-myDetails" class="space-y-4">
+                    <!-- Provider profile edit card -->
+                    <div id="myProviderCard" class="hidden bg-white rounded-2xl shadow-md p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-800">🛠️ My Provider Profile</h3>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-gray-500">Available</span>
+                                <div id="availabilityToggle" onclick="toggleAvailability()" class="w-12 h-6 bg-gray-300 rounded-full cursor-pointer transition-all relative">
+                                    <div class="w-5 h-5 bg-white rounded-full shadow absolute top-0.5 left-0.5 transition-all"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="myProviderInfo" class="space-y-3 text-sm text-gray-600"></div>
+                        <button onclick="openEditProviderModal()" class="mt-4 w-full bg-orange-100 text-orange-700 py-2.5 rounded-xl font-medium hover:bg-orange-200 transition">
+                            ✏️ Edit My Profile
+                        </button>
+                    </div>
+
+                    <!-- Seeker profile card -->
+                    <div id="mySeekerCard" class="hidden bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3">🔍 My Seeker Profile</h3>
+                        <div id="mySeekerInfo" class="space-y-2 text-sm text-gray-600"></div>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div id="myRecommendations" class="bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">💡 Recommended For You</h3>
+                        <div id="recommendationsList" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Tab: Favourites -->
+                <div id="profileTab-favourites" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">❤️ Saved Providers</h3>
+                        <div id="favouritesList" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Tab: My Reviews -->
+                <div id="profileTab-myReviews" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">⭐ Reviews I've Written</h3>
+                        <div id="myReviewsList" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Tab: My Reports -->
+                <div id="profileTab-myReports" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">🚨 My Complaints / Reports</h3>
+                        <div id="myReportsList" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHASE F: Edit Provider Profile Modal -->
+    <div id="editProviderModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-orange-600 p-5 rounded-t-2xl text-white flex justify-between items-center">
+                <h3 class="text-lg font-bold">✏️ Edit My Profile</h3>
+                <button onclick="document.getElementById('editProviderModal').classList.add('hidden')" class="text-2xl opacity-75 hover:opacity-100">✕</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <!-- Photo -->
+                <div class="flex flex-col items-center">
+                    <div class="relative">
+                        <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-orange-300 flex items-center justify-center bg-orange-50">
+                            <img id="editPhotoPreview" class="w-full h-full object-cover" alt="Photo">
+                        </div>
+                        <label for="editProviderPhoto" class="absolute bottom-0 right-0 bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center cursor-pointer text-sm hover:bg-orange-700">📷</label>
+                        <input type="file" id="editProviderPhoto" accept="image/*" class="hidden" onchange="previewEditPhoto(this)">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">About / Bio</label>
+                    <textarea id="editBio" rows="3" maxlength="250" class="w-full border rounded-xl px-4 py-2 resize-none outline-none focus:ring-2 focus:ring-orange-400" placeholder="Tell customers about yourself..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Rate (₹/hour)</label>
+                    <input type="number" id="editRate" min="50" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">WhatsApp Number</label>
+                    <input type="tel" id="editWhatsapp" maxlength="10" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="10-digit number">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Working Hours</label>
+                    <select id="editWorkingHours" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400">
+                        <option value="mon-fri">Mon-Fri (9 AM - 6 PM)</option>
+                        <option value="weekends">Weekends Only</option>
+                        <option value="all-days">All Days</option>
+                        <option value="24x7">24×7 Available</option>
+                    </select>
+                </div>
+                <button onclick="saveProviderEdits()" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition">
+                    💾 Save Changes
+                </button>
             </div>
         </div>
     </div>
@@ -638,10 +782,13 @@
                 <div class="bg-white rounded-xl shadow-lg mb-6">
                     <div class="flex border-b">
                         <button onclick="showAdminTab('users')" id="tab-users" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
-                            👥 User Management
+                            👥 Users
+                        </button>
+                        <button onclick="showAdminTab('reports')" id="tab-reports" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            🚨 Reports
                         </button>
                         <button onclick="showAdminTab('categories')" id="tab-categories" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-orange-600">
-                            📋 Category Management
+                            📋 Categories
                         </button>
                     </div>
                 </div>
@@ -665,6 +812,19 @@
                     </div>
                 </div>
                 
+                <!-- REPORTS TAB -->
+                <div id="adminTab-reports" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-800">🚨 Complaints & Reports</h2>
+                            <button onclick="loadAdminReports()" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-orange-700">🔄 Refresh</button>
+                        </div>
+                        <div id="adminReportsList" class="space-y-4">
+                            <p class="text-gray-400 text-center py-8">Click Refresh to load reports</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- CATEGORY MANAGEMENT TAB -->
                 <div id="adminTab-categories" class="">
                     <div class="bg-white rounded-xl shadow-lg p-6">
@@ -731,6 +891,136 @@
         </div>
     </div>
     
+    <!-- ===== PHASE F: PHONE OTP LOGIN MODAL ===== -->
+    <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-6 text-white text-center">
+                <div class="text-4xl mb-2">🔱</div>
+                <h2 class="text-xl font-bold">Sudarshan Chakra</h2>
+                <p class="text-orange-100 text-sm mt-1">Login with your mobile number</p>
+            </div>
+
+            <!-- Step 1: Enter Phone -->
+            <div id="loginStep1" class="p-6">
+                <label class="block text-gray-700 font-medium mb-3">📱 Mobile Number</label>
+                <div class="flex gap-2 mb-4">
+                    <div class="bg-gray-100 border rounded-xl px-3 py-3 text-gray-600 font-medium flex-shrink-0">🇮🇳 +91</div>
+                    <input type="tel" id="loginPhone" maxlength="10" pattern="[0-9]{10}" placeholder="10-digit number"
+                        class="flex-1 border rounded-xl px-4 py-3 text-lg focus:ring-2 focus:ring-orange-400 outline-none"
+                        oninput="this.value=this.value.replace(/\D/g,'').substring(0,10)">
+                </div>
+                <!-- Invisible reCAPTCHA container -->
+                <div id="recaptcha-container"></div>
+                <button onclick="sendOTP()" id="sendOtpBtn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition text-lg">
+                    Send OTP
+                </button>
+                <p class="text-xs text-gray-400 text-center mt-3">OTP will be sent via SMS. Standard rates apply.</p>
+                <button onclick="closeLoginModal()" class="w-full mt-2 text-gray-500 py-2 text-sm hover:text-gray-700">Cancel</button>
+            </div>
+
+            <!-- Step 2: Enter OTP -->
+            <div id="loginStep2" class="p-6 hidden">
+                <div class="text-center mb-4">
+                    <div class="text-3xl mb-2">📲</div>
+                    <p class="text-gray-700 font-medium">OTP sent to <span id="loginPhoneDisplay" class="text-orange-600 font-bold"></span></p>
+                    <p class="text-sm text-gray-500 mt-1">Enter the 6-digit code</p>
+                </div>
+                <div class="flex gap-2 justify-center mb-5">
+                    <input type="tel" id="otpInput" maxlength="6" placeholder="— — — — — —"
+                        class="w-full text-center border-2 rounded-xl px-4 py-4 text-2xl font-bold tracking-widest focus:ring-2 focus:ring-orange-400 outline-none"
+                        oninput="this.value=this.value.replace(/\D/g,'').substring(0,6)">
+                </div>
+                <button onclick="verifyOTP()" id="verifyOtpBtn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition text-lg">
+                    Verify & Login
+                </button>
+                <button onclick="document.getElementById('loginStep1').classList.remove('hidden'); document.getElementById('loginStep2').classList.add('hidden')" class="w-full mt-2 text-gray-500 py-2 text-sm hover:text-gray-700">
+                    ← Change Number
+                </button>
+            </div>
+
+            <!-- Step 3: New User Setup -->
+            <div id="loginStep3" class="p-6 hidden">
+                <div class="text-center mb-4">
+                    <div class="text-3xl mb-2">👋</div>
+                    <p class="font-bold text-gray-800 text-lg">Welcome! Tell us about yourself</p>
+                    <p class="text-sm text-gray-500">First time login — quick setup</p>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-1">Your Name *</label>
+                        <input type="text" id="newUserName" placeholder="Full name" class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-1">I am a...</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="border-2 rounded-xl p-3 cursor-pointer hover:border-orange-400 transition text-center has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
+                                <input type="radio" name="userRole" value="seeker" class="hidden"> 
+                                <div class="text-2xl mb-1">🔍</div>
+                                <div class="font-medium text-sm">Service Seeker</div>
+                                <div class="text-xs text-gray-500">Looking for services</div>
+                            </label>
+                            <label class="border-2 rounded-xl p-3 cursor-pointer hover:border-orange-400 transition text-center has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
+                                <input type="radio" name="userRole" value="provider" class="hidden">
+                                <div class="text-2xl mb-1">🛠️</div>
+                                <div class="font-medium text-sm">Service Provider</div>
+                                <div class="text-xs text-gray-500">Offering services</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="completeNewUserSetup()" class="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition">
+                    Get Started 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PHASE F: REPORT / COMPLAINT MODAL ===== -->
+    <div id="reportModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div class="bg-red-600 p-5 rounded-t-2xl text-white">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold">🚨 Report / Complaint</h3>
+                    <button onclick="closeReportModal()" class="text-white text-2xl opacity-75 hover:opacity-100">✕</button>
+                </div>
+                <p id="reportTargetName" class="text-red-100 text-sm mt-1"></p>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Type of Issue *</label>
+                    <select id="reportType" class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-400 outline-none">
+                        <option value="">Select issue type</option>
+                        <option value="misconduct">😤 Misconduct / Rude Behaviour</option>
+                        <option value="improper_service">⚠️ Improper / Poor Service Quality</option>
+                        <option value="payment_issue">💸 Payment Dispute / Overcharging</option>
+                        <option value="no_show">🚫 No Show / Did Not Arrive</option>
+                        <option value="fraud">🔴 Fraud / Scam</option>
+                        <option value="harassment">🛑 Harassment / Threats</option>
+                        <option value="fake_profile">👤 Fake Profile / Wrong Information</option>
+                        <option value="other">📝 Other Issue</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Describe the Issue *</label>
+                    <textarea id="reportDescription" rows="4" maxlength="500" placeholder="Please describe what happened in detail. Date, time, what was promised and what happened..." class="w-full border rounded-xl px-4 py-3 resize-none focus:ring-2 focus:ring-red-400 outline-none"></textarea>
+                    <p class="text-xs text-gray-400 text-right mt-1"><span id="reportCharCount">0</span>/500</p>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Your Name (for admin contact)</label>
+                    <input type="text" id="reporterNameInput" placeholder="Your name" class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-400 outline-none">
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm text-yellow-800">
+                    ⚠️ Your report will be reviewed by admin within 24 hours. The reported person will NOT see your identity.
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="submitReport()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition">Submit Report</button>
+                    <button onclick="closeReportModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== PHASE E: REVIEW MODAL ===== -->
     <div id="reviewModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
@@ -1908,6 +2198,8 @@
                 setTimeout(initRegisterMap, 100);
             } else if (pageName === 'seeker') {
                 setTimeout(initSeekerMap, 100);
+            } else if (pageName === 'myProfile') {
+                renderProfilePage();
             }
         }
         
@@ -2191,6 +2483,10 @@
                         <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-2.5 rounded-xl hover:bg-green-600 font-medium text-sm transition" style="text-decoration:none;">💬 WhatsApp</a>
                         ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-2.5 rounded-xl hover:bg-blue-700 font-medium text-sm transition" style="text-decoration:none;">🗺️ Directions</a>` : '<div></div>'}
                         <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">⭐ Review</button>
+                        <button onclick="toggleFavourite('${p.id}')" class="py-2.5 rounded-xl text-sm transition border ${userProfile?.favourites?.[p.id] ? 'bg-red-100 text-red-600 border-red-200' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-red-50 hover:text-red-500'}">
+                            ${userProfile?.favourites?.[p.id] ? '❤️' : '🤍'}
+                        </button>
+                        <button onclick="openReportModal('${p.id}','provider','${p.name}')" class="py-2.5 rounded-xl text-sm transition border bg-gray-50 text-gray-400 border-gray-200 hover:bg-red-50 hover:text-red-500" title="Report this provider">🚨</button>
                     </div>
                 </div>`;
             }).join('');
@@ -2704,6 +3000,7 @@
                 lng: parseFloat(document.getElementById('providerLng').value),
                 rating: 4.0 + Math.random() * 0.5,
                 reviews: {},
+                ownerUid: firebaseUser?.uid || null,
                 status: 'active',
                 registered: new Date().toISOString()
             };
@@ -2797,25 +3094,15 @@
         }
         
         function showAdminTab(tabName) {
-            // Hide all tabs
-            document.getElementById('adminTab-users').classList.add('hidden');
-            document.getElementById('adminTab-categories').classList.add('hidden');
-            
-            // Remove active state from all tab buttons
-            document.getElementById('tab-users').classList.remove('border-orange-600', 'text-orange-600');
-            document.getElementById('tab-categories').classList.remove('border-orange-600', 'text-orange-600');
-            
-            // Show selected tab
+            ['users','reports','categories'].forEach(t => {
+                document.getElementById('adminTab-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).classList.remove('border-orange-600','text-orange-600');
+            });
             document.getElementById('adminTab-' + tabName).classList.remove('hidden');
-            document.getElementById('tab-' + tabName).classList.add('border-orange-600', 'text-orange-600');
-            
-            // Load data for the tab
-            if (tabName === 'users') {
-                loadProvidersList();
-                loadSeekersList();
-            } else if (tabName === 'categories') {
-                loadAdminCategories();
-            }
+            document.getElementById('tab-' + tabName).classList.add('border-orange-600','text-orange-600');
+            if (tabName === 'users') { loadProvidersList(); loadSeekersList(); }
+            else if (tabName === 'categories') { loadAdminCategories(); }
+            else if (tabName === 'reports') { loadAdminReports(); }
         }
         
         function updateAdminStats() {
@@ -3462,6 +3749,514 @@
                 initializeApp();
             }
         };
+        // ==================== PHASE F: ADMIN REPORTS ====================
+        async function loadAdminReports() {
+            const list = document.getElementById('adminReportsList');
+            list.innerHTML = '<p class="text-center text-gray-400 py-4">Loading reports...</p>';
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'reports'));
+                if (!snap.exists()) {
+                    list.innerHTML = '<div class="text-center py-12 text-gray-400"><div class="text-5xl mb-3">✅</div><p class="font-medium">No reports yet!</p></div>';
+                    return;
+                }
+                const reports = Object.values(snap.val()).sort((a,b) => new Date(b.date) - new Date(a.date));
+                list.innerHTML = reports.map(r => {
+                    const statusColors = { pending:'bg-yellow-100 text-yellow-700', reviewing:'bg-blue-100 text-blue-700', resolved:'bg-green-100 text-green-700', dismissed:'bg-gray-100 text-gray-500' };
+                    return `
+                    <div class="border-2 ${r.status === 'pending' ? 'border-red-200' : 'border-gray-200'} rounded-xl p-4">
+                        <div class="flex justify-between items-start flex-wrap gap-2">
+                            <div>
+                                <div class="font-bold text-gray-800">🚨 Against: ${r.targetName} <span class="text-xs text-gray-400">(${r.targetType})</span></div>
+                                <div class="text-red-600 text-xs font-medium mt-0.5">${r.type.replace(/_/g,' ').toUpperCase()}</div>
+                            </div>
+                            <span class="text-xs px-3 py-1 rounded-full font-medium ${statusColors[r.status] || statusColors.pending}">${r.status || 'pending'}</span>
+                        </div>
+                        <div class="mt-2 text-gray-700 text-sm bg-gray-50 rounded-lg p-3">${r.description}</div>
+                        <div class="mt-2 text-xs text-gray-500 flex flex-wrap gap-3">
+                            <span>👤 Reporter: ${r.reporterName || 'Anonymous'}</span>
+                            <span>📱 ${r.reporterPhone || ''}</span>
+                            <span>📅 ${new Date(r.date).toLocaleDateString()}</span>
+                        </div>
+                        <div class="mt-3 flex gap-2 flex-wrap">
+                            <button onclick="updateReportStatus('${r.id}','reviewing')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-700">🔍 Mark Reviewing</button>
+                            <button onclick="updateReportStatus('${r.id}','resolved')" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-green-700">✅ Mark Resolved</button>
+                            <button onclick="updateReportStatus('${r.id}','dismissed')" class="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-gray-600">❌ Dismiss</button>
+                            ${r.targetType === 'provider' ? `<button onclick="restrictProvider('${r.targetId}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-orange-700">⚠️ Restrict Provider</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                list.innerHTML = '<p class="text-red-400 text-center">Could not load reports.</p>';
+            }
+        }
+
+        async function updateReportStatus(reportId, status) {
+            await _firebase.update(_firebase.ref(_firebase.db, `reports/${reportId}`), { status });
+            showFirebaseStatus(`Report marked as ${status}`, 'success');
+            loadAdminReports();
+        }
+
+        // ==================== PHASE F: AUTH STATE ====================
+        let _confirmationResult = null;
+        let _recaptchaVerifier   = null;
+        let firebaseUser         = null; // logged-in Firebase user
+        let userProfile          = null; // our app profile from /users/{uid}
+
+        // Listen for auth state changes
+        window.addEventListener('authStateChanged', async (e) => {
+            firebaseUser = e.detail;
+            if (firebaseUser) {
+                await loadUserProfile(firebaseUser.uid);
+                updateNavForLoggedIn();
+            } else {
+                firebaseUser = null;
+                userProfile  = null;
+                updateNavForLoggedOut();
+            }
+            // Refresh profile page if open
+            if (document.getElementById('page-myProfile') && !document.getElementById('page-myProfile').classList.contains('hidden')) {
+                renderProfilePage();
+            }
+        });
+
+        async function loadUserProfile(uid) {
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `users/${uid}`));
+                userProfile = snap.exists() ? snap.val() : null;
+            } catch(e) { console.warn('Profile load error:', e); }
+        }
+
+        function updateNavForLoggedIn() {
+            const name = userProfile?.name || firebaseUser?.phoneNumber || 'User';
+            const initials = name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('navAuthBtn').innerHTML = `
+                <div class="flex items-center gap-2 cursor-pointer" onclick="showPage('myProfile')">
+                    <div class="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center text-sm font-bold">${initials}</div>
+                    <span class="text-sm font-medium text-gray-700 hidden md:inline">${name.split(' ')[0]}</span>
+                </div>`;
+        }
+
+        function updateNavForLoggedOut() {
+            document.getElementById('navAuthBtn').innerHTML = `
+                <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>`;
+        }
+
+        // ==================== PHASE F: LOGIN MODAL ====================
+        function openLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginStep1').classList.remove('hidden');
+            document.getElementById('loginStep2').classList.add('hidden');
+            document.getElementById('loginStep3').classList.add('hidden');
+            document.getElementById('loginPhone').value = '';
+            // Setup reCAPTCHA
+            setupRecaptcha();
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+            if (_recaptchaVerifier) {
+                try { _recaptchaVerifier.clear(); } catch(e) {}
+                _recaptchaVerifier = null;
+            }
+        }
+
+        function setupRecaptcha() {
+            try {
+                if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} }
+                _recaptchaVerifier = new _auth.RecaptchaVerifier(_auth.auth, 'recaptcha-container', {
+                    size: 'invisible',
+                    callback: () => {}
+                });
+            } catch(e) { console.warn('reCAPTCHA setup:', e); }
+        }
+
+        async function sendOTP() {
+            const phone = document.getElementById('loginPhone').value.trim();
+            if (phone.length !== 10) { alert('Please enter a valid 10-digit mobile number'); return; }
+
+            const btn = document.getElementById('sendOtpBtn');
+            btn.disabled = true; btn.textContent = '⏳ Sending...';
+
+            try {
+                if (!_recaptchaVerifier) setupRecaptcha();
+                const fullPhone = '+91' + phone;
+                _confirmationResult = await _auth.signInWithPhoneNumber(_auth.auth, fullPhone, _recaptchaVerifier);
+                document.getElementById('loginPhoneDisplay').textContent = '+91 ' + phone;
+                document.getElementById('loginStep1').classList.add('hidden');
+                document.getElementById('loginStep2').classList.remove('hidden');
+                showFirebaseStatus('📲 OTP sent to +91 ' + phone, 'success');
+            } catch(err) {
+                console.error('OTP error:', err);
+                let msg = 'Failed to send OTP. ';
+                if (err.code === 'auth/too-many-requests') msg += 'Too many attempts. Please try again later.';
+                else if (err.code === 'auth/invalid-phone-number') msg += 'Invalid phone number.';
+                else msg += err.message;
+                alert(msg);
+                btn.disabled = false; btn.textContent = 'Send OTP';
+                setupRecaptcha();
+            }
+        }
+
+        async function verifyOTP() {
+            const otp = document.getElementById('otpInput').value.trim();
+            if (otp.length !== 6) { alert('Please enter the 6-digit OTP'); return; }
+
+            const btn = document.getElementById('verifyOtpBtn');
+            btn.disabled = true; btn.textContent = '⏳ Verifying...';
+
+            try {
+                const result = await _confirmationResult.confirm(otp);
+                firebaseUser = result.user;
+                // Check if user profile exists
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}`));
+                if (!snap.exists()) {
+                    // New user — show setup step
+                    document.getElementById('loginStep2').classList.add('hidden');
+                    document.getElementById('loginStep3').classList.remove('hidden');
+                } else {
+                    userProfile = snap.val();
+                    closeLoginModal();
+                    showFirebaseStatus('✅ Welcome back, ' + (userProfile.name || 'User') + '!', 'success');
+                    updateNavForLoggedIn();
+                }
+            } catch(err) {
+                console.error('OTP verify error:', err);
+                alert('Invalid OTP. Please check and try again.');
+                btn.disabled = false; btn.textContent = 'Verify & Login';
+            }
+        }
+
+        async function completeNewUserSetup() {
+            const name = document.getElementById('newUserName').value.trim();
+            const role = document.querySelector('input[name="userRole"]:checked')?.value;
+            if (!name) { alert('Please enter your name'); return; }
+            if (!role)  { alert('Please select your role'); return; }
+
+            const profile = {
+                uid:   firebaseUser.uid,
+                phone: firebaseUser.phoneNumber,
+                name,
+                role,
+                favourites: {},
+                joined: new Date().toISOString()
+            };
+
+            await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}`), profile);
+            userProfile = profile;
+            closeLoginModal();
+            showFirebaseStatus('🎉 Welcome to Sudarshan Chakra, ' + name + '!', 'success');
+            updateNavForLoggedIn();
+            showPage('myProfile');
+        }
+
+        async function logoutUser() {
+            if (!confirm('Are you sure you want to logout?')) return;
+            await _auth.signOut(_auth.auth);
+            firebaseUser = null; userProfile = null;
+            updateNavForLoggedOut();
+            showPage('home');
+            showFirebaseStatus('👋 Logged out successfully', 'info');
+        }
+
+        // ==================== PHASE F: PROFILE PAGE ====================
+        function renderProfilePage() {
+            if (!firebaseUser || !userProfile) {
+                document.getElementById('profileNotLoggedIn').classList.remove('hidden');
+                document.getElementById('profileLoggedIn').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('profileNotLoggedIn').classList.add('hidden');
+            document.getElementById('profileLoggedIn').classList.remove('hidden');
+
+            // Header
+            const initials = userProfile.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('myProfileAvatar').innerHTML = `<div class="w-full h-full flex items-center justify-center text-2xl font-bold text-white bg-orange-400">${initials}</div>`;
+            document.getElementById('myProfileName').textContent  = userProfile.name;
+            document.getElementById('myProfilePhone').textContent = firebaseUser.phoneNumber;
+            document.getElementById('myProfileRole').textContent  = userProfile.role === 'provider' ? '🛠️ Service Provider' : '🔍 Service Seeker';
+
+            showProfileTab('myDetails');
+        }
+
+        function showProfileTab(tab) {
+            ['myDetails','favourites','myReviews','myReports'].forEach(t => {
+                document.getElementById('profileTab-' + t).classList.add('hidden');
+                document.getElementById('ptab-' + t).classList.remove('text-orange-600','border-orange-600');
+                document.getElementById('ptab-' + t).classList.add('text-gray-500','border-transparent');
+            });
+            document.getElementById('profileTab-' + tab).classList.remove('hidden');
+            document.getElementById('ptab-' + tab).classList.add('text-orange-600','border-orange-600');
+            document.getElementById('ptab-' + tab).classList.remove('text-gray-500','border-transparent');
+
+            if (tab === 'myDetails')   loadMyDetails();
+            if (tab === 'favourites')  loadFavourites();
+            if (tab === 'myReviews')   loadMyReviews();
+            if (tab === 'myReports')   loadMyReports();
+        }
+
+        function loadMyDetails() {
+            if (!userProfile) return;
+            // Provider card
+            const myProvider = providers.find(p => p.ownerUid === firebaseUser?.uid);
+            if (myProvider) {
+                document.getElementById('myProviderCard').classList.remove('hidden');
+                const avail = myProvider.available !== false;
+                const toggle = document.getElementById('availabilityToggle');
+                toggle.classList.toggle('bg-green-500', avail);
+                toggle.classList.toggle('bg-gray-300', !avail);
+                toggle.querySelector('div').style.transform = avail ? 'translateX(24px)' : 'translateX(0)';
+                document.getElementById('myProviderInfo').innerHTML = `
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><span class="font-medium">Service:</span> ${myProvider.service}</div>
+                        <div><span class="font-medium">Rate:</span> ₹${myProvider.rate}/hr</div>
+                        <div><span class="font-medium">Experience:</span> ${myProvider.experience} yrs</div>
+                        <div><span class="font-medium">Location:</span> ${myProvider.location}</div>
+                    </div>`;
+            }
+            // Seeker card
+            const mySeeker = seekers.find(s => s.ownerUid === firebaseUser?.uid);
+            if (mySeeker) {
+                document.getElementById('mySeekerCard').classList.remove('hidden');
+                document.getElementById('mySeekerInfo').innerHTML = `
+                    <div><span class="font-medium">Name:</span> ${mySeeker.name}</div>
+                    <div><span class="font-medium">Location:</span> ${mySeeker.location}</div>`;
+            }
+            // Recommendations
+            loadRecommendations();
+        }
+
+        function loadRecommendations() {
+            // Suggest based on user's past favourites or random top-rated
+            const favIds = Object.keys(userProfile?.favourites || {});
+            let recommended = providers
+                .filter(p => p.status === 'active' && !favIds.includes(p.id))
+                .sort((a,b) => (b.rating||0) - (a.rating||0))
+                .slice(0, 3);
+
+            const list = document.getElementById('recommendationsList');
+            if (recommended.length === 0) {
+                list.innerHTML = '<p class="text-gray-400 text-sm">No recommendations yet. Browse more providers!</p>';
+                return;
+            }
+            list.innerHTML = recommended.map(p => `
+                <div class="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
+                    <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">${getProviderAvatar(p)}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-gray-800 truncate">${p.name}</div>
+                        <div class="text-orange-600 text-xs">${p.service}</div>
+                        <div class="text-gray-500 text-xs">⭐ ${(p.rating||4).toFixed(1)} · ₹${p.rate}/hr</div>
+                    </div>
+                    <button onclick="openProviderProfile('${p.id}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium">View</button>
+                </div>`).join('');
+        }
+
+        function loadFavourites() {
+            const favIds = Object.keys(userProfile?.favourites || {});
+            const favProviders = providers.filter(p => favIds.includes(p.id));
+            const list = document.getElementById('favouritesList');
+            if (favProviders.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="text-4xl mb-2">❤️</div><p>No saved providers yet.<br>Tap ❤️ on any provider to save them here!</p></div>';
+                return;
+            }
+            list.innerHTML = favProviders.map(p => `
+                <div class="flex items-center gap-3 p-3 border rounded-xl hover:bg-gray-50">
+                    <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">${getProviderAvatar(p)}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-gray-800">${p.name}</div>
+                        <div class="text-orange-600 text-xs">${p.service} · ₹${p.rate}/hr</div>
+                    </div>
+                    <button onclick="removeFavourite('${p.id}')" class="text-red-400 hover:text-red-600 text-xl">💔</button>
+                    <button onclick="openProviderProfile('${p.id}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs">View</button>
+                </div>`).join('');
+        }
+
+        async function toggleFavourite(providerId) {
+            if (!firebaseUser) { openLoginModal(); return; }
+            const isFav = userProfile?.favourites?.[providerId];
+            const path  = `users/${firebaseUser.uid}/favourites/${providerId}`;
+            if (isFav) {
+                await _firebase.remove(_firebase.ref(_firebase.db, path));
+                delete userProfile.favourites[providerId];
+                showFirebaseStatus('💔 Removed from favourites', 'info');
+            } else {
+                await _firebase.set(_firebase.ref(_firebase.db, path), true);
+                if (!userProfile.favourites) userProfile.favourites = {};
+                userProfile.favourites[providerId] = true;
+                showFirebaseStatus('❤️ Saved to favourites!', 'success');
+            }
+        }
+
+        async function removeFavourite(providerId) {
+            await _firebase.remove(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/favourites/${providerId}`));
+            delete userProfile.favourites[providerId];
+            loadFavourites();
+        }
+
+        function loadMyReviews() {
+            const myReviews = [];
+            providers.forEach(p => {
+                if (p.reviews) {
+                    Object.values(p.reviews).forEach(r => {
+                        if (r.reviewerName === userProfile?.name) {
+                            myReviews.push({ ...r, providerName: p.name, providerId: p.id });
+                        }
+                    });
+                }
+            });
+            const list = document.getElementById('myReviewsList');
+            if (myReviews.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="text-4xl mb-2">⭐</div><p>You haven't written any reviews yet.<br>Browse providers and share your experience!</p></div>';
+                return;
+            }
+            list.innerHTML = myReviews.map(r => `
+                <div class="border rounded-xl p-4">
+                    <div class="flex justify-between">
+                        <div class="font-semibold text-gray-800">${r.providerName}</div>
+                        <div class="text-yellow-400">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+                    </div>
+                    <div class="text-gray-600 text-sm mt-1">${r.text}</div>
+                    <div class="text-xs text-gray-400 mt-1">${new Date(r.date).toLocaleDateString()}</div>
+                </div>`).join('');
+        }
+
+        async function loadMyReports() {
+            const list = document.getElementById('myReportsList');
+            list.innerHTML = '<p class="text-gray-400 text-sm">Loading...</p>';
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'reports'));
+                const reports = snap.exists() ? Object.values(snap.val()) : [];
+                const mine = reports.filter(r => r.reporterUid === firebaseUser?.uid);
+                if (mine.length === 0) {
+                    list.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="text-4xl mb-2">🚨</div><p>No complaints filed yet.</p></div>';
+                    return;
+                }
+                list.innerHTML = mine.map(r => `
+                    <div class="border rounded-xl p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-semibold text-gray-800">Against: ${r.targetName}</div>
+                                <div class="text-red-600 text-xs mt-0.5">${r.type.replace('_',' ').toUpperCase()}</div>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full ${r.status === 'resolved' ? 'bg-green-100 text-green-700' : r.status === 'reviewing' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}">${r.status || 'Pending'}</span>
+                        </div>
+                        <div class="text-gray-600 text-sm mt-2">${r.description}</div>
+                        <div class="text-xs text-gray-400 mt-1">${new Date(r.date).toLocaleDateString()}</div>
+                    </div>`).join('');
+            } catch(e) { list.innerHTML = '<p class="text-red-400 text-sm">Could not load reports.</p>'; }
+        }
+
+        // ==================== PHASE F: AVAILABILITY TOGGLE ====================
+        async function toggleAvailability() {
+            if (!firebaseUser) return;
+            const myProvider = providers.find(p => p.ownerUid === firebaseUser.uid);
+            if (!myProvider) return;
+            const newState = myProvider.available === false ? true : false;
+            await updateProviderInFirebase(myProvider.id, { available: newState });
+            showFirebaseStatus(newState ? '🟢 You are now Available' : '🔴 You are now Unavailable', 'info');
+        }
+
+        // ==================== PHASE F: EDIT PROVIDER PROFILE ====================
+        function openEditProviderModal() {
+            const myProvider = providers.find(p => p.ownerUid === firebaseUser?.uid);
+            if (!myProvider) return;
+            document.getElementById('editBio').value         = myProvider.bio || '';
+            document.getElementById('editRate').value        = myProvider.rate || '';
+            document.getElementById('editWhatsapp').value    = myProvider.whatsapp || '';
+            document.getElementById('editWorkingHours').value = myProvider.workingHours || 'mon-fri';
+            const preview = document.getElementById('editPhotoPreview');
+            preview.src = myProvider.photo || '';
+            document.getElementById('editProviderModal').classList.remove('hidden');
+        }
+
+        function previewEditPhoto(input) {
+            const file = input.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const max = 300; let w = img.width, h = img.height;
+                    if (w > h) { if (w > max) { h = h*max/w; w = max; } } else { if (h > max) { w = w*max/h; h = max; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    document.getElementById('editPhotoPreview').src = canvas.toDataURL('image/jpeg', 0.75);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveProviderEdits() {
+            const myProvider = providers.find(p => p.ownerUid === firebaseUser?.uid);
+            if (!myProvider) return;
+            const updates = {
+                bio:          document.getElementById('editBio').value.trim() || null,
+                rate:         parseInt(document.getElementById('editRate').value) || myProvider.rate,
+                whatsapp:     document.getElementById('editWhatsapp').value || null,
+                workingHours: document.getElementById('editWorkingHours').value,
+                photo:        document.getElementById('editPhotoPreview').src || myProvider.photo
+            };
+            await updateProviderInFirebase(myProvider.id, updates);
+            document.getElementById('editProviderModal').classList.add('hidden');
+            showFirebaseStatus('✅ Profile updated successfully!', 'success');
+            loadMyDetails();
+        }
+
+        // ==================== PHASE F: REPORT SYSTEM ====================
+        let reportTargetId   = null;
+        let reportTargetType = null;
+
+        function openReportModal(targetId, targetType, targetName) {
+            if (!firebaseUser) { openLoginModal(); return; }
+            reportTargetId   = targetId;
+            reportTargetType = targetType;
+            document.getElementById('reportTargetName').textContent = 'Reporting: ' + targetName;
+            document.getElementById('reportType').value = '';
+            document.getElementById('reportDescription').value = '';
+            document.getElementById('reporterNameInput').value = userProfile?.name || '';
+            document.getElementById('reportModal').classList.remove('hidden');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+            reportTargetId = null; reportTargetType = null;
+        }
+
+        document.getElementById('reportDescription').addEventListener('input', function() {
+            document.getElementById('reportCharCount').textContent = this.value.length;
+        });
+
+        async function submitReport() {
+            const type = document.getElementById('reportType').value;
+            const desc = document.getElementById('reportDescription').value.trim();
+            const name = document.getElementById('reporterNameInput').value.trim();
+            if (!type) { alert('Please select the type of issue'); return; }
+            if (!desc || desc.length < 20) { alert('Please describe the issue in at least 20 characters'); return; }
+
+            const report = {
+                id:          'rep_' + Date.now(),
+                targetId:    reportTargetId,
+                targetType:  reportTargetType,
+                targetName:  document.getElementById('reportTargetName').textContent.replace('Reporting: ', ''),
+                type,
+                description: desc,
+                reporterName: name,
+                reporterUid: firebaseUser.uid,
+                reporterPhone: firebaseUser.phoneNumber,
+                status: 'pending',
+                date:   new Date().toISOString()
+            };
+
+            try {
+                await _firebase.set(_firebase.ref(_firebase.db, `reports/${report.id}`), report);
+                closeReportModal();
+                showFirebaseStatus('🚨 Report submitted. Admin will review within 24 hours.', 'success');
+            } catch(e) {
+                alert('Could not submit report. Please try again.');
+            }
+        }
+
         // ==================== PHASE E: PHOTO PREVIEW ====================
         function previewProviderPhoto(input) {
             const file = input.files[0];
