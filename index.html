@@ -2,11 +2,72 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Sudarshan Chakra - Find Service Providers Near You</title>
+
+    <!-- ===== PWA META TAGS ===== -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ea580c">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sudarshan Chakra">
+    <meta name="application-name" content="Sudarshan Chakra">
+    <meta name="description" content="Find verified service providers near you — plumbers, electricians, beauticians, caterers and more.">
+
+    <!-- PWA Icons (inline SVG-based via data URI so no separate file needed) -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%23ea580c'/%3E%3Ctext x='96' y='130' font-size='110' text-anchor='middle' font-family='Arial'%3E%F0%9F%94%B1%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23ea580c'/%3E%3Ctext x='16' y='24' font-size='20' text-anchor='middle' font-family='Arial'%3E%F0%9F%94%B1%3C/text%3E%3C/svg%3E">
+
+    <!-- Open Graph (for sharing) -->
+    <meta property="og:title" content="Sudarshan Chakra">
+    <meta property="og:description" content="Find verified service providers near you">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sudarshanchakraindia.github.io/sudarshan-chakra/">
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('✅ Service Worker registered:', reg.scope))
+                    .catch(err => console.warn('⚠️ Service Worker failed:', err));
+            });
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // ==================== FIREBASE SETUP ====================
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
+            authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
+            databaseURL: "https://sudarshan-chakra-b0ac1-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sudarshan-chakra-b0ac1",
+            storageBucket: "sudarshan-chakra-b0ac1.firebasestorage.app",
+            messagingSenderId: "357210144411",
+            appId: "1:357210144411:web:b440a94cf78b04b58b103e"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        // Expose Firebase functions to global scope for use in the main script
+        window._firebase = { db, ref, set, push, onValue, update, remove, get };
+        window._firebaseReady = true;
+        
+        // Dispatch event so main script knows Firebase is ready
+        window.dispatchEvent(new Event('firebaseReady'));
+        
+        console.log('✅ Firebase initialized successfully');
+    </script>
     <style>
         .map-container { height: 500px; width: 100%; border-radius: 12px; }
         .reg-map { height: 350px; width: 100%; border-radius: 8px; margin-top: 10px; }
@@ -19,6 +80,53 @@
     </style>
 </head>
 <body class="bg-gray-50">
+
+    <!-- ===== PWA INSTALL BANNER ===== -->
+    <div id="pwaInstallBanner" class="hidden fixed bottom-0 left-0 right-0 z-50 p-3 bg-white border-t-2 border-orange-500 shadow-2xl" style="padding-bottom: env(safe-area-inset-bottom, 12px);">
+        <div class="max-w-lg mx-auto flex items-center gap-3">
+            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow flex-shrink-0">SC</div>
+            <div class="flex-1 min-w-0">
+                <div class="font-bold text-gray-800 text-sm">Install Sudarshan Chakra</div>
+                <div class="text-xs text-gray-500 truncate">Add to home screen for the full app experience</div>
+            </div>
+            <button id="pwaInstallBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-700 flex-shrink-0">
+                Install
+            </button>
+            <button id="pwaInstallDismiss" class="text-gray-400 hover:text-gray-600 text-xl flex-shrink-0 px-1" title="Dismiss">✕</button>
+        </div>
+    </div>
+
+    <!-- iOS Install Instructions (shown on Safari/iOS) -->
+    <div id="iosInstallBanner" class="hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-orange-500 shadow-2xl" style="padding-bottom: env(safe-area-inset-bottom, 12px);">
+        <div class="p-4 max-w-lg mx-auto">
+            <div class="flex justify-between items-start mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0">SC</div>
+                    <div>
+                        <div class="font-bold text-gray-800 text-sm">Install on iPhone / iPad</div>
+                        <div class="text-xs text-gray-500">Works like a real app — no App Store needed!</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('iosInstallBanner').classList.add('hidden'); localStorage.setItem('pwaDismissed','1')" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <div class="flex items-center gap-4 text-sm text-gray-700 bg-orange-50 rounded-xl p-3">
+                <div class="text-center flex-1">
+                    <div class="text-2xl mb-1">⬆️</div>
+                    <div class="text-xs">Tap <strong>Share</strong></div>
+                </div>
+                <div class="text-gray-400 text-lg">›</div>
+                <div class="text-center flex-1">
+                    <div class="text-2xl mb-1">➕</div>
+                    <div class="text-xs">Tap <strong>"Add to Home Screen"</strong></div>
+                </div>
+                <div class="text-gray-400 text-lg">›</div>
+                <div class="text-center flex-1">
+                    <div class="text-2xl mb-1">📱</div>
+                    <div class="text-xs">Tap <strong>Add</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- LANGUAGE SELECTOR MODAL -->
     <div id="languageModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -598,10 +706,178 @@
     <script>
         // ==================== DATA & INITIALIZATION ====================
         let currentLanguage = localStorage.getItem('language') || 'en';
-        let providers = JSON.parse(localStorage.getItem('providers')) || [];
-        let seekers = JSON.parse(localStorage.getItem('seekers')) || [];
+        let providers = []; // Populated from Firebase Realtime Database
+        let seekers = [];   // Populated from Firebase Realtime Database
         let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
         let maps = {};
+        
+        // Firebase references (set when Firebase is ready)
+        let _db = null, _ref = null, _set = null, _push = null, _onValue = null, _update = null, _remove = null, _get = null;
+        let firebaseListenersAttached = false;
+        
+        // ==================== FIREBASE HELPERS ====================
+        function fbRef(path) { return _ref(_db, path); }
+        
+        function showFirebaseStatus(msg, type = 'info') {
+            // Show a small non-blocking toast
+            const existing = document.getElementById('fb-toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'fb-toast';
+            const colors = { info: '#2563eb', success: '#16a34a', error: '#dc2626' };
+            toast.style.cssText = `position:fixed;bottom:20px;right:20px;z-index:9999;background:${colors[type]||colors.info};color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.3s`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+        
+        // Save a provider to Firebase
+        async function saveProviderToFirebase(provider) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _set(fbRef('providers/' + provider.id), provider);
+                return true;
+            } catch (err) {
+                console.error('Firebase save provider error:', err);
+                showFirebaseStatus('❌ Error saving provider. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Save a seeker to Firebase
+        async function saveSeekerToFirebase(seeker) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _set(fbRef('seekers/' + seeker.id), seeker);
+                return true;
+            } catch (err) {
+                console.error('Firebase save seeker error:', err);
+                showFirebaseStatus('❌ Error saving seeker. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Update a provider field in Firebase
+        async function updateProviderInFirebase(providerId, updates) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _update(fbRef('providers/' + providerId), updates);
+                return true;
+            } catch (err) {
+                console.error('Firebase update provider error:', err);
+                showFirebaseStatus('❌ Error updating provider. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Update a seeker field in Firebase
+        async function updateSeekerInFirebase(seekerId, updates) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _update(fbRef('seekers/' + seekerId), updates);
+                return true;
+            } catch (err) {
+                console.error('Firebase update seeker error:', err);
+                showFirebaseStatus('❌ Error updating seeker. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Delete a provider from Firebase
+        async function deleteProviderFromFirebase(providerId) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _remove(fbRef('providers/' + providerId));
+                return true;
+            } catch (err) {
+                console.error('Firebase delete provider error:', err);
+                showFirebaseStatus('❌ Error deleting provider. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Delete a seeker from Firebase
+        async function deleteSeekerFromFirebase(seekerId) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _remove(fbRef('seekers/' + seekerId));
+                return true;
+            } catch (err) {
+                console.error('Firebase delete seeker error:', err);
+                showFirebaseStatus('❌ Error deleting seeker. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Attach real-time listeners for providers and seekers
+        function attachFirebaseListeners() {
+            if (firebaseListenersAttached || !_db) return;
+            firebaseListenersAttached = true;
+            
+            // Listen for providers changes (real-time)
+            _onValue(fbRef('providers'), (snapshot) => {
+                const data = snapshot.val();
+                providers = data ? Object.values(data) : [];
+                console.log('🔄 Providers updated from Firebase:', providers.length);
+                // Refresh UI if browse page is visible
+                if (!document.getElementById('page-browse').classList.contains('hidden')) {
+                    if (selectedServiceIdx !== null) applySortAndFilter();
+                }
+                // Refresh admin if open
+                if (!document.getElementById('page-admin').classList.contains('hidden')) {
+                    updateAdminStats();
+                    if (!document.getElementById('adminTab-users').classList.contains('hidden')) {
+                        loadProvidersList();
+                    }
+                }
+                // Refresh map if open
+                if (!document.getElementById('page-map').classList.contains('hidden')) {
+                    initMainMap();
+                }
+            }, (err) => {
+                console.error('Firebase providers listener error:', err);
+                showFirebaseStatus('⚠️ Firebase connection issue. Data may be outdated.', 'error');
+            });
+            
+            // Listen for seekers changes (real-time)
+            _onValue(fbRef('seekers'), (snapshot) => {
+                const data = snapshot.val();
+                seekers = data ? Object.values(data) : [];
+                console.log('🔄 Seekers updated from Firebase:', seekers.length);
+                if (!document.getElementById('page-admin').classList.contains('hidden')) {
+                    updateAdminStats();
+                    if (!document.getElementById('adminTab-users').classList.contains('hidden')) {
+                        loadSeekersList();
+                    }
+                }
+            }, (err) => {
+                console.error('Firebase seekers listener error:', err);
+            });
+            
+            showFirebaseStatus('🔥 Connected to Firebase — real-time sync active!', 'success');
+        }
+        
+        // Initialize Firebase when ready
+        function onFirebaseReady() {
+            const fb = window._firebase;
+            _db = fb.db;
+            _ref = fb.ref;
+            _set = fb.set;
+            _push = fb.push;
+            _onValue = fb.onValue;
+            _update = fb.update;
+            _remove = fb.remove;
+            _get = fb.get;
+            
+            attachFirebaseListeners();
+        }
+        
+        // Check if Firebase is already ready (race condition safety)
+        if (window._firebaseReady) {
+            onFirebaseReady();
+        } else {
+            window.addEventListener('firebaseReady', onFirebaseReady);
+        }
         
         // Selected browsing state
         let selectedCategoryId = null;
@@ -702,34 +978,700 @@
         }
         
         
-        // Default categories
-        let categories = JSON.parse(localStorage.getItem('categories')) || [
+        // ==================== CATEGORY VERSION & MERGE SYSTEM ====================
+        // Increment CATEGORY_VERSION each time you add new default categories.
+        // The merge logic will ADD new categories/subcategories/services to saved data
+        // without removing anything the admin has added or customised.
+        const CATEGORY_VERSION = 2; // <-- bump this number when adding new defaults
+
+        // These are the MASTER default categories. They are only ever ADDED, never removed.
+        const DEFAULT_CATEGORIES = [
             {
                 id: 'cat1',
                 name: { en: 'Home Services' },
                 icon: '🏠',
                 subcategories: [
                     {
-                        name: { en: 'Plumbing' },
-                        icon: '🔧',
+                        name: { en: 'Plumber' }, icon: '🔧',
                         subsubcategories: [
                             { name: { en: 'Pipe Repair' }, icon: '🔧' },
+                            { name: { en: 'Tap/Faucet Repair' }, icon: '🚰' },
                             { name: { en: 'Tank Installation' }, icon: '💧' },
-                            { name: { en: 'Bathroom Fitting' }, icon: '🚿' }
+                            { name: { en: 'Bathroom Fitting' }, icon: '🚿' },
+                            { name: { en: 'Drainage Cleaning' }, icon: '🪣' }
                         ]
                     },
                     {
-                        name: { en: 'Electrical' },
-                        icon: '⚡',
+                        name: { en: 'Electrician' }, icon: '⚡',
                         subsubcategories: [
-                            { name: { en: 'Wiring' }, icon: '🔌' },
+                            { name: { en: 'Wiring & Rewiring' }, icon: '🔌' },
+                            { name: { en: 'Fan Installation' }, icon: '🌀' },
+                            { name: { en: 'Light Installation' }, icon: '💡' },
+                            { name: { en: 'Switchboard Repair' }, icon: '🔲' },
                             { name: { en: 'Appliance Repair' }, icon: '🔧' }
+                        ]
+                    },
+                    {
+                        name: { en: 'AC Repair & Servicing' }, icon: '❄️',
+                        subsubcategories: [
+                            { name: { en: 'AC Servicing' }, icon: '❄️' },
+                            { name: { en: 'AC Installation' }, icon: '🔩' },
+                            { name: { en: 'AC Gas Refill' }, icon: '💨' },
+                            { name: { en: 'AC Uninstallation' }, icon: '🔧' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Carpenter' }, icon: '🪵',
+                        subsubcategories: [
+                            { name: { en: 'Furniture Repair' }, icon: '🪑' },
+                            { name: { en: 'Door/Window Repair' }, icon: '🚪' },
+                            { name: { en: 'Wood Polishing' }, icon: '✨' },
+                            { name: { en: 'Custom Furniture' }, icon: '🛋️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'RO Repair & Installation' }, icon: '💧',
+                        subsubcategories: [
+                            { name: { en: 'RO Installation' }, icon: '💧' },
+                            { name: { en: 'RO Service & Filter Change' }, icon: '🔧' },
+                            { name: { en: 'RO Repair' }, icon: '🛠️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Geyser Repair' }, icon: '🚿',
+                        subsubcategories: [
+                            { name: { en: 'Geyser Repair' }, icon: '🔧' },
+                            { name: { en: 'Geyser Installation' }, icon: '🚿' },
+                            { name: { en: 'Element Replacement' }, icon: '⚡' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Inverter/Battery Service' }, icon: '🔋',
+                        subsubcategories: [
+                            { name: { en: 'Inverter Repair' }, icon: '🔋' },
+                            { name: { en: 'Battery Replacement' }, icon: '🔌' },
+                            { name: { en: 'Solar Panel Service' }, icon: '☀️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'CCTV Installation' }, icon: '📷',
+                        subsubcategories: [
+                            { name: { en: 'CCTV Installation' }, icon: '📷' },
+                            { name: { en: 'CCTV Repair' }, icon: '🔧' },
+                            { name: { en: 'DVR/NVR Setup' }, icon: '🖥️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Water Tank Cleaning' }, icon: '🛢️',
+                        subsubcategories: [
+                            { name: { en: 'Overhead Tank Cleaning' }, icon: '🛢️' },
+                            { name: { en: 'Underground Tank Cleaning' }, icon: '⬇️' },
+                            { name: { en: 'Sump Cleaning' }, icon: '🪣' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Pest Control' }, icon: '🐜',
+                        subsubcategories: [
+                            { name: { en: 'Cockroach Treatment' }, icon: '🪲' },
+                            { name: { en: 'Termite Treatment' }, icon: '🐛' },
+                            { name: { en: 'Mosquito Treatment' }, icon: '🦟' },
+                            { name: { en: 'Rodent Control' }, icon: '🐀' },
+                            { name: { en: 'Bed Bug Treatment' }, icon: '🛏️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Painter' }, icon: '🎨',
+                        subsubcategories: [
+                            { name: { en: 'Wall Painting' }, icon: '🖌️' },
+                            { name: { en: 'Waterproofing' }, icon: '💦' },
+                            { name: { en: 'Texture Painting' }, icon: '🎨' },
+                            { name: { en: 'Exterior Painting' }, icon: '🏠' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Interior Designer' }, icon: '🛋️',
+                        subsubcategories: [
+                            { name: { en: 'Home Interior Design' }, icon: '🏡' },
+                            { name: { en: '3D Design Consultation' }, icon: '🖥️' },
+                            { name: { en: 'Office Interior' }, icon: '🏢' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Modular Kitchen' }, icon: '🍳',
+                        subsubcategories: [
+                            { name: { en: 'Modular Kitchen Design' }, icon: '🍳' },
+                            { name: { en: 'Kitchen Installation' }, icon: '🔩' },
+                            { name: { en: 'Kitchen Repair' }, icon: '🔧' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat2',
+                name: { en: 'Beauty & Wellness' },
+                icon: '💄',
+                subcategories: [
+                    {
+                        name: { en: 'Bridal Makeup' }, icon: '👰',
+                        subsubcategories: [
+                            { name: { en: 'Bridal Makeup' }, icon: '💄' },
+                            { name: { en: 'Engagement Makeup' }, icon: '💍' },
+                            { name: { en: 'Party Makeup' }, icon: '✨' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Mehendi Artist' }, icon: '🌿',
+                        subsubcategories: [
+                            { name: { en: 'Bridal Mehendi' }, icon: '👰' },
+                            { name: { en: 'Party Mehendi' }, icon: '🎉' },
+                            { name: { en: 'Arabic Mehendi' }, icon: '🌿' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Home Salon Services' }, icon: '💅',
+                        subsubcategories: [
+                            { name: { en: 'Facial' }, icon: '🧖' },
+                            { name: { en: 'Waxing' }, icon: '✨' },
+                            { name: { en: 'Threading' }, icon: '🧵' },
+                            { name: { en: 'Pedicure & Manicure' }, icon: '💅' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Hair Stylist at Home' }, icon: '💇',
+                        subsubcategories: [
+                            { name: { en: 'Haircut' }, icon: '✂️' },
+                            { name: { en: 'Hair Colour' }, icon: '🎨' },
+                            { name: { en: 'Hair Treatment' }, icon: '✨' },
+                            { name: { en: 'Blow Dry & Setting' }, icon: '💨' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Nail Artist' }, icon: '💅',
+                        subsubcategories: [
+                            { name: { en: 'Nail Extensions' }, icon: '💅' },
+                            { name: { en: 'Nail Art' }, icon: '🎨' },
+                            { name: { en: 'Gel Nails' }, icon: '✨' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Men Grooming' }, icon: '💈',
+                        subsubcategories: [
+                            { name: { en: 'Haircut at Home' }, icon: '✂️' },
+                            { name: { en: 'Beard Styling' }, icon: '🧔' },
+                            { name: { en: 'Facial for Men' }, icon: '🧖' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Spa at Home' }, icon: '🧘',
+                        subsubcategories: [
+                            { name: { en: 'Full Body Massage' }, icon: '💆' },
+                            { name: { en: 'Head Massage' }, icon: '🧠' },
+                            { name: { en: 'Foot Massage' }, icon: '🦶' },
+                            { name: { en: 'Aromatherapy' }, icon: '🌸' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Fitness Trainer' }, icon: '🏋️',
+                        subsubcategories: [
+                            { name: { en: 'Personal Training at Home' }, icon: '🏋️' },
+                            { name: { en: 'Weight Loss Program' }, icon: '⚖️' },
+                            { name: { en: 'Strength Training' }, icon: '💪' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Yoga Instructor' }, icon: '🧘',
+                        subsubcategories: [
+                            { name: { en: 'Morning Yoga' }, icon: '🌅' },
+                            { name: { en: 'Meditation Sessions' }, icon: '🧘' },
+                            { name: { en: 'Prenatal Yoga' }, icon: '🤰' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Dietician' }, icon: '🥗',
+                        subsubcategories: [
+                            { name: { en: 'Diet Consultation' }, icon: '🥗' },
+                            { name: { en: 'Weight Management Plan' }, icon: '⚖️' },
+                            { name: { en: 'Disease-specific Diet' }, icon: '🏥' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Physiotherapist' }, icon: '🦴',
+                        subsubcategories: [
+                            { name: { en: 'Home Physiotherapy' }, icon: '🦴' },
+                            { name: { en: 'Sports Injury Rehab' }, icon: '⚽' },
+                            { name: { en: 'Post-surgery Rehab' }, icon: '🏥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat3',
+                name: { en: 'Cleaning Services' },
+                icon: '🧹',
+                subcategories: [
+                    {
+                        name: { en: 'Deep Home Cleaning' }, icon: '🏠',
+                        subsubcategories: [
+                            { name: { en: 'Full Home Deep Clean' }, icon: '🧹' },
+                            { name: { en: 'Bathroom Deep Clean' }, icon: '🚿' },
+                            { name: { en: 'Post-renovation Cleaning' }, icon: '🔨' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Sofa Cleaning' }, icon: '🛋️',
+                        subsubcategories: [
+                            { name: { en: 'Fabric Sofa Cleaning' }, icon: '🛋️' },
+                            { name: { en: 'Leather Sofa Cleaning' }, icon: '✨' },
+                            { name: { en: 'Sofa Shampooing' }, icon: '🧴' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Mattress Cleaning' }, icon: '🛏️',
+                        subsubcategories: [
+                            { name: { en: 'Mattress Deep Clean' }, icon: '🛏️' },
+                            { name: { en: 'Mattress Sanitization' }, icon: '🧼' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Kitchen Deep Cleaning' }, icon: '🍳',
+                        subsubcategories: [
+                            { name: { en: 'Chimney Cleaning' }, icon: '🌫️' },
+                            { name: { en: 'Stove & Burner Cleaning' }, icon: '🔥' },
+                            { name: { en: 'Full Kitchen Deep Clean' }, icon: '🧹' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Marble Polishing' }, icon: '✨',
+                        subsubcategories: [
+                            { name: { en: 'Floor Polishing' }, icon: '✨' },
+                            { name: { en: 'Granite Polishing' }, icon: '🪨' },
+                            { name: { en: 'Anti-skid Treatment' }, icon: '⚠️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Move-in/Move-out Cleaning' }, icon: '📦',
+                        subsubcategories: [
+                            { name: { en: 'Move-in Cleaning' }, icon: '🏠' },
+                            { name: { en: 'Move-out Cleaning' }, icon: '📦' },
+                            { name: { en: 'Vacant Flat Cleaning' }, icon: '🏢' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat4',
+                name: { en: 'Event Services' },
+                icon: '🎉',
+                subcategories: [
+                    {
+                        name: { en: 'Wedding Photographer' }, icon: '📸',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Photography' }, icon: '📸' },
+                            { name: { en: 'Pre-wedding Shoot' }, icon: '💕' },
+                            { name: { en: 'Candid Photography' }, icon: '🎞️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Videographer' }, icon: '🎥',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Videography' }, icon: '🎥' },
+                            { name: { en: 'Cinematic Film' }, icon: '🎬' },
+                            { name: { en: 'Drone Videography' }, icon: '🚁' }
+                        ]
+                    },
+                    {
+                        name: { en: 'DJ Services' }, icon: '🎧',
+                        subsubcategories: [
+                            { name: { en: 'Wedding DJ' }, icon: '🎧' },
+                            { name: { en: 'Party DJ' }, icon: '🎉' },
+                            { name: { en: 'Sound System Rental' }, icon: '🔊' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Caterers' }, icon: '🍽️',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Catering' }, icon: '🍽️' },
+                            { name: { en: 'Birthday Catering' }, icon: '🎂' },
+                            { name: { en: 'Corporate Catering' }, icon: '🏢' },
+                            { name: { en: 'Tiffin Service' }, icon: '🥡' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Tent & Decoration' }, icon: '🎪',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Decoration' }, icon: '💐' },
+                            { name: { en: 'Tent & Shamiana' }, icon: '🎪' },
+                            { name: { en: 'Stage Decoration' }, icon: '🎭' },
+                            { name: { en: 'Flower Decoration' }, icon: '🌸' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Birthday Party Planner' }, icon: '🎂',
+                        subsubcategories: [
+                            { name: { en: 'Kids Birthday Planning' }, icon: '🎈' },
+                            { name: { en: 'Theme Party Setup' }, icon: '🎠' },
+                            { name: { en: 'Balloon Decoration' }, icon: '🎈' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Anchor / Emcee' }, icon: '🎤',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Anchor' }, icon: '💍' },
+                            { name: { en: 'Corporate Emcee' }, icon: '🏢' },
+                            { name: { en: 'Bilingual Anchor' }, icon: '🌐' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Band / Dhol' }, icon: '🥁',
+                        subsubcategories: [
+                            { name: { en: 'Baraat Band' }, icon: '🎺' },
+                            { name: { en: 'Dhol Players' }, icon: '🥁' },
+                            { name: { en: 'Brass Band' }, icon: '🎷' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Folk Artists Booking' }, icon: '🎭',
+                        subsubcategories: [
+                            { name: { en: 'Kalbelia Dancers' }, icon: '💃' },
+                            { name: { en: 'Kalbeliya Performers' }, icon: '🎭' },
+                            { name: { en: 'Folk Music Group' }, icon: '🎶' },
+                            { name: { en: 'Fire Show Artist' }, icon: '🔥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat5',
+                name: { en: 'Travel & Transport' },
+                icon: '🚗',
+                subcategories: [
+                    {
+                        name: { en: 'Taxi Booking' }, icon: '🚕',
+                        subsubcategories: [
+                            { name: { en: 'Local Taxi' }, icon: '🚕' },
+                            { name: { en: 'Outstation Taxi' }, icon: '🛣️' },
+                            { name: { en: 'Airport Transfer' }, icon: '✈️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Tempo Traveller Rental' }, icon: '🚐',
+                        subsubcategories: [
+                            { name: { en: '9-Seater Tempo' }, icon: '🚐' },
+                            { name: { en: '12-Seater Tempo' }, icon: '🚌' },
+                            { name: { en: '17-Seater Tempo' }, icon: '🚌' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Car Rental with Driver' }, icon: '🚗',
+                        subsubcategories: [
+                            { name: { en: 'Sedan Rental' }, icon: '🚗' },
+                            { name: { en: 'SUV Rental' }, icon: '🚙' },
+                            { name: { en: 'Luxury Car Rental' }, icon: '🏎️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Bike Rental' }, icon: '🏍️',
+                        subsubcategories: [
+                            { name: { en: 'Scooter Rental' }, icon: '🛵' },
+                            { name: { en: 'Motorcycle Rental' }, icon: '🏍️' },
+                            { name: { en: 'Royal Enfield Rental' }, icon: '🏍️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Local Tour Guide' }, icon: '🗺️',
+                        subsubcategories: [
+                            { name: { en: 'City Tour Guide' }, icon: '🏙️' },
+                            { name: { en: 'Heritage Walk Guide' }, icon: '🏛️' },
+                            { name: { en: 'Multilingual Guide' }, icon: '🌐' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Desert Safari Booking' }, icon: '🐪',
+                        subsubcategories: [
+                            { name: { en: 'Camel Safari' }, icon: '🐪' },
+                            { name: { en: 'Jeep Safari' }, icon: '🚙' },
+                            { name: { en: 'Overnight Desert Camp' }, icon: '⛺' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Driver on Demand' }, icon: '🧑‍✈️',
+                        subsubcategories: [
+                            { name: { en: 'Personal Driver' }, icon: '🧑‍✈️' },
+                            { name: { en: 'Corporate Driver' }, icon: '💼' },
+                            { name: { en: 'Night Driver' }, icon: '🌙' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat6',
+                name: { en: 'Real Estate & Property' },
+                icon: '🏢',
+                subcategories: [
+                    {
+                        name: { en: 'Property Dealer' }, icon: '🏠',
+                        subsubcategories: [
+                            { name: { en: 'Residential Property' }, icon: '🏡' },
+                            { name: { en: 'Commercial Property' }, icon: '🏢' },
+                            { name: { en: 'Land/Plot Dealing' }, icon: '🌾' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Rental Listings' }, icon: '🔑',
+                        subsubcategories: [
+                            { name: { en: 'Flat/Apartment Rental' }, icon: '🏢' },
+                            { name: { en: 'PG Accommodation' }, icon: '🛏️' },
+                            { name: { en: 'Shop/Office Rental' }, icon: '🏪' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Packers & Movers' }, icon: '📦',
+                        subsubcategories: [
+                            { name: { en: 'Home Shifting' }, icon: '🏠' },
+                            { name: { en: 'Office Relocation' }, icon: '🏢' },
+                            { name: { en: 'Vehicle Transportation' }, icon: '🚗' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Marble/Stone Contractor' }, icon: '🪨',
+                        subsubcategories: [
+                            { name: { en: 'Marble Flooring' }, icon: '🪨' },
+                            { name: { en: 'Granite Work' }, icon: '🏗️' },
+                            { name: { en: 'Stone Cladding' }, icon: '🧱' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat7',
+                name: { en: 'Education & Skill Services' },
+                icon: '📚',
+                subcategories: [
+                    {
+                        name: { en: 'Home Tutor' }, icon: '📖',
+                        subsubcategories: [
+                            { name: { en: 'Primary School Tutor' }, icon: '✏️' },
+                            { name: { en: 'Secondary School Tutor' }, icon: '📐' },
+                            { name: { en: 'Science & Math Tutor' }, icon: '🔬' },
+                            { name: { en: 'Commerce Tutor' }, icon: '💹' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Spoken English Trainer' }, icon: '🗣️',
+                        subsubcategories: [
+                            { name: { en: 'Basic Spoken English' }, icon: '🗣️' },
+                            { name: { en: 'Business English' }, icon: '💼' },
+                            { name: { en: 'IELTS / TOEFL Coaching' }, icon: '📝' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Competitive Exam Tutor' }, icon: '🏆',
+                        subsubcategories: [
+                            { name: { en: 'UPSC Coaching' }, icon: '🏛️' },
+                            { name: { en: 'REET / RPSC Coaching' }, icon: '📋' },
+                            { name: { en: 'SSC / Railway Coaching' }, icon: '🚂' },
+                            { name: { en: 'JEE / NEET Coaching' }, icon: '🔬' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Dance Teacher' }, icon: '💃',
+                        subsubcategories: [
+                            { name: { en: 'Classical Dance' }, icon: '💃' },
+                            { name: { en: 'Bollywood Dance' }, icon: '🎬' },
+                            { name: { en: 'Western Dance' }, icon: '🕺' },
+                            { name: { en: 'Folk Dance' }, icon: '🎭' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Music Teacher' }, icon: '🎵',
+                        subsubcategories: [
+                            { name: { en: 'Guitar Classes' }, icon: '🎸' },
+                            { name: { en: 'Keyboard / Piano' }, icon: '🎹' },
+                            { name: { en: 'Vocals / Singing' }, icon: '🎤' },
+                            { name: { en: 'Tabla / Harmonium' }, icon: '🥁' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat8',
+                name: { en: 'Business & Professional Services' },
+                icon: '💼',
+                subcategories: [
+                    {
+                        name: { en: 'CA / Tax Filing' }, icon: '📊',
+                        subsubcategories: [
+                            { name: { en: 'ITR Filing' }, icon: '📋' },
+                            { name: { en: 'GST Registration & Filing' }, icon: '🧾' },
+                            { name: { en: 'Business Accounting' }, icon: '📊' },
+                            { name: { en: 'Audit Services' }, icon: '🔍' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Legal Advisor' }, icon: '⚖️',
+                        subsubcategories: [
+                            { name: { en: 'Property Legal Help' }, icon: '🏠' },
+                            { name: { en: 'Family Law / Divorce' }, icon: '👨‍👩‍👧' },
+                            { name: { en: 'Business Legal Services' }, icon: '💼' },
+                            { name: { en: 'Documentation Help' }, icon: '📄' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Website Developer' }, icon: '💻',
+                        subsubcategories: [
+                            { name: { en: 'Business Website' }, icon: '🌐' },
+                            { name: { en: 'E-commerce Website' }, icon: '🛒' },
+                            { name: { en: 'App Development' }, icon: '📱' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Graphic Designer' }, icon: '🎨',
+                        subsubcategories: [
+                            { name: { en: 'Logo Design' }, icon: '🎯' },
+                            { name: { en: 'Brochure / Flyer Design' }, icon: '📰' },
+                            { name: { en: 'Banner & Poster Design' }, icon: '🖼️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Social Media Manager' }, icon: '📱',
+                        subsubcategories: [
+                            { name: { en: 'Instagram Management' }, icon: '📸' },
+                            { name: { en: 'Facebook Marketing' }, icon: '👍' },
+                            { name: { en: 'Content Creation' }, icon: '✍️' },
+                            { name: { en: 'Paid Ads Management' }, icon: '💰' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Wedding Invitation Designer' }, icon: '💌',
+                        subsubcategories: [
+                            { name: { en: 'Digital Invitations' }, icon: '📱' },
+                            { name: { en: 'Printed Card Design' }, icon: '🖨️' },
+                            { name: { en: 'Video Invitations' }, icon: '🎥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat9',
+                name: { en: 'Pet Services' },
+                icon: '🐾',
+                subcategories: [
+                    {
+                        name: { en: 'Pet Grooming' }, icon: '🐶',
+                        subsubcategories: [
+                            { name: { en: 'Dog Grooming at Home' }, icon: '🐕' },
+                            { name: { en: 'Cat Grooming' }, icon: '🐱' },
+                            { name: { en: 'Bath & Blow Dry' }, icon: '🚿' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Pet Boarding' }, icon: '🏠',
+                        subsubcategories: [
+                            { name: { en: 'Dog Boarding' }, icon: '🐕' },
+                            { name: { en: 'Cat Boarding' }, icon: '🐱' },
+                            { name: { en: 'Home-based Pet Sitting' }, icon: '🏡' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Dog Training' }, icon: '🦮',
+                        subsubcategories: [
+                            { name: { en: 'Basic Obedience Training' }, icon: '🦮' },
+                            { name: { en: 'Advanced Training' }, icon: '🏆' },
+                            { name: { en: 'Puppy Training' }, icon: '🐶' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Vet on Call' }, icon: '🏥',
+                        subsubcategories: [
+                            { name: { en: 'Home Visit Vet' }, icon: '🏥' },
+                            { name: { en: 'Vaccination at Home' }, icon: '💉' },
+                            { name: { en: 'Online Vet Consultation' }, icon: '💻' }
                         ]
                     }
                 ]
             }
-        ];
-        
+        ]; // end DEFAULT_CATEGORIES
+
+        // ==================== CATEGORY MERGE FUNCTION ====================
+        // Merges DEFAULT_CATEGORIES into saved categories:
+        //   - New top-level categories are APPENDED (never removed)
+        //   - New subcategories inside existing categories are APPENDED
+        //   - New service types inside existing subcategories are APPENDED
+        //   - Anything the admin added/edited/deleted is PRESERVED
+        function mergeCategories(saved, defaults) {
+            const merged = [...saved]; // start from what's saved
+
+            defaults.forEach(defCat => {
+                // Match by id first, then by English name as fallback
+                const existingCat = merged.find(c =>
+                    (c.id && defCat.id && c.id === defCat.id) ||
+                    ((c.name?.en || c.name) === (defCat.name?.en || defCat.name))
+                );
+
+                if (!existingCat) {
+                    // Brand-new category — append it whole
+                    merged.push(defCat);
+                } else {
+                    // Category exists — merge subcategories
+                    if (!existingCat.subcategories) existingCat.subcategories = [];
+                    const existingSubs = existingCat.subcategories;
+
+                    (defCat.subcategories || []).forEach(defSub => {
+                        const existingSub = existingSubs.find(s =>
+                            (s.name?.en || s.name) === (defSub.name?.en || defSub.name)
+                        );
+
+                        if (!existingSub) {
+                            // New subcategory — append it whole
+                            existingSubs.push(defSub);
+                        } else {
+                            // Subcategory exists — merge service types
+                            if (!existingSub.subsubcategories) existingSub.subsubcategories = [];
+                            const existingServices = existingSub.subsubcategories;
+
+                            (defSub.subsubcategories || []).forEach(defService => {
+                                const alreadyExists = existingServices.some(sv =>
+                                    (sv.name?.en || sv.name) === (defService.name?.en || defService.name)
+                                );
+                                if (!alreadyExists) {
+                                    // New service type — append it
+                                    existingServices.push(defService);
+                                }
+                                // If it exists: leave it exactly as the admin has it
+                            });
+                        }
+                    });
+                }
+            });
+
+            return merged;
+        }
+
+        // ==================== LOAD & AUTO-MERGE CATEGORIES ====================
+        (function initCategories() {
+            const savedVersion   = parseInt(localStorage.getItem('categoryVersion') || '0');
+            const savedRaw       = localStorage.getItem('categories');
+
+            if (!savedRaw) {
+                // First ever load — just use defaults as-is
+                localStorage.setItem('categories', JSON.stringify(DEFAULT_CATEGORIES));
+                localStorage.setItem('categoryVersion', String(CATEGORY_VERSION));
+                console.log('✅ Categories: first load, defaults applied.');
+            } else if (savedVersion < CATEGORY_VERSION) {
+                // New version detected — merge new defaults into saved data
+                const saved  = JSON.parse(savedRaw);
+                const merged = mergeCategories(saved, DEFAULT_CATEGORIES);
+                localStorage.setItem('categories', JSON.stringify(merged));
+                localStorage.setItem('categoryVersion', String(CATEGORY_VERSION));
+                console.log(`✅ Categories: merged from v${savedVersion} → v${CATEGORY_VERSION}. Total categories: ${merged.length}`);
+            } else {
+                console.log(`✅ Categories: already at v${CATEGORY_VERSION}, no merge needed.`);
+            }
+        })();
+
+        // Live working array — always read fresh after the merge above
+        let categories = JSON.parse(localStorage.getItem('categories'));
+
         // ==================== UTILITY FUNCTIONS ====================
         function getTranslated(obj, defaultText = '') {
             if (!obj) return defaultText;
@@ -1646,16 +2588,26 @@
                 registered: new Date().toISOString()
             };
             
-            providers.push(provider);
-            localStorage.setItem('providers', JSON.stringify(providers));
+            // Show loading state
+            const submitBtn = document.getElementById('providerForm').querySelector('button[type="submit"]');
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Saving...'; }
             
-            document.getElementById('providerSuccess').classList.remove('hidden');
-            document.getElementById('providerForm').reset();
-            
-            setTimeout(() => {
-                document.getElementById('providerSuccess').classList.add('hidden');
-                showPage('browse');
-            }, 2000);
+            saveProviderToFirebase(provider).then(success => {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = t('registerNow') || 'Register Now'; }
+                
+                if (success) {
+                    document.getElementById('providerSuccess').classList.remove('hidden');
+                    document.getElementById('providerForm').reset();
+                    showFirebaseStatus('✅ Provider registered successfully!', 'success');
+                    
+                    setTimeout(() => {
+                        document.getElementById('providerSuccess').classList.add('hidden');
+                        showPage('browse');
+                    }, 2000);
+                } else {
+                    alert('❌ Could not save to database. Please check your internet connection and try again.');
+                }
+            });
         });
         
         document.getElementById('seekerForm').addEventListener('submit', function(e) {
@@ -1673,19 +2625,28 @@
                 registered: new Date().toISOString()
             };
             
-            seekers.push(seeker);
-            localStorage.setItem('seekers', JSON.stringify(seekers));
+            const submitBtnS = document.getElementById('seekerForm').querySelector('button[type="submit"]');
+            if (submitBtnS) { submitBtnS.disabled = true; submitBtnS.textContent = '⏳ Saving...'; }
             
-            currentUser = seeker;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            
-            document.getElementById('seekerSuccess').classList.remove('hidden');
-            document.getElementById('seekerForm').reset();
-            
-            setTimeout(() => {
-                document.getElementById('seekerSuccess').classList.add('hidden');
-                showPage('browse');
-            }, 2000);
+            saveSeekerToFirebase(seeker).then(success => {
+                if (submitBtnS) { submitBtnS.disabled = false; submitBtnS.textContent = t('registerNow') || 'Register Now'; }
+                
+                if (success) {
+                    currentUser = seeker;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    document.getElementById('seekerSuccess').classList.remove('hidden');
+                    document.getElementById('seekerForm').reset();
+                    showFirebaseStatus('✅ Seeker registered successfully!', 'success');
+                    
+                    setTimeout(() => {
+                        document.getElementById('seekerSuccess').classList.add('hidden');
+                        showPage('browse');
+                    }, 2000);
+                } else {
+                    alert('❌ Could not save to database. Please check your internet connection and try again.');
+                }
+            });
         });
         
         // ==================== ADMIN ====================
@@ -1818,44 +2779,31 @@
         
         function pauseProvider(providerId) {
             if (confirm('⏸️ Pause this provider? They will not appear in search results until reactivated.')) {
-                const provider = providers.find(p => p.id === providerId);
-                if (provider) {
-                    provider.status = 'paused';
-                    localStorage.setItem('providers', JSON.stringify(providers));
-                    loadProvidersList();
-                    updateAdminStats();
-                }
+                updateProviderInFirebase(providerId, { status: 'paused' }).then(success => {
+                    if (success) showFirebaseStatus('Provider paused', 'success');
+                });
             }
         }
         
         function restrictProvider(providerId) {
             if (confirm('🚫 Restrict this provider? They will be blocked from the platform.')) {
-                const provider = providers.find(p => p.id === providerId);
-                if (provider) {
-                    provider.status = 'restricted';
-                    localStorage.setItem('providers', JSON.stringify(providers));
-                    loadProvidersList();
-                    updateAdminStats();
-                }
+                updateProviderInFirebase(providerId, { status: 'restricted' }).then(success => {
+                    if (success) showFirebaseStatus('Provider restricted', 'success');
+                });
             }
         }
         
         function activateProvider(providerId) {
-            const provider = providers.find(p => p.id === providerId);
-            if (provider) {
-                provider.status = 'active';
-                localStorage.setItem('providers', JSON.stringify(providers));
-                loadProvidersList();
-                updateAdminStats();
-            }
+            updateProviderInFirebase(providerId, { status: 'active' }).then(success => {
+                if (success) showFirebaseStatus('Provider activated', 'success');
+            });
         }
         
         function deleteProvider(providerId) {
             if (confirm('🗑️ PERMANENTLY DELETE this provider? This action cannot be undone!')) {
-                providers = providers.filter(p => p.id !== providerId);
-                localStorage.setItem('providers', JSON.stringify(providers));
-                loadProvidersList();
-                updateAdminStats();
+                deleteProviderFromFirebase(providerId).then(success => {
+                    if (success) showFirebaseStatus('Provider deleted', 'success');
+                });
             }
         }
         
@@ -1930,44 +2878,31 @@
         
         function pauseSeeker(seekerId) {
             if (confirm('⏸️ Pause this seeker? They will not be able to use the platform until reactivated.')) {
-                const seeker = seekers.find(s => s.id === seekerId);
-                if (seeker) {
-                    seeker.status = 'paused';
-                    localStorage.setItem('seekers', JSON.stringify(seekers));
-                    loadSeekersList();
-                    updateAdminStats();
-                }
+                updateSeekerInFirebase(seekerId, { status: 'paused' }).then(success => {
+                    if (success) showFirebaseStatus('Seeker paused', 'success');
+                });
             }
         }
         
         function restrictSeeker(seekerId) {
             if (confirm('🚫 Restrict this seeker? They will be blocked from the platform.')) {
-                const seeker = seekers.find(s => s.id === seekerId);
-                if (seeker) {
-                    seeker.status = 'restricted';
-                    localStorage.setItem('seekers', JSON.stringify(seekers));
-                    loadSeekersList();
-                    updateAdminStats();
-                }
+                updateSeekerInFirebase(seekerId, { status: 'restricted' }).then(success => {
+                    if (success) showFirebaseStatus('Seeker restricted', 'success');
+                });
             }
         }
         
         function activateSeeker(seekerId) {
-            const seeker = seekers.find(s => s.id === seekerId);
-            if (seeker) {
-                seeker.status = 'active';
-                localStorage.setItem('seekers', JSON.stringify(seekers));
-                loadSeekersList();
-                updateAdminStats();
-            }
+            updateSeekerInFirebase(seekerId, { status: 'active' }).then(success => {
+                if (success) showFirebaseStatus('Seeker activated', 'success');
+            });
         }
         
         function deleteSeeker(seekerId) {
             if (confirm('🗑️ PERMANENTLY DELETE this seeker? This action cannot be undone!')) {
-                seekers = seekers.filter(s => s.id !== seekerId);
-                localStorage.setItem('seekers', JSON.stringify(seekers));
-                loadSeekersList();
-                updateAdminStats();
+                deleteSeekerFromFirebase(seekerId).then(success => {
+                    if (success) showFirebaseStatus('Seeker deleted', 'success');
+                });
             }
         }
         
@@ -2370,7 +3305,15 @@
             initializeTranslations(); // Mark translatable elements
             updateProviderCategorySelects();
             updateAllUIText(); // Apply translations on init
-            showPage('home');
+
+            // Handle PWA shortcut URLs e.g. ?page=browse or ?page=register
+            const urlParams = new URLSearchParams(window.location.search);
+            const startPage = urlParams.get('page');
+            if (startPage && ['home','browse','map','register','seeker','admin','myProfile'].includes(startPage)) {
+                showPage(startPage);
+            } else {
+                showPage('home');
+            }
         }
         
         window.onload = function() {
@@ -2393,6 +3336,64 @@
                 initializeApp();
             }
         };
+        // ==================== PWA INSTALL PROMPT ====================
+        let deferredInstallPrompt = null;
+
+        // Capture the install prompt event (Android/Chrome)
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+
+            // Don't show if already dismissed or installed
+            if (localStorage.getItem('pwaDismissed') === '1') return;
+            if (window.matchMedia('(display-mode: standalone)').matches) return;
+
+            // Show our custom banner after 3 seconds
+            setTimeout(() => {
+                document.getElementById('pwaInstallBanner').classList.remove('hidden');
+            }, 3000);
+        });
+
+        // Install button clicked
+        document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            document.getElementById('pwaInstallBanner').classList.add('hidden');
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            console.log('PWA install outcome:', outcome);
+            deferredInstallPrompt = null;
+            if (outcome === 'accepted') {
+                showFirebaseStatus('🎉 App installed! Find it on your home screen.', 'success');
+            }
+        });
+
+        // Dismiss banner
+        document.getElementById('pwaInstallDismiss')?.addEventListener('click', () => {
+            document.getElementById('pwaInstallBanner').classList.add('hidden');
+            localStorage.setItem('pwaDismissed', '1');
+        });
+
+        // iOS Safari detection — show manual instructions
+        (function checkiOS() {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const dismissed = localStorage.getItem('pwaDismissed') === '1';
+
+            if (isIOS && isSafari && !isStandalone && !dismissed) {
+                setTimeout(() => {
+                    document.getElementById('iosInstallBanner').classList.remove('hidden');
+                }, 3000);
+            }
+        })();
+
+        // Hide banner once app is installed
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('pwaInstallBanner').classList.add('hidden');
+            document.getElementById('iosInstallBanner').classList.add('hidden');
+            console.log('✅ PWA installed successfully');
+        });
+
     </script>
 </body>
 </html>
