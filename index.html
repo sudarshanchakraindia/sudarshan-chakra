@@ -82,7 +82,10 @@
         // Auth state listener — fires whenever user logs in or out
         onAuthStateChanged(auth, (user) => {
             window._firebaseUser = user || null;
-            window.dispatchEvent(new CustomEvent('authStateChanged', { detail: user }));
+            // Small delay to ensure main script variables are ready
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('authStateChanged', { detail: user }));
+            }, 300);
         });
 
         window.dispatchEvent(new Event('firebaseReady'));
@@ -2483,10 +2486,8 @@
                         <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-2.5 rounded-xl hover:bg-green-600 font-medium text-sm transition" style="text-decoration:none;">💬 WhatsApp</a>
                         ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-2.5 rounded-xl hover:bg-blue-700 font-medium text-sm transition" style="text-decoration:none;">🗺️ Directions</a>` : '<div></div>'}
                         <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">⭐ Review</button>
-                        <button onclick="toggleFavourite('${p.id}')" class="py-2.5 rounded-xl text-sm transition border ${userProfile?.favourites?.[p.id] ? 'bg-red-100 text-red-600 border-red-200' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-red-50 hover:text-red-500'}">
-                            ${userProfile?.favourites?.[p.id] ? '❤️' : '🤍'}
-                        </button>
-                        <button onclick="openReportModal('${p.id}','provider','${p.name}')" class="py-2.5 rounded-xl text-sm transition border bg-gray-50 text-gray-400 border-gray-200 hover:bg-red-50 hover:text-red-500" title="Report this provider">🚨</button>
+                        <button onclick="toggleFavourite('${p.id}')" id="fav-${p.id}" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-500 border-gray-200 hover:bg-red-50 hover:text-red-500">🤍</button>
+                        <button onclick="openReportModal('${p.id}','provider','${p.name}')" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-400 border-gray-200 hover:bg-red-50 hover:text-red-500" title="Report">🚨</button>
                     </div>
                 </div>`;
             }).join('');
@@ -3806,6 +3807,10 @@
         window.addEventListener('authStateChanged', async (e) => {
             firebaseUser = e.detail;
             if (firebaseUser) {
+                // Wait for Firebase to be ready
+                if (!window._firebase) {
+                    await new Promise(resolve => window.addEventListener('firebaseReady', resolve, { once: true }));
+                }
                 await loadUserProfile(firebaseUser.uid);
                 updateNavForLoggedIn();
             } else {
@@ -3813,15 +3818,17 @@
                 userProfile  = null;
                 updateNavForLoggedOut();
             }
-            // Refresh profile page if open
-            if (document.getElementById('page-myProfile') && !document.getElementById('page-myProfile').classList.contains('hidden')) {
+            // Refresh profile page if currently open
+            const profilePage = document.getElementById('page-myProfile');
+            if (profilePage && !profilePage.classList.contains('hidden')) {
                 renderProfilePage();
             }
         });
 
         async function loadUserProfile(uid) {
             try {
-                const snap = await _firebase.get(_firebase.ref(_firebase.db, `users/${uid}`));
+                if (!_firebase || !_firebase.db) return;
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'users/' + uid));
                 userProfile = snap.exists() ? snap.val() : null;
             } catch(e) { console.warn('Profile load error:', e); }
         }
@@ -3848,8 +3855,8 @@
             document.getElementById('loginStep2').classList.add('hidden');
             document.getElementById('loginStep3').classList.add('hidden');
             document.getElementById('loginPhone').value = '';
-            // Setup reCAPTCHA
-            setupRecaptcha();
+            document.getElementById('otpInput') && (document.getElementById('otpInput').value = '');
+            // Don't setup reCAPTCHA here - do it when user clicks Send OTP
         }
 
         function closeLoginModal() {
@@ -3862,7 +3869,13 @@
 
         function setupRecaptcha() {
             try {
-                if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch(e) {} }
+                if (_recaptchaVerifier) {
+                    try { _recaptchaVerifier.clear(); } catch(e) {}
+                    _recaptchaVerifier = null;
+                }
+                // Only setup if container exists and auth is ready
+                const container = document.getElementById('recaptcha-container');
+                if (!container || !window._auth) return;
                 _recaptchaVerifier = new _auth.RecaptchaVerifier(_auth.auth, 'recaptcha-container', {
                     size: 'invisible',
                     callback: () => {}
@@ -3960,9 +3973,14 @@
 
         // ==================== PHASE F: PROFILE PAGE ====================
         function renderProfilePage() {
+            // Safety check - elements might not exist yet
+            const notLoggedIn = document.getElementById('profileNotLoggedIn');
+            const loggedIn    = document.getElementById('profileLoggedIn');
+            if (!notLoggedIn || !loggedIn) return;
+
             if (!firebaseUser || !userProfile) {
-                document.getElementById('profileNotLoggedIn').classList.remove('hidden');
-                document.getElementById('profileLoggedIn').classList.add('hidden');
+                notLoggedIn.classList.remove('hidden');
+                loggedIn.classList.add('hidden');
                 return;
             }
 
@@ -4073,16 +4091,20 @@
 
         async function toggleFavourite(providerId) {
             if (!firebaseUser) { openLoginModal(); return; }
-            const isFav = userProfile?.favourites?.[providerId];
-            const path  = `users/${firebaseUser.uid}/favourites/${providerId}`;
+            if (!userProfile) { openLoginModal(); return; }
+            const isFav = userProfile.favourites && userProfile.favourites[providerId];
+            const path  = 'users/' + firebaseUser.uid + '/favourites/' + providerId;
+            const btn   = document.getElementById('fav-' + providerId);
             if (isFav) {
                 await _firebase.remove(_firebase.ref(_firebase.db, path));
-                delete userProfile.favourites[providerId];
+                if (userProfile.favourites) delete userProfile.favourites[providerId];
+                if (btn) btn.textContent = '🤍';
                 showFirebaseStatus('💔 Removed from favourites', 'info');
             } else {
                 await _firebase.set(_firebase.ref(_firebase.db, path), true);
                 if (!userProfile.favourites) userProfile.favourites = {};
                 userProfile.favourites[providerId] = true;
+                if (btn) btn.textContent = '❤️';
                 showFirebaseStatus('❤️ Saved to favourites!', 'success');
             }
         }
@@ -4106,7 +4128,7 @@
             });
             const list = document.getElementById('myReviewsList');
             if (myReviews.length === 0) {
-                list.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="text-4xl mb-2">⭐</div><p>You haven't written any reviews yet.<br>Browse providers and share your experience!</p></div>';
+                list.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="text-4xl mb-2">⭐</div><p>You have not written any reviews yet.<br>Browse providers and share your experience!</p></div>';
                 return;
             }
             list.innerHTML = myReviews.map(r => `
@@ -4223,8 +4245,12 @@
             reportTargetId = null; reportTargetType = null;
         }
 
-        document.getElementById('reportDescription').addEventListener('input', function() {
-            document.getElementById('reportCharCount').textContent = this.value.length;
+        // Use event delegation for reportDescription
+        document.addEventListener('input', function(e) {
+            if (e.target.id === 'reportDescription') {
+                const counter = document.getElementById('reportCharCount');
+                if (counter) counter.textContent = e.target.value.length;
+            }
         });
 
         async function submitReport() {
@@ -4324,21 +4350,17 @@
             document.getElementById('ratingLabel').textContent = rating ? labels[rating] : 'Tap to rate';
         }
 
-        // Star click handlers
-        document.getElementById('starSelector').addEventListener('click', (e) => {
+        // Star click handlers - use event delegation on document to avoid null errors
+        document.addEventListener('click', (e) => {
             const star = e.target.closest('.star-btn');
             if (!star) return;
             currentReviewRating = parseInt(star.dataset.val);
             updateStarUI(currentReviewRating);
         });
 
-        document.getElementById('starSelector').addEventListener('mouseover', (e) => {
+        document.addEventListener('mouseover', (e) => {
             const star = e.target.closest('.star-btn');
             if (star) updateStarUI(parseInt(star.dataset.val));
-        });
-
-        document.getElementById('starSelector').addEventListener('mouseleave', () => {
-            updateStarUI(currentReviewRating);
         });
 
         async function submitReview() {
