@@ -100,6 +100,21 @@
         .category-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
         .category-card.selected { border: 3px solid #ea580c; background: #fff7ed; }
         .star-rating { color: #fbbf24; }
+
+        /* Multi-select chips for language & service type */
+        .lang-chip, .service-chip {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            border: 2px solid #e5e7eb; border-radius: 10px;
+            padding: 8px 10px; cursor: pointer;
+            transition: all 0.2s; font-size: 13px; font-weight: 500;
+            background: #fff; user-select: none;
+        }
+        .lang-chip:hover, .service-chip:hover { border-color: #fb923c; background: #fff7ed; }
+        .lang-chip input, .service-chip input { display: none; }
+        .lang-chip.checked, .service-chip.checked {
+            border-color: #ea580c; background: #fff7ed; color: #c2410c; font-weight: 700;
+            box-shadow: 0 0 0 2px #fed7aa;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -320,6 +335,12 @@
                                     <option value="Gujarati">ગુજરાતી (Gujarati)</option>
                                     <option value="Marathi">मराठी (Marathi)</option>
                                     <option value="Kannada">ಕನ್ನಡ (Kannada)</option>
+                                    <option value="Telugu">తెలుగు (Telugu)</option>
+                                    <option value="Malayalam">മലയാളം (Malayalam)</option>
+                                    <option value="Tamil">தமிழ் (Tamil)</option>
+                                    <option value="Punjabi">ਪੰਜਾਬੀ (Punjabi)</option>
+                                    <option value="Urdu">اردو (Urdu)</option>
+                                    <option value="Odia">ଓଡ଼ିଆ (Odia)</option>
                                 </select>
                             </div>
                             
@@ -583,9 +604,10 @@
                         <label class="block text-gray-700 font-medium mb-2">Subcategory (Optional)</label>
                         <select id="providerSubcategory" class="w-full px-4 py-2 border rounded-lg" onchange="updateProviderSubSubcategories()"></select>
                     </div>
-                    <div>
-                        <label class="block text-gray-700 font-medium mb-2">Service Type (Optional)</label>
-                        <select id="providerSubSubcategory" class="w-full px-4 py-2 border rounded-lg"></select>
+                    <div class="md:col-span-2" id="serviceTypeSection" style="display:none">
+                        <label class="block text-gray-700 font-medium mb-2">🔧 Services Offered <span class="text-sm text-gray-400 font-normal">(select all that apply)</span></label>
+                        <div id="providerServiceChips" class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2"></div>
+                        <p class="text-xs text-gray-400 mt-1">You can offer multiple service types</p>
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Religion *</label>
@@ -600,18 +622,24 @@
                         </select>
                     </div>
                     
-                    <!-- PHASE B: Language Field -->
-                    <div>
-                        <label data-i18n="providerLanguage" class="block text-gray-700 font-medium mb-2">Provider Language *</label>
-                        <select id="providerLanguage" required class="w-full px-4 py-2 border rounded-lg">
-                            <option value="">Select Language</option>
-                            <option value="English">English</option>
-                            <option value="Hindi">हिंदी (Hindi)</option>
-                            <option value="Bengali">বাংলা (Bengali)</option>
-                            <option value="Gujarati">ગુજરાતી (Gujarati)</option>
-                            <option value="Marathi">मराठी (Marathi)</option>
-                            <option value="Kannada">ಕನ್ನಡ (Kannada)</option>
-                        </select>
+                    <!-- PHASE B: Language Field - Multi-select -->
+                    <div class="md:col-span-2">
+                        <label class="block text-gray-700 font-medium mb-2">🗣️ Languages Spoken * <span class="text-sm text-gray-400 font-normal">(select all you speak)</span></label>
+                        <div id="providerLanguageChips" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="English"><span>🇬🇧 English</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Hindi"><span>हिंदी</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Bengali"><span>বাংলা</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Gujarati"><span>ગુજરાતી</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Marathi"><span>मराठी</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Kannada"><span>ಕನ್ನಡ</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Telugu"><span>తెలుగు</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Malayalam"><span>മലയാളം</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Tamil"><span>தமிழ்</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Punjabi"><span>ਪੰਜਾਬੀ</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Urdu"><span>اردو</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Odia"><span>ଓଡ଼ିଆ</span></label>
+                        </div>
+                        <p id="langError" class="text-red-500 text-xs mt-1 hidden">Please select at least one language.</p>
                     </div>
                     
                     <div>
@@ -762,6 +790,25 @@
                             <option value="Jain">Jain ☸️</option>
                         </select>
                     </div>
+                </div>
+                <!-- Multi-language for seeker -->
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">🗣️ Preferred Languages * <span class="text-sm text-gray-400 font-normal">(select all you understand)</span></label>
+                    <div id="seekerLanguageChips" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="English"><span>🇬🇧 English</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Hindi"><span>हिंदी</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Bengali"><span>বাংলা</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Gujarati"><span>ગુજરાતી</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Marathi"><span>मराठी</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Kannada"><span>ಕನ್ನಡ</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Telugu"><span>తెలుగు</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Malayalam"><span>മലയാളം</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Tamil"><span>தமிழ்</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Punjabi"><span>ਪੰਜਾਬੀ</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Urdu"><span>اردو</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Odia"><span>ଓଡ଼ିଆ</span></label>
+                    </div>
+                    <p id="seekerLangError" class="text-red-500 text-xs mt-1 hidden">Please select at least one language.</p>
                 </div>
                 
                 <div class="mt-4">
@@ -1272,11 +1319,14 @@
             setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
         
-        // Save a provider to Firebase
+        // Save a provider to Firebase using push() for guaranteed unique keys
         async function saveProviderToFirebase(provider) {
             try {
                 if (!_db) throw new Error('Firebase not ready');
-                await _set(fbRef('providers/' + provider.id), provider);
+                // Use Firebase push() — server generates a unique, ordered key (no collisions)
+                const newRef = await _push(fbRef('providers'), provider);
+                // Also store the Firebase key as the provider's id (overwrite the temp id)
+                await _update(newRef, { id: newRef.key });
                 return true;
             } catch (err) {
                 console.error('Firebase save provider error:', err);
@@ -1285,11 +1335,12 @@
             }
         }
         
-        // Save a seeker to Firebase
+        // Save a seeker to Firebase using push() for guaranteed unique keys
         async function saveSeekerToFirebase(seeker) {
             try {
                 if (!_db) throw new Error('Firebase not ready');
-                await _set(fbRef('seekers/' + seeker.id), seeker);
+                const newRef = await _push(fbRef('seekers'), seeker);
+                await _update(newRef, { id: newRef.key });
                 return true;
             } catch (err) {
                 console.error('Firebase save seeker error:', err);
@@ -1358,7 +1409,15 @@
             // Listen for providers changes (real-time)
             _onValue(fbRef('providers'), (snapshot) => {
                 const data = snapshot.val();
-                providers = data ? Object.values(data) : [];
+                if (data) {
+                    // Map each entry with its Firebase key as id (handles both push() and old set() records)
+                    providers = Object.entries(data).map(([key, val]) => {
+                        if (!val.id) val.id = key; // ensure id field is always set
+                        return val;
+                    });
+                } else {
+                    providers = [];
+                }
                 console.log('🔄 Providers updated from Firebase:', providers.length);
                 // Refresh UI if browse page is visible
                 if (!document.getElementById('page-browse').classList.contains('hidden')) {
@@ -1383,7 +1442,14 @@
             // Listen for seekers changes (real-time)
             _onValue(fbRef('seekers'), (snapshot) => {
                 const data = snapshot.val();
-                seekers = data ? Object.values(data) : [];
+                if (data) {
+                    seekers = Object.entries(data).map(([key, val]) => {
+                        if (!val.id) val.id = key;
+                        return val;
+                    });
+                } else {
+                    seekers = [];
+                }
                 console.log('🔄 Seekers updated from Firebase:', seekers.length);
                 if (!document.getElementById('page-admin').classList.contains('hidden')) {
                     updateAdminStats();
@@ -1652,13 +1718,156 @@
         }
 
         function shareProviderDetails(providerId) {
-            const provider = providers.find(p => p.id === providerId);
-            if (!provider) return;
-            const details = 'Provider: ' + provider.name + '\nMobile: ' + provider.mobile + '\nService: ' + provider.service + '\nLocation: ' + provider.location;
-            if (navigator.share) {
-                navigator.share({ title: 'Provider Details', text: details });
-            } else {
-                prompt('Copy provider details:', details);
+            // Find provider from Firebase cache
+            _firebase.get(_firebase.ref(_firebase.db, 'providers/' + providerId)).then(snap => {
+                if (!snap.exists()) { showFirebaseStatus('Provider not found.', 'error'); return; }
+                const p = snap.val();
+                p.id = providerId;
+                showShareProviderModal(p);
+            });
+        }
+
+        function showShareProviderModal(p) {
+            // Remove existing modal if any
+            const existing = document.getElementById('shareProviderModal');
+            if (existing) existing.remove();
+
+            const iv = p.idVerification || {};
+            const docHtml = iv.document
+                ? `<div class="mt-3">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">📄 ID Document:</p>
+                    <img src="${iv.document}" class="max-h-48 rounded-xl border-2 border-gray-200 shadow cursor-pointer w-full object-contain bg-gray-50"
+                         onclick="this.style.maxHeight = this.style.maxHeight==='none' ? '12rem' : 'none'" title="Click to expand">
+                    <p class="text-xs text-gray-400 mt-1 text-center">Tap image to expand</p>
+                   </div>`
+                : `<div class="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700">⚠️ No ID document uploaded by this provider.</div>`;
+
+            const idTypeLabels = { aadhaar:'Aadhaar Card', driving:'Driving License', voter:'Voter ID', pan:'PAN Card', passport:'Passport' };
+
+            const modal = document.createElement('div');
+            modal.id = 'shareProviderModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+              <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-5 rounded-t-2xl flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    ${p.photo ? `<img src="${p.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow">` : `<div class="w-14 h-14 rounded-full bg-white bg-opacity-30 flex items-center justify-center text-3xl">👤</div>`}
+                    <div>
+                      <div class="font-bold text-lg leading-tight">${p.name}</div>
+                      <div class="text-sm opacity-90">${p.service}</div>
+                      ${p.verified ? '<div class="text-xs mt-0.5">✅ Verified</div>' : '<div class="text-xs mt-0.5">⏳ Unverified</div>'}
+                    </div>
+                  </div>
+                  <button onclick="document.getElementById('shareProviderModal').remove()" class="text-white text-2xl hover:opacity-70 leading-none">✕</button>
+                </div>
+
+                <!-- Details -->
+                <div class="p-5 space-y-3">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">📞 Mobile</div>
+                      <div class="font-semibold text-sm">${p.mobile}</div>
+                    </div>
+                    ${p.whatsapp ? `<div class="bg-green-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-0.5">💬 WhatsApp</div><div class="font-semibold text-sm">${p.whatsapp}</div></div>` : ''}
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">📍 Location</div>
+                      <div class="font-semibold text-sm">${p.location || 'N/A'}</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">💰 Rate</div>
+                      <div class="font-semibold text-sm">₹${p.rate}/hr</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">🗣️ Language</div>
+                      <div class="font-semibold text-sm">${Array.isArray(p.language) ? p.language.join(', ') : (p.language || 'N/A')}</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">⭐ Experience</div>
+                      <div class="font-semibold text-sm">${p.experience} yrs</div>
+                    </div>
+                  </div>
+
+                  <!-- ID Verification Info -->
+                  ${iv.type ? `<div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm">
+                    <div class="font-semibold text-blue-800 mb-1">🪪 ID Verification</div>
+                    <div class="text-blue-700">Type: ${idTypeLabels[iv.type] || iv.type}</div>
+                    ${iv.number ? `<div class="text-blue-700">Number: ${iv.number}</div>` : ''}
+                    <div class="text-blue-700">Status: <span class="font-bold uppercase">${iv.status || 'pending'}</span></div>
+                  </div>` : ''}
+
+                  ${docHtml}
+
+                  <!-- Share Buttons -->
+                  <div class="pt-2 space-y-2">
+                    <p class="text-sm font-semibold text-gray-700">📤 Share with Seeker:</p>
+                    <div class="grid grid-cols-2 gap-2">
+                      <button onclick="doShareProvider('${p.id}', 'whatsapp')"
+                        class="bg-green-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-green-600 flex items-center justify-center gap-2">
+                        💬 WhatsApp
+                      </button>
+                      <button onclick="doShareProvider('${p.id}', 'copy')"
+                        class="bg-blue-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 flex items-center justify-center gap-2">
+                        📋 Copy Details
+                      </button>
+                      <button onclick="doShareProvider('${p.id}', 'native')"
+                        class="bg-orange-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-600 flex items-center justify-center gap-2 col-span-2">
+                        📱 Share via Device
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>`;
+            document.body.appendChild(modal);
+            // Close on backdrop click
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        async function doShareProvider(providerId, method) {
+            const snap = await _firebase.get(_firebase.ref(_firebase.db, 'providers/' + providerId));
+            if (!snap.exists()) return;
+            const p = snap.val();
+            const iv = p.idVerification || {};
+            const langs = Array.isArray(p.language) ? p.language.join(', ') : (p.language || 'N/A');
+            const services = Array.isArray(p.services) ? p.services.join(', ') : (p.service || 'N/A');
+            const text = `🌟 *Sudarshan Chakra - Provider Details*
+
+` +
+                `👤 *Name:* ${p.name}
+` +
+                `🔧 *Service:* ${services}
+` +
+                `📞 *Mobile:* ${p.mobile}
+` +
+                `${p.whatsapp ? `💬 *WhatsApp:* ${p.whatsapp}
+` : ''}` +
+                `📍 *Location:* ${p.location || 'N/A'}
+` +
+                `💰 *Rate:* ₹${p.rate}/hr
+` +
+                `🗣️ *Language:* ${langs}
+` +
+                `⭐ *Experience:* ${p.experience} years
+` +
+                `${p.verified ? '✅ *Verified Provider*' : '⏳ Verification Pending'}
+` +
+                `${iv.type ? `🪪 *ID:* ${iv.type.toUpperCase()} ${iv.number ? '(#' + iv.number + ')' : ''} — ${(iv.status||'pending').toUpperCase()}` : ''}`;
+
+            if (method === 'whatsapp') {
+                window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+            } else if (method === 'copy') {
+                try {
+                    await navigator.clipboard.writeText(text.replace(/\*/g, ''));
+                    showFirebaseStatus('✅ Details copied to clipboard!', 'success');
+                } catch(e) {
+                    prompt('Copy provider details:', text.replace(/\*/g, ''));
+                }
+            } else if (method === 'native') {
+                if (navigator.share) {
+                    navigator.share({ title: 'Provider: ' + p.name, text: text.replace(/\*/g, '') });
+                } else {
+                    showFirebaseStatus('Native share not supported on this device.', 'info');
+                }
             }
         }
         
@@ -2505,7 +2714,7 @@
                 if (category) {
                     const subGrid = document.getElementById('browseSubcategoriesGrid');
                     subGrid.innerHTML = category.subcategories.map((sub, idx) => `
-                        <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === selectedSubcategoryIdx ? 'selected' : ''}" onclick="selectSubcategory(${idx})">
+                        <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === selectedSubcategoryIdx ? 'selected' : ''}" onclick="selectSubcategory(${idx}, this)">
                             <div class="flex justify-center mb-3">${renderIcon(sub.icon, 'text-4xl', 'w-10 h-10 mx-auto')}</div>
                             <div class="font-bold text-gray-800">${getTranslated(sub.name)}</div>
                         </div>
@@ -2518,7 +2727,7 @@
                     if (sub?.subsubcategories) {
                         const svcGrid = document.getElementById('browseServicesGrid');
                         svcGrid.innerHTML = sub.subsubcategories.map((service, idx) => `
-                            <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === selectedServiceIdx ? 'selected' : ''}" onclick="selectService(${idx})">
+                            <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === selectedServiceIdx ? 'selected' : ''}" onclick="selectService(${idx}, this)">
                                 <div class="flex justify-center mb-3">${renderIcon(service.icon, 'text-4xl', 'w-10 h-10 mx-auto')}</div>
                                 <div class="font-bold text-gray-800">${getTranslated(service.name)}</div>
                             </div>
@@ -2625,7 +2834,7 @@
         function loadBrowseCategories() {
             const grid = document.getElementById('browseCategoriesGrid');
             grid.innerHTML = categories.map(cat => `
-                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectCategory('${cat.id}')">
+                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectCategory('${cat.id}', this)">
                     <div class="flex justify-center mb-3">${renderIcon(cat.icon, 'text-5xl', 'w-12 h-12 mx-auto')}</div>
                     <div class="font-bold text-gray-800">${getTranslated(cat.name)}</div>
                 </div>
@@ -2637,7 +2846,7 @@
             document.getElementById('providersSection').classList.add('hidden');
         }
         
-        function selectCategory(catId) {
+        function selectCategory(catId, el) {
             selectedCategoryId = catId;
             selectedSubcategoryIdx = null;
             selectedServiceIdx = null;
@@ -2649,12 +2858,12 @@
             document.querySelectorAll('#browseCategoriesGrid .category-card').forEach(card => {
                 card.classList.remove('selected');
             });
-            event.currentTarget.classList.add('selected');
+            if (el) el.classList.add('selected');
             
             // Show subcategories
             const grid = document.getElementById('browseSubcategoriesGrid');
             grid.innerHTML = category.subcategories.map((sub, idx) => `
-                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectSubcategory(${idx})">
+                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectSubcategory(${idx}, this)">
                     <div class="flex justify-center mb-3">${renderIcon(sub.icon, 'text-4xl', 'w-10 h-10 mx-auto')}</div>
                     <div class="font-bold text-gray-800">${getTranslated(sub.name)}</div>
                 </div>
@@ -2665,7 +2874,7 @@
             document.getElementById('providersSection').classList.add('hidden');
         }
         
-        function selectSubcategory(subIdx) {
+        function selectSubcategory(subIdx, el) {
             selectedSubcategoryIdx = subIdx;
             selectedServiceIdx = null;
             
@@ -2678,12 +2887,12 @@
             document.querySelectorAll('#browseSubcategoriesGrid .category-card').forEach(card => {
                 card.classList.remove('selected');
             });
-            event.currentTarget.classList.add('selected');
+            if (el) el.classList.add('selected');
             
             // Show services
             const grid = document.getElementById('browseServicesGrid');
             grid.innerHTML = subcategory.subsubcategories.map((service, idx) => `
-                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectService(${idx})">
+                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectService(${idx}, this)">
                     <div class="flex justify-center mb-3">${renderIcon(service.icon, 'text-4xl', 'w-10 h-10 mx-auto')}</div>
                     <div class="font-bold text-gray-800">${getTranslated(service.name)}</div>
                 </div>
@@ -2693,14 +2902,14 @@
             document.getElementById('providersSection').classList.add('hidden');
         }
         
-        function selectService(serviceIdx) {
+        function selectService(serviceIdx, el) {
             selectedServiceIdx = serviceIdx;
             
             // Update UI
             document.querySelectorAll('#browseServicesGrid .category-card').forEach(card => {
                 card.classList.remove('selected');
             });
-            event.currentTarget.classList.add('selected');
+            if (el) el.classList.add('selected');
             
             // Load and display providers
             applySortAndFilter();
@@ -2749,18 +2958,20 @@
             
             // Start with service filter - BACKWARD COMPATIBLE
             let filteredProviders = providers.filter(p => {
-                // NEW: Exact match for providers with service name
+                // Match primary service name
                 const exactMatch = p.service === serviceNameEnglish;
-                
-                // BACKWARD COMPATIBLE: For old providers without service field or with "undefined"
-                // Check if they match by category/subcategory/service indices
+
+                // Match any of provider's multiple services (new multi-service field)
+                const multiServiceMatch = Array.isArray(p.services) && p.services.includes(serviceNameEnglish);
+
+                // BACKWARD COMPATIBLE: index-based matching for old providers
                 const hasValidService = p.service && p.service !== 'undefined' && p.service !== 'General Service Provider';
-                const backwardCompatible = !hasValidService && 
-                                          p.categoryId === selectedCategoryId && 
-                                          p.subcategoryIdx == selectedSubcategoryIdx &&
-                                          p.subsubcategoryIdx == selectedServiceIdx;
-                
-                const matchesService = exactMatch || backwardCompatible;
+                const indexMatchesSub = p.categoryId === selectedCategoryId && p.subcategoryIdx == selectedSubcategoryIdx;
+                const indexMatchesService = p.subsubcategoryIdx == selectedServiceIdx ||
+                    (Array.isArray(p.subsubcategoryIndices) && p.subsubcategoryIndices.includes(String(selectedServiceIdx)));
+                const backwardCompatible = !hasValidService && indexMatchesSub && indexMatchesService;
+
+                const matchesService = exactMatch || multiServiceMatch || backwardCompatible;
                 const isActive = (!p.status || p.status === 'active');
                 
                 console.log('  Provider:', p.name);
@@ -2781,7 +2992,10 @@
             
             filteredProviders = filteredProviders.filter(p => {
                 // Language filter
-                if (filterLang && p.language && p.language !== filterLang) return false;
+                if (filterLang && p.language) {
+                    const langs = Array.isArray(p.language) ? p.language : [p.language];
+                    if (!langs.includes(filterLang)) return false;
+                }
                 
                 // Religion filter
                 if (filterRel && p.religion !== filterRel) return false;
@@ -2883,7 +3097,7 @@
                                 ${getVerifiedBadge(p)}
                             </div>
                             <div class="text-orange-600 font-medium text-sm">${p.service}</div>
-                            ${p.language ? `<div class="text-xs text-gray-500 mt-0.5">🗣️ ${p.language}${p.workingHours ? ' &nbsp;|&nbsp; ' + getWorkingHoursLabel(p.workingHours) : ''}</div>` : ''}
+                            ${p.language ? `<div class="text-xs text-gray-500 mt-0.5">🗣️ ${Array.isArray(p.language) ? p.language.join(', ') : p.language}${p.workingHours ? ' &nbsp;|&nbsp; ' + getWorkingHoursLabel(p.workingHours) : ''}</div>` : ''}
                         </div>
                         <div class="text-right flex-shrink-0">
                             <div class="text-yellow-400 text-base leading-none">${stars}</div>
@@ -2922,6 +3136,14 @@
         }
         
         // ==================== PHASE C: VOICE SEARCH ====================
+        // ==================== CHIP TOGGLE ====================
+        function toggleChip(label) {
+            const checkbox = label.querySelector('input[type="checkbox"]');
+            if (!checkbox) return;
+            checkbox.checked = !checkbox.checked;
+            label.classList.toggle('checked', checkbox.checked);
+        }
+
         // ==================== VOICE TOAST (non-blocking) ====================
         function showVoiceToast(msg) {
             let toast = document.getElementById('voiceToast');
@@ -3320,7 +3542,7 @@
                 // Show subcategories
                 const subcatGrid = document.getElementById('browseSubcategoriesGrid');
                 subcatGrid.innerHTML = category.subcategories.map((sub, idx) => `
-                    <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === subIdx ? 'ring-4 ring-orange-500' : ''}" onclick="selectSubcategory(${idx})">
+                    <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === subIdx ? 'ring-4 ring-orange-500' : ''}" onclick="selectSubcategory(${idx}, this)">
                         <div class="text-4xl mb-3">${sub.icon}</div>
                         <div class="font-bold text-gray-800">${getTranslated(sub.name)}</div>
                     </div>
@@ -3331,7 +3553,7 @@
                 const subcategory = category.subcategories[subIdx];
                 const serviceGrid = document.getElementById('browseServicesGrid');
                 serviceGrid.innerHTML = subcategory.subsubcategories.map((service, idx) => `
-                    <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === serviceIdx ? 'ring-4 ring-orange-500' : ''}" onclick="selectService(${idx})">
+                    <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === serviceIdx ? 'ring-4 ring-orange-500' : ''}" onclick="selectService(${idx}, this)">
                         <div class="text-4xl mb-3">${service.icon}</div>
                         <div class="font-bold text-gray-800">${getTranslated(service.name)}</div>
                     </div>
@@ -3458,22 +3680,34 @@
             } else {
                 subSelect.innerHTML = '<option value="">Select Subcategory</option>';
             }
-            document.getElementById('providerSubSubcategory').innerHTML = '<option value="">Select Service Type</option>';
+            const chips = document.getElementById('providerServiceChips');
+            if (chips) chips.innerHTML = '';
+            const svc = document.getElementById('serviceTypeSection');
+            if (svc) svc.style.display = 'none';
         }
         
         function updateProviderSubSubcategories() {
             const catId = document.getElementById('providerCategory').value;
             const subIdx = document.getElementById('providerSubcategory').value;
-            const subSubSelect = document.getElementById('providerSubSubcategory');
-            
+            const chipsContainer = document.getElementById('providerServiceChips');
+            const section = document.getElementById('serviceTypeSection');
+
             const category = categories.find(c => c.id === catId);
-            if (category && category.subcategories && category.subcategories[subIdx] && category.subcategories[subIdx].subsubcategories) {
-                subSubSelect.innerHTML = '<option value="">Select Service Type</option>' + 
-                    category.subcategories[subIdx].subsubcategories.map((subsub, idx) => 
-                        `<option value="${idx}">${getTranslated(subsub.name)}</option>`
-                    ).join('');
+            const subcat = category && category.subcategories && category.subcategories[subIdx];
+
+            if (subcat && subcat.subsubcategories && subcat.subsubcategories.length > 0) {
+                chipsContainer.innerHTML = subcat.subsubcategories.map((subsub, idx) => {
+                    const name = getTranslated(subsub.name);
+                    const icon = subsub.icon ? (subsub.icon.startsWith('<') ? '' : subsub.icon + ' ') : '';
+                    return `<label class="service-chip" onclick="toggleChip(this)">
+                        <input type="checkbox" name="providerService" value="${idx}" data-name="${name}">
+                        <span>${icon}${name}</span>
+                    </label>`;
+                }).join('');
+                section.style.display = '';
             } else {
-                subSubSelect.innerHTML = '<option value="">Select Service Type</option>';
+                chipsContainer.innerHTML = '';
+                section.style.display = 'none';
             }
         }
         
@@ -3483,17 +3717,31 @@
             
             const catId = document.getElementById('providerCategory').value;
             const subIdx = document.getElementById('providerSubcategory').value;
-            const subSubIdx = document.getElementById('providerSubSubcategory').value;
-            
-            // Service is now optional - provider can register without it
+
+            // Collect multiple selected service chips
+            const selectedServiceChips = Array.from(document.querySelectorAll('input[name="providerService"]:checked'));
+            const selectedServiceIndices = selectedServiceChips.map(cb => cb.value);
+            const selectedServiceNames = selectedServiceChips.map(cb => cb.dataset.name);
+
+            // Build primary service name (first selected or generic)
             let serviceName = 'General Service Provider';
-            if (catId && subIdx && subSubIdx) {
+            if (selectedServiceNames.length > 0) {
+                serviceName = selectedServiceNames[0]; // primary service for display
+            } else if (catId && subIdx) {
                 const category = categories.find(c => c.id === catId);
                 const subcategory = category?.subcategories[subIdx];
-                const subsubcategory = subcategory?.subsubcategories[subSubIdx];
-                serviceName = getTranslated(subsubcategory?.name) || serviceName;
+                if (subcategory) serviceName = getTranslated(subcategory.name);
             }
             
+            // Validate at least one language selected
+            const providerLangs = Array.from(document.querySelectorAll('input[name="providerLang"]:checked')).map(cb => cb.value);
+            if (providerLangs.length === 0) {
+                const err = document.getElementById('langError');
+                if (err) { err.classList.remove('hidden'); setTimeout(() => err.classList.add('hidden'), 3000); }
+                document.getElementById('providerLanguageChips').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             // PHASE E: get photo as base64
             const photoDataUrl = document.getElementById('photoPreview')?.src || null;
             const photoToSave = (photoDataUrl && !document.getElementById('photoPreview').classList.contains('hidden')) ? photoDataUrl : null;
@@ -3505,7 +3753,7 @@
             const idNumber = document.getElementById('providerIdNumber').value.trim();
 
             const provider = {
-                id: 'p_' + Date.now(),
+                id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
                 name: document.getElementById('providerName').value,
                 mobile: document.getElementById('providerMobile').value,
                 whatsapp: document.getElementById('providerWhatsapp').value || null, // PHASE E
@@ -3521,10 +3769,12 @@
                 } : null,
                 categoryId: catId || null,
                 subcategoryIdx: subIdx || null,
-                subsubcategoryIdx: subSubIdx || null,
+                subsubcategoryIdx: selectedServiceIndices[0] || null,
+                subsubcategoryIndices: selectedServiceIndices.length > 0 ? selectedServiceIndices : null,
+                services: selectedServiceNames.length > 0 ? selectedServiceNames : null,
                 service: serviceName,
                 religion: document.getElementById('providerReligion').value,
-                language: document.getElementById('providerLanguage').value,
+                language: providerLangs,
                 experience: parseInt(document.getElementById('providerExperience').value),
                 rate: parseInt(document.getElementById('providerRate').value),
                 workingHours: document.querySelector('input[name="workingHours"]:checked')?.value || 'mon-fri',
@@ -3549,6 +3799,10 @@
                 if (success) {
                     document.getElementById('providerSuccess').classList.remove('hidden');
                     document.getElementById('providerForm').reset();
+                    // Reset chip selections
+                    document.querySelectorAll('.lang-chip, .service-chip').forEach(c => c.classList.remove('checked'));
+                    const svcSection = document.getElementById('serviceTypeSection');
+                    if (svcSection) svcSection.style.display = 'none';
                     // Reset photo preview
                     document.getElementById('photoPreview').classList.add('hidden');
                     document.getElementById('photoPlaceholder').classList.remove('hidden');
@@ -3567,11 +3821,20 @@
         document.getElementById('seekerForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
+            // Validate at least one language selected
+            const seekerLangs = Array.from(document.querySelectorAll('input[name="seekerLang"]:checked')).map(cb => cb.value);
+            if (seekerLangs.length === 0) {
+                const err = document.getElementById('seekerLangError');
+                if (err) { err.classList.remove('hidden'); setTimeout(() => err.classList.add('hidden'), 3000); }
+                return;
+            }
+
             const seeker = {
-                id: 's_' + Date.now(),
+                id: 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
                 name: document.getElementById('seekerName').value,
                 mobile: document.getElementById('seekerMobile').value,
                 religion: document.getElementById('seekerReligion').value,
+                language: seekerLangs,
                 location: document.getElementById('seekerLocation').value,
                 lat: parseFloat(document.getElementById('seekerLat').value),
                 lng: parseFloat(document.getElementById('seekerLng').value),
@@ -4983,7 +5246,8 @@
                         <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Service</div><div class="font-semibold">${p.service}</div></div>
                         <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Rate</div><div class="font-semibold text-green-600">₹${p.rate}/hr</div></div>
                         <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Experience</div><div class="font-semibold">${p.experience} years</div></div>
-                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Language</div><div class="font-semibold">${p.language || 'N/A'}</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Language</div><div class="font-semibold">${Array.isArray(p.language) ? p.language.join(', ') : (p.language || 'N/A')}</div></div>
+                        ${Array.isArray(p.services) && p.services.length > 1 ? `<div class="bg-orange-50 rounded-xl p-3 col-span-2"><div class="text-gray-400 text-xs mb-1">🔧 All Services</div><div class="font-semibold text-sm">${p.services.join(' • ')}</div></div>` : ''}
                         <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Religion</div><div class="font-semibold">${religionIcons[p.religion] || ''} ${p.religion}</div></div>
                         <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Working Hours</div><div class="font-semibold">${getWorkingHoursLabel(p.workingHours || '')}</div></div>
                         <div class="bg-gray-50 rounded-xl p-3 col-span-2"><div class="text-gray-400 text-xs mb-1">📍 Location</div><div class="font-semibold">${p.location}</div></div>
