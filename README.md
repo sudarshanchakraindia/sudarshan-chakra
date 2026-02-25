@@ -21,9 +21,10 @@ Sudarshan Chakra is a comprehensive service provider platform that helps people 
 ### For Seekers:
 - 🎤 **Voice Search** - "Find a plumber near me"
 - 🔍 **Advanced Filters** - Sort by rating, price, distance, experience
-- 🌍 **6 Languages** - English, Hindi, Bengali, Gujarati, Marathi, Kannada
+- 🌍 **10 Languages** - English, Hindi, Bengali, Gujarati, Marathi, Kannada, Telgu, Tamil, Malayam,Panjabi,
 - 🗺️ **Maps Integration** - Get directions to providers
 - 📞 **Direct Contact** - Call providers instantly
+- 📱 **Whats app** - Chat, call, directly
 
 ### For Providers:
 - 📝 **Easy Registration** - Quick signup process
