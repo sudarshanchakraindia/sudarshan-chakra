@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sudarshan Chakra — Reel</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --saffron: #EA580C; --saffron-lt: #FED7AA;
+  --navy: #1E3A5F; --navy-lt: #2D5282;
+  --gold: #D97706; --gold-lt: #FDE68A;
+  --white: #FFFFFF; --green: #059669; --teal: #0D9488;
+}
+html,body { width:100%;height:100%;background:#111;font-family:'Poppins',sans-serif;overflow:hidden;display:flex;align-items:center;justify-content:center; }
+
+#reel { position:relative;width:min(390px,100vw);height:min(693px,100vh);overflow:hidden;border-radius:18px;box-shadow:0 0 60px rgba(234,88,12,0.3); }
+
+.slide { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 22px 80px;opacity:0;pointer-events:none;transition:opacity 0.5s ease;overflow:hidden; }
+.slide.active { opacity:1;pointer-events:all; }
+
+#top-ui { position:absolute;top:0;left:0;right:0;padding:14px 16px 0;z-index:200;display:flex;align-items:center;gap:5px; }
+.seg { flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.25);overflow:hidden; }
+.seg-fill { height:100%;width:0%;background:white;border-radius:2px; }
+
+#music-btn { position:absolute;top:28px;right:14px;z-index:300;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.3);color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);transition:all 0.2s; }
+#music-btn:hover { background:var(--saffron); }
+
+.music-note { position:absolute;font-size:18px;pointer-events:none;z-index:50;animation:floatNote 3s ease-in-out forwards;opacity:0; }
+@keyframes floatNote { 0%{opacity:0;transform:translateY(0) scale(0.8)} 20%{opacity:1;transform:translateY(-10px) scale(1)} 80%{opacity:0.6;transform:translateY(-60px) scale(1.1)} 100%{opacity:0;transform:translateY(-100px) scale(0.8)} }
+
+#nav { position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:14px;z-index:200; }
+.nav-btn { width:42px;height:42px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.35);background:rgba(0,0,0,0.3);color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);transition:all 0.2s; }
+.nav-btn:hover { background:var(--saffron);border-color:var(--saffron); }
+
+#slide-count { position:absolute;bottom:22px;right:18px;font-size:11px;color:rgba(255,255,255,0.55);z-index:200;font-weight:600; }
+
+.orb { position:absolute;border-radius:50%;pointer-events:none; }
+.particle { position:absolute;border-radius:50%;pointer-events:none;animation:floatPart linear infinite; }
+@keyframes floatPart { 0%{transform:translateY(0) rotate(0deg);opacity:0.7} 100%{transform:translateY(-110vh) rotate(360deg);opacity:0} }
+
+.au { opacity:0;transform:translateY(28px); }
+.slide.active .au { animation:slideUp 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
+.slide.active .au:nth-child(1){animation-delay:0.08s} .slide.active .au:nth-child(2){animation-delay:0.18s} .slide.active .au:nth-child(3){animation-delay:0.28s} .slide.active .au:nth-child(4){animation-delay:0.38s} .slide.active .au:nth-child(5){animation-delay:0.48s} .slide.active .au:nth-child(6){animation-delay:0.58s}
+@keyframes slideUp { to{opacity:1;transform:translateY(0)} }
+
+.as { opacity:0;transform:scale(0.75); }
+.slide.active .as { animation:scaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.slide.active .as:nth-child(1){animation-delay:0.05s} .slide.active .as:nth-child(2){animation-delay:0.15s} .slide.active .as:nth-child(3){animation-delay:0.25s} .slide.active .as:nth-child(4){animation-delay:0.35s}
+@keyframes scaleIn { to{opacity:1;transform:scale(1)} }
+
+/* S1 */
+#s1 { background:linear-gradient(155deg,#1E3A5F 0%,#0f2040 100%); }
+.sc-logo { width:88px;height:88px;border-radius:50%;background:var(--saffron);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:30px;font-weight:900;color:white;margin-bottom:20px;box-shadow:0 0 0 8px rgba(234,88,12,0.15),0 0 40px rgba(234,88,12,0.4);animation:logoPulse 2.5s ease-in-out infinite; }
+@keyframes logoPulse { 0%,100%{box-shadow:0 0 0 8px rgba(234,88,12,0.15),0 0 40px rgba(234,88,12,0.4)} 50%{box-shadow:0 0 0 16px rgba(234,88,12,0.08),0 0 70px rgba(234,88,12,0.6)} }
+#s1 h1 { font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:white;text-align:center;line-height:1.15;margin-bottom:10px; }
+#s1 h1 span{color:var(--saffron)}
+#s1 .tagline{font-size:10px;color:var(--saffron-lt);text-align:center;letter-spacing:2px;font-weight:600;margin-bottom:28px}
+.pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
+.pill{padding:5px 13px;border-radius:20px;border:1px solid rgba(234,88,12,0.4);color:var(--saffron-lt);font-size:10px;font-weight:600;background:rgba(234,88,12,0.1)}
+#s1 .url{font-size:9px;color:var(--gold);text-align:center;margin-top:14px;opacity:0.85}
+
+/* SHARED HEADER */
+.sh{width:100%;border-radius:14px;padding:13px 18px;margin-bottom:18px}
+.sh h2{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:white}
+.sh p{font-size:10px;color:rgba(255,255,255,0.7);margin-top:2px}
+
+/* S2 */
+#s2{background:#FFF7ED}
+.prob-card{width:100%;background:white;border-radius:14px;padding:13px 16px;margin-bottom:11px;display:flex;align-items:center;gap:13px;box-shadow:0 3px 16px rgba(0,0,0,0.08);border-left:4px solid var(--saffron)}
+.prob-card .ico{font-size:26px;flex-shrink:0}
+.prob-card h3{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.prob-card p{font-size:10px;color:#64748B;line-height:1.5}
+
+/* S3 */
+#s3{background:linear-gradient(155deg,#1E3A5F,#0f2040)}
+#s3 .lbl{font-size:10px;font-weight:700;color:var(--saffron);letter-spacing:3px;text-align:center;margin-bottom:6px;text-transform:uppercase}
+#s3 h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:white;text-align:center;margin-bottom:20px;line-height:1.2}
+.vbox{width:100%;border-radius:14px;padding:16px;margin-bottom:12px}
+.vbox.v{background:rgba(234,88,12,0.15);border:1px solid rgba(234,88,12,0.3)}
+.vbox.m{background:rgba(45,82,130,0.5);border:1px solid rgba(255,255,255,0.1)}
+.vbox .vt{font-size:10px;font-weight:700;letter-spacing:2px;margin-bottom:7px;text-transform:uppercase}
+.vbox.v .vt{color:var(--gold-lt)} .vbox.m .vt{color:var(--saffron-lt)}
+.vbox p{font-size:11px;color:white;line-height:1.65}
+.val-row{display:flex;gap:7px;width:100%;flex-wrap:wrap}
+.val-chip{flex:1;min-width:70px;padding:7px 4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;text-align:center;font-size:10px;color:white;font-weight:600}
+
+/* STEPS */
+.step-row{display:flex;align-items:flex-start;gap:13px;width:100%;margin-bottom:13px}
+.snum{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;flex-shrink:0;box-shadow:0 3px 12px rgba(0,0,0,0.2)}
+.scon h3{font-size:13px;font-weight:700;margin-bottom:2px}
+.scon p{font-size:10px;color:#64748B;line-height:1.5}
+#s4{background:#F0FDFA} #s4 .scon h3{color:var(--navy)}
+#s5{background:#FFF7ED} #s5 .scon h3{color:var(--saffron)}
+.sico{font-size:17px;margin-bottom:2px}
+
+/* S6 */
+#s6{background:linear-gradient(155deg,#1E3A5F,#0f2040)}
+.ig{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.ic-card{background:var(--navy-lt);border-radius:14px;padding:14px 12px;border-top:3px solid var(--green);text-align:center}
+.ic-card .ic{font-size:26px;margin-bottom:7px}
+.ic-card h3{font-size:11px;font-weight:700;color:white;margin-bottom:5px}
+.ic-card p{font-size:9px;color:var(--saffron-lt);line-height:1.5}
+
+/* S7 */
+#s7{background:#FFFBEB}
+.er{display:flex;align-items:center;justify-content:space-between;width:100%;padding:9px 13px;background:white;border-radius:11px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.er .el{font-size:11px;font-weight:600;color:var(--navy)}
+.eb{padding:3px 11px;background:var(--gold-lt);border:1px solid var(--gold);border-radius:20px;font-size:10px;font-weight:700;color:var(--gold)}
+.rbanner{width:100%;background:linear-gradient(135deg,var(--saffron),var(--gold));border-radius:14px;padding:14px;text-align:center;margin-top:10px}
+.rbanner .big{font-size:28px;font-weight:900;color:white;font-family:'Playfair Display',serif}
+.rbanner .eq{font-size:12px;font-weight:700;color:white;opacity:0.9}
+
+/* S8 */
+#s8{background:linear-gradient(155deg,#1E3A5F,#0f2040)}
+.pc{width:100%;border-radius:14px;padding:15px 16px;margin-bottom:11px;display:flex;align-items:center;gap:15px}
+.pc.p1{background:rgba(30,58,95,0.8);border:1px solid rgba(255,255,255,0.12)}
+.pc.p2{background:rgba(13,148,136,0.18);border:1px solid rgba(13,148,136,0.35)}
+.pc.p3{background:rgba(5,150,105,0.18);border:1px solid rgba(5,150,105,0.35)}
+.pico{font-size:28px;flex-shrink:0}
+.pi h3{font-size:13px;font-weight:700;color:white;margin-bottom:2px}
+.pi .amt{font-size:20px;font-weight:900;font-family:'Playfair Display',serif}
+.pc.p1 .amt{color:var(--saffron-lt)} .pc.p2 .amt{color:#5EEAD4} .pc.p3 .amt{color:#6EE7B7}
+.pi p{font-size:9px;color:rgba(255,255,255,0.55);margin-top:2px}
+.ftag{margin-left:auto;flex-shrink:0;background:var(--green);color:white;font-size:8px;font-weight:700;padding:3px 7px;border-radius:9px;letter-spacing:0.5px;text-align:center}
+
+/* S9 */
+#s9{background:linear-gradient(155deg,#1E3A5F,#0f2040)}
+.ph{width:100%;background:var(--navy-lt);border-radius:13px;padding:13px 15px;margin-bottom:9px;display:flex;align-items:center;gap:13px}
+.ph.live{border-left:4px solid var(--green)} .ph.prog{border-left:4px solid var(--gold)} .ph.upco{border-left:4px solid var(--saffron)} .ph.vis{border-left:4px solid var(--teal)}
+.pbadge{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ph.live .pbadge{background:rgba(5,150,105,0.18)} .ph.prog .pbadge{background:rgba(217,119,6,0.18)} .ph.upco .pbadge{background:rgba(234,88,12,0.18)} .ph.vis .pbadge{background:rgba(13,148,136,0.18)}
+.ptxt .plbl{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px}
+.ph.live .plbl{color:#6EE7B7} .ph.prog .plbl{color:var(--gold-lt)} .ph.upco .plbl{color:var(--saffron-lt)} .ph.vis .plbl{color:#5EEAD4}
+.ptxt h3{font-size:12px;font-weight:700;color:white;margin-bottom:1px}
+.ptxt p{font-size:9px;color:rgba(255,255,255,0.5)}
+
+/* S10 */
+#s10{background:linear-gradient(155deg,#EA580C,#D97706)}
+.sc-logo2{width:78px;height:78px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:white;margin-bottom:18px;box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+#s10 h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:white;text-align:center;margin-bottom:6px;line-height:1.2}
+#s10 .sub{font-size:12px;color:var(--navy);text-align:center;font-weight:600;margin-bottom:22px}
+.cta-cards{display:flex;flex-direction:column;gap:9px;width:100%}
+.cc{background:rgba(30,58,95,0.8);border-radius:13px;padding:13px 16px;display:flex;align-items:center;gap:13px;backdrop-filter:blur(8px)}
+.cc .ci{font-size:22px;flex-shrink:0}
+.cc h3{font-size:12px;font-weight:700;color:white}
+.cc p{font-size:9px;color:var(--saffron-lt);margin-top:1px}
+#s10 .url2{margin-top:16px;font-size:9px;font-weight:700;color:var(--navy);text-align:center}
+
+/* START SCREEN */
+#start-screen { position:absolute;inset:0;z-index:500;background:linear-gradient(155deg,#1E3A5F,#0a1628);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0; }
+#start-screen .sl{width:100px;height:100px;border-radius:50%;background:var(--saffron);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:white;margin-bottom:22px;box-shadow:0 0 60px rgba(234,88,12,0.5);animation:logoPulse 2s ease-in-out infinite}
+#start-screen h1{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:white;text-align:center;margin-bottom:8px}
+#start-screen h1 span{color:var(--saffron)}
+#start-screen .desc{font-size:12px;color:var(--saffron-lt);text-align:center;margin-bottom:34px}
+#play-btn{background:var(--saffron);color:white;border:none;border-radius:50px;padding:16px 40px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;box-shadow:0 8px 30px rgba(234,88,12,0.5);display:flex;align-items:center;gap:10px;transition:all 0.2s}
+#play-btn:hover{transform:scale(1.05)}
+#start-screen .note{font-size:10px;color:rgba(255,255,255,0.4);margin-top:14px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="reel">
+
+  <!-- Start screen -->
+  <div id="start-screen">
+    <div class="sl">SC</div>
+    <h1>Sudarshan<br><span>Chakra</span></h1>
+    <p class="desc">Connecting Communities · Empowering Lives</p>
+    <button id="play-btn" onclick="startReel()">▶ &nbsp; Play Reel with Music</button>
+    <p class="note">🎵 Soulful Indian Bansuri flute will play<br>🔊 Please turn up your volume!</p>
+  </div>
+
+  <!-- Segment progress bar -->
+  <div id="top-ui">
+    <div class="seg"><div class="seg-fill" id="sf0"></div></div>
+    <div class="seg"><div class="seg-fill" id="sf1"></div></div>
+    <div class="seg"><div class="seg-fill" id="sf2"></div></div>
+    <div class="seg"><div class="seg-fill" id="sf3"></div></div>
+    <div class="seg"><div class="seg-fill" id="sf4"></div></div>
+    <div class="seg"><div class="seg-fill" id="sf5"></div></div>
+    <div class="seg"><div class="seg-fill" id="sf6"></div></div>
+    <div class="seg"><div class="seg-fill" id="sf7"></div></div>
+    <div class="seg"><div class="seg-fill" id="sf8"></div></div>
+    <div class="seg"><div class="seg-fill" id="sf9"></div></div>
+  </div>
+
+  <button id="music-btn" onclick="toggleMusic()">🎵</button>
+
+  <!-- SLIDE 1: TITLE -->
+  <div class="slide active" id="s1">
+    <div class="orb" style="width:300px;height:300px;top:-100px;right:-90px;background:radial-gradient(circle,#2D528233,transparent 70%)"></div>
+    <div class="orb" style="width:200px;height:200px;bottom:-70px;left:-70px;background:radial-gradient(circle,#EA580C22,transparent 70%)"></div>
+    <div class="sc-logo as">SC</div>
+    <h1 class="au">Sudarshan<br><span>Chakra</span></h1>
+    <p class="tagline au">CONNECTING COMMUNITIES · EMPOWERING LIVES</p>
+    <div class="pills au"><span class="pill">🔍 Find Services</span><span class="pill">🛠️ Hire Locally</span><span class="pill">💚 Give Back</span></div>
+    <div class="pills au"><span class="pill">🇮🇳 Made for India</span><span class="pill">🗣️ 10 Languages</span></div>
+    <p class="url au">🌐 sudarshanchakraindia.github.io/sudarshan-chakra</p>
+  </div>
+
+  <!-- SLIDE 2: PROBLEM -->
+  <div class="slide" id="s2">
+    <div class="sh au" style="background:var(--navy)"><h2>The Problem We Solve</h2><p>Why India needs Sudarshan Chakra</p></div>
+    <div class="prob-card au"><div class="ico">🔍</div><div><h3>Hard to Find Reliable Help</h3><p>Finding a trusted plumber, electrician or tutor is still done by word of mouth — unreliable and slow.</p></div></div>
+    <div class="prob-card au"><div class="ico">🤝</div><div><h3>No Trust or Verification</h3><p>No way to check ratings, reviews or credentials before letting someone into your home.</p></div></div>
+    <div class="prob-card au"><div class="ico">💼</div><div><h3>Skilled Workers Have No Platform</h3><p>Carpenters, cooks, tutors — stuck with no way to grow their business beyond their neighbourhood.</p></div></div>
+  </div>
+
+  <!-- SLIDE 3: VISION -->
+  <div class="slide" id="s3">
+    <p class="lbl au">Our Purpose</p>
+    <h2 class="au">Vision & Mission</h2>
+    <div class="vbox v au"><div class="vt">🎯 VISION</div><p>To be India's most trusted local service network — connecting every skilled person with every person who needs help, in every town and village.</p></div>
+    <div class="vbox m au"><div class="vt">🚀 MISSION</div><p>Empower communities by making services accessible, affordable and trustworthy — creating income opportunities and giving back to society.</p></div>
+    <div class="val-row au"><div class="val-chip">🤝 Trust</div><div class="val-chip">🌍 Community</div><div class="val-chip">⭐ Quality</div><div class="val-chip">💚 Giving</div></div>
+  </div>
+
+  <!-- SLIDE 4: SEEKERS -->
+  <div class="slide" id="s4">
+    <div class="sh au" style="background:var(--teal)"><h2>For Service Seekers</h2><p>Find help in 4 simple steps</p></div>
+    <div class="step-row au"><div class="snum" style="background:var(--teal)">1</div><div class="scon"><div class="sico">📱</div><h3>Download & Login</h3><p>Open on browser or app. Login with mobile OTP — quick and secure.</p></div></div>
+    <div class="step-row au"><div class="snum" style="background:var(--teal)">2</div><div class="scon"><div class="sico">🔍</div><h3>Browse or Search</h3><p>Search by service type — plumber, cook, tutor. Filter by location and ratings.</p></div></div>
+    <div class="step-row au"><div class="snum" style="background:var(--teal)">3</div><div class="scon"><div class="sico">📍</div><h3>Find Nearby Providers</h3><p>See verified providers on map. View ratings, photos and contact details.</p></div></div>
+    <div class="step-row au"><div class="snum" style="background:var(--teal)">4</div><div class="scon"><div class="sico">✅</div><h3>Hire & Review</h3><p>Contact directly. Leave a review and earn reward points!</p></div></div>
+  </div>
+
+  <!-- SLIDE 5: PROVIDERS -->
+  <div class="slide" id="s5">
+    <div class="sh au" style="background:var(--saffron)"><h2>For Service Providers</h2><p>Grow your business — absolutely FREE</p></div>
+    <div class="step-row au"><div class="snum" style="background:var(--saffron)">1</div><div class="scon"><div class="sico">📝</div><h3>Register FREE</h3><p>Sign up in minutes. Zero fee for providers. Name, service and location.</p></div></div>
+    <div class="step-row au"><div class="snum" style="background:var(--saffron)">2</div><div class="scon"><div class="sico">📸</div><h3>Build Your Profile</h3><p>Add photo and skills. Visible to thousands of seekers in your area.</p></div></div>
+    <div class="step-row au"><div class="snum" style="background:var(--saffron)">3</div><div class="scon"><div class="sico">📞</div><h3>Get Contacted Directly</h3><p>Seekers find you and call directly. No middlemen. No commission. Ever.</p></div></div>
+    <div class="step-row au"><div class="snum" style="background:var(--saffron)">4</div><div class="scon"><div class="sico">⭐</div><h3>Earn Reviews & Grow</h3><p>More reviews = more trust = more customers = more income!</p></div></div>
+  </div>
+
+  <!-- SLIDE 6: IMPACT -->
+  <div class="slide" id="s6">
+    <p class="lbl au" style="color:var(--green)">Social Impact</p>
+    <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:white;text-align:center;margin-bottom:6px" class="au">Giving Back to Society</h2>
+    <p style="font-size:10px;color:var(--saffron-lt);text-align:center;margin-bottom:16px;font-style:italic" class="au">Every transaction contributes to a greater purpose</p>
+    <div class="ig">
+      <div class="ic-card as"><div class="ic">🎓</div><h3>Skill Development</h3><p>Vocational training for underprivileged youth</p></div>
+      <div class="ic-card as"><div class="ic">👩‍💼</div><h3>Women Empowerment</h3><p>Supporting women entrepreneurs</p></div>
+      <div class="ic-card as"><div class="ic">🏥</div><h3>Community Welfare</h3><p>Health camps & social activities</p></div>
+      <div class="ic-card as"><div class="ic">🌱</div><h3>Charity Donations</h3><p>100% to welfare activities</p></div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: REWARDS -->
+  <div class="slide" id="s7">
+    <div class="sh au" style="background:var(--gold)"><h2 style="color:var(--navy)">🪙 Referral Rewards</h2><p style="color:var(--navy);opacity:0.75">Earn points. Redeem for discounts.</p></div>
+    <div class="er au"><span class="el">👥 Refer a Seeker</span><span class="eb">+5 pts</span></div>
+    <div class="er au"><span class="el">🛠️ Refer a Provider</span><span class="eb">+10 pts</span></div>
+    <div class="er au"><span class="el">⭐ Write a Review</span><span class="eb">+2 pts</span></div>
+    <div class="er au"><span class="el">📅 Daily Login</span><span class="eb">+1 pt/day</span></div>
+    <div class="rbanner au"><div class="big">10 Points</div><div class="eq">= ₹1 Discount on Portal Fee</div></div>
+  </div>
+
+  <!-- SLIDE 8: PAYMENTS -->
+  <div class="slide" id="s8">
+    <p style="font-size:10px;font-weight:700;color:var(--saffron);letter-spacing:3px;text-align:center;margin-bottom:6px;text-transform:uppercase" class="au">Simple & Transparent</p>
+    <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:white;text-align:center;margin-bottom:20px" class="au">💳 Payments</h2>
+    <div class="pc p1 au"><div class="pico">🔱</div><div class="pi"><h3>Portal Access Fee</h3><div class="amt">₹10</div><p>One-time only</p></div><span class="ftag">FREE<br>for<br>Providers</span></div>
+    <div class="pc p2 au"><div class="pico">🙏</div><div class="pi"><h3>Tip the Provider</h3><div class="amt">Any ₹</div><p>Optional · 100% goes to provider</p></div></div>
+    <div class="pc p3 au"><div class="pico">🌱</div><div class="pi"><h3>Charity Donation</h3><div class="amt">Any ₹</div><p>Optional · 100% to welfare</p></div></div>
+  </div>
+
+  <!-- SLIDE 9: ROADMAP -->
+  <div class="slide" id="s9">
+    <p style="font-size:10px;font-weight:700;color:var(--saffron);letter-spacing:3px;text-align:center;margin-bottom:6px;text-transform:uppercase" class="au">Our Journey</p>
+    <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:white;text-align:center;margin-bottom:16px" class="au">🗺️ Roadmap</h2>
+    <div class="ph live au"><div class="pbadge">✅</div><div class="ptxt"><div class="plbl">Phase 1 · Live Now</div><h3>Web App Launch</h3><p>10 languages · OTP login · Map search · Reviews</p></div></div>
+    <div class="ph prog au"><div class="pbadge">🔄</div><div class="ptxt"><div class="plbl">Phase 2 · In Progress</div><h3>Payments & Rewards</h3><p>UPI · Referral points · Wallet</p></div></div>
+    <div class="ph upco au"><div class="pbadge">📱</div><div class="ptxt"><div class="plbl">Phase 3 · Upcoming</div><h3>Mobile APK</h3><p>Android · iOS · Push notifications</p></div></div>
+    <div class="ph vis au"><div class="pbadge">🚀</div><div class="ptxt"><div class="plbl">Phase 4 · Vision</div><h3>Scale Across India</h3><p>10,000+ providers · Pan-India expansion</p></div></div>
+  </div>
+
+  <!-- SLIDE 10: CTA -->
+  <div class="slide" id="s10">
+    <div class="orb" style="width:250px;height:250px;top:-80px;right:-70px;background:radial-gradient(circle,#FED7AA22,transparent 70%)"></div>
+    <div class="orb" style="width:180px;height:180px;bottom:-50px;left:-50px;background:radial-gradient(circle,#1E3A5F33,transparent 70%)"></div>
+    <div class="sc-logo2 as">SC</div>
+    <h2 class="au">Join Sudarshan<br>Chakra Today!</h2>
+    <p class="sub au">Be part of India's most caring<br>local service community</p>
+    <div class="cta-cards">
+      <div class="cc au"><div class="ci">🔍</div><div><h3>I Need a Service</h3><p>Register as Seeker — Find help near you</p></div></div>
+      <div class="cc au"><div class="ci">🛠️</div><div><h3>I Offer a Service</h3><p>Register as Provider — Grow your business FREE</p></div></div>
+      <div class="cc au"><div class="ci">🤝</div><div><h3>I Want to Refer</h3><p>Share with friends — Earn reward points</p></div></div>
+    </div>
+    <p class="url2 au">🌐 sudarshanchakraindia.github.io/sudarshan-chakra</p>
+  </div>
+
+  <div id="nav">
+    <button class="nav-btn" onclick="prev()">◀</button>
+    <button class="nav-btn" onclick="next()">▶</button>
+  </div>
+  <div id="slide-count">1 / 10</div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   BANSURI FLUTE ENGINE — Web Audio API
+   Raag Bhupali (pentatonic: Sa Re Ga Pa Dha)
+══════════════════════════════════════════ */
+let ctx = null, musicOn = false, loopTid = null;
+let nodes = [];
+
+const BPM = 68, BEAT = 60 / BPM;
+
+// Raag Bhupali frequencies (C major pentatonic)
+const N = {
+  S0: 130.81, R0: 146.83, G0: 164.81, P0: 196.00, D0: 220.00,
+  S:  261.63, R:  293.66, G:  329.63, P:  392.00, D:  440.00,
+  S2: 523.25, R2: 587.33, G2: 659.25, P2: 784.00,
+};
+
+// Melody — authentic bansuri phrasing with meend (glide) effect
+const MELODY = [
+  // Alaap — slow opening
+  [N.S, 1.5, 0.45], [N.R, 0.5, 0.55], [N.G, 2.0, 0.75],
+  [N.P, 0.5, 0.65], [N.G, 0.5, 0.60], [N.R, 1.0, 0.65],
+  [N.S, 0.5, 0.50], [N.R, 0.5, 0.58], [N.G, 0.5, 0.72],
+  // Ascending run
+  [N.P, 0.5, 0.80], [N.D, 1.0, 0.88], [N.S2,0.5, 0.95],
+  [N.D, 0.5, 0.78], [N.P, 0.5, 0.70], [N.D, 0.5, 0.82],
+  [N.S2,1.5, 1.00],
+  // Descend with grace
+  [N.D, 0.5, 0.75], [N.P, 0.5, 0.68], [N.G, 0.5, 0.62],
+  [N.R, 0.5, 0.58], [N.S, 1.5, 0.50],
+  // Middle octave play
+  [N.R, 0.5, 0.60], [N.G, 0.5, 0.72], [N.P, 0.5, 0.80],
+  [N.G, 0.5, 0.68], [N.R, 0.5, 0.62], [N.G, 1.0, 0.75],
+  [N.P, 0.5, 0.82], [N.D, 0.5, 0.88], [N.P, 0.5, 0.75],
+  [N.G, 0.5, 0.65], [N.R, 0.5, 0.58], [N.S, 2.0, 0.55],
+  // Final resolution
+  [N.G, 0.5, 0.68], [N.R, 0.5, 0.62], [N.S, 0.5, 0.55],
+  [N.D0,1.0, 0.45], [N.S, 1.5, 0.60],
+];
+
+function note(freq, start, dur, vol, glideFrom) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const vLfo = ctx.createOscillator();   // vibrato
+  const vGain = ctx.createGain();
+  const osc2 = ctx.createOscillator();   // 2nd harmonic (breath)
+  const g2 = ctx.createGain();
+
+  osc.type = 'sine';
+  if (glideFrom) {
+    osc.frequency.setValueAtTime(glideFrom, start);
+    osc.frequency.linearRampToValueAtTime(freq, start + Math.min(0.15, dur * 0.3));
+  } else {
+    osc.frequency.setValueAtTime(freq, start);
+  }
+
+  // Vibrato — starts after attack
+  vLfo.type = 'sine';
+  vLfo.frequency.value = 5.8;
+  vGain.gain.setValueAtTime(0, start);
+  vGain.gain.linearRampToValueAtTime(freq * 0.013, start + dur * 0.4);
+  vLfo.connect(vGain);
+  vGain.connect(osc.frequency);
+
+  // Slight octave harmonic for flute colour
+  osc2.type = 'sine';
+  osc2.frequency.value = freq * 2;
+  g2.gain.setValueAtTime(0, start);
+  g2.gain.linearRampToValueAtTime(vol * 0.06, start + 0.05);
+  g2.gain.setValueAtTime(vol * 0.06, start + dur - 0.08);
+  g2.gain.linearRampToValueAtTime(0, start + dur);
+
+  // Breath noise
+  const bufLen = Math.ceil(ctx.sampleRate * (dur + 0.1));
+  const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * 0.025;
+  const noise = ctx.createBufferSource();
+  noise.buffer = buf;
+  const bp = ctx.createBiquadFilter();
+  bp.type = 'bandpass'; bp.frequency.value = freq * 1.6; bp.Q.value = 0.8;
+  const ng = ctx.createGain();
+
+  // Envelope
+  const atk = Math.min(0.09, dur * 0.18);
+  const rel = Math.min(0.14, dur * 0.22);
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(vol * 0.68, start + atk);
+  gain.gain.setValueAtTime(vol * 0.68, start + dur - rel);
+  gain.gain.linearRampToValueAtTime(0, start + dur);
+
+  ng.gain.setValueAtTime(0, start);
+  ng.gain.linearRampToValueAtTime(vol * 0.07, start + atk * 0.6);
+  ng.gain.setValueAtTime(vol * 0.04, start + dur - rel);
+  ng.gain.linearRampToValueAtTime(0, start + dur);
+
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc2.connect(g2); g2.connect(ctx.destination);
+  noise.connect(bp); bp.connect(ng); ng.connect(ctx.destination);
+
+  osc.start(start); vLfo.start(start); osc2.start(start); noise.start(start);
+  osc.stop(start + dur + 0.05); vLfo.stop(start + dur + 0.05);
+  osc2.stop(start + dur + 0.05); noise.stop(start + dur + 0.05);
+  nodes.push(osc, vLfo, osc2, noise);
+}
+
+function tabla(start, vol) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(160, start);
+  o.frequency.exponentialRampToValueAtTime(55, start + 0.18);
+  g.gain.setValueAtTime(vol, start);
+  g.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(start); o.stop(start + 0.28);
+  nodes.push(o);
+}
+
+function drone(start, dur) {
+  [[N.S, 0.038], [N.P0, 0.022], [N.S0, 0.018]].forEach(([f, v]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(v, start + 0.8);
+    g.gain.setValueAtTime(v, start + dur - 0.8);
+    g.gain.linearRampToValueAtTime(0, start + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(start); o.stop(start + dur + 0.1);
+    nodes.push(o);
+  });
+}
+
+function playLoop() {
+  if (!musicOn) return;
+  const now = ctx.currentTime;
+  let t = now + 0.08;
+  const totalDur = MELODY.reduce((s, n) => s + n[1], 0) * BEAT;
+
+  drone(t, totalDur);
+
+  // Play melody with occasional glides
+  let prev = null;
+  MELODY.forEach(([f, beats, vol], i) => {
+    const dur = beats * BEAT;
+    const glide = (prev && Math.abs(f - prev) < 100 && Math.random() > 0.6) ? prev : null;
+    note(f, t, dur, vol * 0.58, glide);
+    prev = f;
+    t += dur;
+  });
+
+  // Tabla pattern — sam (beat 1) stronger
+  let tb = now + 0.08;
+  const totalBeats = Math.floor(MELODY.reduce((s, n) => s + n[1], 0));
+  for (let i = 0; i < totalBeats; i++) {
+    tabla(tb, i % 8 === 0 ? 0.20 : i % 4 === 0 ? 0.13 : 0.07);
+    tb += BEAT;
+  }
+
+  loopTid = setTimeout(playLoop, (totalDur - 0.25) * 1000);
+}
+
+function stopMusic() {
+  clearTimeout(loopTid);
+  nodes.forEach(n => { try { n.stop(); } catch(e){} });
+  nodes = [];
+}
+
+function toggleMusic() {
+  musicOn = !musicOn;
+  document.getElementById('music-btn').textContent = musicOn ? '🎵' : '🔇';
+  if (musicOn) playLoop(); else stopMusic();
+}
+
+/* ══════════════════════════════════════════
+   MUSIC NOTE VISUALS
+══════════════════════════════════════════ */
+const SYMBOLS = ['♩','♪','♫','♬'];
+function spawnNote() {
+  if (!musicOn) return;
+  const n = document.createElement('div');
+  n.className = 'music-note';
+  n.textContent = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+  n.style.cssText = `left:${10+Math.random()*80}%;bottom:${8+Math.random()*35}%;color:${Math.random()>.5?'#EA580C':'#FDE68A'};animation-duration:${2+Math.random()*2}s;`;
+  document.getElementById('reel').appendChild(n);
+  setTimeout(() => n.remove(), 3500);
+}
+
+/* ══════════════════════════════════════════
+   SLIDE ENGINE
+══════════════════════════════════════════ */
+const TOTAL = 10, DUR = 5500;
+let cur = 0, tid = null, raf = null, t0 = null;
+
+function goTo(n) {
+  document.querySelectorAll('.slide')[cur].classList.remove('active');
+  for (let i = 0; i < cur; i++) { const sf = document.getElementById('sf'+i); if(sf) sf.style.width='100%'; }
+  document.querySelectorAll('.slide')[n].querySelectorAll('.au,.as').forEach(el => { el.style.animation='none'; void el.offsetHeight; el.style.animation=''; });
+  cur = n;
+  document.querySelectorAll('.slide')[cur].classList.add('active');
+  document.getElementById('slide-count').textContent = (cur+1)+' / '+TOTAL;
+  for (let i = cur; i < TOTAL; i++) { const sf = document.getElementById('sf'+i); if(sf) sf.style.width='0%'; }
+  resetTimer();
+}
+function next() { goTo(cur >= TOTAL-1 ? 0 : cur+1); }
+function prev() { goTo(cur <= 0 ? TOTAL-1 : cur-1); }
+
+function resetTimer() {
+  clearTimeout(tid); cancelAnimationFrame(raf);
+  t0 = performance.now(); animSeg();
+  tid = setTimeout(next, DUR);
+}
+function animSeg() {
+  const pct = Math.min(((performance.now()-t0)/DUR)*100, 100);
+  const sf = document.getElementById('sf'+cur); if(sf) sf.style.width = pct+'%';
+  if (pct < 100) raf = requestAnimationFrame(animSeg);
+}
+
+function startReel() {
+  document.getElementById('start-screen').style.display = 'none';
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  musicOn = true;
+  document.getElementById('music-btn').textContent = '🎵';
+  playLoop();
+  resetTimer();
+  setInterval(spawnNote, 2000);
+  // Particles
+  ['s1','s10'].forEach(id => {
+    const sl = document.getElementById(id);
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const sz = Math.random()*4+2;
+      p.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;background:rgba(234,88,12,${Math.random()*0.4+0.1});animation-duration:${Math.random()*8+6}s;animation-delay:${Math.random()*5}s;`;
+      sl.appendChild(p);
+    }
+  });
+}
+
+// Swipe
+let tx = 0;
+document.getElementById('reel').addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, {passive:true});
+document.getElementById('reel').addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx)>40) dx<0?next():prev(); });
+</script>
+</body>
+</html>
