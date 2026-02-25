@@ -50,6 +50,8 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- QR Code library (works on mobile without external API) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
@@ -1378,12 +1380,13 @@
                 </div>
                 <!-- Payment gateway buttons -->
                 <div id="paymentGatewayBtns">
-                    <!-- UPI QR Code -->
+                    <!-- UPI QR Code (rendered by qrcode.js) -->
                     <div class="text-center mb-3">
                         <div class="text-sm font-semibold text-gray-700 mb-2">📲 Scan & Pay via any UPI App</div>
                         <div class="flex justify-center mb-2">
-                            <img id="upiQrImage" src="" alt="UPI QR Code"
-                                class="w-48 h-48 border-2 border-gray-200 rounded-xl shadow-sm bg-white p-1">
+                            <div id="upiQrCode" class="w-48 h-48 border-2 border-gray-200 rounded-xl shadow-sm bg-white p-2 flex items-center justify-center">
+                                <span class="text-gray-400 text-xs">Loading QR...</span>
+                            </div>
                         </div>
                         <div class="text-xs text-gray-500 mb-1">UPI ID: <strong class="text-gray-800">9414055013@ybl</strong></div>
                         <div class="text-xs text-gray-400">Works with PhonePe, Google Pay, Paytm, BHIM & all UPI apps</div>
@@ -6560,44 +6563,56 @@ Join thousands of verified providers across India! 🇮🇳`,
         // ---- UPI Payment Config ----
         const UPI_ID = '9414055013@ybl';
         const UPI_NAME = 'Sudarshan+Chakra';
+        let _qrInstance = null;
 
-        function getUpiQrUrl(amount, note) {
-            const upiString = `upi://pay?pa=${UPI_ID}&pn=${UPI_NAME}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
-            // Use Google Charts QR API (free, no key needed)
-            return `https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodeURIComponent(upiString)}&choe=UTF-8`;
-        }
-
-        function openUpiApp() {
-            const amount = getEffectivePaymentAmount();
-            if (amount <= 0) { alert('Please enter a valid amount'); return; }
-            const note = _currentPaymentContext === 'portalFee' ? 'Portal Fee' :
-                         _currentPaymentContext === 'tip' ? 'Provider Tip' : 'Charity Donation';
-            const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${UPI_NAME}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
-            window.location.href = upiUrl;
+        function getUpiString(amount, note) {
+            return `upi://pay?pa=${UPI_ID}&pn=${UPI_NAME}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
         }
 
         function updateUpiQr() {
             const amount = getEffectivePaymentAmount();
             if (amount <= 0) return;
             const note = _currentPaymentContext === 'portalFee' ? 'SC Portal Fee' :
-                         _currentPaymentContext === 'tip' ? 'SC Provider Tip' : 'SC Charity';
-            const qrImg = document.getElementById('upiQrImage');
-            if (qrImg) qrImg.src = getUpiQrUrl(amount, note);
-            const upiLink = document.getElementById('upiPayLink');
-            if (upiLink) {
-                const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${UPI_NAME}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
-                upiLink.href = upiUrl;
+                         _currentPaymentContext === 'tip' ? 'SC Provider Tip' : 'SC Charity Donation';
+            const upiString = getUpiString(amount, note);
+
+            const container = document.getElementById('upiQrCode');
+            if (!container) return;
+            container.innerHTML = ''; // Clear previous QR
+
+            if (typeof QRCode !== 'undefined') {
+                _qrInstance = new QRCode(container, {
+                    text: upiString,
+                    width: 176,
+                    height: 176,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } else {
+                // Fallback: show UPI string as text
+                container.innerHTML = `<div class="text-xs text-gray-500 break-all p-2">${upiString}</div>`;
             }
+
+            // Update deep link button
+            const upiLink = document.getElementById('upiPayLink');
+            if (upiLink) upiLink.href = upiString;
+        }
+
+        function openUpiApp() {
+            const amount = getEffectivePaymentAmount();
+            if (amount <= 0) { alert('Please enter a valid amount'); return; }
+            const note = _currentPaymentContext === 'portalFee' ? 'SC Portal Fee' :
+                         _currentPaymentContext === 'tip' ? 'SC Provider Tip' : 'SC Charity';
+            window.location.href = getUpiString(amount, note);
         }
 
         async function confirmUpiPayment() {
             const amount = getEffectivePaymentAmount();
             if (amount <= 0) { alert('Please enter a valid amount first'); return; }
-            // Ask user to confirm they paid
-            const confirmed = confirm(`Please confirm:\n\nHave you successfully paid ₹${amount} to UPI ID: ${UPI_ID}?\n\nOnly click OK if payment is complete.`);
+            const confirmed = confirm(`Please confirm:\n\nHave you successfully paid ₹${amount} to UPI ID:\n${UPI_ID}?\n\nOnly click OK if payment is complete.`);
             if (!confirmed) return;
-            // Ask for UTR/transaction reference
-            const utr = prompt('Please enter your UPI Transaction ID / UTR number\n(Find it in your payment app under transaction details):');
+            const utr = prompt('Enter your UPI Transaction ID / UTR number\n(Find it in your payment app under transaction details):');
             if (!utr || utr.trim().length < 5) {
                 alert('Please enter a valid Transaction ID to confirm payment.');
                 return;
@@ -6669,12 +6684,12 @@ Join thousands of verified providers across India! 🇮🇳`,
             if (amt <= 0) { alert('Please enter a tip amount'); return; }
             if (!firebaseUser) { openLoginModal(); return; }
             document.getElementById('tipModal').classList.add('hidden');
-            _currentPaymentContext = 'tip';
-            document.getElementById('paymentAmount').textContent = amt;
-            document.getElementById('customAmountSection').classList.add('hidden');
-            document.getElementById('pointsRedemptionSection').classList.add('hidden');
-            document.getElementById('paymentModalTitle').textContent = `Tip: ${_tipProviderData?.name}`;
-            document.getElementById('paymentModal').classList.remove('hidden');
+            openPaymentModal('tip', amt, 0);
+            // Pre-fill amount
+            setTimeout(() => {
+                document.getElementById('paymentAmount').textContent = amt;
+                updateUpiQr();
+            }, 150);
         }
 
         // ---- Charity ----
@@ -6692,12 +6707,11 @@ Join thousands of verified providers across India! 🇮🇳`,
             const amt = parseInt(document.getElementById('charityAmountInput').value) || 0;
             if (amt <= 0) { alert('Please enter a donation amount'); return; }
             document.getElementById('charityModal').classList.add('hidden');
-            _currentPaymentContext = 'charity';
-            setQuickAmount(amt);
-            document.getElementById('customAmountSection').classList.add('hidden');
-            document.getElementById('pointsRedemptionSection').classList.add('hidden');
-            document.getElementById('paymentModalTitle').textContent = 'Charity Donation';
-            document.getElementById('paymentModal').classList.remove('hidden');
+            openPaymentModal('charity', amt, 0);
+            setTimeout(() => {
+                document.getElementById('paymentAmount').textContent = amt;
+                updateUpiQr();
+            }, 150);
         }
 
         // ---- Wallet Modal ----
