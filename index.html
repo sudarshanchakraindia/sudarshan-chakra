@@ -507,11 +507,12 @@
 
                 <!-- Tabs -->
                 <div class="bg-white rounded-2xl shadow-md mb-6 overflow-hidden">
-                    <div class="flex border-b">
-                        <button onclick="showProfileTab('myDetails')" id="ptab-myDetails" class="flex-1 px-4 py-3 font-semibold text-sm text-orange-600 border-b-2 border-orange-600">👤 My Details</button>
-                        <button onclick="showProfileTab('favourites')" id="ptab-favourites" class="flex-1 px-4 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent">❤️ Favourites</button>
-                        <button onclick="showProfileTab('myReviews')" id="ptab-myReviews" class="flex-1 px-4 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent">⭐ My Reviews</button>
-                        <button onclick="showProfileTab('myReports')" id="ptab-myReports" class="flex-1 px-4 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent">🚨 Reports</button>
+                    <div class="flex border-b overflow-x-auto">
+                        <button onclick="showProfileTab('myDetails')" id="ptab-myDetails" class="flex-1 px-3 py-3 font-semibold text-xs text-orange-600 border-b-2 border-orange-600 whitespace-nowrap">👤 My Details</button>
+                        <button onclick="showProfileTab('favourites')" id="ptab-favourites" class="flex-1 px-3 py-3 font-semibold text-xs text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">❤️ Favourites</button>
+                        <button onclick="showProfileTab('myReviews')" id="ptab-myReviews" class="flex-1 px-3 py-3 font-semibold text-xs text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">⭐ Reviews</button>
+                        <button onclick="showProfileTab('myReports')" id="ptab-myReports" class="flex-1 px-3 py-3 font-semibold text-xs text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">🚨 Reports</button>
+                        <button onclick="showProfileTab('myWallet')" id="ptab-myWallet" class="flex-1 px-3 py-3 font-semibold text-xs text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">🪙 Wallet</button>
                     </div>
                 </div>
 
@@ -568,6 +569,77 @@
                     <div class="bg-white rounded-2xl shadow-md p-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4">🚨 My Complaints / Reports</h3>
                         <div id="myReportsList" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Tab: My Wallet -->
+                <div id="profileTab-myWallet" class="hidden">
+                    <!-- Points Balance Card -->
+                    <div class="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl shadow-md p-5 text-white mb-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="text-lg font-bold">🪙 My Points Wallet</div>
+                            <button onclick="openLeaderboard()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1.5 rounded-lg text-xs font-medium">🏆 Leaderboard</button>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-6xl font-bold" id="profileWalletPoints">0</div>
+                            <div class="text-yellow-100 text-sm">Total Points</div>
+                            <div class="text-white font-semibold mt-1">= ₹<span id="profileWalletRupees">0</span></div>
+                            <div class="text-yellow-200 text-xs">(10 points = ₹1)</div>
+                        </div>
+                    </div>
+
+                    <!-- Referral Code -->
+                    <div class="bg-white rounded-2xl shadow-md p-5 mb-4">
+                        <div class="font-bold text-gray-800 mb-3">🔗 My Referral Code</div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <div id="profileReferralCode" class="flex-1 bg-orange-50 border-2 border-orange-300 rounded-xl px-4 py-3 text-xl font-bold text-orange-600 text-center tracking-widest"></div>
+                            <button onclick="copyMyReferralCode()" class="bg-orange-500 text-white px-4 py-3 rounded-xl font-medium hover:bg-orange-600">📋</button>
+                            <button onclick="shareReferralCode()" class="bg-green-500 text-white px-4 py-3 rounded-xl font-medium hover:bg-green-600">📤</button>
+                        </div>
+                        <p class="text-xs text-gray-500">Share your code. Earn 5 pts when seeker joins, 10 pts when provider joins!</p>
+                    </div>
+
+                    <!-- Points Earning Status -->
+                    <div class="bg-white rounded-2xl shadow-md p-5 mb-4">
+                        <div class="font-bold text-gray-800 mb-3">📊 Points Summary</div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center py-2 border-b">
+                                <span class="text-sm text-gray-600">👥 From Referrals</span>
+                                <span class="font-bold text-green-600" id="walletPtRef">0 pts</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b">
+                                <span class="text-sm text-gray-600">⭐ From Reviews</span>
+                                <span class="font-bold text-green-600" id="walletPtRev">0 pts</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b">
+                                <span class="text-sm text-gray-600">📅 Daily Logins</span>
+                                <span class="font-bold text-green-600" id="walletPtLogin">0 pts</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b">
+                                <span class="text-sm text-gray-600">👤 Profile Complete</span>
+                                <span class="font-bold text-green-600" id="walletPtProfile">0 pts</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <span class="text-sm text-gray-600">🛍️ Points Redeemed</span>
+                                <span class="font-bold text-red-500" id="walletPtUsed">0 pts</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Log -->
+                    <div class="bg-white rounded-2xl shadow-md p-5 mb-4">
+                        <div class="font-bold text-gray-800 mb-3">📜 Recent Activity</div>
+                        <div id="walletActivityLog" class="space-y-2 max-h-60 overflow-y-auto">
+                            <div class="text-gray-400 text-center py-4 text-sm">No activity yet</div>
+                        </div>
+                    </div>
+
+                    <!-- Payment History -->
+                    <div class="bg-white rounded-2xl shadow-md p-5">
+                        <div class="font-bold text-gray-800 mb-3">💳 Payment History</div>
+                        <div id="paymentHistoryList" class="space-y-2 max-h-60 overflow-y-auto">
+                            <div class="text-gray-400 text-center py-4 text-sm">No payments yet</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1245,10 +1317,247 @@
                             </label>
                         </div>
                     </div>
+                    <!-- Referral Code Field -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-1">Referral Code <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <input type="text" id="newUserReferralCode" placeholder="Enter referral code if you have one"
+                            class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-400 outline-none text-sm uppercase"
+                            oninput="this.value=this.value.toUpperCase()">
+                        <p class="text-xs text-green-600 mt-1">🎁 Your referrer earns 5 points when you join!</p>
+                    </div>
                 </div>
                 <button onclick="completeNewUserSetup()" class="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition">
                     Get Started 🚀
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PAYMENT MODAL (Portal Fee / Tip / Charity) ===== -->
+    <div id="paymentModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-br from-green-500 to-emerald-600 p-5 text-white text-center">
+                <div class="text-3xl mb-1" id="paymentModalIcon">💳</div>
+                <h2 class="text-xl font-bold" id="paymentModalTitle">Portal Access Fee</h2>
+                <p class="text-green-100 text-sm mt-1" id="paymentModalSubtitle">One-time fee to access Sudarshan Chakra</p>
+            </div>
+            <div class="p-6">
+                <!-- Amount display -->
+                <div class="bg-gray-50 rounded-xl p-4 mb-4 text-center">
+                    <div class="text-gray-500 text-sm mb-1">Amount</div>
+                    <div class="text-4xl font-bold text-gray-800">₹<span id="paymentAmount">10</span></div>
+                    <div class="text-xs text-gray-400 mt-1" id="paymentAmountNote">One-time portal access fee</div>
+                </div>
+                <!-- Custom amount (for tip/charity) -->
+                <div id="customAmountSection" class="hidden mb-4">
+                    <label class="block text-gray-700 text-sm font-medium mb-2">Enter Amount (₹)</label>
+                    <input type="number" id="customPaymentAmount" min="1" placeholder="Enter any amount"
+                        class="w-full border-2 rounded-xl px-4 py-3 text-xl font-bold text-center focus:ring-2 focus:ring-green-400 outline-none"
+                        oninput="this.value=this.value.replace(/[^0-9]/g,''); document.getElementById('paymentAmount').textContent=this.value||'0'; updateUpiQr()">
+                    <!-- Quick amount buttons -->
+                    <div class="flex gap-2 mt-2 flex-wrap">
+                        <button onclick="setQuickAmount(10)" class="flex-1 bg-gray-100 hover:bg-green-100 text-gray-700 py-1.5 rounded-lg text-sm font-medium">₹10</button>
+                        <button onclick="setQuickAmount(20)" class="flex-1 bg-gray-100 hover:bg-green-100 text-gray-700 py-1.5 rounded-lg text-sm font-medium">₹20</button>
+                        <button onclick="setQuickAmount(50)" class="flex-1 bg-gray-100 hover:bg-green-100 text-gray-700 py-1.5 rounded-lg text-sm font-medium">₹50</button>
+                        <button onclick="setQuickAmount(100)" class="flex-1 bg-gray-100 hover:bg-green-100 text-gray-700 py-1.5 rounded-lg text-sm font-medium">₹100</button>
+                    </div>
+                </div>
+                <!-- Points redemption -->
+                <div id="pointsRedemptionSection" class="hidden mb-4 bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-semibold text-yellow-800">🪙 Use My Points</div>
+                            <div class="text-xs text-yellow-600">You have <span id="availablePointsDisplay">0</span> points = ₹<span id="availablePointsValue">0</span></div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="usePointsToggle" class="sr-only peer" onchange="togglePointsRedemption()">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                        </label>
+                    </div>
+                    <div id="pointsDiscountInfo" class="hidden mt-2 text-xs text-green-700 font-medium">✅ ₹<span id="pointsDiscountAmount">0</span> discount applied!</div>
+                </div>
+                <!-- Payment gateway buttons -->
+                <div id="paymentGatewayBtns">
+                    <!-- UPI QR Code -->
+                    <div class="text-center mb-3">
+                        <div class="text-sm font-semibold text-gray-700 mb-2">📲 Scan & Pay via any UPI App</div>
+                        <div class="flex justify-center mb-2">
+                            <img id="upiQrImage" src="" alt="UPI QR Code"
+                                class="w-48 h-48 border-2 border-gray-200 rounded-xl shadow-sm bg-white p-1">
+                        </div>
+                        <div class="text-xs text-gray-500 mb-1">UPI ID: <strong class="text-gray-800">9414055013@ybl</strong></div>
+                        <div class="text-xs text-gray-400">Works with PhonePe, Google Pay, Paytm, BHIM & all UPI apps</div>
+                    </div>
+                    <!-- UPI Deep Link Button -->
+                    <a id="upiPayLink" href="#" onclick="openUpiApp(); return false;"
+                        class="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2 text-sm mb-2 block text-center">
+                        📱 Open UPI App to Pay
+                    </a>
+                    <!-- Confirm Payment -->
+                    <button onclick="confirmUpiPayment()"
+                        class="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2 text-sm">
+                        ✅ I Have Paid — Confirm
+                    </button>
+                </div>
+                <button onclick="closePaymentModal()" class="w-full mt-3 text-gray-400 py-2 text-sm hover:text-gray-600" id="paymentSkipBtn">
+                    Skip for now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== WALLET / POINTS MODAL ===== -->
+    <div id="walletModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div class="bg-gradient-to-br from-yellow-400 to-orange-500 p-5 text-white">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="text-3xl font-bold">🪙 My Wallet</div>
+                        <div class="text-yellow-100 text-sm mt-1">Points & Rewards</div>
+                    </div>
+                    <button onclick="closeWalletModal()" class="text-white text-2xl opacity-75 hover:opacity-100">✕</button>
+                </div>
+                <!-- Points balance -->
+                <div class="mt-4 bg-white bg-opacity-20 rounded-xl p-4 text-center">
+                    <div class="text-5xl font-bold" id="walletPointsBalance">0</div>
+                    <div class="text-yellow-100 text-sm mt-1">Total Points</div>
+                    <div class="text-white font-semibold mt-1">= ₹<span id="walletRupeeValue">0</span> value</div>
+                    <div class="text-yellow-200 text-xs mt-1">(10 points = ₹1)</div>
+                </div>
+            </div>
+            <div class="p-5">
+                <!-- My Referral Code -->
+                <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+                    <div class="text-sm font-bold text-orange-800 mb-2">🔗 My Referral Code</div>
+                    <div class="flex items-center gap-2">
+                        <div id="myReferralCode" class="flex-1 bg-white border-2 border-orange-300 rounded-lg px-3 py-2 text-lg font-bold text-orange-600 text-center tracking-widest"></div>
+                        <button onclick="copyMyReferralCode()" class="bg-orange-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-orange-600">Copy</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Share this code. Earn 5 pts when someone joins using it!</p>
+                </div>
+                <!-- Points Breakdown -->
+                <div class="mb-4">
+                    <div class="text-sm font-bold text-gray-700 mb-2">📊 Points Breakdown</div>
+                    <div class="space-y-2" id="pointsBreakdown">
+                        <div class="flex justify-between text-sm py-1.5 border-b">
+                            <span class="text-gray-600">👥 Referrals</span>
+                            <span class="font-semibold text-green-600" id="ptBreakReferral">0 pts</span>
+                        </div>
+                        <div class="flex justify-between text-sm py-1.5 border-b">
+                            <span class="text-gray-600">⭐ Reviews Written</span>
+                            <span class="font-semibold text-green-600" id="ptBreakReviews">0 pts</span>
+                        </div>
+                        <div class="flex justify-between text-sm py-1.5 border-b">
+                            <span class="text-gray-600">📅 Daily Logins</span>
+                            <span class="font-semibold text-green-600" id="ptBreakLogins">0 pts</span>
+                        </div>
+                        <div class="flex justify-between text-sm py-1.5 border-b">
+                            <span class="text-gray-600">👤 Profile Completed</span>
+                            <span class="font-semibold text-green-600" id="ptBreakProfile">0 pts</span>
+                        </div>
+                        <div class="flex justify-between text-sm py-1.5">
+                            <span class="text-gray-600">🛍️ Points Used</span>
+                            <span class="font-semibold text-red-500" id="ptBreakUsed">0 pts</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Earn More Points -->
+                <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+                    <div class="text-sm font-bold text-green-800 mb-2">💡 How to Earn More Points</div>
+                    <div class="space-y-1 text-xs text-gray-600">
+                        <div>🤝 Refer a seeker → <strong>5 pts</strong></div>
+                        <div>🛠️ Refer a provider → <strong>10 pts</strong></div>
+                        <div>✅ Referred user's first booking → <strong>+5 bonus pts</strong></div>
+                        <div>⭐ Write a review → <strong>2 pts</strong></div>
+                        <div>📅 Daily login → <strong>1 pt</strong></div>
+                        <div>👤 Complete profile → <strong>10 pts</strong> (once)</div>
+                    </div>
+                </div>
+                <!-- Transaction History -->
+                <div>
+                    <div class="text-sm font-bold text-gray-700 mb-2">📜 Recent Activity</div>
+                    <div id="pointsHistory" class="space-y-2 max-h-48 overflow-y-auto text-sm text-gray-600">
+                        <div class="text-gray-400 text-center py-4">No activity yet</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== LEADERBOARD MODAL ===== -->
+    <div id="leaderboardModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-br from-purple-600 to-indigo-600 p-5 text-white">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="text-2xl font-bold">🏆 Referral Leaderboard</div>
+                        <div class="text-purple-200 text-sm mt-1">Top Sudarshan Champions</div>
+                    </div>
+                    <button onclick="document.getElementById('leaderboardModal').classList.add('hidden')" class="text-white text-2xl opacity-75 hover:opacity-100">✕</button>
+                </div>
+            </div>
+            <div class="p-5 max-h-96 overflow-y-auto" id="leaderboardList">
+                <div class="text-center text-gray-400 py-8">Loading leaderboard...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TIP MODAL ===== -->
+    <div id="tipModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-br from-pink-500 to-rose-500 p-5 text-white text-center">
+                <div class="text-3xl mb-1">🙏</div>
+                <h2 class="text-xl font-bold">Tip the Provider</h2>
+                <p class="text-pink-100 text-sm mt-1">Happy with the service? Show your appreciation!</p>
+            </div>
+            <div class="p-6">
+                <div class="text-center text-gray-600 text-sm mb-4">Provider: <strong id="tipProviderName"></strong></div>
+                <div class="flex gap-2 mb-4 flex-wrap justify-center">
+                    <button onclick="setTipAmount(10)" class="px-4 py-2 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-xl font-semibold">₹10</button>
+                    <button onclick="setTipAmount(20)" class="px-4 py-2 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-xl font-semibold">₹20</button>
+                    <button onclick="setTipAmount(50)" class="px-4 py-2 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-xl font-semibold">₹50</button>
+                    <button onclick="setTipAmount(100)" class="px-4 py-2 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-xl font-semibold">₹100</button>
+                </div>
+                <input type="number" id="tipAmountInput" placeholder="Or enter custom amount" min="1"
+                    class="w-full border-2 rounded-xl px-4 py-3 text-center text-xl font-bold focus:ring-2 focus:ring-pink-400 outline-none mb-4">
+                <button onclick="submitTip()" class="w-full bg-pink-500 text-white py-3 rounded-xl font-semibold hover:bg-pink-600 transition">
+                    💝 Proceed to Pay via UPI
+                </button>
+                <button onclick="document.getElementById('tipModal').classList.add('hidden')" class="w-full mt-2 text-gray-400 py-2 text-sm">Maybe later</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CHARITY MODAL ===== -->
+    <div id="charityModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-br from-teal-500 to-cyan-600 p-5 text-white text-center">
+                <div class="text-3xl mb-1">🌱</div>
+                <h2 class="text-xl font-bold">Give Back to Society</h2>
+                <p class="text-teal-100 text-sm mt-1">Your donation helps skill development & social welfare</p>
+            </div>
+            <div class="p-6">
+                <div class="bg-teal-50 rounded-xl p-4 mb-4 text-sm text-teal-800">
+                    <div class="font-semibold mb-2">Your contribution supports:</div>
+                    <div class="space-y-1 text-xs">
+                        <div>🎓 Skill training for underprivileged youth</div>
+                        <div>👩‍💼 Women entrepreneurship programs</div>
+                        <div>🏥 Community health & welfare activities</div>
+                        <div>📚 Vocational education initiatives</div>
+                    </div>
+                </div>
+                <div class="flex gap-2 mb-4 flex-wrap justify-center">
+                    <button onclick="setCharityAmount(10)" class="px-4 py-2 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-xl font-semibold">₹10</button>
+                    <button onclick="setCharityAmount(25)" class="px-4 py-2 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-xl font-semibold">₹25</button>
+                    <button onclick="setCharityAmount(50)" class="px-4 py-2 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-xl font-semibold">₹50</button>
+                    <button onclick="setCharityAmount(100)" class="px-4 py-2 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-xl font-semibold">₹100</button>
+                </div>
+                <input type="number" id="charityAmountInput" placeholder="Or enter any amount" min="1"
+                    class="w-full border-2 rounded-xl px-4 py-3 text-center text-xl font-bold focus:ring-2 focus:ring-teal-400 outline-none mb-4">
+                <button onclick="submitCharity()" class="w-full bg-teal-500 text-white py-3 rounded-xl font-semibold hover:bg-teal-600 transition">
+                    🌱 Proceed to Pay via UPI
+                </button>
+                <button onclick="document.getElementById('charityModal').classList.add('hidden')" class="w-full mt-2 text-gray-400 py-2 text-sm">Skip for now</button>
             </div>
         </div>
     </div>
@@ -6003,6 +6312,626 @@ Join thousands of verified providers across India! 🇮🇳`,
             document.getElementById('iosInstallBanner').classList.add('hidden');
             console.log('✅ PWA installed successfully');
         });
+
+        // ==================== PAYMENT & REFERRAL POINTS SYSTEM ====================
+
+        // --- Config ---
+        const PORTAL_FEE = 10;           // ₹10 one-time
+        const POINTS_PER_RUPEE = 10;     // 10 points = ₹1
+        const RAZORPAY_KEY = 'rzp_test_XXXXXXXXXXXXXXXX'; // TODO: Replace with live key from Razorpay dashboard
+
+        // Points earning rules
+        const POINTS_RULES = {
+            referSeeker:        5,
+            referProvider:      10,
+            referredFirstBook:  5,
+            writeReview:        2,
+            dailyLogin:         1,
+            completeProfile:    10
+        };
+
+        let _currentPaymentContext = null; // 'portalFee' | 'tip' | 'charity'
+        let _tipProviderData = null;
+
+        // Generate unique referral code from uid
+        function generateReferralCode(uid) {
+            return 'SC' + uid.substring(0, 6).toUpperCase();
+        }
+
+        // ---- Points Engine ----
+        async function getUserPoints(uid) {
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `points/${uid}`));
+                return snap.exists() ? snap.val() : {
+                    total: 0, referral: 0, reviews: 0, logins: 0, profile: 0, used: 0,
+                    history: [], pendingReferrals: {}
+                };
+            } catch(e) { return { total: 0, referral: 0, reviews: 0, logins: 0, profile: 0, used: 0, history: [], pendingReferrals: {} }; }
+        }
+
+        async function addPoints(uid, amount, reason, category) {
+            try {
+                const pts = await getUserPoints(uid);
+                pts.total = (pts.total || 0) + amount;
+                pts[category] = (pts[category] || 0) + amount;
+                if (!Array.isArray(pts.history)) pts.history = [];
+                pts.history.unshift({
+                    pts: amount, reason,
+                    date: new Date().toLocaleDateString('en-IN'),
+                    type: 'credit'
+                });
+                if (pts.history.length > 50) pts.history = pts.history.slice(0, 50);
+                await _firebase.set(_firebase.ref(_firebase.db, `points/${uid}`), pts);
+                return pts.total;
+            } catch(e) { console.error('addPoints error:', e); }
+        }
+
+        async function usePoints(uid, amount) {
+            try {
+                const pts = await getUserPoints(uid);
+                const use = Math.min(amount, pts.total || 0);
+                pts.total = (pts.total || 0) - use;
+                pts.used = (pts.used || 0) + use;
+                if (!Array.isArray(pts.history)) pts.history = [];
+                pts.history.unshift({
+                    pts: -use, reason: `Redeemed for ₹${(use / POINTS_PER_RUPEE).toFixed(0)} discount`,
+                    date: new Date().toLocaleDateString('en-IN'),
+                    type: 'debit'
+                });
+                await _firebase.set(_firebase.ref(_firebase.db, `points/${uid}`), pts);
+                return use;
+            } catch(e) { console.error('usePoints error:', e); return 0; }
+        }
+
+        // ---- Daily Login Bonus ----
+        async function checkDailyLoginBonus() {
+            if (!firebaseUser) return;
+            try {
+                const today = new Date().toDateString();
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `points/${firebaseUser.uid}/lastLogin`));
+                const lastLogin = snap.exists() ? snap.val() : null;
+                if (lastLogin !== today) {
+                    await _firebase.update(_firebase.ref(_firebase.db, `points/${firebaseUser.uid}`), { lastLogin: today });
+                    await addPoints(firebaseUser.uid, POINTS_RULES.dailyLogin, 'Daily login bonus', 'logins');
+                    showFirebaseStatus('🎁 +1 point for daily login!', 'success');
+                }
+            } catch(e) {}
+        }
+
+        // ---- Profile Completion Check ----
+        async function checkProfileCompletion(uid, profile) {
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `points/${uid}/profileBonusGiven`));
+                if (snap.exists() && snap.val()) return;
+                // Check if provider or seeker profile exists
+                const provSnap = await _firebase.get(_firebase.ref(_firebase.db, `providers`));
+                const seekSnap = await _firebase.get(_firebase.ref(_firebase.db, `seekers`));
+                let hasFullProfile = false;
+                if (provSnap.exists()) {
+                    const providers = Object.values(provSnap.val() || {});
+                    hasFullProfile = providers.some(p => p.uid === uid && p.name && p.service && p.location);
+                }
+                if (!hasFullProfile && seekSnap.exists()) {
+                    const seekers = Object.values(seekSnap.val() || {});
+                    hasFullProfile = seekers.some(s => s.uid === uid && s.name && s.location);
+                }
+                if (hasFullProfile && profile.name) {
+                    await _firebase.update(_firebase.ref(_firebase.db, `points/${uid}`), { profileBonusGiven: true });
+                    await addPoints(uid, POINTS_RULES.completeProfile, 'Profile completion bonus', 'profile');
+                    showFirebaseStatus('🎉 +10 points for completing your profile!', 'success');
+                }
+            } catch(e) {}
+        }
+
+        // ---- Referral Code Processing ----
+        async function processReferralCode(newUid, referralCode, newUserRole) {
+            if (!referralCode || referralCode.length < 4) return;
+            try {
+                // Find referrer by code
+                const usersSnap = await _firebase.get(_firebase.ref(_firebase.db, 'users'));
+                if (!usersSnap.exists()) return;
+                const users = usersSnap.val();
+                const referrerEntry = Object.entries(users).find(([uid, u]) =>
+                    generateReferralCode(uid) === referralCode.toUpperCase()
+                );
+                if (!referrerEntry) {
+                    showFirebaseStatus('⚠️ Referral code not found', 'info');
+                    return;
+                }
+                const [referrerUid] = referrerEntry;
+                if (referrerUid === newUid) return; // Can't refer yourself
+
+                // Award pending referral points (activate when new user's account is set up)
+                const pts = newUserRole === 'provider' ? POINTS_RULES.referProvider : POINTS_RULES.referSeeker;
+                await addPoints(referrerUid, pts, `Referral: new ${newUserRole} joined (${referralCode})`, 'referral');
+                // Store referral relationship
+                await _firebase.set(_firebase.ref(_firebase.db, `referrals/${newUid}`), {
+                    referrerUid, referralCode, joinedDate: new Date().toISOString(), role: newUserRole
+                });
+                showFirebaseStatus(`🎉 Referral code applied! Your referrer earned ${pts} points!`, 'success');
+            } catch(e) { console.error('Referral processing error:', e); }
+        }
+
+        // ---- Portal Fee Check ----
+        async function checkAndChargePortalFee() {
+            if (!firebaseUser || !userProfile) return;
+            if (userProfile.role !== 'seeker') return; // Only seekers pay
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/portalFeePaid`));
+                if (snap.exists() && snap.val()) return; // Already paid
+                // Check if user has enough points to cover fee (100 pts = ₹10)
+                const pts = await getUserPoints(firebaseUser.uid);
+                openPaymentModal('portalFee', PORTAL_FEE, pts.total || 0);
+            } catch(e) {}
+        }
+
+        // ---- Payment Modal ----
+        function openPaymentModal(context, amount, userPoints) {
+            _currentPaymentContext = context;
+            const modal = document.getElementById('paymentModal');
+
+            const configs = {
+                portalFee: {
+                    icon: '🔱', title: 'Portal Access Fee',
+                    subtitle: 'One-time fee to access Sudarshan Chakra',
+                    amount, note: 'One-time • Never charged again', canSkip: false, customAmount: false
+                },
+                tip: {
+                    icon: '🙏', title: 'Tip the Provider',
+                    subtitle: 'Optional — show your appreciation',
+                    amount: 0, note: 'Completely voluntary', canSkip: true, customAmount: true
+                },
+                charity: {
+                    icon: '🌱', title: 'Charity Donation',
+                    subtitle: 'Support skill development & social welfare',
+                    amount: 0, note: 'Optional • 100% goes to welfare activities', canSkip: true, customAmount: true
+                }
+            };
+            const cfg = configs[context] || configs.portalFee;
+
+            document.getElementById('paymentModalIcon').textContent = cfg.icon;
+            document.getElementById('paymentModalTitle').textContent = cfg.title;
+            document.getElementById('paymentModalSubtitle').textContent = cfg.subtitle;
+            document.getElementById('paymentAmount').textContent = cfg.amount;
+            document.getElementById('paymentAmountNote').textContent = cfg.note;
+
+            const customSec = document.getElementById('customAmountSection');
+            if (cfg.customAmount) {
+                customSec.classList.remove('hidden');
+                document.getElementById('customPaymentAmount').value = '';
+            } else {
+                customSec.classList.add('hidden');
+            }
+
+            // Points redemption (only for portal fee)
+            const ptsSec = document.getElementById('pointsRedemptionSection');
+            if (context === 'portalFee' && userPoints > 0) {
+                ptsSec.classList.remove('hidden');
+                document.getElementById('availablePointsDisplay').textContent = userPoints;
+                document.getElementById('availablePointsValue').textContent = Math.floor(userPoints / POINTS_PER_RUPEE);
+                document.getElementById('usePointsToggle').checked = false;
+                document.getElementById('pointsDiscountInfo').classList.add('hidden');
+            } else {
+                ptsSec.classList.add('hidden');
+            }
+
+            const skipBtn = document.getElementById('paymentSkipBtn');
+            skipBtn.textContent = cfg.canSkip ? 'Skip for now' : 'I\'ll pay later';
+            modal.classList.remove('hidden');
+            // Update QR code for the amount
+            setTimeout(() => updateUpiQr(), 100);
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+            _currentPaymentContext = null;
+        }
+
+        function setQuickAmount(amt) {
+            document.getElementById('customPaymentAmount').value = amt;
+            document.getElementById('paymentAmount').textContent = amt;
+            updateUpiQr();
+        }
+
+        function togglePointsRedemption() {
+            const checked = document.getElementById('usePointsToggle').checked;
+            const discountInfo = document.getElementById('pointsDiscountInfo');
+            if (checked) {
+                const pts = parseInt(document.getElementById('availablePointsDisplay').textContent) || 0;
+                const maxDiscount = Math.floor(pts / POINTS_PER_RUPEE);
+                const finalAmt = Math.max(0, PORTAL_FEE - maxDiscount);
+                document.getElementById('paymentAmount').textContent = finalAmt;
+                document.getElementById('pointsDiscountAmount').textContent = Math.min(maxDiscount, PORTAL_FEE);
+                discountInfo.classList.remove('hidden');
+            } else {
+                document.getElementById('paymentAmount').textContent = PORTAL_FEE;
+                discountInfo.classList.add('hidden');
+            }
+        }
+
+        function getEffectivePaymentAmount() {
+            const custom = document.getElementById('customPaymentAmount');
+            if (custom && !document.getElementById('customAmountSection').classList.contains('hidden')) {
+                return parseInt(custom.value) || 0;
+            }
+            return parseInt(document.getElementById('paymentAmount').textContent) || 0;
+        }
+
+        // ---- UPI Payment Config ----
+        const UPI_ID = '9414055013@ybl';
+        const UPI_NAME = 'Sudarshan+Chakra';
+
+        function getUpiQrUrl(amount, note) {
+            const upiString = `upi://pay?pa=${UPI_ID}&pn=${UPI_NAME}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+            // Use Google Charts QR API (free, no key needed)
+            return `https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodeURIComponent(upiString)}&choe=UTF-8`;
+        }
+
+        function openUpiApp() {
+            const amount = getEffectivePaymentAmount();
+            if (amount <= 0) { alert('Please enter a valid amount'); return; }
+            const note = _currentPaymentContext === 'portalFee' ? 'Portal Fee' :
+                         _currentPaymentContext === 'tip' ? 'Provider Tip' : 'Charity Donation';
+            const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${UPI_NAME}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+            window.location.href = upiUrl;
+        }
+
+        function updateUpiQr() {
+            const amount = getEffectivePaymentAmount();
+            if (amount <= 0) return;
+            const note = _currentPaymentContext === 'portalFee' ? 'SC Portal Fee' :
+                         _currentPaymentContext === 'tip' ? 'SC Provider Tip' : 'SC Charity';
+            const qrImg = document.getElementById('upiQrImage');
+            if (qrImg) qrImg.src = getUpiQrUrl(amount, note);
+            const upiLink = document.getElementById('upiPayLink');
+            if (upiLink) {
+                const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${UPI_NAME}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+                upiLink.href = upiUrl;
+            }
+        }
+
+        async function confirmUpiPayment() {
+            const amount = getEffectivePaymentAmount();
+            if (amount <= 0) { alert('Please enter a valid amount first'); return; }
+            // Ask user to confirm they paid
+            const confirmed = confirm(`Please confirm:\n\nHave you successfully paid ₹${amount} to UPI ID: ${UPI_ID}?\n\nOnly click OK if payment is complete.`);
+            if (!confirmed) return;
+            // Ask for UTR/transaction reference
+            const utr = prompt('Please enter your UPI Transaction ID / UTR number\n(Find it in your payment app under transaction details):');
+            if (!utr || utr.trim().length < 5) {
+                alert('Please enter a valid Transaction ID to confirm payment.');
+                return;
+            }
+            await onPaymentSuccess('UPI_' + utr.trim(), amount, 'upi_qr');
+        }
+
+        // ---- Razorpay (placeholder for future) ----
+        async function payWithRazorpay() { openUpiApp(); }
+        function payWithPhonePe() { openUpiApp(); }
+        function payWithPaytm() { openUpiApp(); }
+
+        // ---- On Payment Success ----
+        async function onPaymentSuccess(paymentId, amount, gateway) {
+            if (!firebaseUser) return;
+            // Deduct points if used
+            const usePointsToggle = document.getElementById('usePointsToggle');
+            if (usePointsToggle?.checked && _currentPaymentContext === 'portalFee') {
+                const pts = parseInt(document.getElementById('availablePointsDisplay').textContent) || 0;
+                const discount = Math.min(Math.floor(pts / POINTS_PER_RUPEE), PORTAL_FEE);
+                if (discount > 0) await usePoints(firebaseUser.uid, discount * POINTS_PER_RUPEE);
+            }
+            // Save payment record
+            const paymentRecord = {
+                paymentId, amount, gateway,
+                type: _currentPaymentContext,
+                date: new Date().toISOString(),
+                uid: firebaseUser.uid,
+                userName: userProfile?.name || ''
+            };
+            await _firebase.push(_firebase.ref(_firebase.db, `payments/${firebaseUser.uid}`), paymentRecord);
+            // Handle specific payment types
+            if (_currentPaymentContext === 'portalFee') {
+                await markPortalFeePaid(gateway);
+            } else if (_currentPaymentContext === 'tip' && _tipProviderData) {
+                await _firebase.push(_firebase.ref(_firebase.db, `tips/${_tipProviderData.uid || _tipProviderData.id}`), paymentRecord);
+                showFirebaseStatus(`🙏 Thank you! ₹${amount} tip sent to ${_tipProviderData.name}!`, 'success');
+            } else if (_currentPaymentContext === 'charity') {
+                showFirebaseStatus(`🌱 Thank you! ₹${amount} donation received. You're making a difference!`, 'success');
+            }
+            closePaymentModal();
+            renderWalletTab();
+        }
+
+        async function markPortalFeePaid(method) {
+            await _firebase.update(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}`), {
+                portalFeePaid: true,
+                portalFeeDate: new Date().toISOString(),
+                portalFeeMethod: method
+            });
+            if (userProfile) { userProfile.portalFeePaid = true; }
+            showFirebaseStatus('✅ Portal fee paid! Full access unlocked 🎉', 'success');
+        }
+
+        // ---- Tip Provider ----
+        function openTipModal(provider) {
+            _tipProviderData = provider;
+            document.getElementById('tipProviderName').textContent = provider.name;
+            document.getElementById('tipAmountInput').value = '';
+            document.getElementById('tipModal').classList.remove('hidden');
+        }
+
+        function setTipAmount(amt) {
+            document.getElementById('tipAmountInput').value = amt;
+        }
+
+        async function submitTip() {
+            const amt = parseInt(document.getElementById('tipAmountInput').value) || 0;
+            if (amt <= 0) { alert('Please enter a tip amount'); return; }
+            if (!firebaseUser) { openLoginModal(); return; }
+            document.getElementById('tipModal').classList.add('hidden');
+            _currentPaymentContext = 'tip';
+            document.getElementById('paymentAmount').textContent = amt;
+            document.getElementById('customAmountSection').classList.add('hidden');
+            document.getElementById('pointsRedemptionSection').classList.add('hidden');
+            document.getElementById('paymentModalTitle').textContent = `Tip: ${_tipProviderData?.name}`;
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        // ---- Charity ----
+        function openCharityModal() {
+            if (!firebaseUser) { openLoginModal(); return; }
+            document.getElementById('charityAmountInput').value = '';
+            document.getElementById('charityModal').classList.remove('hidden');
+        }
+
+        function setCharityAmount(amt) {
+            document.getElementById('charityAmountInput').value = amt;
+        }
+
+        async function submitCharity() {
+            const amt = parseInt(document.getElementById('charityAmountInput').value) || 0;
+            if (amt <= 0) { alert('Please enter a donation amount'); return; }
+            document.getElementById('charityModal').classList.add('hidden');
+            _currentPaymentContext = 'charity';
+            setQuickAmount(amt);
+            document.getElementById('customAmountSection').classList.add('hidden');
+            document.getElementById('pointsRedemptionSection').classList.add('hidden');
+            document.getElementById('paymentModalTitle').textContent = 'Charity Donation';
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        // ---- Wallet Modal ----
+        function openWalletModal() {
+            document.getElementById('walletModal').classList.remove('hidden');
+            loadWalletData();
+        }
+
+        function closeWalletModal() {
+            document.getElementById('walletModal').classList.add('hidden');
+        }
+
+        async function loadWalletData() {
+            if (!firebaseUser) return;
+            const pts = await getUserPoints(firebaseUser.uid);
+            const code = generateReferralCode(firebaseUser.uid);
+            document.getElementById('walletPointsBalance').textContent = pts.total || 0;
+            document.getElementById('walletRupeeValue').textContent = Math.floor((pts.total || 0) / POINTS_PER_RUPEE);
+            document.getElementById('myReferralCode').textContent = code;
+            document.getElementById('ptBreakReferral').textContent = (pts.referral || 0) + ' pts';
+            document.getElementById('ptBreakReviews').textContent = (pts.reviews || 0) + ' pts';
+            document.getElementById('ptBreakLogins').textContent = (pts.logins || 0) + ' pts';
+            document.getElementById('ptBreakProfile').textContent = (pts.profile || 0) + ' pts';
+            document.getElementById('ptBreakUsed').textContent = (pts.used || 0) + ' pts';
+            // History
+            const histEl = document.getElementById('pointsHistory');
+            if (pts.history && pts.history.length > 0) {
+                histEl.innerHTML = pts.history.map(h => `
+                    <div class="flex justify-between items-center py-1.5 border-b text-xs">
+                        <span class="text-gray-600">${h.reason}</span>
+                        <span class="${h.type === 'credit' ? 'text-green-600' : 'text-red-500'} font-bold">
+                            ${h.type === 'credit' ? '+' : ''}${h.pts} pts
+                        </span>
+                    </div>`).join('');
+            } else {
+                histEl.innerHTML = '<div class="text-gray-400 text-center py-4 text-xs">No activity yet</div>';
+            }
+        }
+
+        // ---- Wallet Tab in Profile ----
+        async function renderWalletTab() {
+            if (!firebaseUser) return;
+            const pts = await getUserPoints(firebaseUser.uid);
+            const code = generateReferralCode(firebaseUser.uid);
+
+            const el = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+            el('profileWalletPoints', pts.total || 0);
+            el('profileWalletRupees', Math.floor((pts.total || 0) / POINTS_PER_RUPEE));
+            el('profileReferralCode', code);
+            el('walletPtRef', (pts.referral || 0) + ' pts');
+            el('walletPtRev', (pts.reviews || 0) + ' pts');
+            el('walletPtLogin', (pts.logins || 0) + ' pts');
+            el('walletPtProfile', (pts.profile || 0) + ' pts');
+            el('walletPtUsed', (pts.used || 0) + ' pts');
+
+            // Activity log
+            const log = document.getElementById('walletActivityLog');
+            if (log) {
+                if (pts.history && pts.history.length > 0) {
+                    log.innerHTML = pts.history.map(h => `
+                        <div class="flex justify-between items-center py-2 border-b text-sm">
+                            <div>
+                                <div class="text-gray-700">${h.reason}</div>
+                                <div class="text-xs text-gray-400">${h.date}</div>
+                            </div>
+                            <span class="${h.type === 'credit' ? 'text-green-600' : 'text-red-500'} font-bold text-sm">
+                                ${h.type === 'credit' ? '+' : ''}${h.pts} pts
+                            </span>
+                        </div>`).join('');
+                } else {
+                    log.innerHTML = '<div class="text-gray-400 text-center py-4 text-sm">No activity yet</div>';
+                }
+            }
+
+            // Payment history
+            const payHist = document.getElementById('paymentHistoryList');
+            if (payHist) {
+                try {
+                    const snap = await _firebase.get(_firebase.ref(_firebase.db, `payments/${firebaseUser.uid}`));
+                    if (snap.exists()) {
+                        const payments = Object.values(snap.val()).reverse();
+                        payHist.innerHTML = payments.map(p => `
+                            <div class="flex justify-between items-center py-2 border-b text-sm">
+                                <div>
+                                    <div class="text-gray-700 capitalize">${p.type || 'payment'}</div>
+                                    <div class="text-xs text-gray-400">${new Date(p.date).toLocaleDateString('en-IN')} • ${p.gateway}</div>
+                                </div>
+                                <span class="font-bold text-green-600">₹${p.amount}</span>
+                            </div>`).join('');
+                    } else {
+                        payHist.innerHTML = '<div class="text-gray-400 text-center py-4 text-sm">No payments yet</div>';
+                    }
+                } catch(e) {}
+            }
+        }
+
+        // ---- Leaderboard ----
+        async function openLeaderboard() {
+            document.getElementById('leaderboardModal').classList.remove('hidden');
+            const list = document.getElementById('leaderboardList');
+            list.innerHTML = '<div class="text-center text-gray-400 py-8">Loading...</div>';
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'points'));
+                const usersSnap = await _firebase.get(_firebase.ref(_firebase.db, 'users'));
+                if (!snap.exists()) { list.innerHTML = '<div class="text-center text-gray-400 py-8">No data yet</div>'; return; }
+                const pointsData = snap.val();
+                const usersData = usersSnap.exists() ? usersSnap.val() : {};
+                const sorted = Object.entries(pointsData)
+                    .map(([uid, p]) => ({
+                        uid,
+                        name: usersData[uid]?.name || 'Anonymous',
+                        total: p.total || 0,
+                        referral: p.referral || 0
+                    }))
+                    .sort((a, b) => b.total - a.total)
+                    .slice(0, 20);
+                const medals = ['🥇', '🥈', '🥉'];
+                list.innerHTML = sorted.length === 0
+                    ? '<div class="text-center text-gray-400 py-8">No entries yet. Be the first!</div>'
+                    : sorted.map((u, i) => `
+                        <div class="flex items-center gap-3 py-3 border-b ${u.uid === firebaseUser?.uid ? 'bg-yellow-50 rounded-lg px-2' : ''}">
+                            <div class="text-2xl w-8 text-center">${medals[i] || (i + 1)}</div>
+                            <div class="flex-1">
+                                <div class="font-semibold text-gray-800">${u.name} ${u.uid === firebaseUser?.uid ? '(You)' : ''}</div>
+                                <div class="text-xs text-gray-500">👥 ${u.referral} referral pts</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-orange-600">${u.total}</div>
+                                <div class="text-xs text-gray-400">pts</div>
+                            </div>
+                        </div>`).join('');
+            } catch(e) {
+                list.innerHTML = '<div class="text-center text-gray-400 py-8">Could not load leaderboard</div>';
+            }
+        }
+
+        // ---- Referral Code Copy & Share ----
+        function copyMyReferralCode() {
+            if (!firebaseUser) return;
+            const code = generateReferralCode(firebaseUser.uid);
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(() => showFirebaseStatus('✅ Referral code copied!', 'success'));
+            } else {
+                prompt('Your referral code:', code);
+            }
+        }
+
+        function shareReferralCode() {
+            if (!firebaseUser) return;
+            const code = generateReferralCode(firebaseUser.uid);
+            const msg = `🔱 Join Sudarshan Chakra — India's Local Service Network!\n\nUse my referral code: *${code}*\n\n👉 ${APP_URL}\n\nI earn points when you join! 🎁`;
+            if (navigator.share) {
+                navigator.share({ title: 'Join Sudarshan Chakra', text: msg });
+            } else {
+                window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+            }
+        }
+
+        // ---- Hook into completeNewUserSetup to process referral code ----
+        const _origCompleteNewUserSetup = completeNewUserSetup;
+        completeNewUserSetup = async function() {
+            const name = document.getElementById('newUserName').value.trim();
+            const role = document.querySelector('input[name="userRole"]:checked')?.value;
+            const referralCode = document.getElementById('newUserReferralCode')?.value.trim();
+            if (!name) { alert('Please enter your name'); return; }
+            if (!role) { alert('Please select your role'); return; }
+
+            const profile = {
+                uid: firebaseUser.uid,
+                phone: firebaseUser.phoneNumber,
+                name, role,
+                favourites: {},
+                joined: new Date().toISOString()
+            };
+
+            await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}`), profile);
+            userProfile = profile;
+
+            // Process referral code if provided
+            if (referralCode) await processReferralCode(firebaseUser.uid, referralCode, role);
+
+            closeLoginModal();
+            showFirebaseStatus('🎉 Welcome to Sudarshan Chakra, ' + name + '!', 'success');
+            updateNavForLoggedIn();
+
+            // Check portal fee for seekers
+            if (role === 'seeker') {
+                setTimeout(() => checkAndChargePortalFee(), 1500);
+            }
+            showPage('myProfile');
+        };
+
+        // ---- Hook into review submission to award review points ----
+        const _origSubmitReview = typeof submitReview === 'function' ? submitReview : null;
+        if (_origSubmitReview) {
+            submitReview = async function(...args) {
+                const result = await _origSubmitReview(...args);
+                if (firebaseUser) {
+                    await addPoints(firebaseUser.uid, POINTS_RULES.writeReview, 'Wrote a review', 'reviews');
+                    showFirebaseStatus(`⭐ +${POINTS_RULES.writeReview} points for writing a review!`, 'success');
+                }
+                return result;
+            };
+        }
+
+        // ---- Hook into showProfileTab to load wallet data ----
+        const _origShowProfileTab = showProfileTab;
+        showProfileTab = function(tab) {
+            _origShowProfileTab(tab);
+            if (tab === 'myWallet') renderWalletTab();
+        };
+
+        // ---- Run on login ----
+        const _origUpdateNavForLoggedIn = updateNavForLoggedIn;
+        updateNavForLoggedIn = function() {
+            _origUpdateNavForLoggedIn();
+            // Daily login bonus
+            setTimeout(() => checkDailyLoginBonus(), 2000);
+            // Profile completion check
+            setTimeout(() => { if (firebaseUser && userProfile) checkProfileCompletion(firebaseUser.uid, userProfile); }, 3000);
+        };
+
+        // Add charity link to homepage
+        setTimeout(() => {
+            const homeActions = document.querySelector('#page-home .flex.gap-4');
+            if (homeActions && !document.getElementById('charityHomeBtn')) {
+                const btn = document.createElement('button');
+                btn.id = 'charityHomeBtn';
+                btn.className = 'bg-teal-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-teal-700 text-base';
+                btn.innerHTML = '🌱 Donate & Give Back';
+                btn.onclick = openCharityModal;
+                homeActions.appendChild(btn);
+            }
+        }, 500);
 
     </script>
 </body>
