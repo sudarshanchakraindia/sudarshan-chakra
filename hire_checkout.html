@@ -461,7 +461,7 @@ input:checked + .slider::before { transform:translateX(20px); }
         </svg>
       </div>
       <div class="qr-amount-badge" id="qr-amount">₹10</div>
-      <div class="upi-id">UPI ID: <span>sudarshanchakra@phonepe</span></div>
+      <div class="upi-id">UPI ID: <span>9414055013@ybl</span></div>
     </div>
 
     <!-- Mini bill in sheet -->
@@ -475,11 +475,11 @@ input:checked + .slider::before { transform:translateX(20px); }
 
     <!-- UPI Apps -->
     <div class="upi-apps">
-      <div class="upi-app"><div class="app-icon">💜</div><p>PhonePe</p></div>
-      <div class="upi-app"><div class="app-icon">🟦</div><p>GPay</p></div>
-      <div class="upi-app"><div class="app-icon">🟠</div><p>Paytm</p></div>
-      <div class="upi-app"><div class="app-icon">🏦</div><p>BHIM</p></div>
-      <div class="upi-app"><div class="app-icon">💳</div><p>Any UPI</p></div>
+      <div class="upi-app" onclick="openUPI('phonepe')"><div class="app-icon">💜</div><p>PhonePe</p></div>
+      <div class="upi-app" onclick="openUPI('gpay')"><div class="app-icon">🟦</div><p>GPay</p></div>
+      <div class="upi-app" onclick="openUPI('paytm')"><div class="app-icon">🟠</div><p>Paytm</p></div>
+      <div class="upi-app" onclick="openUPI('bhim')"><div class="app-icon">🏦</div><p>BHIM</p></div>
+      <div class="upi-app" onclick="openUPI('upi')"><div class="app-icon">💳</div><p>Any UPI</p></div>
     </div>
 
     <button class="done-btn" onclick="paymentDone()">✅ &nbsp;I Have Paid — Done!</button>
@@ -487,6 +487,31 @@ input:checked + .slider::before { transform:translateX(20px); }
 </div>
 
 <script>
+// ── UPI DEEP LINKS ──
+const UPI_ID = '9414055013@ybl';
+const UPI_NAME = 'Sudarshan Chakra';
+
+function openUPI(app) {
+  const total = CONV_FEE + tipAmt + charityAmt;
+  const note = encodeURIComponent('Sudarshan Chakra - Platform Fee');
+  const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total}&cu=INR&tn=${note}`;
+
+  const appUrls = {
+    phonepe: `phonepe://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total}&cu=INR&tn=${note}`,
+    gpay:    `tez://upi/pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total}&cu=INR&tn=${note}`,
+    paytm:   `paytmmp://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total}&cu=INR&tn=${note}`,
+    bhim:    `bhim://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total}&cu=INR&tn=${note}`,
+    upi:     upiUrl,
+  };
+
+  window.location.href = appUrls[app] || upiUrl;
+
+  // Fallback: if app not installed, show QR after 2s
+  setTimeout(() => {
+    // Already on QR sheet — user can scan manually
+  }, 2000);
+}
+
 // ── AMOUNTS ──
 let tipAmt = 0, charityAmt = 0;
 const CONV_FEE = 10;
