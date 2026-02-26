@@ -98,7 +98,7 @@
         .lang-option:hover { transform: scale(1.05); }
         .category-card { cursor: pointer; transition: all 0.3s; }
         .browse-step { animation: stepFadeIn 0.35s ease forwards; }
-        @keyframes stepFadeIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes stepFadeIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
         .bc-item { cursor:pointer; color:#ea580c; font-weight:600; }
         .bc-item:hover { text-decoration:underline; }
         .category-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
@@ -282,15 +282,15 @@
         <div class="max-w-7xl mx-auto px-4 py-8">
             <h1 data-i18n="findServiceProviders" class="text-3xl font-bold text-gray-800 mb-6">Find Service Providers Near You</h1>
             
-            <!-- Breadcrumb Trail -->
-            <div id="breadcrumb-trail" class="hidden flex items-center gap-2 flex-wrap mb-5 text-sm bg-orange-50 rounded-xl px-4 py-3 border border-orange-100">
-                <span id="bc-home" class="bc-item" onclick="browseGoTo('category')">🏠 Categories</span>
+            <!-- Breadcrumb -->
+            <div id="breadcrumb-trail" class="hidden flex items-center gap-2 flex-wrap mb-4 text-sm bg-orange-50 rounded-xl px-4 py-2 border border-orange-100">
+                <span class="bc-item" onclick="browseGoTo('category')">🏠 Categories</span>
                 <span id="bc-sep1" class="text-gray-400 hidden">›</span>
                 <span id="bc-cat" class="bc-item hidden" onclick="browseGoTo('subcategory')"></span>
                 <span id="bc-sep2" class="text-gray-400 hidden">›</span>
                 <span id="bc-sub" class="bc-item hidden" onclick="browseGoTo('service')"></span>
                 <span id="bc-sep3" class="text-gray-400 hidden">›</span>
-                <span id="bc-svc" class="text-gray-500 font-medium hidden"></span>
+                <span id="bc-svc" class="text-gray-600 font-medium hidden"></span>
             </div>
 
             <!-- Step 1: Category -->
@@ -299,13 +299,13 @@
                 <div id="browseCategoriesGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
             </div>
 
-            <!-- Step 2: Subcategory (hidden until cat selected) -->
+            <!-- Step 2: Subcategory -->
             <div id="subcategorySection" class="browse-step mb-6 hidden">
                 <h2 data-i18n="selectSubcategory" class="text-xl font-bold text-gray-700 mb-4">2️⃣ Select Subcategory</h2>
                 <div id="browseSubcategoriesGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
             </div>
 
-            <!-- Step 3: Service Type (hidden until subcat selected) -->
+            <!-- Step 3: Service Type -->
             <div id="serviceSection" class="browse-step mb-6 hidden">
                 <h2 data-i18n="selectService" class="text-xl font-bold text-gray-700 mb-4">3️⃣ Select Service Type</h2>
                 <div id="browseServicesGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
@@ -1154,8 +1154,7 @@
                 <button onclick="verifyOTP()" id="verifyOtpBtn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition text-lg">
                     Verify & Login
                 </button>
-                <!-- Resend OTP -->
-                <div class="text-center mt-3 min-h-[28px]">
+                <div class="text-center mt-3 min-h-[26px]">
                     <p id="resendCountdown" class="text-sm text-gray-500">Resend OTP in <span id="resendTimer" class="font-bold text-orange-500">30</span>s</p>
                     <button id="resendOtpBtn" onclick="resendOTP()" class="hidden text-sm font-semibold text-orange-600 hover:text-orange-800 underline">🔄 Resend OTP</button>
                 </div>
@@ -2870,15 +2869,10 @@
             selectedCategoryId = catId;
             selectedSubcategoryIdx = null;
             selectedServiceIdx = null;
-
             const category = categories.find(c => c.id === catId);
             if (!category || !category.subcategories) return;
-
-            // Highlight selected card
             document.querySelectorAll('#browseCategoriesGrid .category-card').forEach(c => c.classList.remove('selected'));
             if (el) el.classList.add('selected');
-
-            // Build subcategory grid
             const grid = document.getElementById('browseSubcategoriesGrid');
             grid.innerHTML = category.subcategories.map((sub, idx) => `
                 <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectSubcategory(${idx}, this)">
@@ -2886,33 +2880,25 @@
                     <div class="font-bold text-gray-800">${getTranslated(sub.name)}</div>
                 </div>
             `).join('');
-
-            // Hide all other steps, show only subcategory
-            document.getElementById('step-category').classList.add('hidden');
+            // HIDE category step, SHOW only subcategory
+            const stepCat = document.getElementById('step-category');
+            if (stepCat) stepCat.classList.add('hidden');
             document.getElementById('subcategorySection').classList.remove('hidden');
             document.getElementById('serviceSection').classList.add('hidden');
             document.getElementById('providersSection').classList.add('hidden');
-
             // Breadcrumb
-            updateBreadcrumb('cat', getTranslated(category.name));
-
-            // Scroll to top of browse page
+            _updateBC('cat', getTranslated(category.name));
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         
         function selectSubcategory(subIdx, el) {
             selectedSubcategoryIdx = subIdx;
             selectedServiceIdx = null;
-
             const category = categories.find(c => c.id === selectedCategoryId);
             const subcategory = category.subcategories[subIdx];
             if (!subcategory.subsubcategories) return;
-
-            // Highlight selected
             document.querySelectorAll('#browseSubcategoriesGrid .category-card').forEach(c => c.classList.remove('selected'));
             if (el) el.classList.add('selected');
-
-            // Build service type grid
             const grid = document.getElementById('browseServicesGrid');
             grid.innerHTML = subcategory.subsubcategories.map((service, idx) => `
                 <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectService(${idx}, this)">
@@ -2920,100 +2906,88 @@
                     <div class="font-bold text-gray-800">${getTranslated(service.name)}</div>
                 </div>
             `).join('');
-
-            // Hide subcategory, show service types only
+            // HIDE subcategory, SHOW service types
             document.getElementById('subcategorySection').classList.add('hidden');
             document.getElementById('serviceSection').classList.remove('hidden');
             document.getElementById('providersSection').classList.add('hidden');
-
-            // Breadcrumb
-            updateBreadcrumb('sub', getTranslated(subcategory.name));
-
-            // Scroll to top
+            _updateBC('sub', getTranslated(subcategory.name));
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         
         function selectService(serviceIdx, el) {
             selectedServiceIdx = serviceIdx;
-
-            // Highlight selected
             document.querySelectorAll('#browseServicesGrid .category-card').forEach(c => c.classList.remove('selected'));
             if (el) el.classList.add('selected');
-
-            // Hide service step, show providers
+            // HIDE service, SHOW providers
             document.getElementById('serviceSection').classList.add('hidden');
             document.getElementById('providersSection').classList.remove('hidden');
-
             // Breadcrumb
-            const category = categories.find(c => c.id === selectedCategoryId);
-            const sub = category?.subcategories[selectedSubcategoryIdx];
-            const svc = sub?.subsubcategories[serviceIdx];
-            if (svc) updateBreadcrumb('svc', getTranslated(svc.name));
-
-            // Load providers
+            const cat2 = categories.find(c => c.id === selectedCategoryId);
+            const sub2 = cat2?.subcategories[selectedSubcategoryIdx];
+            const svc2 = sub2?.subsubcategories[serviceIdx];
+            if (svc2) _updateBC('svc', getTranslated(svc2.name));
             applySortAndFilter();
-
-            // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // ── BREADCRUMB HELPER ──
-        function updateBreadcrumb(level, label) {
+        // ── BREADCRUMB ──
+        function _updateBC(level, label) {
             const trail = document.getElementById('breadcrumb-trail');
             if (!trail) return;
             trail.classList.remove('hidden');
             if (level === 'cat') {
-                document.getElementById('bc-cat').textContent = label;
-                document.getElementById('bc-cat').classList.remove('hidden');
+                const el = document.getElementById('bc-cat');
+                if (el) { el.textContent = label; el.classList.remove('hidden'); }
                 document.getElementById('bc-sep1').classList.remove('hidden');
-                document.getElementById('bc-sub').classList.add('hidden');
-                document.getElementById('bc-sep2').classList.add('hidden');
-                document.getElementById('bc-svc').classList.add('hidden');
-                document.getElementById('bc-sep3').classList.add('hidden');
+                ['bc-sub','bc-sep2','bc-svc','bc-sep3'].forEach(id => { const e=document.getElementById(id); if(e) e.classList.add('hidden'); });
             } else if (level === 'sub') {
-                document.getElementById('bc-sub').textContent = label;
-                document.getElementById('bc-sub').classList.remove('hidden');
+                const el = document.getElementById('bc-sub');
+                if (el) { el.textContent = label; el.classList.remove('hidden'); }
                 document.getElementById('bc-sep2').classList.remove('hidden');
-                document.getElementById('bc-svc').classList.add('hidden');
-                document.getElementById('bc-sep3').classList.add('hidden');
+                ['bc-svc','bc-sep3'].forEach(id => { const e=document.getElementById(id); if(e) e.classList.add('hidden'); });
             } else if (level === 'svc') {
-                document.getElementById('bc-svc').textContent = label;
-                document.getElementById('bc-svc').classList.remove('hidden');
+                const el = document.getElementById('bc-svc');
+                if (el) { el.textContent = label; el.classList.remove('hidden'); }
                 document.getElementById('bc-sep3').classList.remove('hidden');
             }
         }
-
-        // ── BREADCRUMB BACK NAVIGATION ──
         function browseGoTo(step) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            const show = id => { const e=document.getElementById(id); if(e) e.classList.remove('hidden'); };
+            const hide = id => { const e=document.getElementById(id); if(e) e.classList.add('hidden'); };
             if (step === 'category') {
-                document.getElementById('step-category').classList.remove('hidden');
-                document.getElementById('subcategorySection').classList.add('hidden');
-                document.getElementById('serviceSection').classList.add('hidden');
-                document.getElementById('providersSection').classList.add('hidden');
-                document.getElementById('breadcrumb-trail').classList.add('hidden');
+                show('step-category'); hide('subcategorySection'); hide('serviceSection'); hide('providersSection'); hide('breadcrumb-trail');
                 selectedCategoryId = null; selectedSubcategoryIdx = null; selectedServiceIdx = null;
             } else if (step === 'subcategory') {
-                document.getElementById('step-category').classList.add('hidden');
-                document.getElementById('subcategorySection').classList.remove('hidden');
-                document.getElementById('serviceSection').classList.add('hidden');
-                document.getElementById('providersSection').classList.add('hidden');
-                document.getElementById('bc-sub').classList.add('hidden');
-                document.getElementById('bc-sep2').classList.add('hidden');
-                document.getElementById('bc-svc').classList.add('hidden');
-                document.getElementById('bc-sep3').classList.add('hidden');
+                hide('step-category'); show('subcategorySection'); hide('serviceSection'); hide('providersSection');
+                ['bc-sub','bc-sep2','bc-svc','bc-sep3'].forEach(hide);
                 selectedSubcategoryIdx = null; selectedServiceIdx = null;
             } else if (step === 'service') {
-                document.getElementById('step-category').classList.add('hidden');
-                document.getElementById('subcategorySection').classList.add('hidden');
-                document.getElementById('serviceSection').classList.remove('hidden');
-                document.getElementById('providersSection').classList.add('hidden');
-                document.getElementById('bc-svc').classList.add('hidden');
-                document.getElementById('bc-sep3').classList.add('hidden');
+                hide('step-category'); hide('subcategorySection'); show('serviceSection'); hide('providersSection');
+                ['bc-svc','bc-sep3'].forEach(hide);
                 selectedServiceIdx = null;
             }
         }
         
+
+        // ── BILINGUAL WHATSAPP MESSAGE ──
+        function buildWAMsg(providerName, serviceName) {
+            const lang = currentLanguage || 'en';
+            const msgs = {
+                hi: `नमस्ते ${providerName} जी 🙏\nमैंने आपको *सुदर्शन चक्र* पर देखा।\nमुझे आपकी *${serviceName}* सेवा चाहिए।\nक्या हम बात कर सकते हैं?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                bn: `নমস্কার ${providerName} 🙏\nআমি *সুদর্শন চক্র*-এ আপনাকে খুঁজে পেয়েছি।\nআমার *${serviceName}* সেবা দরকার।\nআলোচনা করতে পারি?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                gu: `નમસ્તે ${providerName} 🙏\nમેં *સુદર્શન ચક્ર* પર તમને શોધ્યા।\nમને *${serviceName}* સેવા જોઈએ છે।\nવાત કરી શકીએ?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                mr: `नमस्ते ${providerName} 🙏\nमला *सुदर्शन चक्र* वर तुम्ही दिसलात।\nमला *${serviceName}* सेवा हवी आहे।\nआपण बोलू शकतो का?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                ta: `வணக்கம் ${providerName} 🙏\n*சுதர்ஷன் சக்ர*-ல் உங்களை கண்டேன்।\n*${serviceName}* சேவை தேவை।\nபேசலாமா?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                te: `నమస్కారం ${providerName} 🙏\n*సుదర్శన చక్ర*లో మీరు కనిపించారు।\n*${serviceName}* సేవ కావాలి।\nమాట్లాడగలమా?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                kn: `ನಮಸ್ಕಾರ ${providerName} 🙏\n*ಸುದರ್ಶನ ಚಕ್ರ*ದಲ್ಲಿ ನಿಮ್ಮನ್ನು ಕಂಡೆ।\n*${serviceName}* ಸೇವೆ ಬೇಕಾಗಿದೆ।\nಮಾತನಾಡಬಹುದೇ?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                ml: `നമസ്കാരം ${providerName} 🙏\n*സുദർശന ചക്ര*-ൽ നിങ്ങളെ കണ്ടു।\n*${serviceName}* സേവനം വേണം।\nസംസാരിക്കാമോ?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                pa: `ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ${providerName} 🙏\n*ਸੁਦਰਸ਼ਨ ਚੱਕਰ* ਤੇ ਤੁਹਾਨੂੰ ਲੱਭਿਆ।\n*${serviceName}* ਸੇਵਾ ਚਾਹੀਦੀ ਹੈ।\nਗੱਲ ਕਰ ਸਕਦੇ ਹਾਂ?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                en: `Hi ${providerName} 🙏\nI found you on *Sudarshan Chakra*.\nI need your *${serviceName}* service.\nCan we discuss?`,
+            };
+            return msgs[lang] || msgs['en'];
+        }
+
         // ==================== PHASE B: SORT & FILTER FUNCTIONS ====================
         function toggleFilters() {
             const panel = document.getElementById('filterPanel');
@@ -3180,7 +3154,7 @@
             grid.innerHTML = filteredProviders.map(p => {
                 const { avg, count } = getAvgRating(p);
                 const waNum = p.whatsapp || p.mobile;
-                const waMsg = encodeURIComponent(`Hi ${p.name}, I found you on Sudarshan Chakra. I need your ${p.service} service. Can we discuss?`);
+                const waMsg = encodeURIComponent(buildWAMsg(p.name, p.service));
                 const distText = (p.distance !== undefined && p.distance < 100) ? p.distance.toFixed(1) + ' km away' : p.location;
                 const stars = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
 
@@ -3217,6 +3191,7 @@
                         <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">⭐ Review</button>
                         <button onclick="toggleFavourite('${p.id}')" id="fav-${p.id}" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-500 border-gray-200 hover:bg-red-50 hover:text-red-500">🤍</button>
                         <button onclick="openReportModal('${p.id}','provider','${p.name}')" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-400 border-gray-200 hover:bg-red-50 hover:text-red-500" title="Report">🚨</button>
+                        <a href="hire_checkout.html?name=${encodeURIComponent(p.name)}&service=${encodeURIComponent(p.service)}&location=${encodeURIComponent(p.location)}&rating=${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}&lang=${currentLanguage || 'hi'}" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2.5 rounded-xl font-bold text-sm transition hover:from-purple-700 hover:to-indigo-700 shadow-md" style="text-decoration:none;">⚡ Hire Now &nbsp;<span class="text-xs font-normal opacity-80">(₹10 fee)</span></a>
                     </div>
                 </div>`;
             }).join('');
@@ -4787,9 +4762,10 @@
                     try { _recaptchaVerifier.clear(); } catch(e) {}
                     _recaptchaVerifier = null;
                 }
-                // Only setup if container exists and auth is ready
                 const container = document.getElementById('recaptcha-container');
                 if (!container || !window._auth) return;
+                // Clear inner HTML to allow fresh render — fixes "already rendered" error
+                container.innerHTML = '';
                 _recaptchaVerifier = new _auth.RecaptchaVerifier(_auth.auth, 'recaptcha-container', {
                     size: 'invisible',
                     callback: () => {}
@@ -4825,25 +4801,24 @@
             }
         }
 
-        // ── RESEND OTP ──
-        let _resendTimer = null;
+        let _resendInterval = null;
         function startResendCountdown() {
             let secs = 30;
             const countdown = document.getElementById('resendCountdown');
             const btn = document.getElementById('resendOtpBtn');
-            const timerSpan = document.getElementById('resendTimer');
+            const timerEl = document.getElementById('resendTimer');
             if (!countdown) return;
             countdown.classList.remove('hidden');
             btn.classList.add('hidden');
-            timerSpan.textContent = secs;
-            if (_resendTimer) clearInterval(_resendTimer);
-            _resendTimer = setInterval(() => {
+            if (timerEl) timerEl.textContent = secs;
+            if (_resendInterval) clearInterval(_resendInterval);
+            _resendInterval = setInterval(() => {
                 secs--;
-                if (timerSpan) timerSpan.textContent = secs;
+                if (timerEl) timerEl.textContent = secs;
                 if (secs <= 0) {
-                    clearInterval(_resendTimer);
-                    if (countdown) countdown.classList.add('hidden');
-                    if (btn) btn.classList.remove('hidden');
+                    clearInterval(_resendInterval);
+                    countdown.classList.add('hidden');
+                    btn.classList.remove('hidden');
                 }
             }, 1000);
         }
@@ -4854,11 +4829,14 @@
             btn.textContent = '⏳ Sending...';
             btn.disabled = true;
             try {
+                // Fresh reCAPTCHA — clears old render
                 setupRecaptcha();
+                await new Promise(r => setTimeout(r, 300)); // small delay
                 _confirmationResult = await _auth.signInWithPhoneNumber(_auth.auth, '+91' + phone, _recaptchaVerifier);
                 showFirebaseStatus('📲 OTP resent to +91 ' + phone, 'success');
                 startResendCountdown();
             } catch(err) {
+                console.error('Resend error:', err);
                 alert('Failed to resend OTP: ' + err.message);
                 btn.textContent = '🔄 Resend OTP';
                 btn.disabled = false;
@@ -5352,7 +5330,7 @@
             const { avg, count } = getAvgRating(p);
             const reviews = p.reviews ? Object.values(p.reviews).sort((a,b) => new Date(b.date) - new Date(a.date)) : [];
             const waNum = p.whatsapp || p.mobile;
-            const waMsg = encodeURIComponent(`Hi ${p.name}, I found you on Sudarshan Chakra. I need your ${p.service} service.`);
+            const waMsg = encodeURIComponent(buildWAMsg(p.name, p.service));
             const stars = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
 
             document.getElementById('profileModalContent').innerHTML = `
@@ -5399,6 +5377,7 @@
                         <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-600 transition" style="text-decoration:none;">💬 WhatsApp</a>
                         ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-blue-700 transition" style="text-decoration:none;">🗺️ Get Directions</a>` : '<div></div>'}
                         <button onclick="document.getElementById('profileModal').classList.add('hidden'); openReviewModal('${p.id}')" class="bg-orange-100 text-orange-700 py-3 rounded-xl font-semibold hover:bg-orange-200 transition border border-orange-200">⭐ Write Review</button>
+                        <a href="hire_checkout.html?name=${encodeURIComponent(p.name)}&service=${encodeURIComponent(p.service)}&location=${encodeURIComponent(p.location)}&rating=${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}&lang=${currentLanguage || 'hi'}" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-base transition hover:from-purple-700 hover:to-indigo-700 shadow-lg" style="text-decoration:none;">⚡ Hire Now &nbsp;<span class="text-sm font-normal opacity-80">(₹10 convenience fee)</span></a>
                     </div>
 
                     <!-- Reviews section -->
