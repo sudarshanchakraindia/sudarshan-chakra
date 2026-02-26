@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudarshan Chakra — Hire Provider</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --saffron:#EA580C; --saffron-lt:#FED7AA;
+  --navy:#1E3A5F; --navy-lt:#2D5282;
+  --gold:#D97706; --gold-lt:#FDE68A;
+  --green:#059669; --green-lt:#D1FAE5;
+  --teal:#0D9488;
+  --bg:#F8FAFC; --card:#FFFFFF;
+  --text:#1E293B; --muted:#64748B;
+}
+html,body { min-height:100%; background:var(--bg); font-family:'Poppins',sans-serif; color:var(--text); }
+
+/* ── TOP NAV ── */
+.topnav {
+  background:var(--navy);
+  padding:14px 20px;
+  display:flex; align-items:center; gap:14px;
+  position:sticky; top:0; z-index:100;
+  box-shadow:0 2px 12px rgba(30,58,95,0.3);
+}
+.back-btn { background:rgba(255,255,255,0.12); border:none; border-radius:10px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:white; font-size:18px; cursor:pointer; }
+.topnav h1 { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:white; flex:1; }
+.sc-badge { font-size:10px; font-weight:700; color:var(--saffron-lt); background:rgba(234,88,12,0.2); padding:4px 10px; border-radius:20px; border:1px solid rgba(234,88,12,0.3); }
+
+/* ── PAGE WRAPPER ── */
+.page { max-width:480px; margin:0 auto; padding:20px 16px 40px; }
+
+/* ── PROVIDER CARD ── */
+.provider-card {
+  background:var(--card);
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:16px;
+  box-shadow:0 2px 16px rgba(0,0,0,0.07);
+  border:1px solid #E2E8F0;
+  display:flex; align-items:center; gap:16px;
+  animation:fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.provider-avatar {
+  width:64px; height:64px; border-radius:50%;
+  background:linear-gradient(135deg,var(--saffron),var(--gold));
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; flex-shrink:0;
+  box-shadow:0 4px 14px rgba(234,88,12,0.3);
+}
+.provider-info h2 { font-size:16px; font-weight:700; color:var(--text); margin-bottom:3px; }
+.provider-info .service-tag { display:inline-block; padding:3px 10px; background:#EFF6FF; color:#1D4ED8; border-radius:20px; font-size:10px; font-weight:600; margin-bottom:4px; }
+.provider-info .rating { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); }
+.provider-info .rating .stars { color:#F59E0B; font-size:13px; }
+.provider-info .location { font-size:11px; color:var(--muted); margin-top:2px; }
+.verified-badge { margin-left:auto; flex-shrink:0; text-align:center; }
+.verified-badge .vico { font-size:22px; }
+.verified-badge p { font-size:8px; color:var(--green); font-weight:700; letter-spacing:0.5px; }
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-size:11px; font-weight:700; color:var(--muted);
+  letter-spacing:2px; text-transform:uppercase;
+  margin-bottom:10px; margin-top:6px;
+  padding-left:4px;
+}
+
+/* ── SERVICE DETAILS ── */
+.service-card {
+  background:var(--card);
+  border-radius:16px;
+  padding:16px 18px;
+  margin-bottom:16px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.06);
+  border:1px solid #E2E8F0;
+  animation:fadeUp 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;
+}
+.service-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.service-row:last-child { margin-bottom:0; }
+.srv-icon { font-size:20px; width:36px; text-align:center; flex-shrink:0; }
+.srv-label { font-size:11px; color:var(--muted); margin-bottom:1px; }
+.srv-value { font-size:14px; font-weight:600; color:var(--text); }
+.srv-input {
+  width:100%; border:1.5px solid #E2E8F0; border-radius:10px;
+  padding:10px 14px; font-size:13px; font-family:'Poppins',sans-serif;
+  color:var(--text); outline:none; transition:border 0.2s;
+  background:#FAFBFC;
+}
+.srv-input:focus { border-color:var(--saffron); background:white; }
+
+/* ── OPTIONAL ADDS ── */
+.optional-card {
+  background:var(--card);
+  border-radius:16px;
+  padding:16px 18px;
+  margin-bottom:16px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.06);
+  border:1px solid #E2E8F0;
+  animation:fadeUp 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both;
+}
+.opt-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.opt-row:last-child { margin-bottom:0; }
+.opt-label { flex:1; }
+.opt-label p { font-size:13px; font-weight:600; color:var(--text); }
+.opt-label span { font-size:10px; color:var(--muted); }
+.amount-ctrl { display:flex; align-items:center; gap:8px; }
+.amt-btn { width:28px; height:28px; border-radius:50%; border:1.5px solid #CBD5E1; background:white; color:var(--text); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.amt-btn:hover { border-color:var(--saffron); color:var(--saffron); }
+.amt-display { font-size:13px; font-weight:700; color:var(--text); min-width:36px; text-align:center; }
+.toggle-switch { position:relative; width:44px; height:24px; flex-shrink:0; }
+.toggle-switch input { opacity:0; width:0; height:0; }
+.slider { position:absolute; inset:0; background:#CBD5E1; border-radius:24px; cursor:pointer; transition:0.3s; }
+.slider::before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:white; border-radius:50%; transition:0.3s; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+input:checked + .slider { background:var(--green); }
+input:checked + .slider::before { transform:translateX(20px); }
+
+/* ── BILL BREAKDOWN ── */
+.bill-card {
+  background:var(--navy);
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:16px;
+  box-shadow:0 4px 24px rgba(30,58,95,0.25);
+  animation:fadeUp 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both;
+  position:relative; overflow:hidden;
+}
+.bill-card::before {
+  content:'';
+  position:absolute; top:-40px; right:-40px;
+  width:120px; height:120px; border-radius:50%;
+  background:rgba(234,88,12,0.1);
+}
+.bill-card::after {
+  content:'';
+  position:absolute; bottom:-30px; left:-30px;
+  width:90px; height:90px; border-radius:50%;
+  background:rgba(253,230,138,0.07);
+}
+.bill-title { font-size:11px; font-weight:700; color:rgba(253,230,138,0.6); letter-spacing:2px; text-transform:uppercase; margin-bottom:16px; }
+.bill-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:11px; }
+.bill-row .bl { font-size:13px; color:rgba(255,255,255,0.7); display:flex; align-items:center; gap:6px; }
+.bill-row .br { font-size:13px; font-weight:600; color:white; }
+.bill-row .br.free { color:var(--green-lt); font-size:12px; }
+.bill-divider { height:1px; background:rgba(255,255,255,0.1); margin:12px 0; }
+
+/* ── CONVENIENCE FEE ROW — highlighted ── */
+.conv-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:11px; background:rgba(234,88,12,0.12); border-radius:10px; padding:8px 12px; border:1px solid rgba(234,88,12,0.25); }
+.conv-row .cl { font-size:13px; color:rgba(255,255,255,0.85); display:flex; align-items:center; gap:7px; }
+.conv-row .cr { font-size:14px; font-weight:700; color:var(--saffron-lt); }
+.conv-info { font-size:9px; color:rgba(253,230,138,0.45); margin-top:3px; display:block; }
+
+/* ── TOTAL ROW ── */
+.total-row { display:flex; justify-content:space-between; align-items:center; margin-top:4px; }
+.total-row .tl { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:white; }
+.total-row .tr { font-family:'Playfair Display',serif; font-size:28px; font-weight:900; color:var(--gold-lt); }
+
+/* ── QR MODAL OVERLAY ── */
+.qr-overlay {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(0,0,0,0.65);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.3s;
+  backdrop-filter:blur(4px);
+}
+.qr-overlay.open { opacity:1; pointer-events:all; }
+
+.qr-sheet {
+  background:white; border-radius:28px 28px 0 0;
+  width:100%; max-width:480px;
+  padding:10px 24px 40px;
+  transform:translateY(100%);
+  transition:transform 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+.qr-overlay.open .qr-sheet { transform:translateY(0); }
+
+.sheet-handle { width:44px; height:4px; background:#E2E8F0; border-radius:2px; margin:0 auto 20px; }
+.sheet-title { font-family:'Playfair Display',serif; font-size:20px; font-weight:900; color:var(--navy); text-align:center; margin-bottom:4px; }
+.sheet-sub { font-size:12px; color:var(--muted); text-align:center; margin-bottom:20px; }
+
+.qr-wrap {
+  background:linear-gradient(135deg,#F8FAFC,#EFF6FF);
+  border-radius:20px; padding:20px;
+  text-align:center; margin-bottom:16px;
+  border:2px solid #E2E8F0;
+}
+/* PhonePe-style QR placeholder */
+.qr-box {
+  width:180px; height:180px; margin:0 auto 14px;
+  background:white; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 4px 20px rgba(0,0,0,0.1);
+  position:relative; overflow:hidden;
+}
+.qr-box svg { width:160px; height:160px; }
+.qr-amount-badge {
+  background:linear-gradient(135deg,var(--saffron),var(--gold));
+  color:white; border-radius:50px;
+  padding:8px 20px; font-size:20px; font-weight:900;
+  font-family:'Playfair Display',serif;
+  display:inline-block; margin-bottom:8px;
+  box-shadow:0 4px 16px rgba(234,88,12,0.35);
+}
+.upi-id { font-size:11px; color:var(--muted); }
+.upi-id span { font-weight:700; color:var(--navy); }
+
+/* Bill mini in sheet */
+.mini-bill { background:#F8FAFC; border-radius:14px; padding:14px 16px; margin-bottom:16px; }
+.mb-row { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:6px; }
+.mb-row:last-child { margin-bottom:0; font-size:14px; font-weight:700; color:var(--navy); border-top:1px solid #E2E8F0; padding-top:8px; margin-top:4px; }
+.mb-conv { color:var(--saffron); font-weight:600; }
+
+/* ── UPI APPS ROW ── */
+.upi-apps { display:flex; gap:10px; justify-content:center; margin-bottom:16px; }
+.upi-app { display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; }
+.upi-app .app-icon { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; border:1.5px solid #E2E8F0; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.07); transition:all 0.2s; }
+.upi-app .app-icon:hover { transform:scale(1.08); box-shadow:0 4px 16px rgba(0,0,0,0.12); }
+.upi-app p { font-size:9px; color:var(--muted); font-weight:600; }
+
+.done-btn {
+  width:100%; background:linear-gradient(135deg,var(--green),#047857);
+  border:none; border-radius:50px; padding:15px;
+  font-size:15px; font-weight:700; color:white;
+  font-family:'Poppins',sans-serif; cursor:pointer;
+  box-shadow:0 6px 20px rgba(5,150,105,0.35);
+  transition:all 0.2s;
+}
+.done-btn:hover { transform:scale(1.02); }
+
+/* ── PAY BUTTON ── */
+.pay-btn {
+  width:100%; background:linear-gradient(135deg,#5F33B8,#7C3AED);
+  border:none; border-radius:16px; padding:18px;
+  font-size:16px; font-weight:700; color:white;
+  font-family:'Poppins',sans-serif; cursor:pointer;
+  box-shadow:0 6px 24px rgba(124,58,237,0.4);
+  transition:all 0.2s;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  margin-bottom:12px;
+  animation:fadeUp 0.5s 0.3s cubic-bezier(0.22,1,0.36,1) both;
+}
+.pay-btn:hover { transform:scale(1.02); box-shadow:0 8px 30px rgba(124,58,237,0.5); }
+.pay-btn .phonepe-logo { font-size:22px; }
+
+.free-note {
+  text-align:center; font-size:11px; color:var(--muted);
+  animation:fadeUp 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both;
+  margin-bottom:16px;
+}
+.free-note span { color:var(--green); font-weight:700; }
+
+/* ── TRUST STRIP ── */
+.trust-strip {
+  display:flex; gap:6px; flex-wrap:wrap; justify-content:center;
+  animation:fadeUp 0.5s 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+.trust-chip { padding:5px 12px; background:white; border:1px solid #E2E8F0; border-radius:20px; font-size:10px; color:var(--muted); font-weight:500; box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<div class="topnav">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <h1>Hire Provider</h1>
+  <span class="sc-badge">🔱 SC</span>
+</div>
+
+<div class="page">
+
+  <!-- PROVIDER INFO -->
+  <p class="section-label">Selected Provider</p>
+  <div class="provider-card">
+    <div class="provider-avatar">🔧</div>
+    <div class="provider-info">
+      <h2 id="prov-name">Ramesh Kumar</h2>
+      <span class="service-tag" id="prov-service">🔧 Plumber</span>
+      <div class="rating">
+        <span class="stars">★★★★★</span>
+        <span id="prov-rating">4.8 (124 reviews)</span>
+      </div>
+      <div class="location">📍 <span id="prov-location">Vaishali Nagar, Jaipur</span></div>
+    </div>
+    <div class="verified-badge">
+      <div class="vico">✅</div>
+      <p>VERIFIED</p>
+    </div>
+  </div>
+
+  <!-- SERVICE DETAILS -->
+  <p class="section-label">Service Details</p>
+  <div class="service-card">
+    <div class="service-row">
+      <div class="srv-icon">📋</div>
+      <div style="flex:1">
+        <div class="srv-label">Describe your requirement</div>
+        <textarea class="srv-input" rows="2" placeholder="e.g. Fix leaking tap in kitchen, install new pipe..."></textarea>
+      </div>
+    </div>
+    <div class="service-row">
+      <div class="srv-icon">📅</div>
+      <div style="flex:1">
+        <div class="srv-label">Preferred date & time</div>
+        <input type="datetime-local" class="srv-input">
+      </div>
+    </div>
+    <div class="service-row">
+      <div class="srv-icon">📍</div>
+      <div style="flex:1">
+        <div class="srv-label">Your address</div>
+        <input type="text" class="srv-input" placeholder="Enter your full address">
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTIONAL: TIP + CHARITY -->
+  <p class="section-label">Optional Add-ons</p>
+  <div class="optional-card">
+    <div class="opt-row">
+      <div class="opt-label">
+        <p>🙏 Tip to Provider</p>
+        <span>Show your appreciation (100% to provider)</span>
+      </div>
+      <div class="amount-ctrl">
+        <button class="amt-btn" onclick="changeAmt('tip',-10)">−</button>
+        <span class="amt-display" id="tip-display">₹0</span>
+        <button class="amt-btn" onclick="changeAmt('tip',10)">+</button>
+      </div>
+    </div>
+    <div class="opt-row">
+      <div class="opt-label">
+        <p>🌱 Charity Donation</p>
+        <span>100% goes to social welfare</span>
+      </div>
+      <div class="amount-ctrl">
+        <button class="amt-btn" onclick="changeAmt('charity',-10)">−</button>
+        <span class="amt-display" id="charity-display">₹0</span>
+        <button class="amt-btn" onclick="changeAmt('charity',10)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BILL BREAKDOWN -->
+  <p class="section-label">Bill Summary</p>
+  <div class="bill-card">
+    <div class="bill-title">💰 Payment Breakdown</div>
+
+    <div class="bill-row">
+      <span class="bl">🔱 Provider Contact Fee</span>
+      <span class="br free">FREE ✓</span>
+    </div>
+    <div class="bill-row">
+      <span class="bl">🙏 Tip to Provider</span>
+      <span class="br" id="bill-tip">₹0</span>
+    </div>
+    <div class="bill-row">
+      <span class="bl">🌱 Charity Donation</span>
+      <span class="br" id="bill-charity">₹0</span>
+    </div>
+
+    <div class="bill-divider"></div>
+
+    <!-- CONVENIENCE FEE — HIGHLIGHTED -->
+    <div class="conv-row">
+      <div class="cl">
+        <span>⚡</span>
+        <div>
+          Platform Convenience Fee
+          <span class="conv-info">Keeps Sudarshan Chakra running · Providers stay FREE forever</span>
+        </div>
+      </div>
+      <span class="cr">₹10</span>
+    </div>
+
+    <div class="bill-divider"></div>
+
+    <div class="total-row">
+      <span class="tl">Total Payable</span>
+      <span class="tr" id="bill-total">₹10</span>
+    </div>
+  </div>
+
+  <!-- PAY BUTTON -->
+  <button class="pay-btn" onclick="openQR()">
+    <span class="phonepe-logo">💜</span>
+    Pay with PhonePe / UPI
+  </button>
+
+  <p class="free-note">
+    🔱 Provider registration is <span>always FREE</span> · No commission charged
+  </p>
+
+  <div class="trust-strip">
+    <span class="trust-chip">🔒 Secure Payment</span>
+    <span class="trust-chip">✅ Verified Provider</span>
+    <span class="trust-chip">🇮🇳 Made in India</span>
+    <span class="trust-chip">💚 Transparent Fees</span>
+  </div>
+</div>
+
+<!-- ── QR PAYMENT SHEET ── -->
+<div class="qr-overlay" id="qr-overlay" onclick="closeQROutside(event)">
+  <div class="qr-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Scan & Pay</div>
+    <p class="sheet-sub" id="sheet-sub">Pay ₹10 via PhonePe / any UPI app</p>
+
+    <div class="qr-wrap">
+      <div class="qr-box">
+        <!-- QR Code SVG pattern — replace with real PhonePe QR -->
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <!-- Finder patterns -->
+          <rect x="5" y="5" width="30" height="30" rx="3" fill="#1E3A5F"/>
+          <rect x="9" y="9" width="22" height="22" rx="1" fill="white"/>
+          <rect x="13" y="13" width="14" height="14" rx="1" fill="#1E3A5F"/>
+          <rect x="65" y="5" width="30" height="30" rx="3" fill="#1E3A5F"/>
+          <rect x="69" y="9" width="22" height="22" rx="1" fill="white"/>
+          <rect x="73" y="13" width="14" height="14" rx="1" fill="#1E3A5F"/>
+          <rect x="5" y="65" width="30" height="30" rx="3" fill="#1E3A5F"/>
+          <rect x="9" y="69" width="22" height="22" rx="1" fill="white"/>
+          <rect x="13" y="73" width="14" height="14" rx="1" fill="#1E3A5F"/>
+          <!-- Data modules (representative pattern) -->
+          <rect x="40" y="5" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="50" y="5" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="40" y="15" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="55" y="15" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="40" y="25" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="50" y="25" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="5" y="40" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="15" y="40" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="25" y="40" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="5" y="50" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="20" y="50" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="5" y="55" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="15" y="55" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="40" y="40" width="20" height="20" rx="2" fill="#EA580C"/>
+          <rect x="44" y="44" width="12" height="12" rx="1" fill="white"/>
+          <text x="50" y="53" font-family="serif" font-size="9" fill="#EA580C" text-anchor="middle" font-weight="bold">SC</text>
+          <rect x="65" y="40" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="75" y="40" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="85" y="40" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="70" y="50" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="85" y="50" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="65" y="55" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="80" y="55" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="40" y="65" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="50" y="65" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="60" y="65" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="45" y="75" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="55" y="75" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="40" y="85" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="55" y="85" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="65" y="65" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="80" y="70" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="70" y="80" width="5" height="5" fill="#1E3A5F"/>
+          <rect x="85" y="85" width="5" height="5" fill="#1E3A5F"/>
+        </svg>
+      </div>
+      <div class="qr-amount-badge" id="qr-amount">₹10</div>
+      <div class="upi-id">UPI ID: <span>sudarshanchakra@phonepe</span></div>
+    </div>
+
+    <!-- Mini bill in sheet -->
+    <div class="mini-bill">
+      <div class="mb-row"><span>Provider Contact Fee</span><span style="color:var(--green);font-weight:600">FREE</span></div>
+      <div class="mb-row"><span>Tip to Provider</span><span id="mb-tip">₹0</span></div>
+      <div class="mb-row"><span>Charity Donation</span><span id="mb-charity">₹0</span></div>
+      <div class="mb-row"><span class="mb-conv">⚡ Platform Convenience Fee</span><span class="mb-conv">₹10</span></div>
+      <div class="mb-row"><span>Total</span><span id="mb-total">₹10</span></div>
+    </div>
+
+    <!-- UPI Apps -->
+    <div class="upi-apps">
+      <div class="upi-app"><div class="app-icon">💜</div><p>PhonePe</p></div>
+      <div class="upi-app"><div class="app-icon">🟦</div><p>GPay</p></div>
+      <div class="upi-app"><div class="app-icon">🟠</div><p>Paytm</p></div>
+      <div class="upi-app"><div class="app-icon">🏦</div><p>BHIM</p></div>
+      <div class="upi-app"><div class="app-icon">💳</div><p>Any UPI</p></div>
+    </div>
+
+    <button class="done-btn" onclick="paymentDone()">✅ &nbsp;I Have Paid — Done!</button>
+  </div>
+</div>
+
+<script>
+// ── AMOUNTS ──
+let tipAmt = 0, charityAmt = 0;
+const CONV_FEE = 10;
+
+function changeAmt(type, delta) {
+  if (type === 'tip') {
+    tipAmt = Math.max(0, tipAmt + delta);
+    document.getElementById('tip-display').textContent = '₹' + tipAmt;
+    document.getElementById('bill-tip').textContent = '₹' + tipAmt;
+    document.getElementById('mb-tip').textContent = '₹' + tipAmt;
+  } else {
+    charityAmt = Math.max(0, charityAmt + delta);
+    document.getElementById('charity-display').textContent = '₹' + charityAmt;
+    document.getElementById('bill-charity').textContent = '₹' + charityAmt;
+    document.getElementById('mb-charity').textContent = '₹' + charityAmt;
+  }
+  updateTotal();
+}
+
+function updateTotal() {
+  const total = CONV_FEE + tipAmt + charityAmt;
+  document.getElementById('bill-total').textContent = '₹' + total;
+  document.getElementById('qr-amount').textContent = '₹' + total;
+  document.getElementById('mb-total').textContent = '₹' + total;
+  document.getElementById('sheet-sub').textContent =
+    'Pay ₹' + total + ' via PhonePe / any UPI app';
+}
+
+// ── QR MODAL ──
+function openQR() {
+  updateTotal();
+  document.getElementById('qr-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeQR() {
+  document.getElementById('qr-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeQROutside(e) {
+  if (e.target === document.getElementById('qr-overlay')) closeQR();
+}
+
+function paymentDone() {
+  closeQR();
+  // Redirect to gratitude page with language and type
+  const lang = new URLSearchParams(window.location.search).get('lang') || 'hi';
+  setTimeout(() => {
+    window.location.href = 'gratitude.html?lang=' + lang + '&type=portal';
+  }, 300);
+}
+
+// ── DEMO: set provider from URL params ──
+const p = new URLSearchParams(window.location.search);
+if (p.get('name')) document.getElementById('prov-name').textContent = p.get('name');
+if (p.get('service')) {
+  document.getElementById('prov-service').textContent = p.get('service');
+  document.querySelector('.provider-avatar').textContent = p.get('emoji') || '👷';
+}
+if (p.get('location')) document.getElementById('prov-location').textContent = p.get('location');
+if (p.get('rating')) document.getElementById('prov-rating').textContent = p.get('rating');
+</script>
+</body>
+</html>
