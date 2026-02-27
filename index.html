@@ -242,13 +242,15 @@
                 <button data-i18n="home" onclick="showPage('home')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Home</button>
                 <button data-i18n="browse" onclick="showPage('browse')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Browse</button>
                 <button data-i18n="map" onclick="showPage('map')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Map</button>
-                <button onclick="showPage('myProfile')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">My Profile</button>
-                <button data-i18n="registerProvider" onclick="showPage('register')" class="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">Register Provider</button>
-                <button data-i18n="registerSeeker" onclick="showPage('seeker')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Register Seeker</button>
-                <button data-i18n="admin" onclick="showPage('admin')" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">🔐 Admin</button>
+                <!-- Show register/admin buttons only when NOT logged in -->
+                <div id="navGuestButtons" class="flex gap-2 items-center">
+                    <button data-i18n="registerProvider" onclick="showPage('register')" class="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">Register Provider</button>
+                    <button data-i18n="registerSeeker" onclick="showPage('seeker')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Register Seeker</button>
+                    <button data-i18n="admin" onclick="showPage('admin')" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">🔐 Admin</button>
+                </div>
+                <!-- Wallet button — shown only when logged in -->
+                <button id="walletNavBtn" onclick="showPage('myProfile'); setTimeout(()=>showProfileTab('wallet'),300)" class="hidden px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-semibold border border-green-300">💰 Wallet</button>
                 <button onclick="changeLang()" class="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">🌏 <span id="currentLang">EN</span></button>
-                <!-- wallet moved to profile page -->
-                <!-- PHASE F: Auth Button -->
                 <div id="navAuthBtn">
                     <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>
                 </div>
@@ -481,24 +483,41 @@
                 <!-- Tab: Wallet -->
                 <div id="profileTab-wallet" class="hidden">
                   <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white mb-4 shadow-lg">
-                    <div class="text-sm font-medium opacity-80 mb-1">💰 Wallet Balance</div>
-                    <div class="text-4xl font-bold mb-1">₹<span id="walletBalance">0</span></div>
-                    <div class="text-green-100 text-sm">Referral & reward points</div>
+                    <div class="text-sm font-medium opacity-80 mb-1">🌟 Reward Points Balance</div>
+                    <div class="text-4xl font-bold mb-1"><span id="walletBalance">0</span> <span style="font-size:20px;font-weight:600">pts</span></div>
+                    <div class="text-green-100 text-sm">= ₹<span id="walletRupees">0.00</span> &nbsp;·&nbsp; 10 points = ₹1</div>
                   </div>
                   <div class="bg-white rounded-2xl shadow-md p-5 mb-4">
-                    <h3 class="font-bold text-gray-800 mb-3">🎁 How to Earn</h3>
+                    <h3 class="font-bold text-gray-800 mb-3">🎁 How to Earn Points</h3>
+                    <div class="text-xs text-gray-400 mb-3 bg-gray-50 rounded-lg px-3 py-2">💡 <strong>10 points = ₹1</strong> &nbsp;·&nbsp; Redeem points for discounts on future hires</div>
                     <div class="space-y-3">
-                      <div class="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
-                        <span class="text-2xl">📤</span>
-                        <div><div class="font-semibold text-sm">Share Gratitude Message</div><div class="text-xs text-gray-500">Earn ₹5 for every friend who joins via your share</div></div>
+                      <div class="flex items-center gap-3 p-3 bg-purple-50 rounded-xl">
+                        <span class="text-2xl">💳</span>
+                        <div>
+                          <div class="font-semibold text-sm">Make a Payment</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-purple-600">10 pts</strong> (= ₹1) every time you hire a provider</div>
+                        </div>
                       </div>
                       <div class="flex items-center gap-3 p-3 bg-green-50 rounded-xl">
                         <span class="text-2xl">⭐</span>
-                        <div><div class="font-semibold text-sm">Write a Review</div><div class="text-xs text-gray-500">Earn ₹2 for every verified review you write</div></div>
+                        <div>
+                          <div class="font-semibold text-sm">Write a Review</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-green-600">2 pts</strong> (= ₹0.20) for every verified review you write</div>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
+                        <span class="text-2xl">📤</span>
+                        <div>
+                          <div class="font-semibold text-sm">Share Gratitude Message</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-orange-600">5 pts</strong> (= ₹0.50) for every friend who joins via your share</div>
+                        </div>
                       </div>
                       <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
                         <span class="text-2xl">🤝</span>
-                        <div><div class="font-semibold text-sm">Refer a Provider</div><div class="text-xs text-gray-500">Earn ₹10 when a provider you refer gets their first hire</div></div>
+                        <div>
+                          <div class="font-semibold text-sm">Refer a Provider</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-blue-600">10 pts</strong> (= ₹1) when your referred provider gets their first hire</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -4772,13 +4791,21 @@
                     <div class="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center text-sm font-bold">${initials}</div>
                     <span class="text-sm font-medium text-gray-700 hidden md:inline">${name.split(' ')[0]}</span>
                 </div>`;
-
+            // Show wallet, hide register/admin buttons
+            const wb = document.getElementById('walletNavBtn');
+            if (wb) wb.classList.remove('hidden');
+            const gb = document.getElementById('navGuestButtons');
+            if (gb) gb.classList.add('hidden');
         }
 
         function updateNavForLoggedOut() {
             document.getElementById('navAuthBtn').innerHTML = `
                 <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>`;
-
+            // Hide wallet, show register/admin buttons
+            const wb = document.getElementById('walletNavBtn');
+            if (wb) wb.classList.add('hidden');
+            const gb = document.getElementById('navGuestButtons');
+            if (gb) gb.classList.remove('hidden');
         }
 
         // ==================== PHASE F: LOGIN MODAL ====================
@@ -5030,6 +5057,8 @@
                 const balance = balSnap.exists() ? (balSnap.val() || 0) : 0;
                 const balEl = document.getElementById('walletBalance');
                 if (balEl) balEl.textContent = balance;
+                const rupEl = document.getElementById('walletRupees');
+                if (rupEl) rupEl.textContent = (balance / 10).toFixed(1);
 
                 // Load transactions
                 const txnSnap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions`));
@@ -5053,12 +5082,12 @@
                                 <span class="text-2xl">${typeIcons[t.type] || '💳'}</span>
                                 <div>
                                     <div class="font-semibold text-sm text-gray-800">${typeLabels[t.type] || 'Payment'}</div>
-                                    <div class="text-xs text-gray-400">${t.date || ''} · +₹2 credit earned</div>
+                                    <div class="text-xs text-gray-400">${t.date || ''}</div>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <div class="font-bold text-gray-800">₹${t.amount}</div>
-                                <div class="text-xs text-green-600 font-semibold">+₹2 earned</div>
+                                <div class="font-bold text-gray-800">₹${t.amount} paid</div>
+                                <div class="text-xs text-green-600 font-semibold">+10 pts earned</div>
                             </div>
                         </div>`).join('');
 
@@ -5828,11 +5857,11 @@ async function hmPaymentDone() {
       const txnRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${Date.now()}`);
       await _firebase.set(txnRef, txn);
 
-      // Award wallet credits: ₹2 for each payment made
+      // Award 10 points per payment (10 points = ₹1)
       const creditsRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`);
       const snap = await _firebase.get(creditsRef);
       const current = snap.exists() ? (snap.val() || 0) : 0;
-      await _firebase.set(creditsRef, current + 2);
+      await _firebase.set(creditsRef, current + 10);
     } catch(e) { console.warn('Wallet save error:', e); }
   }
 
