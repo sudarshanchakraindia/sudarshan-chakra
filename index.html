@@ -2728,8 +2728,32 @@
             }
         })();
 
-        // Live working array — always read fresh after the merge above
-        let categories = JSON.parse(localStorage.getItem('categories'));
+        // Live working array — loaded from Firebase on init
+        let categories = [];
+
+        // Load categories from Firebase (visible to ALL users)
+        async function loadCategoriesFromFirebase() {
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'categories'));
+                if (snap.exists() && Array.isArray(snap.val()) && snap.val().length > 0) {
+                    categories = snap.val();
+                } else {
+                    // Try localStorage fallback for first-time migration
+                    const local = JSON.parse(localStorage.getItem('categories'));
+                    if (local && local.length > 0) {
+                        categories = local;
+                        // Migrate to Firebase
+                        await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
+                        localStorage.removeItem('categories');
+                    }
+                }
+                // Refresh all UI that depends on categories
+                updateProviderCategorySelects();
+                if (document.getElementById('page-home') && !document.getElementById('page-home').classList.contains('hidden')) {
+                    renderHomeCategories && renderHomeCategories();
+                }
+            } catch(e) { console.warn('Categories load error:', e); }
+        }
 
         // ==================== UTILITY FUNCTIONS ====================
         function getTranslated(obj, defaultText = '') {
@@ -4326,6 +4350,13 @@
             `).join('');
         }
         
+        // Save categories to Firebase so ALL users see changes
+        async function saveCategoriesToFirebase() {
+            try {
+                await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
+            } catch(e) { console.warn('Categories save error:', e); alert('❌ Could not save. Check internet connection.'); }
+        }
+
         function resetToDefaults() {
             if (confirm('⚠️ This will delete all categories and restore defaults. Continue?')) {
                 categories = [
@@ -4354,7 +4385,7 @@
                         ]
                     }
                 ];
-                localStorage.setItem('categories', JSON.stringify(categories));
+                saveCategoriesToFirebase();
                 loadAdminCategories();
                 updateAdminStats();
                 updateProviderCategorySelects();
@@ -4415,7 +4446,7 @@
                 categories[currentEditCategoryIdx].icon = icon;
             }
             
-            localStorage.setItem('categories', JSON.stringify(categories));
+            saveCategoriesToFirebase();
             loadAdminCategories();
             updateAdminStats();
             updateProviderCategorySelects();
@@ -4429,7 +4460,7 @@
         function deleteCategory(catIdx) {
             if (confirm('⚠️ Delete this entire category including all subcategories and services?')) {
                 categories.splice(catIdx, 1);
-                localStorage.setItem('categories', JSON.stringify(categories));
+                saveCategoriesToFirebase();
                 loadAdminCategories();
                 updateAdminStats();
                 updateProviderCategorySelects();
@@ -4490,7 +4521,7 @@
                 sub.icon = icon;
             }
             
-            localStorage.setItem('categories', JSON.stringify(categories));
+            saveCategoriesToFirebase();
             loadAdminCategories();
             updateProviderCategorySelects();
             closeSubcategoryModal();
@@ -4503,7 +4534,7 @@
         function deleteSubcategory(catIdx, subIdx) {
             if (confirm('⚠️ Delete this subcategory including all its services?')) {
                 categories[catIdx].subcategories.splice(subIdx, 1);
-                localStorage.setItem('categories', JSON.stringify(categories));
+                saveCategoriesToFirebase();
                 loadAdminCategories();
                 updateProviderCategorySelects();
             }
@@ -4560,7 +4591,7 @@
                 service.icon = icon;
             }
             
-            localStorage.setItem('categories', JSON.stringify(categories));
+            saveCategoriesToFirebase();
             loadAdminCategories();
             updateProviderCategorySelects();
             closeServiceModal();
@@ -4573,7 +4604,7 @@
         function deleteService(catIdx, subIdx, serviceIdx) {
             if (confirm('⚠️ Delete this service type?')) {
                 categories[catIdx].subcategories[subIdx].subsubcategories.splice(serviceIdx, 1);
-                localStorage.setItem('categories', JSON.stringify(categories));
+                saveCategoriesToFirebase();
                 loadAdminCategories();
                 updateProviderCategorySelects();
             }
@@ -4666,7 +4697,7 @@
         // ==================== INITIALIZATION ====================
         function initializeApp() {
             if (!localStorage.getItem('categories')) {
-                localStorage.setItem('categories', JSON.stringify(categories));
+                saveCategoriesToFirebase();
             }
             
             initializeTranslations(); // Mark translatable elements
@@ -4676,6 +4707,9 @@
             // Handle PWA shortcut URLs e.g. ?page=browse or ?page=register
             const urlParams = new URLSearchParams(window.location.search);
             const startPage = urlParams.get('page');
+            // Load categories from Firebase for all users
+            loadCategoriesFromFirebase();
+
             if (startPage && ['home','browse','map','register','seeker','admin','myProfile'].includes(startPage)) {
                 showPage(startPage);
             } else {
