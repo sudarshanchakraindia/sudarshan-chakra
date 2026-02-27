@@ -571,7 +571,7 @@ function paymentDone() {
   // Build share link — recipient will see the full gratitude page
   const gratLink = 'gratitude.html?lang=' + lang + '&type=' + gratType;
   setTimeout(() => {
-    window.location.href = gratLink;
+  window.location.replace(gratLink);
   }, 300);
 }
 
