@@ -556,10 +556,22 @@ function closeQROutside(e) {
 
 function paymentDone() {
   closeQR();
-  // Redirect to gratitude page with language and type
   const lang = new URLSearchParams(window.location.search).get('lang') || 'hi';
+  // Determine gratitude type based on what seeker paid for
+  let gratType = 'portal'; // default — convenience fee only
+  if (tipAmt > 0 && charityAmt > 0) {
+    gratType = 'tip'; // both tip and charity — show tip gratitude (most personal)
+  } else if (tipAmt > 0) {
+    gratType = 'tip';
+  } else if (charityAmt > 0) {
+    gratType = 'charity';
+  } else {
+    gratType = 'portal';
+  }
+  // Build share link — recipient will see the full gratitude page
+  const gratLink = 'gratitude.html?lang=' + lang + '&type=' + gratType;
   setTimeout(() => {
-    window.location.href = 'gratitude.html?lang=' + lang + '&type=portal';
+    window.location.href = gratLink;
   }, 300);
 }
 
