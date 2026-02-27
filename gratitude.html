@@ -158,28 +158,23 @@ html,body {
   <line x1="135" y1="5" x2="65" y2="195" stroke="#FDE68A" stroke-width="0.2"/>
 </svg>
 
-<!-- Language Selector -->
-<div class="lang-wrap">
-  <p class="lang-label">🌐 Select Your Language — अपनी भाषा चुनें</p>
-  <div class="lang-grid" id="lang-grid">
-    <button class="lang-btn active" onclick="setLang('hi')">हिंदी<br><span style="font-size:8px;opacity:0.6">Hindi</span></button>
-    <button class="lang-btn" onclick="setLang('en')">English<br><span style="font-size:8px;opacity:0.6">English</span></button>
-    <button class="lang-btn" onclick="setLang('ta')">தமிழ்<br><span style="font-size:8px;opacity:0.6">Tamil</span></button>
-    <button class="lang-btn" onclick="setLang('te')">తెలుగు<br><span style="font-size:8px;opacity:0.6">Telugu</span></button>
-    <button class="lang-btn" onclick="setLang('kn')">ಕನ್ನಡ<br><span style="font-size:8px;opacity:0.6">Kannada</span></button>
-    <button class="lang-btn" onclick="setLang('ml')">മലയാളം<br><span style="font-size:8px;opacity:0.6">Malay.</span></button>
-    <button class="lang-btn" onclick="setLang('mr')">मराठी<br><span style="font-size:8px;opacity:0.6">Marathi</span></button>
-    <button class="lang-btn" onclick="setLang('bn')">বাংলা<br><span style="font-size:8px;opacity:0.6">Bengali</span></button>
-    <button class="lang-btn" onclick="setLang('gu')">ગુજરાતી<br><span style="font-size:8px;opacity:0.6">Gujarati</span></button>
-    <button class="lang-btn" onclick="setLang('pa')">ਪੰਜਾਬੀ<br><span style="font-size:8px;opacity:0.6">Punjabi</span></button>
-  </div>
+<!-- Hidden selectors — set via URL params only, not shown to user -->
+<div id="lang-grid" style="display:none">
+  <button class="lang-btn active" onclick="setLang('hi')">हिंदी</button>
+  <button class="lang-btn" onclick="setLang('en')">English</button>
+  <button class="lang-btn" onclick="setLang('ta')">தமிழ்</button>
+  <button class="lang-btn" onclick="setLang('te')">తెలుగు</button>
+  <button class="lang-btn" onclick="setLang('kn')">ಕನ್ನಡ</button>
+  <button class="lang-btn" onclick="setLang('ml')">മലയാളം</button>
+  <button class="lang-btn" onclick="setLang('mr')">मराठी</button>
+  <button class="lang-btn" onclick="setLang('bn')">বাংলা</button>
+  <button class="lang-btn" onclick="setLang('gu')">ગુજ</button>
+  <button class="lang-btn" onclick="setLang('pa')">ਪੰਜਾਬੀ</button>
 </div>
-
-<!-- Payment Type -->
-<div class="type-wrap">
-  <button class="type-btn active" onclick="setType('portal')">🔱 Portal Fee</button>
-  <button class="type-btn" onclick="setType('tip')">🙏 Tip</button>
-  <button class="type-btn" onclick="setType('charity')">🌱 Charity</button>
+<div style="display:none">
+  <button class="type-btn active" onclick="setType('portal')">Portal</button>
+  <button class="type-btn" onclick="setType('tip')">Tip</button>
+  <button class="type-btn" onclick="setType('charity')">Charity</button>
 </div>
 
 <!-- CARD -->
@@ -200,8 +195,10 @@ html,body {
       <div class="ic-chip"><div class="ico">⭐</div><p id="ic2">विश्वसनीय नेटवर्क</p></div>
       <div class="ic-chip"><div class="ico">🇮🇳</div><p id="ic3">भारत के लिए</p></div>
     </div>
-    <button class="wa-btn" onclick="shareWA()">💬 &nbsp;WhatsApp पर शेयर करें</button>
-    <button class="copy-btn" onclick="copyMsg()">📋 &nbsp;संदेश कॉपी करें</button>
+    <div id="share-actions">
+      <button class="wa-btn" id="wa-share-btn" onclick="shareWithReferral()">💬 &nbsp;<span id="wa-btn-text">WhatsApp पर शेयर करें</span></button>
+      <button class="copy-btn" onclick="copyWithReferral()">📋 &nbsp;<span id="copy-btn-text">संदेश कॉपी करें</span></button>
+    </div>
   </div>
   <div class="footer">
     <div class="flowers">🌸 🌼 🌸</div>
@@ -429,27 +426,53 @@ function render() {
   card.style.animation = 'none';
   void card.offsetHeight;
   card.style.animation = 'cardIn 0.5s cubic-bezier(0.22,1,0.36,1) forwards';
+  // Update button labels in current language
+  const waBtnTxt = document.getElementById('wa-btn-text');
+  const cpBtnTxt = document.getElementById('copy-btn-text');
+  if (waBtnTxt && d.waBtn) waBtnTxt.textContent = d.waBtn;
+  if (cpBtnTxt && d.copyBtn) cpBtnTxt.textContent = d.copyBtn;
 }
 
-function shareWA() {
-  const d = DATA[lang]?.[type] || DATA['en'][type];
-  // Share the gratitude page link with lang+type so recipient sees the full colorful page
+// ── REFERRAL SHARE: sends text message + gratitude page link ──
+function buildReferralMsg(d) {
   const pageLink = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/gratitude.html?lang=' + lang + '&type=' + type;
-  // Short intro line + link (WhatsApp will show OG image card preview automatically)
-  const msg = d.wa + '\n\n👆 *सुदर्शन चक्र का सुंदर संदेश देखें:*\n' + pageLink;
+  // Short teaser message in WhatsApp text + link to the beautiful page
+  const langNames = {hi:'हिंदी',en:'English',ta:'Tamil',te:'Telugu',kn:'Kannada',ml:'Malayalam',mr:'Marathi',bn:'Bengali',gu:'Gujarati',pa:'Punjabi'};
+  const typeNames = {portal:'Portal Fee',tip:'Tip to Provider',charity:'Charity'};
+  const teaser = (lang === 'hi')
+    ? `🔱 *सुदर्शन चक्र* से एक हृदयस्पर्शी संदेश!\n\nमैंने ${typeNames[type] || ''} का भुगतान किया और यह खूबसूरत संदेश मिला। आप भी देखें 👇\n\n🌐 ${pageLink}`
+    : `🔱 A heartfelt message from *Sudarshan Chakra*!\n\nI paid for ${typeNames[type] || ''} and received this beautiful blessing. See it here 👇\n\n🌐 ${pageLink}`;
+  return teaser;
+}
+
+function shareWithReferral() {
+  const d = DATA[lang]?.[type] || DATA['en'][type];
+  const msg = buildReferralMsg(d);
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
-function copyMsg() {
+function copyWithReferral() {
   const d = DATA[lang]?.[type] || DATA['en'][type];
-  const pageLink = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/gratitude.html?lang=' + lang + '&type=' + type;
-  const fullText = d.wa + '\n\n👆 सुदर्शन चक्र का सुंदर संदेश देखें:\n' + pageLink;
+  const fullText = buildReferralMsg(d);
   navigator.clipboard.writeText(fullText).then(() => {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }).catch(() => {
+    // Fallback for browsers that block clipboard
+    const ta = document.createElement('textarea');
+    ta.value = fullText; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
     const t = document.getElementById('toast');
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
   });
 }
+
+// Keep old names as aliases (in case called from elsewhere)
+function shareWA() { shareWithReferral(); }
+function copyMsg() { copyWithReferral(); }
 
 // ── SPARKS ──
 for (let i = 0; i < 28; i++) {
