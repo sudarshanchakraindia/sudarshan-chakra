@@ -247,7 +247,7 @@
                 <button data-i18n="registerSeeker" onclick="showPage('seeker')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Register Seeker</button>
                 <button data-i18n="admin" onclick="showPage('admin')" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">🔐 Admin</button>
                 <button onclick="changeLang()" class="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">🌏 <span id="currentLang">EN</span></button>
-                <button id="walletNavBtn" onclick="showPage('myProfile')" class="hidden px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-semibold border border-green-300">💰 Wallet</button>
+                <!-- wallet moved to profile page -->
                 <!-- PHASE F: Auth Button -->
                 <div id="navAuthBtn">
                     <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>
@@ -469,12 +469,43 @@
 
                 <!-- Tabs -->
                 <div class="bg-white rounded-2xl shadow-md mb-6 overflow-hidden">
-                    <div class="flex border-b">
-                        <button onclick="showProfileTab('myDetails')" id="ptab-myDetails" class="flex-1 px-4 py-3 font-semibold text-sm text-orange-600 border-b-2 border-orange-600">👤 My Details</button>
-                        <button onclick="showProfileTab('favourites')" id="ptab-favourites" class="flex-1 px-4 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent">❤️ Favourites</button>
-                        <button onclick="showProfileTab('myReviews')" id="ptab-myReviews" class="flex-1 px-4 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent">⭐ My Reviews</button>
-                        <button onclick="showProfileTab('myReports')" id="ptab-myReports" class="flex-1 px-4 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent">🚨 Reports</button>
+                    <div class="flex border-b overflow-x-auto">
+                        <button onclick="showProfileTab('myDetails')" id="ptab-myDetails" class="flex-1 px-3 py-3 font-semibold text-sm text-orange-600 border-b-2 border-orange-600 whitespace-nowrap">👤 Details</button>
+                        <button onclick="showProfileTab('wallet')" id="ptab-wallet" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">💰 Wallet</button>
+                        <button onclick="showProfileTab('favourites')" id="ptab-favourites" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">❤️ Saved</button>
+                        <button onclick="showProfileTab('myReviews')" id="ptab-myReviews" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">⭐ Reviews</button>
+                        <button onclick="showProfileTab('myReports')" id="ptab-myReports" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">🚨 Reports</button>
                     </div>
+                </div>
+
+                <!-- Tab: Wallet -->
+                <div id="profileTab-wallet" class="hidden">
+                  <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white mb-4 shadow-lg">
+                    <div class="text-sm font-medium opacity-80 mb-1">💰 Wallet Balance</div>
+                    <div class="text-4xl font-bold mb-1">₹<span id="walletBalance">0</span></div>
+                    <div class="text-green-100 text-sm">Referral & reward points</div>
+                  </div>
+                  <div class="bg-white rounded-2xl shadow-md p-5 mb-4">
+                    <h3 class="font-bold text-gray-800 mb-3">🎁 How to Earn</h3>
+                    <div class="space-y-3">
+                      <div class="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
+                        <span class="text-2xl">📤</span>
+                        <div><div class="font-semibold text-sm">Share Gratitude Message</div><div class="text-xs text-gray-500">Earn ₹5 for every friend who joins via your share</div></div>
+                      </div>
+                      <div class="flex items-center gap-3 p-3 bg-green-50 rounded-xl">
+                        <span class="text-2xl">⭐</span>
+                        <div><div class="font-semibold text-sm">Write a Review</div><div class="text-xs text-gray-500">Earn ₹2 for every verified review you write</div></div>
+                      </div>
+                      <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                        <span class="text-2xl">🤝</span>
+                        <div><div class="font-semibold text-sm">Refer a Provider</div><div class="text-xs text-gray-500">Earn ₹10 when a provider you refer gets their first hire</div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bg-white rounded-2xl shadow-md p-5">
+                    <h3 class="font-bold text-gray-800 mb-3">📋 Transaction History</h3>
+                    <div id="walletHistory" class="text-center text-gray-400 py-6 text-sm">Loading... 🔄</div>
+                  </div>
                 </div>
 
                 <!-- Tab: My Details -->
@@ -4741,17 +4772,13 @@
                     <div class="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center text-sm font-bold">${initials}</div>
                     <span class="text-sm font-medium text-gray-700 hidden md:inline">${name.split(' ')[0]}</span>
                 </div>`;
-            // Show wallet button in nav
-            const wb = document.getElementById('walletNavBtn');
-            if (wb) wb.classList.remove('hidden');
+
         }
 
         function updateNavForLoggedOut() {
             document.getElementById('navAuthBtn').innerHTML = `
                 <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>`;
-            // Hide wallet button
-            const wb = document.getElementById('walletNavBtn');
-            if (wb) wb.classList.add('hidden');
+
         }
 
         // ==================== PHASE F: LOGIN MODAL ====================
@@ -4948,7 +4975,7 @@
         }
 
         function showProfileTab(tab) {
-            ['myDetails','favourites','myReviews','myReports'].forEach(t => {
+            ['myDetails','wallet','favourites','myReviews','myReports'].forEach(t => {
                 document.getElementById('profileTab-' + t).classList.add('hidden');
                 document.getElementById('ptab-' + t).classList.remove('text-orange-600','border-orange-600');
                 document.getElementById('ptab-' + t).classList.add('text-gray-500','border-transparent');
@@ -4958,6 +4985,7 @@
             document.getElementById('ptab-' + tab).classList.remove('text-gray-500','border-transparent');
 
             if (tab === 'myDetails')   loadMyDetails();
+            if (tab === 'wallet')      loadWallet();
             if (tab === 'favourites')  loadFavourites();
             if (tab === 'myReviews')   loadMyReviews();
             if (tab === 'myReports')   loadMyReports();
@@ -4992,6 +5020,54 @@
             }
             // Recommendations
             loadRecommendations();
+        }
+
+        async function loadWallet() {
+            if (!firebaseUser || !window._firebase) return;
+            try {
+                // Load balance
+                const balSnap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`));
+                const balance = balSnap.exists() ? (balSnap.val() || 0) : 0;
+                const balEl = document.getElementById('walletBalance');
+                if (balEl) balEl.textContent = balance;
+
+                // Load transactions
+                const txnSnap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions`));
+                const histEl = document.getElementById('walletHistory');
+                if (!histEl) return;
+
+                if (!txnSnap.exists()) {
+                    histEl.innerHTML = '<div class="text-center text-gray-400 py-6 text-sm">No transactions yet. Start sharing to earn! 🙏</div>';
+                    return;
+                }
+
+                const txns = txnSnap.val();
+                const typeIcons = { portal: '🔱', tip: '🙏', charity: '🌱' };
+                const typeLabels = { portal: 'Portal Fee', tip: 'Tip to Provider', charity: 'Charity Donation' };
+
+                const rows = Object.entries(txns)
+                    .sort(([a],[b]) => b - a) // newest first
+                    .map(([ts, t]) => `
+                        <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">${typeIcons[t.type] || '💳'}</span>
+                                <div>
+                                    <div class="font-semibold text-sm text-gray-800">${typeLabels[t.type] || 'Payment'}</div>
+                                    <div class="text-xs text-gray-400">${t.date || ''} · +₹2 credit earned</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-gray-800">₹${t.amount}</div>
+                                <div class="text-xs text-green-600 font-semibold">+₹2 earned</div>
+                            </div>
+                        </div>`).join('');
+
+                histEl.innerHTML = rows || '<div class="text-center text-gray-400 py-6 text-sm">No transactions yet 🙏</div>';
+            } catch(e) {
+                console.warn('Wallet load error:', e);
+                const histEl = document.getElementById('walletHistory');
+                if (histEl) histEl.innerHTML = '<div class="text-center text-gray-400 py-6 text-sm">Could not load wallet data.</div>';
+            }
         }
 
         function loadRecommendations() {
@@ -5574,18 +5650,18 @@
     <div class="ocard">
       <div class="orow">
         <div style="flex:1"><p style="font-size:13px;font-weight:600">🙏 Tip to Provider</p><span style="font-size:10px;color:#64748B">100% goes to provider</span></div>
-        <div class="amtctrl">
-          <button class="amtbtn" onclick="hmChangeAmt('tip',-10)">−</button>
-          <span class="amtdisp" id="hm-tip-disp">₹0</span>
-          <button class="amtbtn" onclick="hmChangeAmt('tip',10)">+</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button style="width:32px;height:32px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('tip',-10)">−</button>
+          <span style="font-size:14px;font-weight:700;min-width:40px;text-align:center;color:#1E293B" id="hm-tip-disp">₹0</span>
+          <button style="width:32px;height:32px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('tip',10)">+</button>
         </div>
       </div>
-      <div class="orow" style="margin-bottom:0">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:0">
         <div style="flex:1"><p style="font-size:13px;font-weight:600">🌱 Charity Donation</p><span style="font-size:10px;color:#64748B">100% social welfare</span></div>
-        <div class="amtctrl">
-          <button class="amtbtn" onclick="hmChangeAmt('charity',-10)">−</button>
-          <span class="amtdisp" id="hm-charity-disp">₹0</span>
-          <button class="amtbtn" onclick="hmChangeAmt('charity',10)">+</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button style="width:32px;height:32px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('charity',-10)">−</button>
+          <span style="font-size:14px;font-weight:700;min-width:40px;text-align:center;color:#1E293B" id="hm-charity-disp">₹0</span>
+          <button style="width:32px;height:32px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('charity',10)">+</button>
         </div>
       </div>
     </div>
@@ -5727,13 +5803,39 @@ function hmOpenUPI(app) {
   window.location.href = appUrls[app] || upiUrl;
 }
 
-function hmPaymentDone() {
+async function hmPaymentDone() {
   hmCloseQR();
   closeHireModal();
   // Determine type
   let gratType = 'portal';
   if (hmTipAmt > 0) gratType = 'tip';
   else if (hmCharityAmt > 0) gratType = 'charity';
+
+  // ── Save transaction to Firebase ──
+  if (window._firebase && firebaseUser) {
+    try {
+      const total = 10 + hmTipAmt + hmCharityAmt;
+      const txn = {
+        type: gratType,
+        amount: total,
+        tip: hmTipAmt,
+        charity: hmCharityAmt,
+        fee: 10,
+        timestamp: Date.now(),
+        date: new Date().toLocaleDateString('en-IN')
+      };
+      // Save transaction record
+      const txnRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${Date.now()}`);
+      await _firebase.set(txnRef, txn);
+
+      // Award wallet credits: ₹2 for each payment made
+      const creditsRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`);
+      const snap = await _firebase.get(creditsRef);
+      const current = snap.exists() ? (snap.val() || 0) : 0;
+      await _firebase.set(creditsRef, current + 2);
+    } catch(e) { console.warn('Wallet save error:', e); }
+  }
+
   // Go to gratitude — replaces current page in history
   setTimeout(() => {
     window.location.replace('gratitude.html?lang=' + hmLang + '&type=' + gratType);
