@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SC — Restore & Merge Categories</title>
+<style>
+body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; text-align: center; }
+.btn { color: white; border: none; padding: 14px 30px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin: 6px; display: inline-block; }
+.orange { background: #EA580C; }
+.blue { background: #2563EB; }
+#log { margin-top: 20px; text-align: left; background: #f1f5f9; border-radius: 10px; padding: 16px; font-size: 13px; font-family: monospace; min-height: 120px; white-space: pre-wrap; max-height: 500px; overflow-y: auto; }
+</style>
+</head>
+<body>
+<div style="font-size:48px">🔱</div>
+<h2>Sudarshan Chakra — Category Restore</h2>
+<p>Restores all 9 original categories + keeps all 11 ITI categories = <strong>20 total</strong></p>
+<button class="btn orange" onclick="restoreAndMerge()">🔀 Restore All + Keep ITI</button>
+<button class="btn blue" onclick="showCurrent()">👁️ Show Current Firebase</button>
+<div id="log">Ready...</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+            apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
+            authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
+            databaseURL: "https://sudarshan-chakra-b0ac1-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sudarshan-chakra-b0ac1",
+            storageBucket: "sudarshan-chakra-b0ac1.firebasestorage.app",
+            messagingSenderId: "357210144411",
+            appId: "1:357210144411:web:b440a94cf78b04b58b103e"
+        };
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const OLD_CATEGORIES = [
+            {
+                id: 'cat1',
+                name: { en: 'Home Services' },
+                icon: '🏠',
+                subcategories: [
+                    {
+                        name: { en: 'Plumber' }, icon: '🔧',
+                        subsubcategories: [
+                            { name: { en: 'Pipe Repair' }, icon: '🔧' },
+                            { name: { en: 'Tap/Faucet Repair' }, icon: '🚰' },
+                            { name: { en: 'Tank Installation' }, icon: '💧' },
+                            { name: { en: 'Bathroom Fitting' }, icon: '🚿' },
+                            { name: { en: 'Drainage Cleaning' }, icon: '🪣' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Electrician' }, icon: '⚡',
+                        subsubcategories: [
+                            { name: { en: 'Wiring & Rewiring' }, icon: '🔌' },
+                            { name: { en: 'Fan Installation' }, icon: '🌀' },
+                            { name: { en: 'Light Installation' }, icon: '💡' },
+                            { name: { en: 'Switchboard Repair' }, icon: '🔲' },
+                            { name: { en: 'Appliance Repair' }, icon: '🔧' }
+                        ]
+                    },
+                    {
+                        name: { en: 'AC Repair & Servicing' }, icon: '❄️',
+                        subsubcategories: [
+                            { name: { en: 'AC Servicing' }, icon: '❄️' },
+                            { name: { en: 'AC Installation' }, icon: '🔩' },
+                            { name: { en: 'AC Gas Refill' }, icon: '💨' },
+                            { name: { en: 'AC Uninstallation' }, icon: '🔧' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Carpenter' }, icon: '🪵',
+                        subsubcategories: [
+                            { name: { en: 'Furniture Repair' }, icon: '🪑' },
+                            { name: { en: 'Door/Window Repair' }, icon: '🚪' },
+                            { name: { en: 'Wood Polishing' }, icon: '✨' },
+                            { name: { en: 'Custom Furniture' }, icon: '🛋️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'RO Repair & Installation' }, icon: '💧',
+                        subsubcategories: [
+                            { name: { en: 'RO Installation' }, icon: '💧' },
+                            { name: { en: 'RO Service & Filter Change' }, icon: '🔧' },
+                            { name: { en: 'RO Repair' }, icon: '🛠️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Geyser Repair' }, icon: '🚿',
+                        subsubcategories: [
+                            { name: { en: 'Geyser Repair' }, icon: '🔧' },
+                            { name: { en: 'Geyser Installation' }, icon: '🚿' },
+                            { name: { en: 'Element Replacement' }, icon: '⚡' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Inverter/Battery Service' }, icon: '🔋',
+                        subsubcategories: [
+                            { name: { en: 'Inverter Repair' }, icon: '🔋' },
+                            { name: { en: 'Battery Replacement' }, icon: '🔌' },
+                            { name: { en: 'Solar Panel Service' }, icon: '☀️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'CCTV Installation' }, icon: '📷',
+                        subsubcategories: [
+                            { name: { en: 'CCTV Installation' }, icon: '📷' },
+                            { name: { en: 'CCTV Repair' }, icon: '🔧' },
+                            { name: { en: 'DVR/NVR Setup' }, icon: '🖥️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Water Tank Cleaning' }, icon: '🛢️',
+                        subsubcategories: [
+                            { name: { en: 'Overhead Tank Cleaning' }, icon: '🛢️' },
+                            { name: { en: 'Underground Tank Cleaning' }, icon: '⬇️' },
+                            { name: { en: 'Sump Cleaning' }, icon: '🪣' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Pest Control' }, icon: '🐜',
+                        subsubcategories: [
+                            { name: { en: 'Cockroach Treatment' }, icon: '🪲' },
+                            { name: { en: 'Termite Treatment' }, icon: '🐛' },
+                            { name: { en: 'Mosquito Treatment' }, icon: '🦟' },
+                            { name: { en: 'Rodent Control' }, icon: '🐀' },
+                            { name: { en: 'Bed Bug Treatment' }, icon: '🛏️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Painter' }, icon: '🎨',
+                        subsubcategories: [
+                            { name: { en: 'Wall Painting' }, icon: '🖌️' },
+                            { name: { en: 'Waterproofing' }, icon: '💦' },
+                            { name: { en: 'Texture Painting' }, icon: '🎨' },
+                            { name: { en: 'Exterior Painting' }, icon: '🏠' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Interior Designer' }, icon: '🛋️',
+                        subsubcategories: [
+                            { name: { en: 'Home Interior Design' }, icon: '🏡' },
+                            { name: { en: '3D Design Consultation' }, icon: '🖥️' },
+                            { name: { en: 'Office Interior' }, icon: '🏢' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Modular Kitchen' }, icon: '🍳',
+                        subsubcategories: [
+                            { name: { en: 'Modular Kitchen Design' }, icon: '🍳' },
+                            { name: { en: 'Kitchen Installation' }, icon: '🔩' },
+                            { name: { en: 'Kitchen Repair' }, icon: '🔧' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat2',
+                name: { en: 'Beauty & Wellness' },
+                icon: '💄',
+                subcategories: [
+                    {
+                        name: { en: 'Bridal Makeup' }, icon: '👰',
+                        subsubcategories: [
+                            { name: { en: 'Bridal Makeup' }, icon: '💄' },
+                            { name: { en: 'Engagement Makeup' }, icon: '💍' },
+                            { name: { en: 'Party Makeup' }, icon: '✨' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Mehendi Artist' }, icon: '🌿',
+                        subsubcategories: [
+                            { name: { en: 'Bridal Mehendi' }, icon: '👰' },
+                            { name: { en: 'Party Mehendi' }, icon: '🎉' },
+                            { name: { en: 'Arabic Mehendi' }, icon: '🌿' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Home Salon Services' }, icon: '💅',
+                        subsubcategories: [
+                            { name: { en: 'Facial' }, icon: '🧖' },
+                            { name: { en: 'Waxing' }, icon: '✨' },
+                            { name: { en: 'Threading' }, icon: '🧵' },
+                            { name: { en: 'Pedicure & Manicure' }, icon: '💅' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Hair Stylist at Home' }, icon: '💇',
+                        subsubcategories: [
+                            { name: { en: 'Haircut' }, icon: '✂️' },
+                            { name: { en: 'Hair Colour' }, icon: '🎨' },
+                            { name: { en: 'Hair Treatment' }, icon: '✨' },
+                            { name: { en: 'Blow Dry & Setting' }, icon: '💨' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Nail Artist' }, icon: '💅',
+                        subsubcategories: [
+                            { name: { en: 'Nail Extensions' }, icon: '💅' },
+                            { name: { en: 'Nail Art' }, icon: '🎨' },
+                            { name: { en: 'Gel Nails' }, icon: '✨' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Men Grooming' }, icon: '💈',
+                        subsubcategories: [
+                            { name: { en: 'Haircut at Home' }, icon: '✂️' },
+                            { name: { en: 'Beard Styling' }, icon: '🧔' },
+                            { name: { en: 'Facial for Men' }, icon: '🧖' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Spa at Home' }, icon: '🧘',
+                        subsubcategories: [
+                            { name: { en: 'Full Body Massage' }, icon: '💆' },
+                            { name: { en: 'Head Massage' }, icon: '🧠' },
+                            { name: { en: 'Foot Massage' }, icon: '🦶' },
+                            { name: { en: 'Aromatherapy' }, icon: '🌸' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Fitness Trainer' }, icon: '🏋️',
+                        subsubcategories: [
+                            { name: { en: 'Personal Training at Home' }, icon: '🏋️' },
+                            { name: { en: 'Weight Loss Program' }, icon: '⚖️' },
+                            { name: { en: 'Strength Training' }, icon: '💪' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Yoga Instructor' }, icon: '🧘',
+                        subsubcategories: [
+                            { name: { en: 'Morning Yoga' }, icon: '🌅' },
+                            { name: { en: 'Meditation Sessions' }, icon: '🧘' },
+                            { name: { en: 'Prenatal Yoga' }, icon: '🤰' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Dietician' }, icon: '🥗',
+                        subsubcategories: [
+                            { name: { en: 'Diet Consultation' }, icon: '🥗' },
+                            { name: { en: 'Weight Management Plan' }, icon: '⚖️' },
+                            { name: { en: 'Disease-specific Diet' }, icon: '🏥' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Physiotherapist' }, icon: '🦴',
+                        subsubcategories: [
+                            { name: { en: 'Home Physiotherapy' }, icon: '🦴' },
+                            { name: { en: 'Sports Injury Rehab' }, icon: '⚽' },
+                            { name: { en: 'Post-surgery Rehab' }, icon: '🏥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat3',
+                name: { en: 'Cleaning Services' },
+                icon: '🧹',
+                subcategories: [
+                    {
+                        name: { en: 'Deep Home Cleaning' }, icon: '🏠',
+                        subsubcategories: [
+                            { name: { en: 'Full Home Deep Clean' }, icon: '🧹' },
+                            { name: { en: 'Bathroom Deep Clean' }, icon: '🚿' },
+                            { name: { en: 'Post-renovation Cleaning' }, icon: '🔨' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Sofa Cleaning' }, icon: '🛋️',
+                        subsubcategories: [
+                            { name: { en: 'Fabric Sofa Cleaning' }, icon: '🛋️' },
+                            { name: { en: 'Leather Sofa Cleaning' }, icon: '✨' },
+                            { name: { en: 'Sofa Shampooing' }, icon: '🧴' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Mattress Cleaning' }, icon: '🛏️',
+                        subsubcategories: [
+                            { name: { en: 'Mattress Deep Clean' }, icon: '🛏️' },
+                            { name: { en: 'Mattress Sanitization' }, icon: '🧼' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Kitchen Deep Cleaning' }, icon: '🍳',
+                        subsubcategories: [
+                            { name: { en: 'Chimney Cleaning' }, icon: '🌫️' },
+                            { name: { en: 'Stove & Burner Cleaning' }, icon: '🔥' },
+                            { name: { en: 'Full Kitchen Deep Clean' }, icon: '🧹' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Marble Polishing' }, icon: '✨',
+                        subsubcategories: [
+                            { name: { en: 'Floor Polishing' }, icon: '✨' },
+                            { name: { en: 'Granite Polishing' }, icon: '🪨' },
+                            { name: { en: 'Anti-skid Treatment' }, icon: '⚠️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Move-in/Move-out Cleaning' }, icon: '📦',
+                        subsubcategories: [
+                            { name: { en: 'Move-in Cleaning' }, icon: '🏠' },
+                            { name: { en: 'Move-out Cleaning' }, icon: '📦' },
+                            { name: { en: 'Vacant Flat Cleaning' }, icon: '🏢' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat4',
+                name: { en: 'Event Services' },
+                icon: '🎉',
+                subcategories: [
+                    {
+                        name: { en: 'Wedding Photographer' }, icon: '📸',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Photography' }, icon: '📸' },
+                            { name: { en: 'Pre-wedding Shoot' }, icon: '💕' },
+                            { name: { en: 'Candid Photography' }, icon: '🎞️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Videographer' }, icon: '🎥',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Videography' }, icon: '🎥' },
+                            { name: { en: 'Cinematic Film' }, icon: '🎬' },
+                            { name: { en: 'Drone Videography' }, icon: '🚁' }
+                        ]
+                    },
+                    {
+                        name: { en: 'DJ Services' }, icon: '🎧',
+                        subsubcategories: [
+                            { name: { en: 'Wedding DJ' }, icon: '🎧' },
+                            { name: { en: 'Party DJ' }, icon: '🎉' },
+                            { name: { en: 'Sound System Rental' }, icon: '🔊' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Caterers' }, icon: '🍽️',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Catering' }, icon: '🍽️' },
+                            { name: { en: 'Birthday Catering' }, icon: '🎂' },
+                            { name: { en: 'Corporate Catering' }, icon: '🏢' },
+                            { name: { en: 'Tiffin Service' }, icon: '🥡' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Tent & Decoration' }, icon: '🎪',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Decoration' }, icon: '💐' },
+                            { name: { en: 'Tent & Shamiana' }, icon: '🎪' },
+                            { name: { en: 'Stage Decoration' }, icon: '🎭' },
+                            { name: { en: 'Flower Decoration' }, icon: '🌸' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Birthday Party Planner' }, icon: '🎂',
+                        subsubcategories: [
+                            { name: { en: 'Kids Birthday Planning' }, icon: '🎈' },
+                            { name: { en: 'Theme Party Setup' }, icon: '🎠' },
+                            { name: { en: 'Balloon Decoration' }, icon: '🎈' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Anchor / Emcee' }, icon: '🎤',
+                        subsubcategories: [
+                            { name: { en: 'Wedding Anchor' }, icon: '💍' },
+                            { name: { en: 'Corporate Emcee' }, icon: '🏢' },
+                            { name: { en: 'Bilingual Anchor' }, icon: '🌐' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Band / Dhol' }, icon: '🥁',
+                        subsubcategories: [
+                            { name: { en: 'Baraat Band' }, icon: '🎺' },
+                            { name: { en: 'Dhol Players' }, icon: '🥁' },
+                            { name: { en: 'Brass Band' }, icon: '🎷' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Folk Artists Booking' }, icon: '🎭',
+                        subsubcategories: [
+                            { name: { en: 'Kalbelia Dancers' }, icon: '💃' },
+                            { name: { en: 'Kalbeliya Performers' }, icon: '🎭' },
+                            { name: { en: 'Folk Music Group' }, icon: '🎶' },
+                            { name: { en: 'Fire Show Artist' }, icon: '🔥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat5',
+                name: { en: 'Travel & Transport' },
+                icon: '🚗',
+                subcategories: [
+                    {
+                        name: { en: 'Taxi Booking' }, icon: '🚕',
+                        subsubcategories: [
+                            { name: { en: 'Local Taxi' }, icon: '🚕' },
+                            { name: { en: 'Outstation Taxi' }, icon: '🛣️' },
+                            { name: { en: 'Airport Transfer' }, icon: '✈️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Tempo Traveller Rental' }, icon: '🚐',
+                        subsubcategories: [
+                            { name: { en: '9-Seater Tempo' }, icon: '🚐' },
+                            { name: { en: '12-Seater Tempo' }, icon: '🚌' },
+                            { name: { en: '17-Seater Tempo' }, icon: '🚌' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Car Rental with Driver' }, icon: '🚗',
+                        subsubcategories: [
+                            { name: { en: 'Sedan Rental' }, icon: '🚗' },
+                            { name: { en: 'SUV Rental' }, icon: '🚙' },
+                            { name: { en: 'Luxury Car Rental' }, icon: '🏎️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Bike Rental' }, icon: '🏍️',
+                        subsubcategories: [
+                            { name: { en: 'Scooter Rental' }, icon: '🛵' },
+                            { name: { en: 'Motorcycle Rental' }, icon: '🏍️' },
+                            { name: { en: 'Royal Enfield Rental' }, icon: '🏍️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Local Tour Guide' }, icon: '🗺️',
+                        subsubcategories: [
+                            { name: { en: 'City Tour Guide' }, icon: '🏙️' },
+                            { name: { en: 'Heritage Walk Guide' }, icon: '🏛️' },
+                            { name: { en: 'Multilingual Guide' }, icon: '🌐' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Desert Safari Booking' }, icon: '🐪',
+                        subsubcategories: [
+                            { name: { en: 'Camel Safari' }, icon: '🐪' },
+                            { name: { en: 'Jeep Safari' }, icon: '🚙' },
+                            { name: { en: 'Overnight Desert Camp' }, icon: '⛺' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Driver on Demand' }, icon: '🧑‍✈️',
+                        subsubcategories: [
+                            { name: { en: 'Personal Driver' }, icon: '🧑‍✈️' },
+                            { name: { en: 'Corporate Driver' }, icon: '💼' },
+                            { name: { en: 'Night Driver' }, icon: '🌙' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat6',
+                name: { en: 'Real Estate & Property' },
+                icon: '🏢',
+                subcategories: [
+                    {
+                        name: { en: 'Property Dealer' }, icon: '🏠',
+                        subsubcategories: [
+                            { name: { en: 'Residential Property' }, icon: '🏡' },
+                            { name: { en: 'Commercial Property' }, icon: '🏢' },
+                            { name: { en: 'Land/Plot Dealing' }, icon: '🌾' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Rental Listings' }, icon: '🔑',
+                        subsubcategories: [
+                            { name: { en: 'Flat/Apartment Rental' }, icon: '🏢' },
+                            { name: { en: 'PG Accommodation' }, icon: '🛏️' },
+                            { name: { en: 'Shop/Office Rental' }, icon: '🏪' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Packers & Movers' }, icon: '📦',
+                        subsubcategories: [
+                            { name: { en: 'Home Shifting' }, icon: '🏠' },
+                            { name: { en: 'Office Relocation' }, icon: '🏢' },
+                            { name: { en: 'Vehicle Transportation' }, icon: '🚗' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Marble/Stone Contractor' }, icon: '🪨',
+                        subsubcategories: [
+                            { name: { en: 'Marble Flooring' }, icon: '🪨' },
+                            { name: { en: 'Granite Work' }, icon: '🏗️' },
+                            { name: { en: 'Stone Cladding' }, icon: '🧱' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat7',
+                name: { en: 'Education & Skill Services' },
+                icon: '📚',
+                subcategories: [
+                    {
+                        name: { en: 'Home Tutor' }, icon: '📖',
+                        subsubcategories: [
+                            { name: { en: 'Primary School Tutor' }, icon: '✏️' },
+                            { name: { en: 'Secondary School Tutor' }, icon: '📐' },
+                            { name: { en: 'Science & Math Tutor' }, icon: '🔬' },
+                            { name: { en: 'Commerce Tutor' }, icon: '💹' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Spoken English Trainer' }, icon: '🗣️',
+                        subsubcategories: [
+                            { name: { en: 'Basic Spoken English' }, icon: '🗣️' },
+                            { name: { en: 'Business English' }, icon: '💼' },
+                            { name: { en: 'IELTS / TOEFL Coaching' }, icon: '📝' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Competitive Exam Tutor' }, icon: '🏆',
+                        subsubcategories: [
+                            { name: { en: 'UPSC Coaching' }, icon: '🏛️' },
+                            { name: { en: 'REET / RPSC Coaching' }, icon: '📋' },
+                            { name: { en: 'SSC / Railway Coaching' }, icon: '🚂' },
+                            { name: { en: 'JEE / NEET Coaching' }, icon: '🔬' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Dance Teacher' }, icon: '💃',
+                        subsubcategories: [
+                            { name: { en: 'Classical Dance' }, icon: '💃' },
+                            { name: { en: 'Bollywood Dance' }, icon: '🎬' },
+                            { name: { en: 'Western Dance' }, icon: '🕺' },
+                            { name: { en: 'Folk Dance' }, icon: '🎭' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Music Teacher' }, icon: '🎵',
+                        subsubcategories: [
+                            { name: { en: 'Guitar Classes' }, icon: '🎸' },
+                            { name: { en: 'Keyboard / Piano' }, icon: '🎹' },
+                            { name: { en: 'Vocals / Singing' }, icon: '🎤' },
+                            { name: { en: 'Tabla / Harmonium' }, icon: '🥁' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat8',
+                name: { en: 'Business & Professional Services' },
+                icon: '💼',
+                subcategories: [
+                    {
+                        name: { en: 'CA / Tax Filing' }, icon: '📊',
+                        subsubcategories: [
+                            { name: { en: 'ITR Filing' }, icon: '📋' },
+                            { name: { en: 'GST Registration & Filing' }, icon: '🧾' },
+                            { name: { en: 'Business Accounting' }, icon: '📊' },
+                            { name: { en: 'Audit Services' }, icon: '🔍' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Legal Advisor' }, icon: '⚖️',
+                        subsubcategories: [
+                            { name: { en: 'Property Legal Help' }, icon: '🏠' },
+                            { name: { en: 'Family Law / Divorce' }, icon: '👨‍👩‍👧' },
+                            { name: { en: 'Business Legal Services' }, icon: '💼' },
+                            { name: { en: 'Documentation Help' }, icon: '📄' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Website Developer' }, icon: '💻',
+                        subsubcategories: [
+                            { name: { en: 'Business Website' }, icon: '🌐' },
+                            { name: { en: 'E-commerce Website' }, icon: '🛒' },
+                            { name: { en: 'App Development' }, icon: '📱' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Graphic Designer' }, icon: '🎨',
+                        subsubcategories: [
+                            { name: { en: 'Logo Design' }, icon: '🎯' },
+                            { name: { en: 'Brochure / Flyer Design' }, icon: '📰' },
+                            { name: { en: 'Banner & Poster Design' }, icon: '🖼️' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Social Media Manager' }, icon: '📱',
+                        subsubcategories: [
+                            { name: { en: 'Instagram Management' }, icon: '📸' },
+                            { name: { en: 'Facebook Marketing' }, icon: '👍' },
+                            { name: { en: 'Content Creation' }, icon: '✍️' },
+                            { name: { en: 'Paid Ads Management' }, icon: '💰' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Wedding Invitation Designer' }, icon: '💌',
+                        subsubcategories: [
+                            { name: { en: 'Digital Invitations' }, icon: '📱' },
+                            { name: { en: 'Printed Card Design' }, icon: '🖨️' },
+                            { name: { en: 'Video Invitations' }, icon: '🎥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat9',
+                name: { en: 'Pet Services' },
+                icon: '🐾',
+                subcategories: [
+                    {
+                        name: { en: 'Pet Grooming' }, icon: '🐶',
+                        subsubcategories: [
+                            { name: { en: 'Dog Grooming at Home' }, icon: '🐕' },
+                            { name: { en: 'Cat Grooming' }, icon: '🐱' },
+                            { name: { en: 'Bath & Blow Dry' }, icon: '🚿' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Pet Boarding' }, icon: '🏠',
+                        subsubcategories: [
+                            { name: { en: 'Dog Boarding' }, icon: '🐕' },
+                            { name: { en: 'Cat Boarding' }, icon: '🐱' },
+                            { name: { en: 'Home-based Pet Sitting' }, icon: '🏡' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Dog Training' }, icon: '🦮',
+                        subsubcategories: [
+                            { name: { en: 'Basic Obedience Training' }, icon: '🦮' },
+                            { name: { en: 'Advanced Training' }, icon: '🏆' },
+                            { name: { en: 'Puppy Training' }, icon: '🐶' }
+                        ]
+                    },
+                    {
+                        name: { en: 'Vet on Call' }, icon: '🏥',
+                        subsubcategories: [
+                            { name: { en: 'Home Visit Vet' }, icon: '🏥' },
+                            { name: { en: 'Vaccination at Home' }, icon: '💉' },
+                            { name: { en: 'Online Vet Consultation' }, icon: '💻' }
+                        ]
+                    }
+                ]
+            }
+        ]; // end DEFAULT_CATEGORIES
+
+        // ==================== CATEGORY MERGE FUNCTION ====================
+        // Merges DEFAULT_CATEGORIES into saved categories:
+        //   - New top-level categories are APPENDED (never removed)
+        //   - New subcategories inside existing categories are APPENDED
+        //   - New service types inside existing subcategories are APPENDED
+        //   - Anything the admin added/edited/deleted is PRESERVED
+        function mergeCategories(saved, defaults) {
+            const merged = [...saved]; // start from what's saved
+
+            defaults.forEach(defCat => {
+                // Match by id first, then by English name as fallback
+                const existingCat = merged.find(c =>
+                    (c.id && defCat.id && c.id === defCat.id) ||
+                    ((c.name?.en || c.name) === (defCat.name?.en || defCat.name))
+                );
+
+                if (!existingCat) {
+                    // Brand-new category — append it whole
+                    merged.push(defCat);
+                } else {
+                    // Category exists — merge subcategories
+                    if (!existingCat.subcategories) existingCat.subcategories = [];
+                    const existingSubs = existingCat.subcategories;
+
+                    (defCat.subcategories || []).forEach(defSub => {
+                        const existingSub = existingSubs.find(s =>
+                            (s.name?.en || s.name) === (defSub.name?.en || defSub.name)
+                        );
+
+                        if (!existingSub) {
+                            // New subcategory — append it whole
+                            existingSubs.push(defSub);
+                        } else {
+                            // Subcategory exists — merge service types
+                            if (!existingSub.subsubcategories) existingSub.subsubcategories = [];
+                            const existingServices = existingSub.subsubcategories;
+
+                            (defSub.subsubcategories || []).forEach(defService => {
+                                const alreadyExists = existingServices.some(sv =>
+                                    (sv.name?.en || sv.name) === (defService.name?.en || defService.name)
+                                );
+                                if (!alreadyExists) {
+                                    // New service type — append it
+                                    existingServices.push(defService);
+                                }
+                                // If it exists: leave it exactly as the admin has it
+                            });
+                        }
+                    });
+                }
+            });
+
+            return merged;
+        }
+
+        // ==================== LOAD & AUTO-MERGE CATEGORIES ====================
+        (function initCategories() {
+            const savedVersion   = parseInt(localStorage.getItem('categoryVersion') || '0');
+            const savedRaw       = localStorage.getItem('categories');
+
+            if (!savedRaw) {
+                // First ever load — just use defaults as-is
+                localStorage.setItem('categories', JSON.stringify(DEFAULT_CATEGORIES));
+                localStorage.setItem('categoryVersion', String(CATEGORY_VERSION));
+                console.log('✅ Categories: first load, defaults applied.');
+            } else if (savedVersion < CATEGORY_VERSION) {
+                // New version detected — merge new defaults into saved data
+                const saved  = JSON.parse(savedRaw);
+                const merged = mergeCategories(saved, DEFAULT_CATEGORIES);
+                localStorage.setItem('categories', JSON.stringify(merged));
+                localStorage.setItem('categoryVersion', String(CATEGORY_VERSION));
+                console.log(`✅ Categories: merged from v${savedVersion} → v${CATEGORY_VERSION}. Total categories: ${merged.length}`);
+            } else {
+                console.log(`✅ Categories: already at v${CATEGORY_VERSION}, no merge needed.`);
+            }
+        })();
+
+        // Live working array — loaded from Firebase on init
+        let categories = [];
+
+        // ITI courses master data — seeded to Firebase on first run;
+const ITI_CATEGORIES = [{"id": "cat_engineering", "name": {"en": "Engineering & Mechanical"}, "icon": "🔧", "subcategories": [{"name": {"en": "Machining & Fabrication"}, "icon": "⚙️", "subsubcategories": [{"name": {"en": "Fitter"}, "icon": "🔧"}, {"name": {"en": "Machinist"}, "icon": "⚙️"}, {"name": {"en": "Machinist Grinder"}, "icon": "⚙️"}, {"name": {"en": "Turner"}, "icon": "🔩"}, {"name": {"en": "CNC Machining Technician"}, "icon": "🖥️"}, {"name": {"en": "Operator Advanced Machine Tool"}, "icon": "🏭"}, {"name": {"en": "Tool & Die Maker (Dies & Moulds)"}, "icon": "🔨"}, {"name": {"en": "Tool & Die Maker (Press Tools, Jigs & Fixtures)"}, "icon": "🔨"}, {"name": {"en": "Sheet Metal Worker"}, "icon": "🪛"}, {"name": {"en": "Foundryman"}, "icon": "🏭"}, {"name": {"en": "Mechanic Machine Tool Maintenance"}, "icon": "🔧"}]}, {"name": {"en": "Welding"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Welder"}, "icon": "🔥"}, {"name": {"en": "Welder (Fabrication & Fitting)"}, "icon": "🔥"}, {"name": {"en": "Welder (GMAW & GTAW)"}, "icon": "🔥"}, {"name": {"en": "Welder (Pipe)"}, "icon": "🔥"}, {"name": {"en": "Welder (Structural)"}, "icon": "🔥"}, {"name": {"en": "Welder (Welding & Inspection)"}, "icon": "🔥"}]}, {"name": {"en": "Industrial & Manufacturing"}, "icon": "🏭", "subsubcategories": [{"name": {"en": "Industrial Robotics & Digital Manufacturing Technician"}, "icon": "🤖"}, {"name": {"en": "Manufacturing Process Control and Automation Technician"}, "icon": "🏭"}, {"name": {"en": "Technician Mechatronics"}, "icon": "⚙️"}, {"name": {"en": "Plastic Processing Operator"}, "icon": "🏭"}, {"name": {"en": "Rubber Technician"}, "icon": "🏭"}, {"name": {"en": "Refractory Technician"}, "icon": "🏭"}, {"name": {"en": "Engineering Design Technician"}, "icon": "📐"}, {"name": {"en": "Additive Manufacturing Technician (3D Printing)"}, "icon": "🖨️"}, {"name": {"en": "Virtual Analysis and Designer"}, "icon": "💻"}]}, {"name": {"en": "Draughting & Surveying"}, "icon": "📐", "subsubcategories": [{"name": {"en": "Draughtsman (Civil)"}, "icon": "📐"}, {"name": {"en": "Draughtsman Mechanical"}, "icon": "📐"}, {"name": {"en": "Architectural Draughtsman"}, "icon": "🏛️"}, {"name": {"en": "Surveyor"}, "icon": "🗺️"}, {"name": {"en": "GEO - Informatics Assistant"}, "icon": "🗺️"}, {"name": {"en": "Civil Engineering Assistant"}, "icon": "🏗️"}]}]}, {"id": "cat_electrical", "name": {"en": "Electrical & Electronics"}, "icon": "⚡", "subcategories": [{"name": {"en": "Electrical"}, "icon": "⚡", "subsubcategories": [{"name": {"en": "Electrician"}, "icon": "⚡"}, {"name": {"en": "Electrician - Power Distribution"}, "icon": "🔌"}, {"name": {"en": "Wireman"}, "icon": "🔌"}, {"name": {"en": "Technician Power Electronics Systems"}, "icon": "⚡"}, {"name": {"en": "Lift and Escalator Mechanic"}, "icon": "🛗"}, {"name": {"en": "Pump Operator Cum Mechanic"}, "icon": "💧"}]}, {"name": {"en": "Electronics & Instruments"}, "icon": "📻", "subsubcategories": [{"name": {"en": "Electronics Mechanic"}, "icon": "📻"}, {"name": {"en": "Instrument Mechanic"}, "icon": "🎛️"}, {"name": {"en": "Instrument Mechanic (Chemical Plant)"}, "icon": "🎛️"}, {"name": {"en": "Technician Electronics System Design and Repair"}, "icon": "🔧"}, {"name": {"en": "Technician Medical Electronics"}, "icon": "🏥"}, {"name": {"en": "Mechanic Consumer Electronic Appliances"}, "icon": "📺"}, {"name": {"en": "Semiconductor Technician"}, "icon": "💡"}]}, {"name": {"en": "Renewable & Green Energy"}, "icon": "🌞", "subsubcategories": [{"name": {"en": "Solar Technician (Electrical)"}, "icon": "☀️"}, {"name": {"en": "Wind Plant Technician"}, "icon": "💨"}, {"name": {"en": "Small Hydro Power Plant Technician"}, "icon": "💧"}, {"name": {"en": "Green Hydrogen Production Technician"}, "icon": "🌿"}]}, {"name": {"en": "Telecom & Networking"}, "icon": "📡", "subsubcategories": [{"name": {"en": "5G Network Technician"}, "icon": "📶"}, {"name": {"en": "Fiber To Home Technician"}, "icon": "🌐"}, {"name": {"en": "Information & Communication Technology System Maintenance (ICTSM)"}, "icon": "📡"}, {"name": {"en": "Computer Hardware & Network Maintenance"}, "icon": "🖥️"}]}]}, {"id": "cat_it", "name": {"en": "IT & Computers"}, "icon": "💻", "subcategories": [{"name": {"en": "Programming & Software"}, "icon": "👨‍💻", "subsubcategories": [{"name": {"en": "Computer Operator and Programming Assistant (COPA)"}, "icon": "💻"}, {"name": {"en": "Information Technology"}, "icon": "🖥️"}, {"name": {"en": "Software Testing Assistant"}, "icon": "🧪"}, {"name": {"en": "Artificial Intelligence Programming Assistant"}, "icon": "🤖"}, {"name": {"en": "Database System Assistant"}, "icon": "🗄️"}, {"name": {"en": "Data Entry Operator"}, "icon": "⌨️"}, {"name": {"en": "Data Annotation Assistant"}, "icon": "🏷️"}, {"name": {"en": "Computer Aided Manufacturing (CAM) Programmer"}, "icon": "🖥️"}]}, {"name": {"en": "Cyber & Security"}, "icon": "🔐", "subsubcategories": [{"name": {"en": "Cyber Security Assistant"}, "icon": "🔐"}, {"name": {"en": "Smartphone Technician Cum App Tester"}, "icon": "📱"}]}, {"name": {"en": "Design & Media"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Desktop Publishing Operator"}, "icon": "🖨️"}, {"name": {"en": "Multimedia, Animation & Special Effects"}, "icon": "🎬"}, {"name": {"en": "Digital Photographer"}, "icon": "📷"}, {"name": {"en": "Photographer"}, "icon": "📸"}, {"name": {"en": "Video Cameraman"}, "icon": "🎥"}]}, {"name": {"en": "IoT & Smart Tech"}, "icon": "🌐", "subsubcategories": [{"name": {"en": "Industrial IoT Technician"}, "icon": "🏭"}, {"name": {"en": "IoT Technician (Smart Agriculture)"}, "icon": "🌾"}, {"name": {"en": "IoT Technician (Smart City)"}, "icon": "🏙️"}, {"name": {"en": "IoT Technician (Smart Healthcare)"}, "icon": "🏥"}]}, {"name": {"en": "Drones & Aviation"}, "icon": "🚁", "subsubcategories": [{"name": {"en": "Drone Pilot (Junior)"}, "icon": "🚁"}, {"name": {"en": "Drone Technician"}, "icon": "🔧"}, {"name": {"en": "Aeronautical Structure and Equipment Fitter"}, "icon": "✈️"}]}]}, {"id": "cat_automotive", "name": {"en": "Automotive & Transport"}, "icon": "🚗", "subcategories": [{"name": {"en": "Vehicle Mechanics"}, "icon": "🔧", "subsubcategories": [{"name": {"en": "Mechanic Motor Vehicle (MMV)"}, "icon": "🚗"}, {"name": {"en": "Mechanic Two and Three Wheeler"}, "icon": "🏍️"}, {"name": {"en": "Mechanic Diesel"}, "icon": "⛽"}, {"name": {"en": "Mechanic Tractor"}, "icon": "🚜"}, {"name": {"en": "Mechanic Electric Vehicle"}, "icon": "🔋"}, {"name": {"en": "Driver cum Mechanic (LMV)"}, "icon": "🚘"}, {"name": {"en": "Mechanic Agricultural Machinery"}, "icon": "🚜"}]}, {"name": {"en": "Auto Body & Paint"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Mechanic Auto Body Painting"}, "icon": "🎨"}, {"name": {"en": "Mechanic Auto Body Repair"}, "icon": "🔨"}, {"name": {"en": "Mechanic Auto Electrical and Electronics"}, "icon": "⚡"}]}, {"name": {"en": "Marine & Logistics"}, "icon": "⚓", "subsubcategories": [{"name": {"en": "Marine Engine Fitter"}, "icon": "⚓"}, {"name": {"en": "Marine Fitter"}, "icon": "⚓"}, {"name": {"en": "Vessel Navigator"}, "icon": "🚢"}, {"name": {"en": "In Plant Logistics Assistant"}, "icon": "📦"}, {"name": {"en": "Warehouse Technician"}, "icon": "🏭"}]}]}, {"id": "cat_construction", "name": {"en": "Construction & Home Services"}, "icon": "🏠", "subcategories": [{"name": {"en": "Plumbing & Sanitation"}, "icon": "🪠", "subsubcategories": [{"name": {"en": "Plumber"}, "icon": "🪠"}, {"name": {"en": "Health Sanitary Inspector"}, "icon": "🏥"}]}, {"name": {"en": "Painting & Finishing"}, "icon": "🖌️", "subsubcategories": [{"name": {"en": "Painter (General)"}, "icon": "🖌️"}, {"name": {"en": "Domestic Painter"}, "icon": "🖌️"}, {"name": {"en": "Industrial Painter"}, "icon": "🏭"}, {"name": {"en": "Electroplater"}, "icon": "✨"}]}, {"name": {"en": "Masonry & Civil"}, "icon": "🧱", "subsubcategories": [{"name": {"en": "Mason (Building Constructor)"}, "icon": "🧱"}, {"name": {"en": "Interior Design & Decoration"}, "icon": "🛋️"}, {"name": {"en": "Floriculture & Landscaping"}, "icon": "🌸"}]}, {"name": {"en": "Refrigeration & AC"}, "icon": "❄️", "subsubcategories": [{"name": {"en": "Refrigeration and Air Conditioning Technician"}, "icon": "❄️"}, {"name": {"en": "Central Air Condition Plant Mechanic"}, "icon": "🌬️"}]}, {"name": {"en": "Fire & Safety"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Fire Technology and Industrial Safety Management"}, "icon": "🚒"}, {"name": {"en": "Fireman"}, "icon": "👨‍🚒"}, {"name": {"en": "Health, Safety and Environment"}, "icon": "🦺"}]}]}, {"id": "cat_fashion", "name": {"en": "Fashion & Textiles"}, "icon": "👗", "subcategories": [{"name": {"en": "Garment Making"}, "icon": "✂️", "subsubcategories": [{"name": {"en": "Sewing Technology"}, "icon": "🧵"}, {"name": {"en": "Dress Making (DM)"}, "icon": "👗"}, {"name": {"en": "Fashion Design and Technology (FD&T)"}, "icon": "👠"}, {"name": {"en": "Cutting & Sewing (VI & OD)"}, "icon": "✂️"}, {"name": {"en": "Computer Aided Embroidery & Designing"}, "icon": "💻"}]}, {"name": {"en": "Weaving & Textiles"}, "icon": "🧶", "subsubcategories": [{"name": {"en": "Weaving Technician"}, "icon": "🧶"}, {"name": {"en": "Weaving Technician for Silk & Woolen Fabrics"}, "icon": "🧶"}, {"name": {"en": "Spinning Technician"}, "icon": "🌀"}, {"name": {"en": "Textile Mechatronics"}, "icon": "⚙️"}, {"name": {"en": "Textile Wet Processing Technician"}, "icon": "💧"}, {"name": {"en": "Carpet Weaving Artisan - Handloom"}, "icon": "🪢"}]}, {"name": {"en": "Embroidery & Artisan"}, "icon": "🪡", "subsubcategories": [{"name": {"en": "Hand Embroidery Artisan"}, "icon": "🪡"}, {"name": {"en": "Surface Ornamentation Techniques (Embroidery)"}, "icon": "🌸"}, {"name": {"en": "Traditional Phulkari Artisan"}, "icon": "🌺"}, {"name": {"en": "Shawl Weaving Artisan"}, "icon": "🧣"}]}, {"name": {"en": "Leather & Footwear"}, "icon": "👞", "subsubcategories": [{"name": {"en": "Footwear Maker"}, "icon": "👟"}, {"name": {"en": "Leather Goods Maker"}, "icon": "👜"}]}]}, {"id": "cat_hospitality", "name": {"en": "Hospitality & Food"}, "icon": "🍽️", "subcategories": [{"name": {"en": "Food Production"}, "icon": "👨‍🍳", "subsubcategories": [{"name": {"en": "Baker & Confectioner"}, "icon": "🥐"}, {"name": {"en": "Food Production (General)"}, "icon": "🍱"}, {"name": {"en": "Food and Beverage Service Assistant"}, "icon": "🍽️"}, {"name": {"en": "Food Beverage"}, "icon": "🥤"}, {"name": {"en": "Catering & Hospitality Assistant"}, "icon": "🍴"}, {"name": {"en": "Fruits and Vegetables Processing"}, "icon": "🥦"}]}, {"name": {"en": "Hotel & Front Office"}, "icon": "🏨", "subsubcategories": [{"name": {"en": "Front Office Assistant"}, "icon": "🏨"}, {"name": {"en": "Housekeeper"}, "icon": "🧹"}, {"name": {"en": "Hospital Housekeeping"}, "icon": "🏥"}]}, {"name": {"en": "Tourism & Travel"}, "icon": "✈️", "subsubcategories": [{"name": {"en": "Tourist Guide"}, "icon": "🗺️"}, {"name": {"en": "Travel & Tour Assistant"}, "icon": "✈️"}]}, {"name": {"en": "Beauty & Wellness"}, "icon": "💅", "subsubcategories": [{"name": {"en": "Cosmetology"}, "icon": "💄"}, {"name": {"en": "Hair & Skin Care (VI)"}, "icon": "💇"}, {"name": {"en": "Spa Therapy"}, "icon": "💆"}]}]}, {"id": "cat_agriculture", "name": {"en": "Agriculture & Environment"}, "icon": "🌾", "subcategories": [{"name": {"en": "Farming & Horticulture"}, "icon": "🌱", "subsubcategories": [{"name": {"en": "Horticulture"}, "icon": "🌸"}, {"name": {"en": "Nursery & Orchard Technician"}, "icon": "🌳"}, {"name": {"en": "Floriculture & Landscaping"}, "icon": "🌺"}, {"name": {"en": "Agro Processing"}, "icon": "🌾"}, {"name": {"en": "Soil Testing and Crop Technician"}, "icon": "🧪"}]}, {"name": {"en": "Dairy & Food Tech"}, "icon": "🥛", "subsubcategories": [{"name": {"en": "Dairying"}, "icon": "🐄"}, {"name": {"en": "Milk and Milk Product Technician"}, "icon": "🥛"}, {"name": {"en": "Honey Processing Technician"}, "icon": "🍯"}]}, {"name": {"en": "Mining & Stone"}, "icon": "⛏️", "subsubcategories": [{"name": {"en": "Stone Mining Machine Operator"}, "icon": "⛏️"}, {"name": {"en": "Stone Processing Machine Operator"}, "icon": "🪨"}, {"name": {"en": "Mechanic Mining Machinery"}, "icon": "🏗️"}]}]}, {"id": "cat_health", "name": {"en": "Health & Medical"}, "icon": "🏥", "subcategories": [{"name": {"en": "Medical Technicians"}, "icon": "🩺", "subsubcategories": [{"name": {"en": "Physiotherapy Technician"}, "icon": "🦽"}, {"name": {"en": "Radiology Technician"}, "icon": "🩻"}, {"name": {"en": "Dental Laboratory Equipment Technician"}, "icon": "🦷"}, {"name": {"en": "Technician Medical Electronics"}, "icon": "💉"}]}, {"name": {"en": "Care & Support"}, "icon": "🤝", "subsubcategories": [{"name": {"en": "Geriatric (Old Age) Care"}, "icon": "👴"}, {"name": {"en": "Early Childhood Educator"}, "icon": "👶"}]}, {"name": {"en": "Chemical & Lab"}, "icon": "🧪", "subsubcategories": [{"name": {"en": "Laboratory Assistant (Chemical Plant)"}, "icon": "🧪"}, {"name": {"en": "Attendant Operator (Chemical Plant)"}, "icon": "🏭"}, {"name": {"en": "Maintenance Mechanic (Chemical Plant)"}, "icon": "🔧"}]}]}, {"id": "cat_arts", "name": {"en": "Arts, Crafts & Media"}, "icon": "🎨", "subcategories": [{"name": {"en": "Visual Arts & Crafts"}, "icon": "🖼️", "subsubcategories": [{"name": {"en": "Basohli Painting Artist"}, "icon": "🖼️"}, {"name": {"en": "Papier Mache Artisan"}, "icon": "🎭"}, {"name": {"en": "Wood Carving Artisan"}, "icon": "🪵"}, {"name": {"en": "Bamboo Works"}, "icon": "🎋"}]}, {"name": {"en": "Wood & Furniture"}, "icon": "🪵", "subsubcategories": [{"name": {"en": "Wood Work Technician"}, "icon": "🪵"}, {"name": {"en": "Mechanic Lens/Prism Grinding"}, "icon": "🔬"}]}, {"name": {"en": "Media & Photography"}, "icon": "📸", "subsubcategories": [{"name": {"en": "Photographer"}, "icon": "📸"}, {"name": {"en": "Digital Photographer"}, "icon": "📷"}, {"name": {"en": "Video Cameraman"}, "icon": "🎥"}, {"name": {"en": "Multimedia, Animation & Special Effects"}, "icon": "🎬"}]}]}, {"id": "cat_business", "name": {"en": "Business & Office"}, "icon": "💼", "subcategories": [{"name": {"en": "Office Administration"}, "icon": "🗂️", "subsubcategories": [{"name": {"en": "Secretarial Practice (English)"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (English)"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (Hindi)"}, "icon": "📝"}, {"name": {"en": "Desktop Publishing Operator"}, "icon": "🖨️"}, {"name": {"en": "Data Entry Operator"}, "icon": "⌨️"}]}, {"name": {"en": "Finance & HR"}, "icon": "💰", "subsubcategories": [{"name": {"en": "Finance Executive"}, "icon": "💰"}, {"name": {"en": "Human Resource Executive"}, "icon": "👥"}, {"name": {"en": "Marketing Executive"}, "icon": "📊"}]}]}];
+
+window.showCurrent = async function() {
+  const log = document.getElementById('log');
+  log.textContent = '⏳ Loading...\n';
+  const snap = await get(ref(db, 'categories'));
+  if (!snap.exists()) { log.textContent += '⚠️ Nothing in Firebase!'; return; }
+  const cats = snap.val();
+  log.textContent += 'Found ' + cats.length + ' categories currently:\n\n';
+  cats.forEach(c => log.textContent += '  📁 ' + (c.name?.en || c.name) + '\n');
+};
+
+window.restoreAndMerge = async function() {
+  const log = document.getElementById('log');
+  log.textContent = '⏳ Merging all categories...\n\n';
+  try {
+    // Start with all 9 original categories
+    let merged = [...OLD_CATEGORIES];
+    log.textContent += '✅ Original categories (' + OLD_CATEGORIES.length + '):\n';
+    OLD_CATEGORIES.forEach(c => log.textContent += '  📁 ' + (c.name?.en || c.name) + '\n');
+
+    // Add all 11 ITI categories
+    log.textContent += '\n✅ Adding ITI categories (' + ITI_CATEGORIES.length + '):\n';
+    ITI_CATEGORIES.forEach(newCat => {
+      const exists = merged.find(e => e.id === newCat.id);
+      if (!exists) {
+        merged.push(newCat);
+        log.textContent += '  📁 ' + newCat.name.en + '\n';
+      }
+    });
+
+    log.textContent += '\n⏳ Saving ' + merged.length + ' categories to Firebase...\n';
+    await set(ref(db, 'categories'), merged);
+    log.textContent += '\n🎉 DONE! ' + merged.length + ' categories now live for ALL users!';
+    log.textContent += '\n\nClose this page and check your app ✅';
+  } catch(e) {
+    log.textContent += '\n❌ ERROR: ' + e.message;
+  }
+};
+</script>
+</body>
+</html>
