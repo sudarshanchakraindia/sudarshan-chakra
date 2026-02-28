@@ -2,26 +2,38 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>SC — Restore & Merge Categories</title>
+<title>SC — Restore Categories</title>
 <style>
-body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; text-align: center; }
-.btn { color: white; border: none; padding: 14px 30px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin: 6px; display: inline-block; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; text-align: center; background: #fff7ed; }
+h2 { color: #EA580C; margin: 10px 0; }
+p { color: #64748B; margin-bottom: 20px; font-size: 14px; }
+.btn { color: white; border: none; padding: 14px 24px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin: 6px; }
 .orange { background: #EA580C; }
 .blue { background: #2563EB; }
-#log { margin-top: 20px; text-align: left; background: #f1f5f9; border-radius: 10px; padding: 16px; font-size: 13px; font-family: monospace; min-height: 120px; white-space: pre-wrap; max-height: 500px; overflow-y: auto; }
+#log { margin-top: 20px; text-align: left; background: white; border-radius: 10px; padding: 16px; font-size: 13px; font-family: monospace; min-height: 150px; white-space: pre-wrap; max-height: 500px; overflow-y: auto; border: 2px solid #E2E8F0; }
+#status { font-weight: 700; color: #EA580C; margin: 12px 0; font-size: 16px; }
 </style>
 </head>
 <body>
-<div style="font-size:48px">🔱</div>
+<div style="font-size:48px;margin-bottom:8px">🔱</div>
 <h2>Sudarshan Chakra — Category Restore</h2>
-<p>Restores all 9 original categories + keeps all 11 ITI categories = <strong>20 total</strong></p>
-<button class="btn orange" onclick="restoreAndMerge()">🔀 Restore All + Keep ITI</button>
-<button class="btn blue" onclick="showCurrent()">👁️ Show Current Firebase</button>
-<div id="log">Ready...</div>
+<p>Restores 9 original + 11 ITI = <strong>20 categories total</strong></p>
+<div>
+  <button class="btn orange" onclick="restoreAndMerge()">🔀 Restore All + Keep ITI</button>
+  <button class="btn blue" onclick="showCurrent()">👁️ Show Current</button>
+</div>
+<div id="status">⏳ Connecting to Firebase...</div>
+<div id="log"></div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script>
+function addLog(msg) {
+  var el = document.getElementById('log');
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
 
 const firebaseConfig = {
             apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -32,10 +44,19 @@ const firebaseConfig = {
             messagingSenderId: "357210144411",
             appId: "1:357210144411:web:b440a94cf78b04b58b103e"
         };
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
 
-const OLD_CATEGORIES = [
+var db;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  document.getElementById('status').textContent = '✅ Firebase connected! Click a button.';
+  document.getElementById('status').style.color = '#059669';
+} catch(e) {
+  document.getElementById('status').textContent = '❌ Firebase error: ' + e.message;
+  document.getElementById('status').style.color = 'red';
+}
+
+var OLD_CATEGORIES = [
             {
                 id: 'cat1',
                 name: { en: 'Home Services' },
@@ -640,128 +661,56 @@ const OLD_CATEGORIES = [
                     }
                 ]
             }
-        ]; // end DEFAULT_CATEGORIES
+        ];
+var ITI_CATEGORIES = [{"id": "cat_engineering", "name": {"en": "Engineering & Mechanical"}, "icon": "🔧", "subcategories": [{"name": {"en": "Machining & Fabrication"}, "icon": "⚙️", "subsubcategories": [{"name": {"en": "Fitter"}, "icon": "🔧"}, {"name": {"en": "Machinist"}, "icon": "⚙️"}, {"name": {"en": "Machinist Grinder"}, "icon": "⚙️"}, {"name": {"en": "Turner"}, "icon": "🔩"}, {"name": {"en": "CNC Machining Technician"}, "icon": "🖥️"}, {"name": {"en": "Operator Advanced Machine Tool"}, "icon": "🏭"}, {"name": {"en": "Tool & Die Maker (Dies & Moulds)"}, "icon": "🔨"}, {"name": {"en": "Tool & Die Maker (Press Tools, Jigs & Fixtures)"}, "icon": "🔨"}, {"name": {"en": "Sheet Metal Worker"}, "icon": "🪛"}, {"name": {"en": "Foundryman"}, "icon": "🏭"}, {"name": {"en": "Mechanic Machine Tool Maintenance"}, "icon": "🔧"}]}, {"name": {"en": "Welding"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Welder"}, "icon": "🔥"}, {"name": {"en": "Welder (Fabrication & Fitting)"}, "icon": "🔥"}, {"name": {"en": "Welder (GMAW & GTAW)"}, "icon": "🔥"}, {"name": {"en": "Welder (Pipe)"}, "icon": "🔥"}, {"name": {"en": "Welder (Structural)"}, "icon": "🔥"}, {"name": {"en": "Welder (Welding & Inspection)"}, "icon": "🔥"}]}, {"name": {"en": "Industrial & Manufacturing"}, "icon": "🏭", "subsubcategories": [{"name": {"en": "Industrial Robotics & Digital Manufacturing Technician"}, "icon": "🤖"}, {"name": {"en": "Manufacturing Process Control and Automation Technician"}, "icon": "🏭"}, {"name": {"en": "Technician Mechatronics"}, "icon": "⚙️"}, {"name": {"en": "Plastic Processing Operator"}, "icon": "🏭"}, {"name": {"en": "Rubber Technician"}, "icon": "🏭"}, {"name": {"en": "Refractory Technician"}, "icon": "🏭"}, {"name": {"en": "Engineering Design Technician"}, "icon": "📐"}, {"name": {"en": "Additive Manufacturing Technician (3D Printing)"}, "icon": "🖨️"}, {"name": {"en": "Virtual Analysis and Designer"}, "icon": "💻"}]}, {"name": {"en": "Draughting & Surveying"}, "icon": "📐", "subsubcategories": [{"name": {"en": "Draughtsman (Civil)"}, "icon": "📐"}, {"name": {"en": "Draughtsman Mechanical"}, "icon": "📐"}, {"name": {"en": "Architectural Draughtsman"}, "icon": "🏛️"}, {"name": {"en": "Surveyor"}, "icon": "🗺️"}, {"name": {"en": "GEO - Informatics Assistant"}, "icon": "🗺️"}, {"name": {"en": "Civil Engineering Assistant"}, "icon": "🏗️"}]}]}, {"id": "cat_electrical", "name": {"en": "Electrical & Electronics"}, "icon": "⚡", "subcategories": [{"name": {"en": "Electrical"}, "icon": "⚡", "subsubcategories": [{"name": {"en": "Electrician"}, "icon": "⚡"}, {"name": {"en": "Electrician - Power Distribution"}, "icon": "🔌"}, {"name": {"en": "Wireman"}, "icon": "🔌"}, {"name": {"en": "Technician Power Electronics Systems"}, "icon": "⚡"}, {"name": {"en": "Lift and Escalator Mechanic"}, "icon": "🛗"}, {"name": {"en": "Pump Operator Cum Mechanic"}, "icon": "💧"}]}, {"name": {"en": "Electronics & Instruments"}, "icon": "📻", "subsubcategories": [{"name": {"en": "Electronics Mechanic"}, "icon": "📻"}, {"name": {"en": "Instrument Mechanic"}, "icon": "🎛️"}, {"name": {"en": "Instrument Mechanic (Chemical Plant)"}, "icon": "🎛️"}, {"name": {"en": "Technician Electronics System Design and Repair"}, "icon": "🔧"}, {"name": {"en": "Technician Medical Electronics"}, "icon": "🏥"}, {"name": {"en": "Mechanic Consumer Electronic Appliances"}, "icon": "📺"}, {"name": {"en": "Semiconductor Technician"}, "icon": "💡"}]}, {"name": {"en": "Renewable & Green Energy"}, "icon": "🌞", "subsubcategories": [{"name": {"en": "Solar Technician (Electrical)"}, "icon": "☀️"}, {"name": {"en": "Wind Plant Technician"}, "icon": "💨"}, {"name": {"en": "Small Hydro Power Plant Technician"}, "icon": "💧"}, {"name": {"en": "Green Hydrogen Production Technician"}, "icon": "🌿"}]}, {"name": {"en": "Telecom & Networking"}, "icon": "📡", "subsubcategories": [{"name": {"en": "5G Network Technician"}, "icon": "📶"}, {"name": {"en": "Fiber To Home Technician"}, "icon": "🌐"}, {"name": {"en": "Information & Communication Technology System Maintenance (ICTSM)"}, "icon": "📡"}, {"name": {"en": "Computer Hardware & Network Maintenance"}, "icon": "🖥️"}]}]}, {"id": "cat_it", "name": {"en": "IT & Computers"}, "icon": "💻", "subcategories": [{"name": {"en": "Programming & Software"}, "icon": "👨‍💻", "subsubcategories": [{"name": {"en": "Computer Operator and Programming Assistant (COPA)"}, "icon": "💻"}, {"name": {"en": "Information Technology"}, "icon": "🖥️"}, {"name": {"en": "Software Testing Assistant"}, "icon": "🧪"}, {"name": {"en": "Artificial Intelligence Programming Assistant"}, "icon": "🤖"}, {"name": {"en": "Database System Assistant"}, "icon": "🗄️"}, {"name": {"en": "Data Entry Operator"}, "icon": "⌨️"}, {"name": {"en": "Data Annotation Assistant"}, "icon": "🏷️"}, {"name": {"en": "Computer Aided Manufacturing (CAM) Programmer"}, "icon": "🖥️"}]}, {"name": {"en": "Cyber & Security"}, "icon": "🔐", "subsubcategories": [{"name": {"en": "Cyber Security Assistant"}, "icon": "🔐"}, {"name": {"en": "Smartphone Technician Cum App Tester"}, "icon": "📱"}]}, {"name": {"en": "Design & Media"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Desktop Publishing Operator"}, "icon": "🖨️"}, {"name": {"en": "Multimedia, Animation & Special Effects"}, "icon": "🎬"}, {"name": {"en": "Digital Photographer"}, "icon": "📷"}, {"name": {"en": "Photographer"}, "icon": "📸"}, {"name": {"en": "Video Cameraman"}, "icon": "🎥"}]}, {"name": {"en": "IoT & Smart Tech"}, "icon": "🌐", "subsubcategories": [{"name": {"en": "Industrial IoT Technician"}, "icon": "🏭"}, {"name": {"en": "IoT Technician (Smart Agriculture)"}, "icon": "🌾"}, {"name": {"en": "IoT Technician (Smart City)"}, "icon": "🏙️"}, {"name": {"en": "IoT Technician (Smart Healthcare)"}, "icon": "🏥"}]}, {"name": {"en": "Drones & Aviation"}, "icon": "🚁", "subsubcategories": [{"name": {"en": "Drone Pilot (Junior)"}, "icon": "🚁"}, {"name": {"en": "Drone Technician"}, "icon": "🔧"}, {"name": {"en": "Aeronautical Structure and Equipment Fitter"}, "icon": "✈️"}]}]}, {"id": "cat_automotive", "name": {"en": "Automotive & Transport"}, "icon": "🚗", "subcategories": [{"name": {"en": "Vehicle Mechanics"}, "icon": "🔧", "subsubcategories": [{"name": {"en": "Mechanic Motor Vehicle (MMV)"}, "icon": "🚗"}, {"name": {"en": "Mechanic Two and Three Wheeler"}, "icon": "🏍️"}, {"name": {"en": "Mechanic Diesel"}, "icon": "⛽"}, {"name": {"en": "Mechanic Tractor"}, "icon": "🚜"}, {"name": {"en": "Mechanic Electric Vehicle"}, "icon": "🔋"}, {"name": {"en": "Driver cum Mechanic (LMV)"}, "icon": "🚘"}, {"name": {"en": "Mechanic Agricultural Machinery"}, "icon": "🚜"}]}, {"name": {"en": "Auto Body & Paint"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Mechanic Auto Body Painting"}, "icon": "🎨"}, {"name": {"en": "Mechanic Auto Body Repair"}, "icon": "🔨"}, {"name": {"en": "Mechanic Auto Electrical and Electronics"}, "icon": "⚡"}]}, {"name": {"en": "Marine & Logistics"}, "icon": "⚓", "subsubcategories": [{"name": {"en": "Marine Engine Fitter"}, "icon": "⚓"}, {"name": {"en": "Marine Fitter"}, "icon": "⚓"}, {"name": {"en": "Vessel Navigator"}, "icon": "🚢"}, {"name": {"en": "In Plant Logistics Assistant"}, "icon": "📦"}, {"name": {"en": "Warehouse Technician"}, "icon": "🏭"}]}]}, {"id": "cat_construction", "name": {"en": "Construction & Home Services"}, "icon": "🏠", "subcategories": [{"name": {"en": "Plumbing & Sanitation"}, "icon": "🪠", "subsubcategories": [{"name": {"en": "Plumber"}, "icon": "🪠"}, {"name": {"en": "Health Sanitary Inspector"}, "icon": "🏥"}]}, {"name": {"en": "Painting & Finishing"}, "icon": "🖌️", "subsubcategories": [{"name": {"en": "Painter (General)"}, "icon": "🖌️"}, {"name": {"en": "Domestic Painter"}, "icon": "🖌️"}, {"name": {"en": "Industrial Painter"}, "icon": "🏭"}, {"name": {"en": "Electroplater"}, "icon": "✨"}]}, {"name": {"en": "Masonry & Civil"}, "icon": "🧱", "subsubcategories": [{"name": {"en": "Mason (Building Constructor)"}, "icon": "🧱"}, {"name": {"en": "Interior Design & Decoration"}, "icon": "🛋️"}, {"name": {"en": "Floriculture & Landscaping"}, "icon": "🌸"}]}, {"name": {"en": "Refrigeration & AC"}, "icon": "❄️", "subsubcategories": [{"name": {"en": "Refrigeration and Air Conditioning Technician"}, "icon": "❄️"}, {"name": {"en": "Central Air Condition Plant Mechanic"}, "icon": "🌬️"}]}, {"name": {"en": "Fire & Safety"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Fire Technology and Industrial Safety Management"}, "icon": "🚒"}, {"name": {"en": "Fireman"}, "icon": "👨‍🚒"}, {"name": {"en": "Health, Safety and Environment"}, "icon": "🦺"}]}]}, {"id": "cat_fashion", "name": {"en": "Fashion & Textiles"}, "icon": "👗", "subcategories": [{"name": {"en": "Garment Making"}, "icon": "✂️", "subsubcategories": [{"name": {"en": "Sewing Technology"}, "icon": "🧵"}, {"name": {"en": "Dress Making (DM)"}, "icon": "👗"}, {"name": {"en": "Fashion Design and Technology (FD&T)"}, "icon": "👠"}, {"name": {"en": "Cutting & Sewing (VI & OD)"}, "icon": "✂️"}, {"name": {"en": "Computer Aided Embroidery & Designing"}, "icon": "💻"}]}, {"name": {"en": "Weaving & Textiles"}, "icon": "🧶", "subsubcategories": [{"name": {"en": "Weaving Technician"}, "icon": "🧶"}, {"name": {"en": "Weaving Technician for Silk & Woolen Fabrics"}, "icon": "🧶"}, {"name": {"en": "Spinning Technician"}, "icon": "🌀"}, {"name": {"en": "Textile Mechatronics"}, "icon": "⚙️"}, {"name": {"en": "Textile Wet Processing Technician"}, "icon": "💧"}, {"name": {"en": "Carpet Weaving Artisan - Handloom"}, "icon": "🪢"}]}, {"name": {"en": "Embroidery & Artisan"}, "icon": "🪡", "subsubcategories": [{"name": {"en": "Hand Embroidery Artisan"}, "icon": "🪡"}, {"name": {"en": "Surface Ornamentation Techniques (Embroidery)"}, "icon": "🌸"}, {"name": {"en": "Traditional Phulkari Artisan"}, "icon": "🌺"}, {"name": {"en": "Shawl Weaving Artisan"}, "icon": "🧣"}]}, {"name": {"en": "Leather & Footwear"}, "icon": "👞", "subsubcategories": [{"name": {"en": "Footwear Maker"}, "icon": "👟"}, {"name": {"en": "Leather Goods Maker"}, "icon": "👜"}]}]}, {"id": "cat_hospitality", "name": {"en": "Hospitality & Food"}, "icon": "🍽️", "subcategories": [{"name": {"en": "Food Production"}, "icon": "👨‍🍳", "subsubcategories": [{"name": {"en": "Baker & Confectioner"}, "icon": "🥐"}, {"name": {"en": "Food Production (General)"}, "icon": "🍱"}, {"name": {"en": "Food and Beverage Service Assistant"}, "icon": "🍽️"}, {"name": {"en": "Food Beverage"}, "icon": "🥤"}, {"name": {"en": "Catering & Hospitality Assistant"}, "icon": "🍴"}, {"name": {"en": "Fruits and Vegetables Processing"}, "icon": "🥦"}]}, {"name": {"en": "Hotel & Front Office"}, "icon": "🏨", "subsubcategories": [{"name": {"en": "Front Office Assistant"}, "icon": "🏨"}, {"name": {"en": "Housekeeper"}, "icon": "🧹"}, {"name": {"en": "Hospital Housekeeping"}, "icon": "🏥"}]}, {"name": {"en": "Tourism & Travel"}, "icon": "✈️", "subsubcategories": [{"name": {"en": "Tourist Guide"}, "icon": "🗺️"}, {"name": {"en": "Travel & Tour Assistant"}, "icon": "✈️"}]}, {"name": {"en": "Beauty & Wellness"}, "icon": "💅", "subsubcategories": [{"name": {"en": "Cosmetology"}, "icon": "💄"}, {"name": {"en": "Hair & Skin Care (VI)"}, "icon": "💇"}, {"name": {"en": "Spa Therapy"}, "icon": "💆"}]}]}, {"id": "cat_agriculture", "name": {"en": "Agriculture & Environment"}, "icon": "🌾", "subcategories": [{"name": {"en": "Farming & Horticulture"}, "icon": "🌱", "subsubcategories": [{"name": {"en": "Horticulture"}, "icon": "🌸"}, {"name": {"en": "Nursery & Orchard Technician"}, "icon": "🌳"}, {"name": {"en": "Floriculture & Landscaping"}, "icon": "🌺"}, {"name": {"en": "Agro Processing"}, "icon": "🌾"}, {"name": {"en": "Soil Testing and Crop Technician"}, "icon": "🧪"}]}, {"name": {"en": "Dairy & Food Tech"}, "icon": "🥛", "subsubcategories": [{"name": {"en": "Dairying"}, "icon": "🐄"}, {"name": {"en": "Milk and Milk Product Technician"}, "icon": "🥛"}, {"name": {"en": "Honey Processing Technician"}, "icon": "🍯"}]}, {"name": {"en": "Mining & Stone"}, "icon": "⛏️", "subsubcategories": [{"name": {"en": "Stone Mining Machine Operator"}, "icon": "⛏️"}, {"name": {"en": "Stone Processing Machine Operator"}, "icon": "🪨"}, {"name": {"en": "Mechanic Mining Machinery"}, "icon": "🏗️"}]}]}, {"id": "cat_health", "name": {"en": "Health & Medical"}, "icon": "🏥", "subcategories": [{"name": {"en": "Medical Technicians"}, "icon": "🩺", "subsubcategories": [{"name": {"en": "Physiotherapy Technician"}, "icon": "🦽"}, {"name": {"en": "Radiology Technician"}, "icon": "🩻"}, {"name": {"en": "Dental Laboratory Equipment Technician"}, "icon": "🦷"}, {"name": {"en": "Technician Medical Electronics"}, "icon": "💉"}]}, {"name": {"en": "Care & Support"}, "icon": "🤝", "subsubcategories": [{"name": {"en": "Geriatric (Old Age) Care"}, "icon": "👴"}, {"name": {"en": "Early Childhood Educator"}, "icon": "👶"}]}, {"name": {"en": "Chemical & Lab"}, "icon": "🧪", "subsubcategories": [{"name": {"en": "Laboratory Assistant (Chemical Plant)"}, "icon": "🧪"}, {"name": {"en": "Attendant Operator (Chemical Plant)"}, "icon": "🏭"}, {"name": {"en": "Maintenance Mechanic (Chemical Plant)"}, "icon": "🔧"}]}]}, {"id": "cat_arts", "name": {"en": "Arts, Crafts & Media"}, "icon": "🎨", "subcategories": [{"name": {"en": "Visual Arts & Crafts"}, "icon": "🖼️", "subsubcategories": [{"name": {"en": "Basohli Painting Artist"}, "icon": "🖼️"}, {"name": {"en": "Papier Mache Artisan"}, "icon": "🎭"}, {"name": {"en": "Wood Carving Artisan"}, "icon": "🪵"}, {"name": {"en": "Bamboo Works"}, "icon": "🎋"}]}, {"name": {"en": "Wood & Furniture"}, "icon": "🪵", "subsubcategories": [{"name": {"en": "Wood Work Technician"}, "icon": "🪵"}, {"name": {"en": "Mechanic Lens/Prism Grinding"}, "icon": "🔬"}]}, {"name": {"en": "Media & Photography"}, "icon": "📸", "subsubcategories": [{"name": {"en": "Photographer"}, "icon": "📸"}, {"name": {"en": "Digital Photographer"}, "icon": "📷"}, {"name": {"en": "Video Cameraman"}, "icon": "🎥"}, {"name": {"en": "Multimedia, Animation & Special Effects"}, "icon": "🎬"}]}]}, {"id": "cat_business", "name": {"en": "Business & Office"}, "icon": "💼", "subcategories": [{"name": {"en": "Office Administration"}, "icon": "🗂️", "subsubcategories": [{"name": {"en": "Secretarial Practice (English)"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (English)"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (Hindi)"}, "icon": "📝"}, {"name": {"en": "Desktop Publishing Operator"}, "icon": "🖨️"}, {"name": {"en": "Data Entry Operator"}, "icon": "⌨️"}]}, {"name": {"en": "Finance & HR"}, "icon": "💰", "subsubcategories": [{"name": {"en": "Finance Executive"}, "icon": "💰"}, {"name": {"en": "Human Resource Executive"}, "icon": "👥"}, {"name": {"en": "Marketing Executive"}, "icon": "📊"}]}]}];
 
-        // ==================== CATEGORY MERGE FUNCTION ====================
-        // Merges DEFAULT_CATEGORIES into saved categories:
-        //   - New top-level categories are APPENDED (never removed)
-        //   - New subcategories inside existing categories are APPENDED
-        //   - New service types inside existing subcategories are APPENDED
-        //   - Anything the admin added/edited/deleted is PRESERVED
-        function mergeCategories(saved, defaults) {
-            const merged = [...saved]; // start from what's saved
-
-            defaults.forEach(defCat => {
-                // Match by id first, then by English name as fallback
-                const existingCat = merged.find(c =>
-                    (c.id && defCat.id && c.id === defCat.id) ||
-                    ((c.name?.en || c.name) === (defCat.name?.en || defCat.name))
-                );
-
-                if (!existingCat) {
-                    // Brand-new category — append it whole
-                    merged.push(defCat);
-                } else {
-                    // Category exists — merge subcategories
-                    if (!existingCat.subcategories) existingCat.subcategories = [];
-                    const existingSubs = existingCat.subcategories;
-
-                    (defCat.subcategories || []).forEach(defSub => {
-                        const existingSub = existingSubs.find(s =>
-                            (s.name?.en || s.name) === (defSub.name?.en || defSub.name)
-                        );
-
-                        if (!existingSub) {
-                            // New subcategory — append it whole
-                            existingSubs.push(defSub);
-                        } else {
-                            // Subcategory exists — merge service types
-                            if (!existingSub.subsubcategories) existingSub.subsubcategories = [];
-                            const existingServices = existingSub.subsubcategories;
-
-                            (defSub.subsubcategories || []).forEach(defService => {
-                                const alreadyExists = existingServices.some(sv =>
-                                    (sv.name?.en || sv.name) === (defService.name?.en || defService.name)
-                                );
-                                if (!alreadyExists) {
-                                    // New service type — append it
-                                    existingServices.push(defService);
-                                }
-                                // If it exists: leave it exactly as the admin has it
-                            });
-                        }
-                    });
-                }
-            });
-
-            return merged;
-        }
-
-        // ==================== LOAD & AUTO-MERGE CATEGORIES ====================
-        (function initCategories() {
-            const savedVersion   = parseInt(localStorage.getItem('categoryVersion') || '0');
-            const savedRaw       = localStorage.getItem('categories');
-
-            if (!savedRaw) {
-                // First ever load — just use defaults as-is
-                localStorage.setItem('categories', JSON.stringify(DEFAULT_CATEGORIES));
-                localStorage.setItem('categoryVersion', String(CATEGORY_VERSION));
-                console.log('✅ Categories: first load, defaults applied.');
-            } else if (savedVersion < CATEGORY_VERSION) {
-                // New version detected — merge new defaults into saved data
-                const saved  = JSON.parse(savedRaw);
-                const merged = mergeCategories(saved, DEFAULT_CATEGORIES);
-                localStorage.setItem('categories', JSON.stringify(merged));
-                localStorage.setItem('categoryVersion', String(CATEGORY_VERSION));
-                console.log(`✅ Categories: merged from v${savedVersion} → v${CATEGORY_VERSION}. Total categories: ${merged.length}`);
-            } else {
-                console.log(`✅ Categories: already at v${CATEGORY_VERSION}, no merge needed.`);
-            }
-        })();
-
-        // Live working array — loaded from Firebase on init
-        let categories = [];
-
-        // ITI courses master data — seeded to Firebase on first run;
-const ITI_CATEGORIES = [{"id": "cat_engineering", "name": {"en": "Engineering & Mechanical"}, "icon": "🔧", "subcategories": [{"name": {"en": "Machining & Fabrication"}, "icon": "⚙️", "subsubcategories": [{"name": {"en": "Fitter"}, "icon": "🔧"}, {"name": {"en": "Machinist"}, "icon": "⚙️"}, {"name": {"en": "Machinist Grinder"}, "icon": "⚙️"}, {"name": {"en": "Turner"}, "icon": "🔩"}, {"name": {"en": "CNC Machining Technician"}, "icon": "🖥️"}, {"name": {"en": "Operator Advanced Machine Tool"}, "icon": "🏭"}, {"name": {"en": "Tool & Die Maker (Dies & Moulds)"}, "icon": "🔨"}, {"name": {"en": "Tool & Die Maker (Press Tools, Jigs & Fixtures)"}, "icon": "🔨"}, {"name": {"en": "Sheet Metal Worker"}, "icon": "🪛"}, {"name": {"en": "Foundryman"}, "icon": "🏭"}, {"name": {"en": "Mechanic Machine Tool Maintenance"}, "icon": "🔧"}]}, {"name": {"en": "Welding"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Welder"}, "icon": "🔥"}, {"name": {"en": "Welder (Fabrication & Fitting)"}, "icon": "🔥"}, {"name": {"en": "Welder (GMAW & GTAW)"}, "icon": "🔥"}, {"name": {"en": "Welder (Pipe)"}, "icon": "🔥"}, {"name": {"en": "Welder (Structural)"}, "icon": "🔥"}, {"name": {"en": "Welder (Welding & Inspection)"}, "icon": "🔥"}]}, {"name": {"en": "Industrial & Manufacturing"}, "icon": "🏭", "subsubcategories": [{"name": {"en": "Industrial Robotics & Digital Manufacturing Technician"}, "icon": "🤖"}, {"name": {"en": "Manufacturing Process Control and Automation Technician"}, "icon": "🏭"}, {"name": {"en": "Technician Mechatronics"}, "icon": "⚙️"}, {"name": {"en": "Plastic Processing Operator"}, "icon": "🏭"}, {"name": {"en": "Rubber Technician"}, "icon": "🏭"}, {"name": {"en": "Refractory Technician"}, "icon": "🏭"}, {"name": {"en": "Engineering Design Technician"}, "icon": "📐"}, {"name": {"en": "Additive Manufacturing Technician (3D Printing)"}, "icon": "🖨️"}, {"name": {"en": "Virtual Analysis and Designer"}, "icon": "💻"}]}, {"name": {"en": "Draughting & Surveying"}, "icon": "📐", "subsubcategories": [{"name": {"en": "Draughtsman (Civil)"}, "icon": "📐"}, {"name": {"en": "Draughtsman Mechanical"}, "icon": "📐"}, {"name": {"en": "Architectural Draughtsman"}, "icon": "🏛️"}, {"name": {"en": "Surveyor"}, "icon": "🗺️"}, {"name": {"en": "GEO - Informatics Assistant"}, "icon": "🗺️"}, {"name": {"en": "Civil Engineering Assistant"}, "icon": "🏗️"}]}]}, {"id": "cat_electrical", "name": {"en": "Electrical & Electronics"}, "icon": "⚡", "subcategories": [{"name": {"en": "Electrical"}, "icon": "⚡", "subsubcategories": [{"name": {"en": "Electrician"}, "icon": "⚡"}, {"name": {"en": "Electrician - Power Distribution"}, "icon": "🔌"}, {"name": {"en": "Wireman"}, "icon": "🔌"}, {"name": {"en": "Technician Power Electronics Systems"}, "icon": "⚡"}, {"name": {"en": "Lift and Escalator Mechanic"}, "icon": "🛗"}, {"name": {"en": "Pump Operator Cum Mechanic"}, "icon": "💧"}]}, {"name": {"en": "Electronics & Instruments"}, "icon": "📻", "subsubcategories": [{"name": {"en": "Electronics Mechanic"}, "icon": "📻"}, {"name": {"en": "Instrument Mechanic"}, "icon": "🎛️"}, {"name": {"en": "Instrument Mechanic (Chemical Plant)"}, "icon": "🎛️"}, {"name": {"en": "Technician Electronics System Design and Repair"}, "icon": "🔧"}, {"name": {"en": "Technician Medical Electronics"}, "icon": "🏥"}, {"name": {"en": "Mechanic Consumer Electronic Appliances"}, "icon": "📺"}, {"name": {"en": "Semiconductor Technician"}, "icon": "💡"}]}, {"name": {"en": "Renewable & Green Energy"}, "icon": "🌞", "subsubcategories": [{"name": {"en": "Solar Technician (Electrical)"}, "icon": "☀️"}, {"name": {"en": "Wind Plant Technician"}, "icon": "💨"}, {"name": {"en": "Small Hydro Power Plant Technician"}, "icon": "💧"}, {"name": {"en": "Green Hydrogen Production Technician"}, "icon": "🌿"}]}, {"name": {"en": "Telecom & Networking"}, "icon": "📡", "subsubcategories": [{"name": {"en": "5G Network Technician"}, "icon": "📶"}, {"name": {"en": "Fiber To Home Technician"}, "icon": "🌐"}, {"name": {"en": "Information & Communication Technology System Maintenance (ICTSM)"}, "icon": "📡"}, {"name": {"en": "Computer Hardware & Network Maintenance"}, "icon": "🖥️"}]}]}, {"id": "cat_it", "name": {"en": "IT & Computers"}, "icon": "💻", "subcategories": [{"name": {"en": "Programming & Software"}, "icon": "👨‍💻", "subsubcategories": [{"name": {"en": "Computer Operator and Programming Assistant (COPA)"}, "icon": "💻"}, {"name": {"en": "Information Technology"}, "icon": "🖥️"}, {"name": {"en": "Software Testing Assistant"}, "icon": "🧪"}, {"name": {"en": "Artificial Intelligence Programming Assistant"}, "icon": "🤖"}, {"name": {"en": "Database System Assistant"}, "icon": "🗄️"}, {"name": {"en": "Data Entry Operator"}, "icon": "⌨️"}, {"name": {"en": "Data Annotation Assistant"}, "icon": "🏷️"}, {"name": {"en": "Computer Aided Manufacturing (CAM) Programmer"}, "icon": "🖥️"}]}, {"name": {"en": "Cyber & Security"}, "icon": "🔐", "subsubcategories": [{"name": {"en": "Cyber Security Assistant"}, "icon": "🔐"}, {"name": {"en": "Smartphone Technician Cum App Tester"}, "icon": "📱"}]}, {"name": {"en": "Design & Media"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Desktop Publishing Operator"}, "icon": "🖨️"}, {"name": {"en": "Multimedia, Animation & Special Effects"}, "icon": "🎬"}, {"name": {"en": "Digital Photographer"}, "icon": "📷"}, {"name": {"en": "Photographer"}, "icon": "📸"}, {"name": {"en": "Video Cameraman"}, "icon": "🎥"}]}, {"name": {"en": "IoT & Smart Tech"}, "icon": "🌐", "subsubcategories": [{"name": {"en": "Industrial IoT Technician"}, "icon": "🏭"}, {"name": {"en": "IoT Technician (Smart Agriculture)"}, "icon": "🌾"}, {"name": {"en": "IoT Technician (Smart City)"}, "icon": "🏙️"}, {"name": {"en": "IoT Technician (Smart Healthcare)"}, "icon": "🏥"}]}, {"name": {"en": "Drones & Aviation"}, "icon": "🚁", "subsubcategories": [{"name": {"en": "Drone Pilot (Junior)"}, "icon": "🚁"}, {"name": {"en": "Drone Technician"}, "icon": "🔧"}, {"name": {"en": "Aeronautical Structure and Equipment Fitter"}, "icon": "✈️"}]}]}, {"id": "cat_automotive", "name": {"en": "Automotive & Transport"}, "icon": "🚗", "subcategories": [{"name": {"en": "Vehicle Mechanics"}, "icon": "🔧", "subsubcategories": [{"name": {"en": "Mechanic Motor Vehicle (MMV)"}, "icon": "🚗"}, {"name": {"en": "Mechanic Two and Three Wheeler"}, "icon": "🏍️"}, {"name": {"en": "Mechanic Diesel"}, "icon": "⛽"}, {"name": {"en": "Mechanic Tractor"}, "icon": "🚜"}, {"name": {"en": "Mechanic Electric Vehicle"}, "icon": "🔋"}, {"name": {"en": "Driver cum Mechanic (LMV)"}, "icon": "🚘"}, {"name": {"en": "Mechanic Agricultural Machinery"}, "icon": "🚜"}]}, {"name": {"en": "Auto Body & Paint"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Mechanic Auto Body Painting"}, "icon": "🎨"}, {"name": {"en": "Mechanic Auto Body Repair"}, "icon": "🔨"}, {"name": {"en": "Mechanic Auto Electrical and Electronics"}, "icon": "⚡"}]}, {"name": {"en": "Marine & Logistics"}, "icon": "⚓", "subsubcategories": [{"name": {"en": "Marine Engine Fitter"}, "icon": "⚓"}, {"name": {"en": "Marine Fitter"}, "icon": "⚓"}, {"name": {"en": "Vessel Navigator"}, "icon": "🚢"}, {"name": {"en": "In Plant Logistics Assistant"}, "icon": "📦"}, {"name": {"en": "Warehouse Technician"}, "icon": "🏭"}]}]}, {"id": "cat_construction", "name": {"en": "Construction & Home Services"}, "icon": "🏠", "subcategories": [{"name": {"en": "Plumbing & Sanitation"}, "icon": "🪠", "subsubcategories": [{"name": {"en": "Plumber"}, "icon": "🪠"}, {"name": {"en": "Health Sanitary Inspector"}, "icon": "🏥"}]}, {"name": {"en": "Painting & Finishing"}, "icon": "🖌️", "subsubcategories": [{"name": {"en": "Painter (General)"}, "icon": "🖌️"}, {"name": {"en": "Domestic Painter"}, "icon": "🖌️"}, {"name": {"en": "Industrial Painter"}, "icon": "🏭"}, {"name": {"en": "Electroplater"}, "icon": "✨"}]}, {"name": {"en": "Masonry & Civil"}, "icon": "🧱", "subsubcategories": [{"name": {"en": "Mason (Building Constructor)"}, "icon": "🧱"}, {"name": {"en": "Interior Design & Decoration"}, "icon": "🛋️"}, {"name": {"en": "Floriculture & Landscaping"}, "icon": "🌸"}]}, {"name": {"en": "Refrigeration & AC"}, "icon": "❄️", "subsubcategories": [{"name": {"en": "Refrigeration and Air Conditioning Technician"}, "icon": "❄️"}, {"name": {"en": "Central Air Condition Plant Mechanic"}, "icon": "🌬️"}]}, {"name": {"en": "Fire & Safety"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Fire Technology and Industrial Safety Management"}, "icon": "🚒"}, {"name": {"en": "Fireman"}, "icon": "👨‍🚒"}, {"name": {"en": "Health, Safety and Environment"}, "icon": "🦺"}]}]}, {"id": "cat_fashion", "name": {"en": "Fashion & Textiles"}, "icon": "👗", "subcategories": [{"name": {"en": "Garment Making"}, "icon": "✂️", "subsubcategories": [{"name": {"en": "Sewing Technology"}, "icon": "🧵"}, {"name": {"en": "Dress Making (DM)"}, "icon": "👗"}, {"name": {"en": "Fashion Design and Technology (FD&T)"}, "icon": "👠"}, {"name": {"en": "Cutting & Sewing (VI & OD)"}, "icon": "✂️"}, {"name": {"en": "Computer Aided Embroidery & Designing"}, "icon": "💻"}]}, {"name": {"en": "Weaving & Textiles"}, "icon": "🧶", "subsubcategories": [{"name": {"en": "Weaving Technician"}, "icon": "🧶"}, {"name": {"en": "Weaving Technician for Silk & Woolen Fabrics"}, "icon": "🧶"}, {"name": {"en": "Spinning Technician"}, "icon": "🌀"}, {"name": {"en": "Textile Mechatronics"}, "icon": "⚙️"}, {"name": {"en": "Textile Wet Processing Technician"}, "icon": "💧"}, {"name": {"en": "Carpet Weaving Artisan - Handloom"}, "icon": "🪢"}]}, {"name": {"en": "Embroidery & Artisan"}, "icon": "🪡", "subsubcategories": [{"name": {"en": "Hand Embroidery Artisan"}, "icon": "🪡"}, {"name": {"en": "Surface Ornamentation Techniques (Embroidery)"}, "icon": "🌸"}, {"name": {"en": "Traditional Phulkari Artisan"}, "icon": "🌺"}, {"name": {"en": "Shawl Weaving Artisan"}, "icon": "🧣"}]}, {"name": {"en": "Leather & Footwear"}, "icon": "👞", "subsubcategories": [{"name": {"en": "Footwear Maker"}, "icon": "👟"}, {"name": {"en": "Leather Goods Maker"}, "icon": "👜"}]}]}, {"id": "cat_hospitality", "name": {"en": "Hospitality & Food"}, "icon": "🍽️", "subcategories": [{"name": {"en": "Food Production"}, "icon": "👨‍🍳", "subsubcategories": [{"name": {"en": "Baker & Confectioner"}, "icon": "🥐"}, {"name": {"en": "Food Production (General)"}, "icon": "🍱"}, {"name": {"en": "Food and Beverage Service Assistant"}, "icon": "🍽️"}, {"name": {"en": "Food Beverage"}, "icon": "🥤"}, {"name": {"en": "Catering & Hospitality Assistant"}, "icon": "🍴"}, {"name": {"en": "Fruits and Vegetables Processing"}, "icon": "🥦"}]}, {"name": {"en": "Hotel & Front Office"}, "icon": "🏨", "subsubcategories": [{"name": {"en": "Front Office Assistant"}, "icon": "🏨"}, {"name": {"en": "Housekeeper"}, "icon": "🧹"}, {"name": {"en": "Hospital Housekeeping"}, "icon": "🏥"}]}, {"name": {"en": "Tourism & Travel"}, "icon": "✈️", "subsubcategories": [{"name": {"en": "Tourist Guide"}, "icon": "🗺️"}, {"name": {"en": "Travel & Tour Assistant"}, "icon": "✈️"}]}, {"name": {"en": "Beauty & Wellness"}, "icon": "💅", "subsubcategories": [{"name": {"en": "Cosmetology"}, "icon": "💄"}, {"name": {"en": "Hair & Skin Care (VI)"}, "icon": "💇"}, {"name": {"en": "Spa Therapy"}, "icon": "💆"}]}]}, {"id": "cat_agriculture", "name": {"en": "Agriculture & Environment"}, "icon": "🌾", "subcategories": [{"name": {"en": "Farming & Horticulture"}, "icon": "🌱", "subsubcategories": [{"name": {"en": "Horticulture"}, "icon": "🌸"}, {"name": {"en": "Nursery & Orchard Technician"}, "icon": "🌳"}, {"name": {"en": "Floriculture & Landscaping"}, "icon": "🌺"}, {"name": {"en": "Agro Processing"}, "icon": "🌾"}, {"name": {"en": "Soil Testing and Crop Technician"}, "icon": "🧪"}]}, {"name": {"en": "Dairy & Food Tech"}, "icon": "🥛", "subsubcategories": [{"name": {"en": "Dairying"}, "icon": "🐄"}, {"name": {"en": "Milk and Milk Product Technician"}, "icon": "🥛"}, {"name": {"en": "Honey Processing Technician"}, "icon": "🍯"}]}, {"name": {"en": "Mining & Stone"}, "icon": "⛏️", "subsubcategories": [{"name": {"en": "Stone Mining Machine Operator"}, "icon": "⛏️"}, {"name": {"en": "Stone Processing Machine Operator"}, "icon": "🪨"}, {"name": {"en": "Mechanic Mining Machinery"}, "icon": "🏗️"}]}]}, {"id": "cat_health", "name": {"en": "Health & Medical"}, "icon": "🏥", "subcategories": [{"name": {"en": "Medical Technicians"}, "icon": "🩺", "subsubcategories": [{"name": {"en": "Physiotherapy Technician"}, "icon": "🦽"}, {"name": {"en": "Radiology Technician"}, "icon": "🩻"}, {"name": {"en": "Dental Laboratory Equipment Technician"}, "icon": "🦷"}, {"name": {"en": "Technician Medical Electronics"}, "icon": "💉"}]}, {"name": {"en": "Care & Support"}, "icon": "🤝", "subsubcategories": [{"name": {"en": "Geriatric (Old Age) Care"}, "icon": "👴"}, {"name": {"en": "Early Childhood Educator"}, "icon": "👶"}]}, {"name": {"en": "Chemical & Lab"}, "icon": "🧪", "subsubcategories": [{"name": {"en": "Laboratory Assistant (Chemical Plant)"}, "icon": "🧪"}, {"name": {"en": "Attendant Operator (Chemical Plant)"}, "icon": "🏭"}, {"name": {"en": "Maintenance Mechanic (Chemical Plant)"}, "icon": "🔧"}]}]}, {"id": "cat_arts", "name": {"en": "Arts, Crafts & Media"}, "icon": "🎨", "subcategories": [{"name": {"en": "Visual Arts & Crafts"}, "icon": "🖼️", "subsubcategories": [{"name": {"en": "Basohli Painting Artist"}, "icon": "🖼️"}, {"name": {"en": "Papier Mache Artisan"}, "icon": "🎭"}, {"name": {"en": "Wood Carving Artisan"}, "icon": "🪵"}, {"name": {"en": "Bamboo Works"}, "icon": "🎋"}]}, {"name": {"en": "Wood & Furniture"}, "icon": "🪵", "subsubcategories": [{"name": {"en": "Wood Work Technician"}, "icon": "🪵"}, {"name": {"en": "Mechanic Lens/Prism Grinding"}, "icon": "🔬"}]}, {"name": {"en": "Media & Photography"}, "icon": "📸", "subsubcategories": [{"name": {"en": "Photographer"}, "icon": "📸"}, {"name": {"en": "Digital Photographer"}, "icon": "📷"}, {"name": {"en": "Video Cameraman"}, "icon": "🎥"}, {"name": {"en": "Multimedia, Animation & Special Effects"}, "icon": "🎬"}]}]}, {"id": "cat_business", "name": {"en": "Business & Office"}, "icon": "💼", "subcategories": [{"name": {"en": "Office Administration"}, "icon": "🗂️", "subsubcategories": [{"name": {"en": "Secretarial Practice (English)"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (English)"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (Hindi)"}, "icon": "📝"}, {"name": {"en": "Desktop Publishing Operator"}, "icon": "🖨️"}, {"name": {"en": "Data Entry Operator"}, "icon": "⌨️"}]}, {"name": {"en": "Finance & HR"}, "icon": "💰", "subsubcategories": [{"name": {"en": "Finance Executive"}, "icon": "💰"}, {"name": {"en": "Human Resource Executive"}, "icon": "👥"}, {"name": {"en": "Marketing Executive"}, "icon": "📊"}]}]}];
-
-window.showCurrent = async function() {
-  const log = document.getElementById('log');
-  log.textContent = '⏳ Loading...\n';
-  const snap = await get(ref(db, 'categories'));
-  if (!snap.exists()) { log.textContent += '⚠️ Nothing in Firebase!'; return; }
-  const cats = snap.val();
-  log.textContent += 'Found ' + cats.length + ' categories currently:\n\n';
-  cats.forEach(c => log.textContent += '  📁 ' + (c.name?.en || c.name) + '\n');
-};
-
-window.restoreAndMerge = async function() {
-  const log = document.getElementById('log');
-  log.textContent = '⏳ Merging all categories...\n\n';
-  try {
-    // Start with all 9 original categories
-    let merged = [...OLD_CATEGORIES];
-    log.textContent += '✅ Original categories (' + OLD_CATEGORIES.length + '):\n';
-    OLD_CATEGORIES.forEach(c => log.textContent += '  📁 ' + (c.name?.en || c.name) + '\n');
-
-    // Add all 11 ITI categories
-    log.textContent += '\n✅ Adding ITI categories (' + ITI_CATEGORIES.length + '):\n';
-    ITI_CATEGORIES.forEach(newCat => {
-      const exists = merged.find(e => e.id === newCat.id);
-      if (!exists) {
-        merged.push(newCat);
-        log.textContent += '  📁 ' + newCat.name.en + '\n';
-      }
+function showCurrent() {
+  document.getElementById('log').textContent = '';
+  addLog('⏳ Loading from Firebase...\n');
+  db.ref('categories').get().then(function(snap) {
+    if (!snap.exists()) {
+      addLog('⚠️ No categories in Firebase!');
+      return;
+    }
+    var cats = snap.val();
+    addLog('Found ' + cats.length + ' categories:\n');
+    cats.forEach(function(c, i) {
+      var name = (c.name && c.name.en) ? c.name.en : (c.name || 'Unknown');
+      var subs = (c.subcategories || []).length;
+      addLog((i+1) + '. 📁 ' + name + ' (' + subs + ' subs)');
     });
+  }).catch(function(e) { addLog('❌ ' + e.message); });
+}
 
-    log.textContent += '\n⏳ Saving ' + merged.length + ' categories to Firebase...\n';
-    await set(ref(db, 'categories'), merged);
-    log.textContent += '\n🎉 DONE! ' + merged.length + ' categories now live for ALL users!';
-    log.textContent += '\n\nClose this page and check your app ✅';
-  } catch(e) {
-    log.textContent += '\n❌ ERROR: ' + e.message;
-  }
-};
+function restoreAndMerge() {
+  document.getElementById('log').textContent = '';
+  addLog('⏳ Merging categories...\n');
+  
+  var merged = OLD_CATEGORIES.slice();
+  addLog('✅ Old categories: ' + OLD_CATEGORIES.length);
+  
+  var added = 0;
+  ITI_CATEGORIES.forEach(function(newCat) {
+    var exists = merged.find(function(e) { return e.id === newCat.id; });
+    if (!exists) { merged.push(newCat); added++; }
+  });
+  addLog('✅ ITI categories added: ' + added);
+  addLog('📦 Total: ' + merged.length + '\n');
+  addLog('⏳ Saving to Firebase...');
+  
+  db.ref('categories').set(merged).then(function() {
+    addLog('\n🎉 SUCCESS! ' + merged.length + ' categories saved!');
+    addLog('\n📁 All categories:');
+    merged.forEach(function(c) {
+      addLog('  • ' + ((c.name && c.name.en) ? c.name.en : c.name));
+    });
+    addLog('\n✅ Refresh your app now!');
+    document.getElementById('status').textContent = '🎉 ' + merged.length + ' categories live!';
+    document.getElementById('status').style.color = '#059669';
+  }).catch(function(e) {
+    addLog('\n❌ Save failed: ' + e.message);
+  });
+}
 </script>
 </body>
 </html>
