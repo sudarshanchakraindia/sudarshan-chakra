@@ -933,27 +933,50 @@
                     <button onclick="adminLogout()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">Logout</button>
                 </div>
                 
-                <!-- Stats Cards -->
-                <div class="grid md:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
-                        <div class="text-4xl font-bold" id="totalProviders">0</div>
-                        <div class="mt-2 opacity-90">Total Providers</div>
+                <!-- Stats Cards Row 1 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalProviders">0</div>
+                        <div class="text-xs mt-1 opacity-90">👷 Total Providers</div>
+                        <div class="text-xs mt-1 opacity-75"><span id="activeProviders">0</span> active · <span id="pausedProviders">0</span> paused</div>
                     </div>
-                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
-                        <div class="text-4xl font-bold" id="totalSeekers">0</div>
-                        <div class="mt-2 opacity-90">Total Seekers</div>
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalSeekers">0</div>
+                        <div class="text-xs mt-1 opacity-90">🙋 Total Seekers</div>
+                        <div class="text-xs mt-1 opacity-75"><span id="activeSeekers">0</span> active · <span id="pausedSeekers">0</span> paused</div>
                     </div>
-                    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
-                        <div class="text-4xl font-bold" id="totalCategories">0</div>
-                        <div class="mt-2 opacity-90">Total Categories</div>
+                    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalCategories">0</div>
+                        <div class="text-xs mt-1 opacity-90">📋 Categories</div>
+                        <div class="text-xs mt-1 opacity-75"><span id="totalSubcategories">0</span> subcategories</div>
                     </div>
-                    <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
-                        <div class="text-4xl font-bold" id="totalRestricted">0</div>
-                        <div class="mt-2 opacity-90">Restricted Users</div>
+                    <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalServices">0</div>
+                        <div class="text-xs mt-1 opacity-90">🛠️ Total Services</div>
+                        <div class="text-xs mt-1 opacity-75"><span id="pausedServices">0</span> paused</div>
                     </div>
-                    <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-xl shadow-lg">
-                        <div class="text-4xl font-bold" id="totalReviews">0</div>
-                        <div class="mt-2 opacity-90">⭐ Total Reviews</div>
+                </div>
+                <!-- Stats Cards Row 2 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalReviews">0</div>
+                        <div class="text-xs mt-1 opacity-90">⭐ Total Reviews</div>
+                        <div class="text-xs mt-1 opacity-75">Avg: <span id="avgRating">0</span> stars</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalRestricted">0</div>
+                        <div class="text-xs mt-1 opacity-90">🚫 Restricted</div>
+                        <div class="text-xs mt-1 opacity-75">Flagged users</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalPayments">0</div>
+                        <div class="text-xs mt-1 opacity-90">💳 Payments</div>
+                        <div class="text-xs mt-1 opacity-75">₹<span id="totalRevenue">0</span> total</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-pink-500 to-pink-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalReports">0</div>
+                        <div class="text-xs mt-1 opacity-90">🚨 Reports</div>
+                        <div class="text-xs mt-1 opacity-75">Pending review</div>
                     </div>
                 </div>
                 
@@ -2731,21 +2754,22 @@
         // Live working array — loaded from Firebase on init
         let categories = [];
 
+        // ITI courses master data — seeded to Firebase on first run
+        const ITI_CATEGORIES = [{"id": "cat_engineering", "name": {"en": "Engineering & Mechanical"}, "icon": "🔧", "subcategories": [{"name": {"en": "Machining & Fabrication"}, "icon": "⚙️", "subsubcategories": [{"name": {"en": "Fitter"}, "icon": "🔧"}, {"name": {"en": "Machinist"}, "icon": "⚙️"}, {"name": {"en": "Machinist Grinder"}, "icon": "⚙️"}, {"name": {"en": "Turner"}, "icon": "🔩"}, {"name": {"en": "CNC Machining Technician"}, "icon": "🖥️"}, {"name": {"en": "Operator Advanced Machine Tool"}, "icon": "🏭"}, {"name": {"en": "Tool & Die Maker (Dies & Moulds)"}, "icon": "🔨"}, {"name": {"en": "Tool & Die Maker (Press Tools, Jigs & Fixtures)"}, "icon": "🔨"}, {"name": {"en": "Sheet Metal Worker"}, "icon": "🪛"}, {"name": {"en": "Foundryman"}, "icon": "🏭"}, {"name": {"en": "Mechanic Machine Tool Maintenance"}, "icon": "🔧"}]}, {"name": {"en": "Welding"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Welder"}, "icon": "🔥"}, {"name": {"en": "Welder (Fabrication & Fitting)"}, "icon": "🔥"}, {"name": {"en": "Welder (GMAW & GTAW)"}, "icon": "🔥"}, {"name": {"en": "Welder (Pipe)"}, "icon": "🔥"}, {"name": {"en": "Welder (Structural)"}, "icon": "🔥"}, {"name": {"en": "Welder (Welding & Inspection)"}, "icon": "🔥"}]}, {"name": {"en": "Industrial & Manufacturing"}, "icon": "🏭", "subsubcategories": [{"name": {"en": "Industrial Robotics & Digital Manufacturing Technician"}, "icon": "🤖"}, {"name": {"en": "Manufacturing Process Control and Automation Technician"}, "icon": "🏭"}, {"name": {"en": "Technician Mechatronics"}, "icon": "⚙️"}, {"name": {"en": "Plastic Processing Operator"}, "icon": "🏭"}, {"name": {"en": "Rubber Technician"}, "icon": "🏭"}, {"name": {"en": "Refractory Technician"}, "icon": "🏭"}, {"name": {"en": "Engineering Design Technician"}, "icon": "📐"}, {"name": {"en": "Additive Manufacturing Technician (3D Printing)"}, "icon": "🖨️"}, {"name": {"en": "Virtual Analysis and Designer"}, "icon": "💻"}]}, {"name": {"en": "Draughting & Surveying"}, "icon": "📐", "subsubcategories": [{"name": {"en": "Draughtsman (Civil)"}, "icon": "📐"}, {"name": {"en": "Draughtsman Mechanical"}, "icon": "📐"}, {"name": {"en": "Architectural Draughtsman"}, "icon": "🏛️"}, {"name": {"en": "Surveyor"}, "icon": "🗺️"}, {"name": {"en": "GEO - Informatics Assistant"}, "icon": "🗺️"}, {"name": {"en": "Civil Engineering Assistant"}, "icon": "🏗️"}]}]}, {"id": "cat_electrical", "name": {"en": "Electrical & Electronics"}, "icon": "⚡", "subcategories": [{"name": {"en": "Electrical"}, "icon": "⚡", "subsubcategories": [{"name": {"en": "Electrician"}, "icon": "⚡"}, {"name": {"en": "Electrician - Power Distribution"}, "icon": "🔌"}, {"name": {"en": "Wireman"}, "icon": "🔌"}, {"name": {"en": "Technician Power Electronics Systems"}, "icon": "⚡"}, {"name": {"en": "Lift and Escalator Mechanic"}, "icon": "🛗"}, {"name": {"en": "Pump Operator Cum Mechanic"}, "icon": "💧"}]}, {"name": {"en": "Electronics & Instruments"}, "icon": "📻", "subsubcategories": [{"name": {"en": "Electronics Mechanic"}, "icon": "📻"}, {"name": {"en": "Instrument Mechanic"}, "icon": "🎛️"}, {"name": {"en": "Instrument Mechanic (Chemical Plant)"}, "icon": "🎛️"}, {"name": {"en": "Technician Electronics System Design and Repair"}, "icon": "🔧"}, {"name": {"en": "Technician Medical Electronics"}, "icon": "🏥"}, {"name": {"en": "Mechanic Consumer Electronic Appliances"}, "icon": "📺"}, {"name": {"en": "Semiconductor Technician"}, "icon": "💡"}]}, {"name": {"en": "Renewable & Green Energy"}, "icon": "🌞", "subsubcategories": [{"name": {"en": "Solar Technician (Electrical)"}, "icon": "☀️"}, {"name": {"en": "Wind Plant Technician"}, "icon": "💨"}, {"name": {"en": "Small Hydro Power Plant Technician"}, "icon": "💧"}, {"name": {"en": "Green Hydrogen Production Technician"}, "icon": "🌿"}]}, {"name": {"en": "Telecom & Networking"}, "icon": "📡", "subsubcategories": [{"name": {"en": "5G Network Technician"}, "icon": "📶"}, {"name": {"en": "Fiber To Home Technician"}, "icon": "🌐"}, {"name": {"en": "Information & Communication Technology System Maintenance (ICTSM)"}, "icon": "📡"}, {"name": {"en": "Computer Hardware & Network Maintenance"}, "icon": "🖥️"}]}]}, {"id": "cat_it", "name": {"en": "IT & Computers"}, "icon": "💻", "subcategories": [{"name": {"en": "Programming & Software"}, "icon": "👨‍💻", "subsubcategories": [{"name": {"en": "Computer Operator and Programming Assistant (COPA)"}, "icon": "💻"}, {"name": {"en": "Information Technology"}, "icon": "🖥️"}, {"name": {"en": "Software Testing Assistant"}, "icon": "🧪"}, {"name": {"en": "Artificial Intelligence Programming Assistant"}, "icon": "🤖"}, {"name": {"en": "Database System Assistant"}, "icon": "🗄️"}, {"name": {"en": "Data Entry Operator"}, "icon": "⌨️"}, {"name": {"en": "Data Annotation Assistant"}, "icon": "🏷️"}, {"name": {"en": "Computer Aided Manufacturing (CAM) Programmer"}, "icon": "🖥️"}]}, {"name": {"en": "Cyber & Security"}, "icon": "🔐", "subsubcategories": [{"name": {"en": "Cyber Security Assistant"}, "icon": "🔐"}, {"name": {"en": "Smartphone Technician Cum App Tester"}, "icon": "📱"}]}, {"name": {"en": "Design & Media"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Desktop Publishing Operator"}, "icon": "🖨️"}, {"name": {"en": "Multimedia, Animation & Special Effects"}, "icon": "🎬"}, {"name": {"en": "Digital Photographer"}, "icon": "📷"}, {"name": {"en": "Photographer"}, "icon": "📸"}, {"name": {"en": "Video Cameraman"}, "icon": "🎥"}]}, {"name": {"en": "IoT & Smart Tech"}, "icon": "🌐", "subsubcategories": [{"name": {"en": "Industrial IoT Technician"}, "icon": "🏭"}, {"name": {"en": "IoT Technician (Smart Agriculture)"}, "icon": "🌾"}, {"name": {"en": "IoT Technician (Smart City)"}, "icon": "🏙️"}, {"name": {"en": "IoT Technician (Smart Healthcare)"}, "icon": "🏥"}]}, {"name": {"en": "Drones & Aviation"}, "icon": "🚁", "subsubcategories": [{"name": {"en": "Drone Pilot (Junior)"}, "icon": "🚁"}, {"name": {"en": "Drone Technician"}, "icon": "🔧"}, {"name": {"en": "Aeronautical Structure and Equipment Fitter"}, "icon": "✈️"}]}]}, {"id": "cat_automotive", "name": {"en": "Automotive & Transport"}, "icon": "🚗", "subcategories": [{"name": {"en": "Vehicle Mechanics"}, "icon": "🔧", "subsubcategories": [{"name": {"en": "Mechanic Motor Vehicle (MMV)"}, "icon": "🚗"}, {"name": {"en": "Mechanic Two and Three Wheeler"}, "icon": "🏍️"}, {"name": {"en": "Mechanic Diesel"}, "icon": "⛽"}, {"name": {"en": "Mechanic Tractor"}, "icon": "🚜"}, {"name": {"en": "Mechanic Electric Vehicle"}, "icon": "🔋"}, {"name": {"en": "Driver cum Mechanic (LMV)"}, "icon": "🚘"}, {"name": {"en": "Mechanic Agricultural Machinery"}, "icon": "🚜"}]}, {"name": {"en": "Auto Body & Paint"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Mechanic Auto Body Painting"}, "icon": "🎨"}, {"name": {"en": "Mechanic Auto Body Repair"}, "icon": "🔨"}, {"name": {"en": "Mechanic Auto Electrical and Electronics"}, "icon": "⚡"}]}, {"name": {"en": "Marine & Logistics"}, "icon": "⚓", "subsubcategories": [{"name": {"en": "Marine Engine Fitter"}, "icon": "⚓"}, {"name": {"en": "Marine Fitter"}, "icon": "⚓"}, {"name": {"en": "Vessel Navigator"}, "icon": "🚢"}, {"name": {"en": "In Plant Logistics Assistant"}, "icon": "📦"}, {"name": {"en": "Warehouse Technician"}, "icon": "🏭"}]}]}, {"id": "cat_construction", "name": {"en": "Construction & Home Services"}, "icon": "🏠", "subcategories": [{"name": {"en": "Plumbing & Sanitation"}, "icon": "🪠", "subsubcategories": [{"name": {"en": "Plumber"}, "icon": "🪠"}, {"name": {"en": "Health Sanitary Inspector"}, "icon": "🏥"}]}, {"name": {"en": "Painting & Finishing"}, "icon": "🖌️", "subsubcategories": [{"name": {"en": "Painter (General)"}, "icon": "🖌️"}, {"name": {"en": "Domestic Painter"}, "icon": "🖌️"}, {"name": {"en": "Industrial Painter"}, "icon": "🏭"}, {"name": {"en": "Electroplater"}, "icon": "✨"}]}, {"name": {"en": "Masonry & Civil"}, "icon": "🧱", "subsubcategories": [{"name": {"en": "Mason (Building Constructor)"}, "icon": "🧱"}, {"name": {"en": "Interior Design & Decoration"}, "icon": "🛋️"}, {"name": {"en": "Floriculture & Landscaping"}, "icon": "🌸"}]}, {"name": {"en": "Refrigeration & AC"}, "icon": "❄️", "subsubcategories": [{"name": {"en": "Refrigeration and Air Conditioning Technician"}, "icon": "❄️"}, {"name": {"en": "Central Air Condition Plant Mechanic"}, "icon": "🌬️"}]}, {"name": {"en": "Fire & Safety"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Fire Technology and Industrial Safety Management"}, "icon": "🚒"}, {"name": {"en": "Fireman"}, "icon": "👨‍🚒"}, {"name": {"en": "Health, Safety and Environment"}, "icon": "🦺"}]}]}, {"id": "cat_fashion", "name": {"en": "Fashion & Textiles"}, "icon": "👗", "subcategories": [{"name": {"en": "Garment Making"}, "icon": "✂️", "subsubcategories": [{"name": {"en": "Sewing Technology"}, "icon": "🧵"}, {"name": {"en": "Dress Making (DM)"}, "icon": "👗"}, {"name": {"en": "Fashion Design and Technology (FD&T)"}, "icon": "👠"}, {"name": {"en": "Cutting & Sewing (VI & OD)"}, "icon": "✂️"}, {"name": {"en": "Computer Aided Embroidery & Designing"}, "icon": "💻"}]}, {"name": {"en": "Weaving & Textiles"}, "icon": "🧶", "subsubcategories": [{"name": {"en": "Weaving Technician"}, "icon": "🧶"}, {"name": {"en": "Weaving Technician for Silk & Woolen Fabrics"}, "icon": "🧶"}, {"name": {"en": "Spinning Technician"}, "icon": "🌀"}, {"name": {"en": "Textile Mechatronics"}, "icon": "⚙️"}, {"name": {"en": "Textile Wet Processing Technician"}, "icon": "💧"}, {"name": {"en": "Carpet Weaving Artisan - Handloom"}, "icon": "🪢"}]}, {"name": {"en": "Embroidery & Artisan"}, "icon": "🪡", "subsubcategories": [{"name": {"en": "Hand Embroidery Artisan"}, "icon": "🪡"}, {"name": {"en": "Surface Ornamentation Techniques (Embroidery)"}, "icon": "🌸"}, {"name": {"en": "Traditional Phulkari Artisan"}, "icon": "🌺"}, {"name": {"en": "Shawl Weaving Artisan"}, "icon": "🧣"}]}, {"name": {"en": "Leather & Footwear"}, "icon": "👞", "subsubcategories": [{"name": {"en": "Footwear Maker"}, "icon": "👟"}, {"name": {"en": "Leather Goods Maker"}, "icon": "👜"}]}]}, {"id": "cat_hospitality", "name": {"en": "Hospitality & Food"}, "icon": "🍽️", "subcategories": [{"name": {"en": "Food Production"}, "icon": "👨‍🍳", "subsubcategories": [{"name": {"en": "Baker & Confectioner"}, "icon": "🥐"}, {"name": {"en": "Food Production (General)"}, "icon": "🍱"}, {"name": {"en": "Food and Beverage Service Assistant"}, "icon": "🍽️"}, {"name": {"en": "Food Beverage"}, "icon": "🥤"}, {"name": {"en": "Catering & Hospitality Assistant"}, "icon": "🍴"}, {"name": {"en": "Fruits and Vegetables Processing"}, "icon": "🥦"}]}, {"name": {"en": "Hotel & Front Office"}, "icon": "🏨", "subsubcategories": [{"name": {"en": "Front Office Assistant"}, "icon": "🏨"}, {"name": {"en": "Housekeeper"}, "icon": "🧹"}, {"name": {"en": "Hospital Housekeeping"}, "icon": "🏥"}]}, {"name": {"en": "Tourism & Travel"}, "icon": "✈️", "subsubcategories": [{"name": {"en": "Tourist Guide"}, "icon": "🗺️"}, {"name": {"en": "Travel & Tour Assistant"}, "icon": "✈️"}]}, {"name": {"en": "Beauty & Wellness"}, "icon": "💅", "subsubcategories": [{"name": {"en": "Cosmetology"}, "icon": "💄"}, {"name": {"en": "Hair & Skin Care (VI)"}, "icon": "💇"}, {"name": {"en": "Spa Therapy"}, "icon": "💆"}]}]}, {"id": "cat_agriculture", "name": {"en": "Agriculture & Environment"}, "icon": "🌾", "subcategories": [{"name": {"en": "Farming & Horticulture"}, "icon": "🌱", "subsubcategories": [{"name": {"en": "Horticulture"}, "icon": "🌸"}, {"name": {"en": "Nursery & Orchard Technician"}, "icon": "🌳"}, {"name": {"en": "Floriculture & Landscaping"}, "icon": "🌺"}, {"name": {"en": "Agro Processing"}, "icon": "🌾"}, {"name": {"en": "Soil Testing and Crop Technician"}, "icon": "🧪"}]}, {"name": {"en": "Dairy & Food Tech"}, "icon": "🥛", "subsubcategories": [{"name": {"en": "Dairying"}, "icon": "🐄"}, {"name": {"en": "Milk and Milk Product Technician"}, "icon": "🥛"}, {"name": {"en": "Honey Processing Technician"}, "icon": "🍯"}]}, {"name": {"en": "Mining & Stone"}, "icon": "⛏️", "subsubcategories": [{"name": {"en": "Stone Mining Machine Operator"}, "icon": "⛏️"}, {"name": {"en": "Stone Processing Machine Operator"}, "icon": "🪨"}, {"name": {"en": "Mechanic Mining Machinery"}, "icon": "🏗️"}]}]}, {"id": "cat_health", "name": {"en": "Health & Medical"}, "icon": "🏥", "subcategories": [{"name": {"en": "Medical Technicians"}, "icon": "🩺", "subsubcategories": [{"name": {"en": "Physiotherapy Technician"}, "icon": "🦽"}, {"name": {"en": "Radiology Technician"}, "icon": "🩻"}, {"name": {"en": "Dental Laboratory Equipment Technician"}, "icon": "🦷"}, {"name": {"en": "Technician Medical Electronics"}, "icon": "💉"}]}, {"name": {"en": "Care & Support"}, "icon": "🤝", "subsubcategories": [{"name": {"en": "Geriatric (Old Age) Care"}, "icon": "👴"}, {"name": {"en": "Early Childhood Educator"}, "icon": "👶"}]}, {"name": {"en": "Chemical & Lab"}, "icon": "🧪", "subsubcategories": [{"name": {"en": "Laboratory Assistant (Chemical Plant)"}, "icon": "🧪"}, {"name": {"en": "Attendant Operator (Chemical Plant)"}, "icon": "🏭"}, {"name": {"en": "Maintenance Mechanic (Chemical Plant)"}, "icon": "🔧"}]}]}, {"id": "cat_arts", "name": {"en": "Arts, Crafts & Media"}, "icon": "🎨", "subcategories": [{"name": {"en": "Visual Arts & Crafts"}, "icon": "🖼️", "subsubcategories": [{"name": {"en": "Basohli Painting Artist"}, "icon": "🖼️"}, {"name": {"en": "Papier Mache Artisan"}, "icon": "🎭"}, {"name": {"en": "Wood Carving Artisan"}, "icon": "🪵"}, {"name": {"en": "Bamboo Works"}, "icon": "🎋"}]}, {"name": {"en": "Wood & Furniture"}, "icon": "🪵", "subsubcategories": [{"name": {"en": "Wood Work Technician"}, "icon": "🪵"}, {"name": {"en": "Mechanic Lens/Prism Grinding"}, "icon": "🔬"}]}, {"name": {"en": "Media & Photography"}, "icon": "📸", "subsubcategories": [{"name": {"en": "Photographer"}, "icon": "📸"}, {"name": {"en": "Digital Photographer"}, "icon": "📷"}, {"name": {"en": "Video Cameraman"}, "icon": "🎥"}, {"name": {"en": "Multimedia, Animation & Special Effects"}, "icon": "🎬"}]}]}, {"id": "cat_business", "name": {"en": "Business & Office"}, "icon": "💼", "subcategories": [{"name": {"en": "Office Administration"}, "icon": "🗂️", "subsubcategories": [{"name": {"en": "Secretarial Practice (English)"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (English)"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (Hindi)"}, "icon": "📝"}, {"name": {"en": "Desktop Publishing Operator"}, "icon": "🖨️"}, {"name": {"en": "Data Entry Operator"}, "icon": "⌨️"}]}, {"name": {"en": "Finance & HR"}, "icon": "💰", "subsubcategories": [{"name": {"en": "Finance Executive"}, "icon": "💰"}, {"name": {"en": "Human Resource Executive"}, "icon": "👥"}, {"name": {"en": "Marketing Executive"}, "icon": "📊"}]}]}];
+
         // Load categories from Firebase (visible to ALL users)
         async function loadCategoriesFromFirebase() {
             try {
                 const snap = await _firebase.get(_firebase.ref(_firebase.db, 'categories'));
-                if (snap.exists() && Array.isArray(snap.val()) && snap.val().length > 0) {
-                    categories = snap.val();
+                const existing = snap.exists() ? snap.val() : null;
+                // Force reseed if empty, old format, or less than 5 categories
+                if (!existing || !Array.isArray(existing) || existing.length < 5) {
+                    categories = ITI_CATEGORIES;
+                    await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
+                    console.log('✅ ITI categories force-seeded to Firebase:', categories.length);
                 } else {
-                    // Try localStorage fallback for first-time migration
-                    const local = JSON.parse(localStorage.getItem('categories'));
-                    if (local && local.length > 0) {
-                        categories = local;
-                        // Migrate to Firebase
-                        await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
-                        localStorage.removeItem('categories');
-                    }
+                    categories = existing;
+                    console.log('✅ Categories loaded from Firebase:', categories.length);
                 }
                 // Refresh all UI that depends on categories
                 updateProviderCategorySelects();
@@ -3856,6 +3880,7 @@
 
             if (subcat && subcat.subsubcategories && subcat.subsubcategories.length > 0) {
                 chipsContainer.innerHTML = subcat.subsubcategories.map((subsub, idx) => {
+                    if (subsub.paused) return ''; // Hide paused services
                     const name = getTranslated(subsub.name);
                     const icon = subsub.icon ? (subsub.icon.startsWith('<') ? '' : subsub.icon + ' ') : '';
                     return `<label class="service-chip" onclick="toggleChip(this)">
@@ -4063,15 +4088,72 @@
         }
         
         function updateAdminStats() {
-            const restrictedCount = providers.filter(p => p.status === 'restricted').length + 
-                                   seekers.filter(s => s.status === 'restricted').length;
-            
-            const totalReviews = providers.reduce((sum, p) => sum + (p.reviews ? Object.keys(p.reviews).length : 0), 0);
-            document.getElementById('totalProviders').textContent = providers.length;
-            document.getElementById('totalSeekers').textContent = seekers.length;
-            document.getElementById('totalCategories').textContent = categories.length;
-            document.getElementById('totalRestricted').textContent = restrictedCount;
-            if (document.getElementById('totalReviews')) document.getElementById('totalReviews').textContent = totalReviews;
+            // Providers
+            const activeProvs = providers.filter(p => !p.status || p.status === 'active').length;
+            const pausedProvs = providers.filter(p => p.status === 'paused').length;
+            const restrictedProvs = providers.filter(p => p.status === 'restricted').length;
+
+            // Seekers
+            const activeSeeks = seekers.filter(s => !s.status || s.status === 'active').length;
+            const pausedSeeks = seekers.filter(s => s.status === 'paused').length;
+            const restrictedSeeks = seekers.filter(s => s.status === 'restricted').length;
+
+            // Categories / subcategories / services
+            let totalSubs = 0, totalSvcs = 0, pausedSvcs = 0;
+            categories.forEach(cat => {
+                totalSubs += (cat.subcategories || []).length;
+                (cat.subcategories || []).forEach(sub => {
+                    (sub.subsubcategories || []).forEach(svc => {
+                        totalSvcs++;
+                        if (svc.paused) pausedSvcs++;
+                    });
+                });
+            });
+
+            // Reviews
+            let totalRevCount = 0, ratingSum = 0;
+            providers.forEach(p => {
+                if (p.reviews) {
+                    Object.values(p.reviews).forEach(r => {
+                        totalRevCount++;
+                        ratingSum += (r.rating || 0);
+                    });
+                }
+            });
+            const avgRating = totalRevCount > 0 ? (ratingSum / totalRevCount).toFixed(1) : '0';
+
+            // Reports
+            const totalRpts = providers.filter(p => p.reports && Object.keys(p.reports).length > 0).length +
+                              seekers.filter(s => s.reports && Object.keys(s.reports).length > 0).length;
+
+            // Set all values
+            const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+            set('totalProviders', providers.length);
+            set('activeProviders', activeProvs);
+            set('pausedProviders', pausedProvs);
+            set('totalSeekers', seekers.length);
+            set('activeSeekers', activeSeeks);
+            set('pausedSeekers', pausedSeeks);
+            set('totalCategories', categories.length);
+            set('totalSubcategories', totalSubs);
+            set('totalServices', totalSvcs);
+            set('pausedServices', pausedSvcs);
+            set('totalReviews', totalRevCount);
+            set('avgRating', avgRating);
+            set('totalRestricted', restrictedProvs + restrictedSeeks);
+            set('totalReports', totalRpts);
+
+            // Payments from Firebase
+            if (_firebase && _firebase.db) {
+                _firebase.get(_firebase.ref(_firebase.db, 'payments')).then(snap => {
+                    if (snap.exists()) {
+                        const payments = Object.values(snap.val() || {});
+                        set('totalPayments', payments.length);
+                        const revenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                        set('totalRevenue', revenue.toLocaleString('en-IN'));
+                    }
+                }).catch(() => {});
+            }
         }
         
         // ==================== PROVIDER MANAGEMENT ====================
@@ -4319,7 +4401,7 @@
                                         ${renderIcon(sub.icon, 'text-2xl', 'w-8 h-8')}
                                         <div>
                                             <h4 class="font-bold text-gray-800">${sub.name.en || sub.name}</h4>
-                                            <p class="text-xs text-gray-500">${(sub.subsubcategories || []).length} services</p>
+                                            <p class="text-xs text-gray-500">${(sub.subsubcategories || []).length} services · ${(sub.subsubcategories || []).filter(s=>s.paused).length > 0 ? '<span class="text-yellow-600">'+((sub.subsubcategories||[]).filter(s=>s.paused).length)+' paused</span>' : 'all active'}</p>
                                         </div>
                                     </div>
                                     <div class="flex gap-2">
@@ -4331,12 +4413,14 @@
                                 
                                 <div class="ml-6 space-y-1">
                                     ${(sub.subsubcategories || []).map((service, serviceIdx) => `
-                                        <div class="flex items-center justify-between bg-white p-2 rounded hover:bg-gray-50">
+                                        <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 ${service.paused ? 'bg-yellow-50 opacity-60' : 'bg-white'}">
                                             <div class="flex items-center gap-2">
                                                 ${renderIcon(service.icon, 'text-lg', 'w-6 h-6')}
-                                                <span class="text-sm text-gray-700">${service.name.en || service.name}</span>
+                                                <span class="text-sm ${service.paused ? 'text-gray-400 line-through' : 'text-gray-700'}">${service.name.en || service.name}</span>
                                             </div>
-                                            <div class="flex gap-1">
+                                            <div class="flex gap-1 items-center">
+                                                ${service.paused ? '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">⏸ Paused</span>' : ''}
+                                                <button onclick="togglePauseService(${catIdx}, ${subIdx}, ${serviceIdx})" class="px-2 py-1 rounded text-xs font-semibold ${service.paused ? 'bg-green-400 hover:bg-green-500 text-white' : 'bg-yellow-400 hover:bg-yellow-500 text-white'}">${service.paused ? '▶️ Resume' : '⏸️ Pause'}</button>
                                                 <button onclick="editService(${catIdx}, ${subIdx}, ${serviceIdx})" class="bg-blue-300 text-white px-2 py-1 rounded hover:bg-blue-400 text-xs">✏️</button>
                                                 <button onclick="deleteService(${catIdx}, ${subIdx}, ${serviceIdx})" class="bg-red-300 text-white px-2 py-1 rounded hover:bg-red-400 text-xs">🗑️</button>
                                             </div>
@@ -4599,6 +4683,17 @@
         
         function closeServiceModal() {
             document.getElementById('serviceModal').classList.add('hidden');
+        }
+
+        function togglePauseService(catIdx, subIdx, serviceIdx) {
+            const service = categories[catIdx].subcategories[subIdx].subsubcategories[serviceIdx];
+            const wasPaused = service.paused || false;
+            service.paused = !wasPaused;
+            const action = service.paused ? 'paused' : 'resumed';
+            saveCategoriesToFirebase();
+            loadAdminCategories();
+            updateAdminStats();
+            showFirebaseStatus(`Service "${service.name.en || service.name}" ${action}`, service.paused ? 'warning' : 'success');
         }
         
         function deleteService(catIdx, subIdx, serviceIdx) {
