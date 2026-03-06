@@ -261,6 +261,9 @@
                 <!-- Wallet button — shown only when logged in -->
                 <button id="walletNavBtn" onclick="showPage('myProfile'); setTimeout(()=>showProfileTab('wallet'),300)" class="hidden px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-semibold border border-green-300">💰 Wallet</button>
                 <button onclick="changeLang()" class="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">🌏 <span id="currentLang">EN</span></button>
+                <button id="notifNavBtn" onclick="openNotifPanel()" class="hidden relative px-3 py-2 text-gray-700 hover:text-orange-600">
+                    🔔 <span id="notifBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
+                </button>
                 <div id="navAuthBtn">
                     <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>
                 </div>
@@ -274,10 +277,19 @@
             <div class="text-center mb-12">
                 <h1 class="text-5xl font-bold text-gray-800 mb-4">Find the Perfect Service Provider Near You</h1>
                 <p class="text-xl text-gray-600 mb-8">Rated, verified professionals in your area</p>
+                <!-- Global Search Bar -->
+                <div class="max-w-xl mx-auto mb-6">
+                    <div class="flex gap-2 bg-white rounded-2xl shadow-lg border-2 border-orange-200 px-4 py-2">
+                        <span class="text-2xl">🔍</span>
+                        <input id="globalSearchInput" type="text" placeholder="Search for plumber, AC repair, beautician..."
+                            class="flex-1 outline-none text-gray-700 text-base bg-transparent"
+                            onkeydown="globalSearchSubmit(event)">
+                        <button onclick="globalSearchSubmit()" class="bg-orange-600 text-white px-4 py-1.5 rounded-xl text-sm font-bold hover:bg-orange-700">Search</button>
+                    </div>
+                </div>
                 <div class="flex gap-4 justify-center flex-wrap">
                     <button data-i18n="browseServices" onclick="showPage('browse')" class="bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-700 text-lg">Browse Services</button>
                     <button data-i18n="becomeProvider" onclick="showPage('register')" class="bg-white text-orange-600 border-2 border-orange-600 px-8 py-3 rounded-lg font-semibold hover:bg-orange-50 text-lg">Become a Provider</button>
-                    
                     <!-- PHASE C: Voice Search Button -->
                     <button data-i18n="voiceSearch" onclick="startVoiceSearch()" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 text-lg">
                         🎤 Voice Search
@@ -390,7 +402,7 @@
                         </button>
                         
                         <!-- Results Count -->
-                        <div id="resultsCount" class="ml-auto text-sm text-gray-600 font-medium"></div>
+                        <div id="browseResultsCount" class="text-blue-600 font-semibold text-sm"></span> <span id="resultsCount" class="ml-auto text-sm text-gray-600 font-medium"></div>
                     </div>
                     
                     <!-- Filter Panel (Hidden by default) -->
@@ -517,6 +529,7 @@
                 <div class="bg-white rounded-2xl shadow-md mb-6 overflow-hidden">
                     <div class="flex border-b overflow-x-auto">
                         <button onclick="showProfileTab('myDetails')" id="ptab-myDetails" class="flex-1 px-3 py-3 font-semibold text-sm text-orange-600 border-b-2 border-orange-600 whitespace-nowrap">👤 Details</button>
+                        <button onclick="showProfileTab('bookings')" id="ptab-bookings" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">📅 Bookings</button>
                         <button onclick="showProfileTab('wallet')" id="ptab-wallet" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">💰 Wallet</button>
                         <button onclick="showProfileTab('favourites')" id="ptab-favourites" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">❤️ Saved</button>
                         <button onclick="showProfileTab('myReviews')" id="ptab-myReviews" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">⭐ Reviews</button>
@@ -525,6 +538,17 @@
                 </div>
 
                 <!-- Tab: Wallet -->
+                <!-- Bookings Tab -->
+                <div id="profileTab-bookings" class="hidden">
+                    <div class="mb-4 flex gap-2">
+                        <button onclick="filterBookingsView('seeker')" id="bookViewSeeker" class="flex-1 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm">📋 My Requests</button>
+                        <button onclick="filterBookingsView('provider')" id="bookViewProvider" class="flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold text-sm">🏷️ Received Jobs</button>
+                    </div>
+                    <div id="bookingsList" class="space-y-3 max-h-96 overflow-y-auto">
+                        <div class="text-center text-gray-400 py-8">Loading bookings... 🔄</div>
+                    </div>
+                </div>
+
                 <div id="profileTab-wallet" class="hidden">
                   <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white mb-4 shadow-lg">
                     <div class="text-sm font-medium opacity-80 mb-1">🌟 Reward Points Balance</div>
@@ -1042,6 +1066,9 @@
                         <button onclick="showAdminTab('idverify')" id="tab-idverify" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
                             🪪 ID Verify
                         </button>
+                        <button onclick="showAdminTab('subscriptions')" id="tab-subscriptions" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            🏅 Plans
+                        </button>
                         <button onclick="showAdminTab('settings')" id="tab-settings" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
                             ⚙️ Settings
                         </button>
@@ -1158,6 +1185,17 @@
                 </div>
 
                 <!-- SETTINGS TAB -->
+                <!-- Subscriptions Panel -->
+                <div id="adminTab-subscriptions" class="hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-700">🏅 Subscription Requests</h3>
+                        <button onclick="loadAdminSubscriptions()" class="text-sm text-orange-600 hover:text-orange-700 font-semibold">🔄 Refresh</button>
+                    </div>
+                    <div id="adminSubsList">
+                        <p class="text-center text-gray-400 py-4">Loading...</p>
+                    </div>
+                </div>
+
                 <div id="adminTab-settings" class="hidden">
                     <div class="bg-white rounded-xl shadow-lg p-6 max-w-md">
                         <h2 class="text-2xl font-bold text-gray-800 mb-6">⚙️ Admin Settings</h2>
@@ -1990,6 +2028,12 @@
 
                   ${docHtml}
 
+                  <!-- Portfolio & Dashboard Buttons -->
+                  <div class="flex gap-2 mb-3">
+                      <button onclick="openPortfolioView('${p.id}')" class="flex-1 bg-purple-100 text-purple-700 py-2 rounded-xl text-sm font-semibold hover:bg-purple-200">📸 Portfolio</button>
+                      <button onclick="openChatModal('${p.id}')" class="flex-1 bg-blue-100 text-blue-700 py-2 rounded-xl text-sm font-semibold hover:bg-blue-200">💬 Chat</button>
+                      <button onclick="openBookingModal('${p.id}')" class="flex-1 bg-green-100 text-green-700 py-2 rounded-xl text-sm font-semibold hover:bg-green-200">📅 Book</button>
+                  </div>
                   <!-- Share Buttons -->
                   <div class="pt-2 space-y-2">
                     <p class="text-sm font-semibold text-gray-700">📤 Share with Seeker:</p>
@@ -2159,604 +2203,604 @@
         const DEFAULT_CATEGORIES = [
             {
                 id: 'cat1',
-                name: { en: 'Home Services' },
+                name: {"en": "Home Services", "hi": "घरेलू सेवाएं", "bn": "বাড়ির সেবা", "gu": "ઘरनी सेवाओ", "mr": "घर सेवा", "kn": "ಮನೆ ಸೇವೆಗಳು", "te": "ఇంటి సేవలు", "ml": "വീടിൻ്റെ സേവനങ്ങൾ", "ta": "வீட்டு சேவைகள்", "pa": "ਘਰੇਲੂ ਸੇਵਾਵਾਂ", "or": "ଘରୋଇ ସେବା", "as": "ঘৰুৱা সেৱা"},
                 icon: '🏠',
                 subcategories: [
                     {
-                        name: { en: 'Plumber' }, icon: '🔧',
+                        name: {"en": "Plumber", "hi": "प्लंबर", "bn": "প্লাম্বার", "gu": "પ્લmbar", "mr": "प्लंबर", "kn": "ಪ್ಲಂಬರ್", "te": "ప్లంబర్", "ml": "പ്ലംബർ", "ta": "பம்பர்", "pa": "ਪਲੰਬਰ", "or": "ପ୍ଲମ୍ବର", "as": "প্লাম্বাৰ"}, icon: '🔧',
                         subsubcategories: [
-                            { name: { en: 'Pipe Repair' }, icon: '🔧' },
-                            { name: { en: 'Tap/Faucet Repair' }, icon: '🚰' },
-                            { name: { en: 'Tank Installation' }, icon: '💧' },
-                            { name: { en: 'Bathroom Fitting' }, icon: '🚿' },
-                            { name: { en: 'Drainage Cleaning' }, icon: '🪣' }
+                            { name: {"en": "Pipe Repair", "hi": "पाइप मरम्मत", "bn": "পাইপ মেরামত", "or": "ପାଇପ ମରାମତ", "as": "পাইপ মেৰামতি"}, icon: '🔧' },
+                            { name: {"en": "Tap/Faucet Repair", "hi": "नल मरम्मत", "bn": "কল মেরামত", "or": "ନଳ ମରାମତ", "as": "নল মেৰামতি"}, icon: '🚰' },
+                            { name: {"en": "Tank Installation", "hi": "टंकी स्थापना", "bn": "ট্যাঙ্ক স্থাপনা", "or": "ଟ୍ୟାଙ୍କ ସ୍ଥାପନ", "as": "টেংক স্থাপন"}, icon: '💧' },
+                            { name: {"en": "Bathroom Fitting", "hi": "बाथरूम फिटिंग", "bn": "বাথরুম ফিটিং", "or": "ବାଥରୁମ ଫିଟିଂ", "as": "বাথৰুম ফিটিং"}, icon: '🚿' },
+                            { name: {"en": "Drainage Cleaning", "hi": "नाला सफाई", "bn": "ড্রেন পরিষ্কার", "or": "ଡ୍ରେନ ସଫେଇ", "as": "নলা পৰিষ্কাৰ"}, icon: '🪣' }
                         ]
                     },
                     {
-                        name: { en: 'Electrician' }, icon: '⚡',
+                        name: {"en": "Electrician", "hi": "इलेक्ट्रीशियन", "bn": "ইলেকট্রিশিয়ান", "gu": "ઇलेक्ट्रिशियन", "mr": "इलेक्ट्रिशियन", "kn": "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್", "te": "ఎలక్ట్రిషియన్", "ml": "ഇലക്ട്രിഷ്യൻ", "ta": "மின்சாரி", "pa": "ਇਲੈਕਟ੍ਰਿਸ਼ੀਅਨ", "or": "ଇଲେକ୍ଟ୍ରିଶିୟାନ", "as": "বিদ্যুৎ মিস্ত্ৰী"}, icon: '⚡',
                         subsubcategories: [
-                            { name: { en: 'Wiring & Rewiring' }, icon: '🔌' },
-                            { name: { en: 'Fan Installation' }, icon: '🌀' },
-                            { name: { en: 'Light Installation' }, icon: '💡' },
-                            { name: { en: 'Switchboard Repair' }, icon: '🔲' },
-                            { name: { en: 'Appliance Repair' }, icon: '🔧' }
+                            { name: {"en": "Wiring & Rewiring", "hi": "वायरिंग", "bn": "ওয়ারিং", "or": "ୱାୟରିଂ", "as": "ৱায়াৰিং"}, icon: '🔌' },
+                            { name: {"en": "Fan Installation", "hi": "पंखा लगाना", "bn": "পাখা লাগানো", "or": "ପ୍ୟାଖ ସ୍ଥାପନ", "as": "পখা লগোৱা"}, icon: '🌀' },
+                            { name: {"en": "Light Installation", "hi": "लाइट लगाना", "bn": "লাইট লাগানো", "or": "ଲାଇଟ ସ୍ଥାପନ", "as": "লাইট লগোৱা"}, icon: '💡' },
+                            { name: {"en": "Switchboard Repair", "hi": "स्विचबोर्ड मरम्मत", "bn": "সুইচবোর্ড মেরামত", "or": "ସ୍ୱିଚ ବୋର୍ଡ ମରାମତ", "as": "চুইচব'ৰ্ড মেৰামতি"}, icon: '🔲' },
+                            { name: {"en": "Appliance Repair", "hi": "उपकरण मरम्मत", "bn": "যন্ত্র মেরামত", "or": "ଉପକରଣ ମରାମତ", "as": "সঁজুলি মেৰামতি"}, icon: '🔧' }
                         ]
                     },
                     {
-                        name: { en: 'AC Repair & Servicing' }, icon: '❄️',
+                        name: {"en": "AC Repair & Servicing", "hi": "एसी मरम्मत", "bn": "এসি মেরামত", "gu": "AC রিপেर", "mr": "एसी दुरुस्ती", "kn": "ಎಸಿ ರಿಪೇರಿ", "te": "ఎసి రిపేర్", "ml": "എസി റിപ്പേർ", "ta": "ஏசி பழுதுபார்ப்பு", "pa": "ਏਸੀ ਮੁਰੰਮਤ", "or": "ଏସି ମରାମତ", "as": "এচি মেৰামতি"}, icon: '❄️',
                         subsubcategories: [
-                            { name: { en: 'AC Servicing' }, icon: '❄️' },
-                            { name: { en: 'AC Installation' }, icon: '🔩' },
-                            { name: { en: 'AC Gas Refill' }, icon: '💨' },
-                            { name: { en: 'AC Uninstallation' }, icon: '🔧' }
+                            { name: {"en": "AC Servicing", "hi": "एसी सर्विसिंग", "bn": "এসি সার্ভিসিং", "or": "ଏସି ସର୍ଭିସ", "as": "এচি চাৰ্ভিচিং"}, icon: '❄️' },
+                            { name: {"en": "AC Installation", "hi": "एसी इंस्टॉलेशन", "bn": "এসি ইনস্টলেশন", "or": "ଏସି ସ୍ଥାପନ", "as": "এচি স্থাপন"}, icon: '🔩' },
+                            { name: {"en": "AC Gas Refill", "hi": "एसी गैस भरना", "bn": "এসি গ্যাস", "or": "ଏସି ଗ୍ୟାସ", "as": "এচি গেছ"}, icon: '💨' },
+                            { name: {"en": "AC Uninstallation", "hi": "एसी हटाना", "bn": "এসি সরানো", "or": "ଏସି ଖୋଲ", "as": "এচি খোলা"}, icon: '🔧' }
                         ]
                     },
                     {
-                        name: { en: 'Carpenter' }, icon: '🪵',
+                        name: {"en": "Carpenter", "hi": "बढ़ई", "bn": "কাঠমিস্ত্রী", "gu": "સुथार", "mr": "सुतार", "kn": "ಬಡಗಿ", "te": "వడ్రంగి", "ml": "ആശാരി", "ta": "தச்சர்", "pa": "ਤਰਖਾਣ", "or": "ଛୁତାର", "as": "ছুতাৰ"}, icon: '🪵',
                         subsubcategories: [
-                            { name: { en: 'Furniture Repair' }, icon: '🪑' },
-                            { name: { en: 'Door/Window Repair' }, icon: '🚪' },
-                            { name: { en: 'Wood Polishing' }, icon: '✨' },
-                            { name: { en: 'Custom Furniture' }, icon: '🛋️' }
+                            { name: {"en": "Furniture Repair", "hi": "फर्नीचर मरम्मत", "bn": "আসবাব মেরামত", "or": "ଫର୍ନିଚର ମରାମତ", "as": "আচবাব মেৰামতি"}, icon: '🪑' },
+                            { name: {"en": "Door/Window Repair", "hi": "दरवाजा मरम्मत", "bn": "দরজা মেরামত", "or": "ଦ୍ୱାର ମରାମତ", "as": "দুৱাৰ মেৰামতি"}, icon: '🚪' },
+                            { name: {"en": "Wood Polishing", "hi": "लकड़ी पॉलिशिंग", "bn": "কাঠ পালিশ", "or": "କାଠ ପଲିଶ", "as": "কাঠ পলিচ"}, icon: '✨' },
+                            { name: {"en": "Custom Furniture", "hi": "कस्टम फर्नीचर", "bn": "কাস্টম আসবাব", "or": "କଷ୍ଟମ ଫର୍ନିଚର", "as": "কাষ্টম আচবাব"}, icon: '🛋️' }
                         ]
                     },
                     {
-                        name: { en: 'RO Repair & Installation' }, icon: '💧',
+                        name: {"en": "RO Repair & Installation", "hi": "आरओ मरम्मत", "bn": "আরও মেরামত", "gu": "RO", "mr": "आरओ दुरुस्ती", "kn": "ಆರ್ಒ ರಿಪೇರಿ", "te": "ఆర్ఓ రిపేర్", "ml": "ആർഒ റിപ്പേർ", "ta": "ஆர்ஓ பழுது", "pa": "ਆਰਓ ਮੁਰੰਮਤ", "or": "ଆରଓ ମରାମତ", "as": "আৰঅ মেৰামতি"}, icon: '💧',
                         subsubcategories: [
-                            { name: { en: 'RO Installation' }, icon: '💧' },
-                            { name: { en: 'RO Service & Filter Change' }, icon: '🔧' },
-                            { name: { en: 'RO Repair' }, icon: '🛠️' }
+                            { name: {"en": "RO Installation", "hi": "आरओ इंस्टालेशन", "bn": "আরও ইনস্টলেশন", "or": "ଆରଓ ସ୍ଥାପନ", "as": "আৰঅ স্থাপন"}, icon: '💧' },
+                            { name: {"en": "RO Service & Filter Change", "hi": "आरओ सर्विस", "bn": "আরও সার্ভিস", "or": "ଆରଓ ସର୍ଭିସ", "as": "আৰঅ চাৰ্ভিচ"}, icon: '🔧' },
+                            { name: {"en": "RO Repair", "hi": "आरओ मरम्मत", "bn": "আরও মেরামত", "or": "ଆରଓ ମରାମତ", "as": "আৰঅ মেৰামতি"}, icon: '🛠️' }
                         ]
                     },
                     {
-                        name: { en: 'Geyser Repair' }, icon: '🚿',
+                        name: {"en": "Geyser Repair", "hi": "गीजर मरम्मत", "bn": "গিজার মেরামত", "gu": "ગীઝर", "mr": "गीझर दुरुस्ती", "kn": "ಗೀಸರ್ ರಿಪೇರಿ", "te": "గీజర్ రిపేర్", "ml": "ഗീസർ റിപ്പേർ", "ta": "கீசர் பழுது", "pa": "ਗੀਜ਼ਰ ਮੁਰੰਮਤ", "or": "ଗିଜର ମରାମତ", "as": "গিজাৰ মেৰামতি"}, icon: '🚿',
                         subsubcategories: [
-                            { name: { en: 'Geyser Repair' }, icon: '🔧' },
-                            { name: { en: 'Geyser Installation' }, icon: '🚿' },
-                            { name: { en: 'Element Replacement' }, icon: '⚡' }
+                            { name: {"en": "Geyser Repair", "hi": "गीजर मरम्मत", "bn": "গিজার মেরামত", "gu": "ગীઝर", "mr": "गीझर दुरुस्ती", "kn": "ಗೀಸರ್ ರಿಪೇರಿ", "te": "గీజర్ రిపేర్", "ml": "ഗീസർ റിപ്പേർ", "ta": "கீசர் பழுது", "pa": "ਗੀਜ਼ਰ ਮੁਰੰਮਤ", "or": "ଗିଜର ମରାମତ", "as": "গিজাৰ মেৰামতি"}, icon: '🔧' },
+                            { name: {"en": "Geyser Installation", "hi": "गीजर इंस्टॉलेशन", "bn": "গিজার ইনস্টলেশন", "or": "ଗିଜର ସ୍ଥାପନ", "as": "গিজাৰ স্থাপন"}, icon: '🚿' },
+                            { name: {"en": "Element Replacement", "hi": "एलिमेंट बदलना", "bn": "উপাদান পরিবর্তন", "or": "ଏଲିମେଣ୍ଟ ବଦଳ", "as": "উপাদান সলনি"}, icon: '⚡' }
                         ]
                     },
                     {
-                        name: { en: 'Inverter/Battery Service' }, icon: '🔋',
+                        name: {"en": "Inverter/Battery Service", "hi": "इन्वर्टर सेवा", "bn": "ইনভার্টার সেবা", "gu": "ઇन्वर्टर", "mr": "इन्व्हर्टर सेवा", "kn": "ಇನ್ವರ್ಟರ್", "te": "ఇన్వర్టర్", "ml": "ഇൻവർട്ടർ", "ta": "இன்வெர்டர்", "pa": "ਇਨਵਰਟਰ", "or": "ଇନ୍ଭର୍ଟର ସେବା", "as": "ইনভাৰ্টাৰ সেৱা"}, icon: '🔋',
                         subsubcategories: [
-                            { name: { en: 'Inverter Repair' }, icon: '🔋' },
-                            { name: { en: 'Battery Replacement' }, icon: '🔌' },
-                            { name: { en: 'Solar Panel Service' }, icon: '☀️' }
+                            { name: {"en": "Inverter Repair", "hi": "इन्वर्टर मरम्मत", "bn": "ইনভার্টার মেরামত", "or": "ଇନ୍ଭର୍ଟର ମରାମତ", "as": "ইনভাৰ্টাৰ মেৰামতি"}, icon: '🔋' },
+                            { name: {"en": "Battery Replacement", "hi": "बैटरी बदलना", "bn": "ব্যাটারি পরিবর্তন", "or": "ବ୍ୟାଟେରୀ ବଦଳ", "as": "বেটাৰী সলনি"}, icon: '🔌' },
+                            { name: {"en": "Solar Panel Service", "hi": "सोलर पैनल सर्विस", "bn": "সোলার প্যানেল", "or": "ସୋଲାର ପ୍ୟାନେଲ", "as": "চৌৰ পেনেল"}, icon: '☀️' }
                         ]
                     },
                     {
-                        name: { en: 'CCTV Installation' }, icon: '📷',
+                        name: {"en": "CCTV Installation", "hi": "सीसीटीवी स्थापना", "bn": "সিসিটিভি স্থাপনা", "gu": "CCTV", "mr": "सीसीटीव्ही बसवणे", "kn": "ಸಿಸಿಟಿವಿ ಅಳವಡಿಕೆ", "te": "సీసీటీవీ ఇన్స్టాలేషన్", "ml": "സിസിടിവി ഇൻസ്റ്റലേഷൻ", "ta": "சிசிடிவி நிறுவல்", "pa": "ਸੀਸੀਟੀਵੀ ਸਥਾਪਨਾ", "or": "ସିସିଟିଭି ସ୍ଥାପନ", "as": "চিচিটিভি স্থাপন"}, icon: '📷',
                         subsubcategories: [
-                            { name: { en: 'CCTV Installation' }, icon: '📷' },
-                            { name: { en: 'CCTV Repair' }, icon: '🔧' },
-                            { name: { en: 'DVR/NVR Setup' }, icon: '🖥️' }
+                            { name: {"en": "CCTV Installation", "hi": "सीसीटीवी स्थापना", "bn": "সিসিটিভি স্থাপনা", "gu": "CCTV", "mr": "सीसीटीव्ही बसवणे", "kn": "ಸಿಸಿಟಿವಿ ಅಳವಡಿಕೆ", "te": "సీసీటీవీ ఇన్స్టాలేషన్", "ml": "സിസിടിവി ഇൻസ്റ്റലേഷൻ", "ta": "சிசிடிவி நிறுவல்", "pa": "ਸੀਸੀਟੀਵੀ ਸਥਾਪਨਾ", "or": "ସିସିଟିଭି ସ୍ଥାପନ", "as": "চিচিটিভি স্থাপন"}, icon: '📷' },
+                            { name: {"en": "CCTV Repair", "hi": "सीसीटीवी मरम्मत", "bn": "সিসিটিভি মেরামত", "or": "ସିସିଟିଭି ମରାମତ", "as": "চিচিটিভি মেৰামতি"}, icon: '🔧' },
+                            { name: {"en": "DVR/NVR Setup", "hi": "डीवीआर/एनवीआर सेटअप", "bn": "DVR/NVR সেটআপ", "or": "DVR/NVR ସেଟଅପ", "as": "DVR/NVR ছেটআপ"}, icon: '🖥️' }
                         ]
                     },
                     {
-                        name: { en: 'Water Tank Cleaning' }, icon: '🛢️',
+                        name: {"en": "Water Tank Cleaning", "hi": "पानी टंकी सफाई", "bn": "ট্যাঙ্ক পরিষ্কার", "gu": "ટांकी", "mr": "टाकी साफसफाई", "kn": "ಟ್ಯಾಂಕ್ ಶುಚಿಗೊಳಿಸುವಿಕೆ", "te": "ట్యాంక్ క్లీనింగ్", "ml": "ടാങ്ക് ക്ലീനിങ്", "ta": "தொட்டி சுத்தம்", "pa": "ਟੈਂਕ ਸਫ਼ਾਈ", "or": "ଜଳ ଟ୍ୟାଙ୍କ ସଫେଇ", "as": "পানীৰ টেংক পৰিষ্কাৰ"}, icon: '🛢️',
                         subsubcategories: [
-                            { name: { en: 'Overhead Tank Cleaning' }, icon: '🛢️' },
-                            { name: { en: 'Underground Tank Cleaning' }, icon: '⬇️' },
-                            { name: { en: 'Sump Cleaning' }, icon: '🪣' }
+                            { name: {"en": "Overhead Tank Cleaning", "hi": "ओवरहेड टंकी सफाई", "bn": "ওভারহেড ট্যাঙ্ক", "or": "ଓଭରହେଡ ଟ୍ୟାଙ୍କ ସଫେଇ", "as": "অভাৰহেড টেংক পৰিষ্কাৰ"}, icon: '🛢️' },
+                            { name: {"en": "Underground Tank Cleaning", "hi": "भूमिगत टंकी सफाई", "bn": "ভূগর্ভস্থ ট্যাঙ্ক", "or": "ଭୂମିଗତ ଟ୍ୟାଙ୍କ ସଫେଇ", "as": "ভূগৰ্ভস্থ টেংক পৰিষ্কাৰ"}, icon: '⬇️' },
+                            { name: {"en": "Sump Cleaning", "hi": "सम्प सफाई", "bn": "সাম্প পরিষ্কার", "or": "ସମ୍ପ ସଫେଇ", "as": "চাম্প পৰিষ্কাৰ"}, icon: '🪣' }
                         ]
                     },
                     {
-                        name: { en: 'Pest Control' }, icon: '🐜',
+                        name: {"en": "Pest Control", "hi": "कीट नियंत्रण", "bn": "কীটপতঙ্গ নিয়ন্ত্রণ", "gu": "જीवात", "mr": "कीड नियंत्रण", "kn": "ಕೀಟ ನಿಯಂತ್ರಣ", "te": "చీడ నియంత్రణ", "ml": "കീടനിയന്ത്രണം", "ta": "பூச்சி கட்டுப்பாடு", "pa": "ਕੀਟ ਨਿਯੰਤਰਣ", "or": "ପୋକ ନିୟନ୍ତ୍ରଣ", "as": "পোক নিয়ন্ত্ৰণ"}, icon: '🐜',
                         subsubcategories: [
-                            { name: { en: 'Cockroach Treatment' }, icon: '🪲' },
-                            { name: { en: 'Termite Treatment' }, icon: '🐛' },
-                            { name: { en: 'Mosquito Treatment' }, icon: '🦟' },
-                            { name: { en: 'Rodent Control' }, icon: '🐀' },
-                            { name: { en: 'Bed Bug Treatment' }, icon: '🛏️' }
+                            { name: {"en": "Cockroach Treatment", "hi": "तिलचट्टा उपचार", "bn": "আরশোলা চিকিৎসা", "or": "ଝୁଣ୍ଟୁ ଚିକିତ୍ସା", "as": "পেৰেলা চিকিৎসা"}, icon: '🪲' },
+                            { name: {"en": "Termite Treatment", "hi": "दीमक उपचार", "bn": "উইপোকা চিকিৎসা", "or": "ଉଇ ଚିକିତ୍ସା", "as": "পিঁপৰা চিকিৎসা"}, icon: '🐛' },
+                            { name: {"en": "Mosquito Treatment", "hi": "मच्छर उपचार", "bn": "মশা চিকিৎসা", "or": "ମଶା ଚିକିତ୍ସା", "as": "মহ চিকিৎসা"}, icon: '🦟' },
+                            { name: {"en": "Rodent Control", "hi": "चूहा नियंत्रण", "bn": "ইঁদুর নিয়ন্ত্রণ", "or": "ମୁଷା ନିୟନ୍ତ୍ରଣ", "as": "নিগনি নিয়ন্ত্ৰণ"}, icon: '🐀' },
+                            { name: {"en": "Bed Bug Treatment", "hi": "खटमल उपचार", "bn": "ছারপোকা চিকিৎসা", "or": "ଖଟ ପୋକ ଚିକିତ୍ସା", "as": "বেড বাগ চিকিৎসা"}, icon: '🛏️' }
                         ]
                     },
                     {
-                        name: { en: 'Painter' }, icon: '🎨',
+                        name: {"en": "Painter", "hi": "पेंटर", "bn": "পেইন্টার", "gu": "পেন्टर", "mr": "पेंटर", "kn": "ಪೇಂಟರ್", "te": "పెయింటర్", "ml": "പെയിന്റർ", "ta": "வண்ணப்பூச்சாளர்", "pa": "ਪੇਂਟਰ", "or": "ପେଣ୍ଟର", "as": "ৰং কৰোঁতা"}, icon: '🎨',
                         subsubcategories: [
-                            { name: { en: 'Wall Painting' }, icon: '🖌️' },
-                            { name: { en: 'Waterproofing' }, icon: '💦' },
-                            { name: { en: 'Texture Painting' }, icon: '🎨' },
-                            { name: { en: 'Exterior Painting' }, icon: '🏠' }
+                            { name: {"en": "Wall Painting", "hi": "दीवार पेंटिंग", "bn": "দেয়াল রং", "or": "କାନ୍ଥ ରଙ୍ଗ", "as": "বেৰ ৰং"}, icon: '🖌️' },
+                            { name: {"en": "Waterproofing", "hi": "वाटरप्रूफिंग", "bn": "ওয়াটারপ্রুফিং", "or": "ୱାଟରପ୍ରୁଫ", "as": "ৱাটাৰপ্ৰুফ"}, icon: '💦' },
+                            { name: {"en": "Texture Painting", "hi": "टेक्सचर पेंटिंग", "bn": "টেক্সচার রং", "or": "ଟେକ୍ସଚର ରଙ୍ଗ", "as": "টেক্সচাৰ ৰং"}, icon: '🎨' },
+                            { name: {"en": "Exterior Painting", "hi": "बाहरी पेंटिंग", "bn": "বাইরের রং", "or": "ବାହ୍ୟ ରଙ୍ଗ", "as": "বাহিৰৰ ৰং"}, icon: '🏠' }
                         ]
                     },
                     {
-                        name: { en: 'Interior Designer' }, icon: '🛋️',
+                        name: {"en": "Interior Designer", "hi": "इंटीरियर डिजाइनर", "bn": "ইন্টেরিয়র ডিজাইনার", "gu": "ઇन्टिरिअर", "mr": "इंटेरिअर डिझायनर", "kn": "ಇಂಟೀರಿಯರ್ ಡಿಸೈನರ್", "te": "ఇంటీరియర్ డిజైనర్", "ml": "ഇന്റീരിയർ ഡിസൈനർ", "ta": "உட்புற வடிவமைப்பாளர்", "pa": "ਇੰਟੀਰੀਅਰ ਡਿਜ਼ਾਈਨਰ", "or": "ଇଣ୍ଟେରିଅର ଡିଜାଇନର", "as": "ইণ্টেৰিয়ৰ ডিজাইনাৰ"}, icon: '🛋️',
                         subsubcategories: [
-                            { name: { en: 'Home Interior Design' }, icon: '🏡' },
-                            { name: { en: '3D Design Consultation' }, icon: '🖥️' },
-                            { name: { en: 'Office Interior' }, icon: '🏢' }
+                            { name: {"en": "Home Interior Design", "hi": "होम इंटीरियर", "bn": "হোম ইন্টেরিয়র", "or": "ଘର ଇଣ୍ଟେରିଅର", "as": "ঘৰ ইণ্টেৰিয়ৰ"}, icon: '🏡' },
+                            { name: {"en": "3D Design Consultation", "hi": "3डी डिजाइन", "bn": "3ডি ডিজাইন", "or": "3D ଡିଜାଇନ", "as": "3D ডিজাইন"}, icon: '🖥️' },
+                            { name: {"en": "Office Interior", "hi": "ऑफिस इंटीरियर", "bn": "অফিস ইন্টেরিয়র", "or": "ଅଫିସ ଇଣ୍ଟେରିଅର", "as": "অফিচ ইণ୍টেৰিয়ৰ"}, icon: '🏢' }
                         ]
                     },
                     {
-                        name: { en: 'Modular Kitchen' }, icon: '🍳',
+                        name: {"en": "Modular Kitchen", "hi": "मॉड्यूलर किचन", "bn": "মডুলার রান্নাঘর", "gu": "मॉड्युलर", "mr": "मॉड्युलर किचन", "kn": "ಮಾಡ್ಯುಲರ್ ಅಡುಗೆಮನೆ", "te": "మాడ్యులర్ వంటగది", "ml": "മോഡുലർ അടുക്കള", "ta": "மாடுலர் சமையலறை", "pa": "ਮਾਡੂਲਰ ਕਿਚਨ", "or": "ମଡ୍ୟୁଲାର ରୋଷେଇ", "as": "মডুলাৰ পাকঘৰ"}, icon: '🍳',
                         subsubcategories: [
-                            { name: { en: 'Modular Kitchen Design' }, icon: '🍳' },
-                            { name: { en: 'Kitchen Installation' }, icon: '🔩' },
-                            { name: { en: 'Kitchen Repair' }, icon: '🔧' }
+                            { name: {"en": "Modular Kitchen Design", "hi": "मॉड्यूलर किचन डिजाइन", "bn": "মডুলার কিচেন ডিজাইন", "or": "ମଡ୍ୟୁଲାର ରୋଷେଇ ଡିଜାଇନ", "as": "মডুলাৰ পাকঘৰ ডিজাইন"}, icon: '🍳' },
+                            { name: {"en": "Kitchen Installation", "hi": "किचन इंस्टॉलेशन", "bn": "কিচেন ইনস্টলেশন", "or": "ରୋଷେଇ ସ୍ଥାପନ", "as": "পাকঘৰ স্থাপন"}, icon: '🔩' },
+                            { name: {"en": "Kitchen Repair", "hi": "किचन मरम्मत", "bn": "কিচেন মেরামত", "or": "ରୋଷେଇ ମରାମତ", "as": "পাকঘৰ মেৰামতি"}, icon: '🔧' }
                         ]
                     }
                 ]
             },
             {
                 id: 'cat2',
-                name: { en: 'Beauty & Wellness' },
+                name: {"en": "Beauty & Wellness", "hi": "सौंदर्य और स्वास्थ्य", "bn": "সৌন্দর্য ও স্বাস্থ্য", "gu": "સૌंदर्य", "mr": "सौंदर्य आणि आरोग्य", "kn": "ಸೌಂದರ್ಯ ಮತ್ತು ಆರೋಗ್ಯ", "te": "అందం మరియు ఆరోగ్యం", "ml": "സൗന്ദര്യവും ആരോഗ്യവും", "ta": "அழகு மற்றும் ஆரோக்கியம்", "pa": "ਸੁੰਦਰਤਾ ਅਤੇ ਸਿਹਤ", "or": "ସୌନ୍ଦର୍ୟ ଓ ସ୍ୱାସ୍ଥ୍ୟ", "as": "সৌন্দৰ্য আৰু স্বাস্থ্য"},
                 icon: '💄',
                 subcategories: [
                     {
-                        name: { en: 'Bridal Makeup' }, icon: '👰',
+                        name: {"en": "Bridal Makeup", "hi": "दुल्हन मेकअप", "bn": "বিয়ের মেকআপ", "or": "ବ୍ୟୁଟି ମେକଅପ", "as": "কইনাৰ মেকআপ"}, icon: '👰',
                         subsubcategories: [
-                            { name: { en: 'Bridal Makeup' }, icon: '💄' },
-                            { name: { en: 'Engagement Makeup' }, icon: '💍' },
-                            { name: { en: 'Party Makeup' }, icon: '✨' }
+                            { name: {"en": "Bridal Makeup", "hi": "दुल्हन मेकअप", "bn": "বিয়ের মেকআপ", "or": "ବ୍ୟୁଟି ମେକଅପ", "as": "কইনাৰ মেকআপ"}, icon: '💄' },
+                            { name: {"en": "Engagement Makeup", "hi": "सगाई मेकअप", "bn": "এনগেজমেন্ট মেকআপ", "or": "ଏଙ୍ଗେଜମେଣ୍ଟ ମେକଅପ", "as": "এনগেজমেন্ট মেকআপ"}, icon: '💍' },
+                            { name: {"en": "Party Makeup", "hi": "पार्टी मेकअप", "bn": "পার্টি মেকআপ", "or": "ପାର୍ଟି ମେକଅପ", "as": "পাৰ্টি মেকআপ"}, icon: '✨' }
                         ]
                     },
                     {
-                        name: { en: 'Mehendi Artist' }, icon: '🌿',
+                        name: {"en": "Mehendi Artist", "hi": "मेहंदी कलाकार", "bn": "মেহেন্দি শিল্পী", "gu": "মेहेन्दी", "mr": "मेहंदी कलाकार", "kn": "ಮೆಹೆಂದಿ ಕಲಾವಿದ", "te": "మెహందీ కళాకారుడు", "ml": "മൈലാഞ്ചി കലാകാരൻ", "ta": "மருதாணி கலைஞர்", "pa": "ਮਹਿੰਦੀ ਕਲਾਕਾਰ", "or": "ମେହୁନ୍ଦି କଳାକାର", "as": "মেহেন্দি শিল্পী"}, icon: '🌿',
                         subsubcategories: [
-                            { name: { en: 'Bridal Mehendi' }, icon: '👰' },
-                            { name: { en: 'Party Mehendi' }, icon: '🎉' },
-                            { name: { en: 'Arabic Mehendi' }, icon: '🌿' }
+                            { name: {"en": "Bridal Mehendi", "hi": "दुल्हन मेहंदी", "bn": "বিয়ের মেহেন্দি", "or": "ବ୍ରାଇଡ଼ାଲ ମେହୁନ୍ଦି", "as": "কইনাৰ মেহেন্দি"}, icon: '👰' },
+                            { name: {"en": "Party Mehendi", "hi": "पार्टी मेहंदी", "bn": "পার্টি মেহেন্দি", "or": "ପାର୍ଟି ମେହୁନ୍ଦି", "as": "পাৰ্টি মেহেন্দি"}, icon: '🎉' },
+                            { name: {"en": "Arabic Mehendi", "hi": "अरबिक मेहंदी", "bn": "আরবিক মেহেন্দি", "or": "ଆରବ ମେହୁନ୍ଦି", "as": "আৰবিক মেহেন্দি"}, icon: '🌿' }
                         ]
                     },
                     {
-                        name: { en: 'Home Salon Services' }, icon: '💅',
+                        name: {"en": "Home Salon Services", "hi": "होम सैलून सेवाएं", "bn": "হোম সেলুন সেবা", "or": "ଘରୋଇ ସ୍ୟାଲୁନ", "as": "ঘৰুৱা চেলুন সেৱা"}, icon: '💅',
                         subsubcategories: [
-                            { name: { en: 'Facial' }, icon: '🧖' },
-                            { name: { en: 'Waxing' }, icon: '✨' },
-                            { name: { en: 'Threading' }, icon: '🧵' },
-                            { name: { en: 'Pedicure & Manicure' }, icon: '💅' }
+                            { name: {"en": "Facial", "hi": "फेशियल", "bn": "ফেসিয়াল", "or": "ଫେସିଆଲ", "as": "ফেচিয়েল"}, icon: '🧖' },
+                            { name: {"en": "Waxing", "hi": "वैक्सिंग", "bn": "ওয়াক্সিং", "or": "ୱ୍ୟାକ୍ସିଂ", "as": "ৱেক্সিং"}, icon: '✨' },
+                            { name: {"en": "Threading", "hi": "थ्रेडिंग", "bn": "থ্রেডিং", "or": "ଥ୍ରେଡ଼ିଂ", "as": "থ্ৰেডিং"}, icon: '🧵' },
+                            { name: {"en": "Pedicure & Manicure", "hi": "पेडीक्योर और मैनीक्योर", "bn": "পেডিকিওর ও ম্যানিকিউর", "or": "ପେଡ଼ିକ୍ୟୁଅର", "as": "পেডিকিউৰ আৰু মেনিকিউৰ"}, icon: '💅' }
                         ]
                     },
                     {
-                        name: { en: 'Hair Stylist at Home' }, icon: '💇',
+                        name: {"en": "Hair Stylist at Home", "hi": "घर पर हेयर स्टाइलिस्ट", "bn": "বাড়িতে হেয়ার স্টাইলিস্ট", "or": "ଘରୋଇ ହେୟାର ଷ୍ଟାଇଲ", "as": "ঘৰত হেয়াৰ ষ্টাইলিষ্ট"}, icon: '💇',
                         subsubcategories: [
-                            { name: { en: 'Haircut' }, icon: '✂️' },
-                            { name: { en: 'Hair Colour' }, icon: '🎨' },
-                            { name: { en: 'Hair Treatment' }, icon: '✨' },
-                            { name: { en: 'Blow Dry & Setting' }, icon: '💨' }
+                            { name: {"en": "Haircut", "hi": "बाल कटाई", "bn": "চুল কাটা", "or": "ଚୁଲି କଟା", "as": "চুলি কটা"}, icon: '✂️' },
+                            { name: {"en": "Hair Colour", "hi": "बाल रंगाई", "bn": "চুলে রং", "or": "ଚୁଲି ରଙ୍ଗ", "as": "চুলিত ৰং"}, icon: '🎨' },
+                            { name: {"en": "Hair Treatment", "hi": "बाल उपचार", "bn": "চুলের চিকিৎসা", "or": "ଚୁଲି ଚିକିତ୍ସା", "as": "চুলিৰ চিকিৎসা"}, icon: '✨' },
+                            { name: {"en": "Blow Dry & Setting", "hi": "ब्लो ड्राई और सेटिंग", "bn": "ব্লো ড্রাই ও সেটিং", "or": "ବ୍ଲୋ ଡ୍ରାୟ", "as": "ব্লো ড্ৰাই"}, icon: '💨' }
                         ]
                     },
                     {
-                        name: { en: 'Nail Artist' }, icon: '💅',
+                        name: {"en": "Nail Artist", "hi": "नेल कलाकार", "bn": "নেইল শিল্পী", "or": "ନ୍ୟାଇଲ ଆର୍ଟିଷ୍ଟ", "as": "নেইল শিল্পী"}, icon: '💅',
                         subsubcategories: [
-                            { name: { en: 'Nail Extensions' }, icon: '💅' },
-                            { name: { en: 'Nail Art' }, icon: '🎨' },
-                            { name: { en: 'Gel Nails' }, icon: '✨' }
+                            { name: {"en": "Nail Extensions", "hi": "नेल एक्सटेंशन", "bn": "নেইল এক্সটেনশন", "or": "ନ୍ୟାଇଲ ଏକ୍ସଟେନ୍ସନ", "as": "নেইল এক্সটেনচন"}, icon: '💅' },
+                            { name: {"en": "Nail Art", "hi": "नेल आर्ट", "bn": "নেইল আর্ট", "or": "ନ୍ୟାଇଲ ଆର୍ଟ", "as": "নেইল আৰ্ট"}, icon: '🎨' },
+                            { name: {"en": "Gel Nails", "hi": "जेल नेल्स", "bn": "জেল নেইলস", "or": "ଜେଲ ନ୍ୟାଇଲ", "as": "জেল নেইলছ"}, icon: '✨' }
                         ]
                     },
                     {
-                        name: { en: 'Men Grooming' }, icon: '💈',
+                        name: {"en": "Men Grooming", "hi": "पुरुषों की देखभाल", "bn": "পুরুষদের সাজসজ্জা", "or": "ପୁରୁଷ ଗ୍ରୁମିଂ", "as": "পুৰুষৰ গ্ৰুমিং"}, icon: '💈',
                         subsubcategories: [
-                            { name: { en: 'Haircut at Home' }, icon: '✂️' },
-                            { name: { en: 'Beard Styling' }, icon: '🧔' },
-                            { name: { en: 'Facial for Men' }, icon: '🧖' }
+                            { name: {"en": "Haircut at Home", "hi": "घर पर बाल कटाई", "bn": "বাড়িতে চুল কাটা", "or": "ଘରୋଇ ଚୁଲି କଟା", "as": "ঘৰত চুলি কটা"}, icon: '✂️' },
+                            { name: {"en": "Beard Styling", "hi": "दाढ़ी स्टाइलिंग", "bn": "দাড়ি স্টাইলিং", "or": "ଦାଢ଼ି ଷ୍ଟାଇଲ", "as": "দাড়ি ষ্টাইলিং"}, icon: '🧔' },
+                            { name: {"en": "Facial for Men", "hi": "पुरुषों के लिए फेशियल", "bn": "পুরুষদের জন্য ফেসিয়াল", "or": "ପୁରୁଷ ଫେସିଆଲ", "as": "পুৰুষৰ ফেচিয়েল"}, icon: '🧖' }
                         ]
                     },
                     {
-                        name: { en: 'Spa at Home' }, icon: '🧘',
+                        name: {"en": "Spa at Home", "hi": "घर पर स्पा", "bn": "বাড়িতে স্পা", "or": "ଘରୋଇ ସ୍ପା", "as": "ঘৰত স্পা"}, icon: '🧘',
                         subsubcategories: [
-                            { name: { en: 'Full Body Massage' }, icon: '💆' },
-                            { name: { en: 'Head Massage' }, icon: '🧠' },
-                            { name: { en: 'Foot Massage' }, icon: '🦶' },
-                            { name: { en: 'Aromatherapy' }, icon: '🌸' }
+                            { name: {"en": "Full Body Massage", "hi": "फुल बॉडी मसाज", "bn": "পুরো শরীরের ম্যাসাজ", "or": "ଫୁଲ ବଡ଼ି ମସାଜ", "as": "সম্পূৰ্ণ শৰীৰৰ মালিচ"}, icon: '💆' },
+                            { name: {"en": "Head Massage", "hi": "सिर मसाज", "bn": "মাথার ম্যাসাজ", "or": "ମୁଣ୍ଡ ମସାଜ", "as": "মূৰৰ মালিচ"}, icon: '🧠' },
+                            { name: {"en": "Foot Massage", "hi": "पैर मसाज", "bn": "পায়ের ম্যাসাজ", "or": "ପାଦ ମସାଜ", "as": "ভৰিৰ মালিচ"}, icon: '🦶' },
+                            { name: {"en": "Aromatherapy", "hi": "अरोमाथेरेपी", "bn": "অ্যারোমাথেরাপি", "or": "ଆରୋମାଥେରାପି", "as": "এৰোমাথেৰাপি"}, icon: '🌸' }
                         ]
                     },
                     {
-                        name: { en: 'Fitness Trainer' }, icon: '🏋️',
+                        name: {"en": "Fitness Trainer", "hi": "फिटनेस ट्रेनर", "bn": "ফিটনেস ট্রেনার", "or": "ଫିଟ୍ନେସ ଟ୍ରେନର", "as": "ফিটনেছ ট্ৰেইনাৰ"}, icon: '🏋️',
                         subsubcategories: [
-                            { name: { en: 'Personal Training at Home' }, icon: '🏋️' },
-                            { name: { en: 'Weight Loss Program' }, icon: '⚖️' },
-                            { name: { en: 'Strength Training' }, icon: '💪' }
+                            { name: {"en": "Personal Training at Home", "hi": "घर पर पर्सनल ट्रेनिंग", "bn": "বাড়িতে ব্যক্তিগত প্রশিক্ষণ", "or": "ଘରୋଇ ଟ୍ରେନିଂ", "as": "ঘৰত ব্যক্তিগত প্ৰশিক্ষণ"}, icon: '🏋️' },
+                            { name: {"en": "Weight Loss Program", "hi": "वजन घटाने का कार्यक्रम", "bn": "ওজন কমানোর প্রোগ্রাম", "or": "ଓଜନ ହ୍ରାସ ପ୍ରୋଗ୍ରାମ", "as": "ওজন কমোৱা কাৰ্যসূচী"}, icon: '⚖️' },
+                            { name: {"en": "Strength Training", "hi": "शक्ति प्रशिक्षण", "bn": "শক্তি প্রশিক্ষণ", "or": "ଶକ୍ତି ଟ୍ରେନିଂ", "as": "শক্তি প্ৰশিক্ষণ"}, icon: '💪' }
                         ]
                     },
                     {
-                        name: { en: 'Yoga Instructor' }, icon: '🧘',
+                        name: {"en": "Yoga Instructor", "hi": "योग प्रशिक्षक", "bn": "যোগ প্রশিক্ষক", "or": "ଯୋଗ ପ୍ରଶିକ୍ଷକ", "as": "যোগ প্ৰশিক্ষক"}, icon: '🧘',
                         subsubcategories: [
-                            { name: { en: 'Morning Yoga' }, icon: '🌅' },
-                            { name: { en: 'Meditation Sessions' }, icon: '🧘' },
-                            { name: { en: 'Prenatal Yoga' }, icon: '🤰' }
+                            { name: {"en": "Morning Yoga", "hi": "सुबह योग", "bn": "সকালের যোগ", "or": "ସକାଳ ଯୋଗ", "as": "ৰাৱিলীয়া যোগ"}, icon: '🌅' },
+                            { name: {"en": "Meditation Sessions", "hi": "ध्यान सत्र", "bn": "ধ্যান সেশন", "or": "ଧ୍ୟାନ ସତ୍ର", "as": "ধ্যান অধিৱেশন"}, icon: '🧘' },
+                            { name: {"en": "Prenatal Yoga", "hi": "प्रसवपूर्व योग", "bn": "প্রসূতি যোগ", "or": "ପ୍ରସବ ଯୋଗ", "as": "প্ৰসৱপূৰ্ব যোগ"}, icon: '🤰' }
                         ]
                     },
                     {
-                        name: { en: 'Dietician' }, icon: '🥗',
+                        name: {"en": "Dietician", "hi": "आहार विशेषज्ञ", "bn": "পুষ্টিবিদ", "or": "ଆହାର ବିଶେଷଜ୍ଞ", "as": "পুষ্টিবিদ"}, icon: '🥗',
                         subsubcategories: [
-                            { name: { en: 'Diet Consultation' }, icon: '🥗' },
-                            { name: { en: 'Weight Management Plan' }, icon: '⚖️' },
-                            { name: { en: 'Disease-specific Diet' }, icon: '🏥' }
+                            { name: {"en": "Diet Consultation", "hi": "डाइट परामर्श", "bn": "ডায়েট পরামর্শ", "or": "ଡ଼ାଏଟ ସଲାହ", "as": "ডায়েট পৰামৰ্শ"}, icon: '🥗' },
+                            { name: {"en": "Weight Management Plan", "hi": "वजन प्रबंधन योजना", "bn": "ওজন ব্যবস্থাপনা পরিকল্পনা", "or": "ଓଜନ ପ୍ରବନ୍ଧ ଯୋଜନା", "as": "ওজন ব্যৱস্থাপনা পৰিকল্পনা"}, icon: '⚖️' },
+                            { name: {"en": "Disease-specific Diet", "hi": "रोग-विशिष्ट आहार", "bn": "রোগ-নির্দিষ্ট আহার", "or": "ରୋଗ ଆଧାରିତ ଡ଼ାଏଟ", "as": "ৰোগ-নিৰ্দিষ্ট আহাৰ"}, icon: '🏥' }
                         ]
                     },
                     {
-                        name: { en: 'Physiotherapist' }, icon: '🦴',
+                        name: {"en": "Physiotherapist", "hi": "फिजियोथेरेपिस्ट", "bn": "ফিজিওথেরাপিস্ট", "or": "ଫିଜିଓଥେରାପିଷ୍ଟ", "as": "ফিজিঅথেৰাপিষ୍ট"}, icon: '🦴',
                         subsubcategories: [
-                            { name: { en: 'Home Physiotherapy' }, icon: '🦴' },
-                            { name: { en: 'Sports Injury Rehab' }, icon: '⚽' },
-                            { name: { en: 'Post-surgery Rehab' }, icon: '🏥' }
+                            { name: {"en": "Home Physiotherapy", "hi": "घर पर फिजियोथेरेपी", "bn": "বাড়িতে ফিজিওথেরাপি", "or": "ଘରୋଇ ଫିଜିଓ", "as": "ঘৰত ফিজিঅথেৰাপি"}, icon: '🦴' },
+                            { name: {"en": "Sports Injury Rehab", "hi": "खेल चोट पुनर्वास", "bn": "ক্রীড়া আঘাত পুনর্বাসন", "or": "ଖେଳ ଆଘାତ ଚିକିତ୍ସା", "as": "ক্ৰীড়া আঘাত পুনৰ্বাসন"}, icon: '⚽' },
+                            { name: {"en": "Post-surgery Rehab", "hi": "सर्जरी के बाद पुनर्वास", "bn": "অস্ত্রোপচার পরবর্তী পুনর্বাসন", "or": "ଅପରେଶନ ପରେ ଚିକିତ୍ସା", "as": "অস্ত্ৰোপচাৰৰ পিছৰ পুনৰ্বাসন"}, icon: '🏥' }
                         ]
                     }
                 ]
             },
             {
                 id: 'cat3',
-                name: { en: 'Cleaning Services' },
+                name: {"en": "Cleaning Services", "hi": "सफाई सेवाएं", "bn": "পরিষ্কার সেবা", "or": "ସଫାଇ ସେବା", "as": "পৰিষ্কাৰ সেৱা"},
                 icon: '🧹',
                 subcategories: [
                     {
-                        name: { en: 'Deep Home Cleaning' }, icon: '🏠',
+                        name: {"en": "Deep Home Cleaning", "hi": "डीप होम क्लीनिंग", "bn": "ডিপ হোম ক্লিনিং", "or": "ଡ଼ିପ ଘର ସଫେଇ", "as": "গভীৰ ঘৰ পৰিষ্কাৰ"}, icon: '🏠',
                         subsubcategories: [
-                            { name: { en: 'Full Home Deep Clean' }, icon: '🧹' },
-                            { name: { en: 'Bathroom Deep Clean' }, icon: '🚿' },
-                            { name: { en: 'Post-renovation Cleaning' }, icon: '🔨' }
+                            { name: {"en": "Full Home Deep Clean", "hi": "पूरे घर की डीप क्लीन", "bn": "পুরো বাড়ির গভীর পরিষ্কার", "or": "ଫୁଲ ଘର ସଫେଇ", "as": "সম্পূৰ্ণ ঘৰ পৰিষ্কাৰ"}, icon: '🧹' },
+                            { name: {"en": "Bathroom Deep Clean", "hi": "बाथरूम डीप क्लीन", "bn": "বাথরুম গভীর পরিষ্কার", "or": "ବାଥରୁମ ସଫେଇ", "as": "বাথৰুম পৰিষ্কাৰ"}, icon: '🚿' },
+                            { name: {"en": "Post-renovation Cleaning", "hi": "नवीनीकरण के बाद सफाई", "bn": "সংস্কারের পরে পরিষ্কার", "or": "ନବୀକରଣ ପରେ ସଫେଇ", "as": "নৱীকৰণৰ পিছৰ পৰিষ্কাৰ"}, icon: '🔨' }
                         ]
                     },
                     {
-                        name: { en: 'Sofa Cleaning' }, icon: '🛋️',
+                        name: {"en": "Sofa Cleaning", "hi": "सोफा सफाई", "bn": "সোফা পরিষ্কার", "or": "ସୋଫା ସଫେଇ", "as": "চোফা পৰিষ্কাৰ"}, icon: '🛋️',
                         subsubcategories: [
-                            { name: { en: 'Fabric Sofa Cleaning' }, icon: '🛋️' },
-                            { name: { en: 'Leather Sofa Cleaning' }, icon: '✨' },
-                            { name: { en: 'Sofa Shampooing' }, icon: '🧴' }
+                            { name: {"en": "Fabric Sofa Cleaning", "hi": "फैब्रिक सोफा सफाई", "bn": "ফ্যাব্রিক সোফা পরিষ্কার", "or": "ଫ୍ୟାବ୍ରିକ ସୋଫା ସଫେଇ", "as": "ফেব্ৰিক চোফা পৰিষ্কাৰ"}, icon: '🛋️' },
+                            { name: {"en": "Leather Sofa Cleaning", "hi": "लेदर सोफा सफाई", "bn": "লেদার সোফা পরিষ্কার", "or": "ଲେଦର ସୋଫା ସଫେଇ", "as": "চামৰা চোফা পৰিষ্কাৰ"}, icon: '✨' },
+                            { name: {"en": "Sofa Shampooing", "hi": "सोफा शैम्पूइंग", "bn": "সোফা শ্যাম্পু করা", "or": "ସୋଫା ଶ୍ୟାମ୍ପୁ", "as": "চোফা শ্যাম্পু কৰা"}, icon: '🧴' }
                         ]
                     },
                     {
-                        name: { en: 'Mattress Cleaning' }, icon: '🛏️',
+                        name: {"en": "Mattress Cleaning", "hi": "गद्दा सफाई", "bn": "গদি পরিষ্কার", "or": "ଗଦ୍ଦା ସଫେଇ", "as": "গদ্দা পৰিষ্কাৰ"}, icon: '🛏️',
                         subsubcategories: [
-                            { name: { en: 'Mattress Deep Clean' }, icon: '🛏️' },
-                            { name: { en: 'Mattress Sanitization' }, icon: '🧼' }
+                            { name: {"en": "Mattress Deep Clean", "hi": "गद्दा डीप क्लीन", "bn": "গদি গভীর পরিষ্কার", "or": "ଗଦ୍ଦା ଡ଼ିପ ସଫେଇ", "as": "গদ্দা গভীৰ পৰিষ্কাৰ"}, icon: '🛏️' },
+                            { name: {"en": "Mattress Sanitization", "hi": "गद्दा सेनीटाइजेशन", "bn": "গদি স্যানিটাইজেশন", "or": "ଗଦ୍ଦା ସ୍ୟାନିଟାଇଜ", "as": "গদ্দা স্যানিটাইজেচন"}, icon: '🧼' }
                         ]
                     },
                     {
-                        name: { en: 'Kitchen Deep Cleaning' }, icon: '🍳',
+                        name: {"en": "Kitchen Deep Cleaning", "hi": "किचन डीप क्लीनिंग", "bn": "রান্নাঘর গভীর পরিষ্কার", "or": "ରୋଷେଇ ଡ଼ିପ ସଫେଇ", "as": "পাকঘৰ গভীৰ পৰিষ্কাৰ"}, icon: '🍳',
                         subsubcategories: [
-                            { name: { en: 'Chimney Cleaning' }, icon: '🌫️' },
-                            { name: { en: 'Stove & Burner Cleaning' }, icon: '🔥' },
-                            { name: { en: 'Full Kitchen Deep Clean' }, icon: '🧹' }
+                            { name: {"en": "Chimney Cleaning", "hi": "चिमनी सफाई", "bn": "চিমনি পরিষ্কার", "or": "ଚିମ୍ନି ସଫେଇ", "as": "চিমনি পৰিষ্কাৰ"}, icon: '🌫️' },
+                            { name: {"en": "Stove & Burner Cleaning", "hi": "स्टोव और बर्नर सफाई", "bn": "স্টোভ ও বার্নার পরিষ্কার", "or": "ଷ୍ଟୋଭ ଓ ବର୍ନର ସଫେଇ", "as": "ষ্ট'ভ আৰু বাৰ্নাৰ পৰিষ্কাৰ"}, icon: '🔥' },
+                            { name: {"en": "Full Kitchen Deep Clean", "hi": "पूरे किचन की डीप क्लीन", "bn": "পুরো রান্নাঘর পরিষ্কার", "or": "ଫୁଲ ରୋଷେଇ ସଫେଇ", "as": "সম্পূৰ্ণ পাকঘৰ পৰিষ্কাৰ"}, icon: '🧹' }
                         ]
                     },
                     {
-                        name: { en: 'Marble Polishing' }, icon: '✨',
+                        name: {"en": "Marble Polishing", "hi": "मार्बल पॉलिशिंग", "bn": "মার্বেল পালিশ", "or": "ମାର୍ବଲ ପଲିଶ", "as": "মাৰ্বেল পলিচ"}, icon: '✨',
                         subsubcategories: [
-                            { name: { en: 'Floor Polishing' }, icon: '✨' },
-                            { name: { en: 'Granite Polishing' }, icon: '🪨' },
-                            { name: { en: 'Anti-skid Treatment' }, icon: '⚠️' }
+                            { name: {"en": "Floor Polishing", "hi": "फर्श पॉलिशिंग", "bn": "মেঝে পালিশ", "or": "ଫ୍ଲୋର ପଲିଶ", "as": "মজিয়া পলিচ"}, icon: '✨' },
+                            { name: {"en": "Granite Polishing", "hi": "ग्रेनाइट पॉलिशिंग", "bn": "গ্রানাইট পালিশ", "or": "ଗ୍ରାନାଇଟ ପଲିଶ", "as": "গ্ৰেনাইট পলিচ"}, icon: '🪨' },
+                            { name: {"en": "Anti-skid Treatment", "hi": "एंटी-स्किड ट्रीटमेंट", "bn": "এন্টি-স্কিড ট্রিটমেন্ট", "or": "ଆଣ୍ଟି-ସ୍କିଡ", "as": "এন্টি-স্কিড"}, icon: '⚠️' }
                         ]
                     },
                     {
-                        name: { en: 'Move-in/Move-out Cleaning' }, icon: '📦',
+                        name: {"en": "Move-in/Move-out Cleaning", "hi": "मूव-इन/आउट सफाई", "bn": "মুভ-ইন/আউট পরিষ্কার", "or": "ମୁଭ ସଫେଇ", "as": "মুভ ইন/আউট পৰিষ্কাৰ"}, icon: '📦',
                         subsubcategories: [
-                            { name: { en: 'Move-in Cleaning' }, icon: '🏠' },
-                            { name: { en: 'Move-out Cleaning' }, icon: '📦' },
-                            { name: { en: 'Vacant Flat Cleaning' }, icon: '🏢' }
+                            { name: {"en": "Move-in Cleaning", "hi": "मूव-इन सफाई", "bn": "মুভ-ইন পরিষ্কার", "or": "ମୁଭ-ଇନ ସଫେଇ", "as": "মুভ-ইন পৰিষ্কাৰ"}, icon: '🏠' },
+                            { name: {"en": "Move-out Cleaning", "hi": "मूव-आउट सफाई", "bn": "মুভ-আউট পরিষ্কার", "or": "ମୁଭ-ଆଉଟ ସଫେଇ", "as": "মুভ-আউট পৰিষ্কাৰ"}, icon: '📦' },
+                            { name: {"en": "Vacant Flat Cleaning", "hi": "खाली फ्लैट सफाई", "bn": "খালি ফ্ল্যাট পরিষ্কার", "or": "ଖାଲି ଫ୍ଲ୍ୟାଟ ସଫେଇ", "as": "খালি ফ্লেট পৰিষ্কাৰ"}, icon: '🏢' }
                         ]
                     }
                 ]
             },
             {
                 id: 'cat4',
-                name: { en: 'Event Services' },
+                name: {"en": "Event Services", "hi": "इवेंट सेवाएं", "bn": "ইভেন্ট সেবা", "or": "ଇଭେଣ୍ଟ ସେବା", "as": "ইভেন্ট সেৱা"},
                 icon: '🎉',
                 subcategories: [
                     {
-                        name: { en: 'Wedding Photographer' }, icon: '📸',
+                        name: {"en": "Wedding Photographer", "hi": "शादी फोटोग्राफर", "bn": "বিবাহের ফটোগ্রাফার", "or": "ବିବାହ ଫଟୋଗ୍ରାଫର", "as": "বিবাহৰ ফটোগ্ৰাফাৰ"}, icon: '📸',
                         subsubcategories: [
-                            { name: { en: 'Wedding Photography' }, icon: '📸' },
-                            { name: { en: 'Pre-wedding Shoot' }, icon: '💕' },
-                            { name: { en: 'Candid Photography' }, icon: '🎞️' }
+                            { name: {"en": "Wedding Photography", "hi": "शादी फोटोग्राफी", "bn": "বিবাহের ফটোগ্রাফি", "or": "ବିବାହ ଫଟୋଗ୍ରାଫି", "as": "বিবাহৰ ফটোগ্ৰাফী"}, icon: '📸' },
+                            { name: {"en": "Pre-wedding Shoot", "hi": "प्री-वेडिंग शूट", "bn": "প্রি-ওয়েডিং শুট", "or": "ପ୍ରି-ୱେଡ଼ିଂ ଶୁଟ", "as": "প্ৰি-ৱেডিং শ্বুট"}, icon: '💕' },
+                            { name: {"en": "Candid Photography", "hi": "कैंडिड फोटोग्राफी", "bn": "ক্যান্ডিড ফটোগ্রাফি", "or": "କ୍ୟାଣ୍ଡିଡ ଫଟୋ", "as": "কেন্ডিড ফটোগ্ৰাফী"}, icon: '🎞️' }
                         ]
                     },
                     {
-                        name: { en: 'Videographer' }, icon: '🎥',
+                        name: {"en": "Videographer", "hi": "वीडियोग्राफर", "bn": "ভিডিওগ্রাফার", "or": "ଭିଡ଼ିଓଗ୍ରାଫର", "as": "ভিডিঅগ্ৰাফাৰ"}, icon: '🎥',
                         subsubcategories: [
-                            { name: { en: 'Wedding Videography' }, icon: '🎥' },
-                            { name: { en: 'Cinematic Film' }, icon: '🎬' },
-                            { name: { en: 'Drone Videography' }, icon: '🚁' }
+                            { name: {"en": "Wedding Videography", "hi": "शादी वीडियोग्राफी", "bn": "বিবাহের ভিডিওগ্রাফি", "or": "ବିବାହ ଭିଡ଼ିଓ", "as": "বিবাহৰ ভিডিঅগ্ৰাফী"}, icon: '🎥' },
+                            { name: {"en": "Cinematic Film", "hi": "सिनेमेटिक फिल्म", "bn": "সিনেমাটিক ফিল্ম", "or": "ସିନେମାଟିକ ଫିଲ୍ମ", "as": "চিনেমাটিক ফিল্ম"}, icon: '🎬' },
+                            { name: {"en": "Drone Videography", "hi": "ड्रोन वीडियोग्राफी", "bn": "ড্রোন ভিডিওগ্রাফি", "or": "ଡ୍ରୋନ ଭିଡ଼ିଓ", "as": "ড্ৰোন ভিডিঅগ্ৰাফী"}, icon: '🚁' }
                         ]
                     },
                     {
-                        name: { en: 'DJ Services' }, icon: '🎧',
+                        name: {"en": "DJ Services", "hi": "डीजे सेवाएं", "bn": "ডিজে সেবা", "or": "ଡ଼ିଜେ ସେବା", "as": "ডিজে সেৱা"}, icon: '🎧',
                         subsubcategories: [
-                            { name: { en: 'Wedding DJ' }, icon: '🎧' },
-                            { name: { en: 'Party DJ' }, icon: '🎉' },
-                            { name: { en: 'Sound System Rental' }, icon: '🔊' }
+                            { name: {"en": "Wedding DJ", "hi": "शादी डीजे", "bn": "বিবাহের ডিজে", "or": "ବିବାହ ଡ଼ିଜେ", "as": "বিবাহৰ ডিজে"}, icon: '🎧' },
+                            { name: {"en": "Party DJ", "hi": "पार्टी डीजे", "bn": "পার্টি ডিজে", "or": "ପାର୍ଟି ଡ଼ିଜେ", "as": "পাৰ্টি ডিজে"}, icon: '🎉' },
+                            { name: {"en": "Sound System Rental", "hi": "साउंड सिस्टम किराया", "bn": "সাউন্ড সিস্টেম ভাড়া", "or": "ସାଉଣ୍ଡ ସିଷ୍ଟମ ଭଡ଼ା", "as": "ছাউণ্ড চিষ্টেম ভাড়া"}, icon: '🔊' }
                         ]
                     },
                     {
-                        name: { en: 'Caterers' }, icon: '🍽️',
+                        name: {"en": "Caterers", "hi": "केटरर्स", "bn": "ক্যাটারার্স", "or": "କ୍ୟାଟରର", "as": "কেটাৰাৰ্চ"}, icon: '🍽️',
                         subsubcategories: [
-                            { name: { en: 'Wedding Catering' }, icon: '🍽️' },
-                            { name: { en: 'Birthday Catering' }, icon: '🎂' },
-                            { name: { en: 'Corporate Catering' }, icon: '🏢' },
-                            { name: { en: 'Tiffin Service' }, icon: '🥡' }
+                            { name: {"en": "Wedding Catering", "hi": "शादी कैटरिंग", "bn": "বিবাহের ক্যাটারিং", "or": "ବିବାହ କ୍ୟାଟରିଂ", "as": "বিবাহৰ কেটাৰিং"}, icon: '🍽️' },
+                            { name: {"en": "Birthday Catering", "hi": "बर्थडे कैटरिंग", "bn": "জন্মদিন ক্যাটারিং", "or": "ଜନ୍ମଦିନ କ୍ୟାଟରିଂ", "as": "জন্মদিন কেটাৰিং"}, icon: '🎂' },
+                            { name: {"en": "Corporate Catering", "hi": "कॉर्पोरेट कैटरिंग", "bn": "কর্পোরেট ক্যাটারিং", "or": "କର୍ପୋରେଟ କ୍ୟାଟରିଂ", "as": "কৰ্পোৰেট কেটাৰিং"}, icon: '🏢' },
+                            { name: {"en": "Tiffin Service", "hi": "टिफिन सेवा", "bn": "টিফিন সেবা", "gu": "ટifin", "mr": "टिफिन सेवा", "kn": "ಟಿಫಿನ್ ಸೇವೆ", "te": "టిఫిన్ సర్వీస్", "ml": "ടിഫിൻ സർവ്വീസ്", "ta": "டிபன் சேவை", "pa": "ਟਿਫਿਨ ਸੇਵਾ", "or": "ଟିଫିନ ସେବା", "as": "টিফিন সেৱা"}, icon: '🥡' }
                         ]
                     },
                     {
-                        name: { en: 'Tent & Decoration' }, icon: '🎪',
+                        name: {"en": "Tent & Decoration", "hi": "टेंट और सजावट", "bn": "তাঁবু ও সাজসজ্জা", "or": "ଟେଣ୍ଟ ଓ ସଜାବ", "as": "তাঁবু আৰু সজাই"}, icon: '🎪',
                         subsubcategories: [
-                            { name: { en: 'Wedding Decoration' }, icon: '💐' },
-                            { name: { en: 'Tent & Shamiana' }, icon: '🎪' },
-                            { name: { en: 'Stage Decoration' }, icon: '🎭' },
-                            { name: { en: 'Flower Decoration' }, icon: '🌸' }
+                            { name: {"en": "Wedding Decoration", "hi": "शादी की सजावट", "bn": "বিবাহের সাজসজ্জা", "or": "ବିବାହ ସଜାବ", "as": "বিবাহৰ সজাই"}, icon: '💐' },
+                            { name: {"en": "Tent & Shamiana", "hi": "टेंट और शामियाना", "bn": "তাঁবু ও শামিয়ানা", "or": "ଟେଣ୍ଟ ଓ ଶାମିଆନ", "as": "তাঁবু আৰু শামিয়ানা"}, icon: '🎪' },
+                            { name: {"en": "Stage Decoration", "hi": "स्टेज सजावट", "bn": "মঞ্চ সাজসজ্জা", "or": "ଷ୍ଟେଜ ସଜାବ", "as": "মঞ্চ সজাই"}, icon: '🎭' },
+                            { name: {"en": "Flower Decoration", "hi": "फूल सजावट", "bn": "ফুলের সাজসজ্জা", "or": "ଫୁଲ ସଜାବ", "as": "ফুলৰ সজাই"}, icon: '🌸' }
                         ]
                     },
                     {
-                        name: { en: 'Birthday Party Planner' }, icon: '🎂',
+                        name: {"en": "Birthday Party Planner", "hi": "बर्थडे पार्टी प्लानर", "bn": "জন্মদিন পার্টি প্ল্যানার", "or": "ଜନ୍ମଦିନ ପ୍ଲାନର", "as": "জন্মদিন প্লেনাৰ"}, icon: '🎂',
                         subsubcategories: [
-                            { name: { en: 'Kids Birthday Planning' }, icon: '🎈' },
-                            { name: { en: 'Theme Party Setup' }, icon: '🎠' },
-                            { name: { en: 'Balloon Decoration' }, icon: '🎈' }
+                            { name: {"en": "Kids Birthday Planning", "hi": "बच्चों का बर्थडे", "bn": "শিশুর জন্মদিন পরিকল্পনা", "or": "ପିଲାଙ୍କ ଜନ୍ମଦିନ", "as": "শিশুৰ জন্মদিন পৰিকল্পনা"}, icon: '🎈' },
+                            { name: {"en": "Theme Party Setup", "hi": "थीम पार्टी सेटअप", "bn": "থিম পার্টি সেটআপ", "or": "ଥିମ ପାର୍ଟି ସେଟଅପ", "as": "থিম পাৰ্টি ছেটআপ"}, icon: '🎠' },
+                            { name: {"en": "Balloon Decoration", "hi": "बैलून सजावट", "bn": "বেলুন সাজসজ্জা", "or": "ବେଲୁନ ସଜାବ", "as": "বেলুন সজাই"}, icon: '🎈' }
                         ]
                     },
                     {
-                        name: { en: 'Anchor / Emcee' }, icon: '🎤',
+                        name: {"en": "Anchor / Emcee", "hi": "एंकर / एमसी", "bn": "উপস্থাপক", "or": "ଆଙ୍କର", "as": "এংকৰ"}, icon: '🎤',
                         subsubcategories: [
-                            { name: { en: 'Wedding Anchor' }, icon: '💍' },
-                            { name: { en: 'Corporate Emcee' }, icon: '🏢' },
-                            { name: { en: 'Bilingual Anchor' }, icon: '🌐' }
+                            { name: {"en": "Wedding Anchor", "hi": "शादी एंकर", "bn": "বিবাহের উপস্থাপক", "or": "ବିବାହ ଆଙ୍କର", "as": "বিবাহৰ এংকৰ"}, icon: '💍' },
+                            { name: {"en": "Corporate Emcee", "hi": "कॉर्पोरेट एंकर", "bn": "কর্পোরেট উপস্থাপক", "or": "କର୍ପୋରେଟ ଆଙ୍କର", "as": "কৰ্পোৰেট এমচি"}, icon: '🏢' },
+                            { name: {"en": "Bilingual Anchor", "hi": "द्विभाषी एंकर", "bn": "দ্বিভাষী উপস্থাপক", "or": "ଦ୍ୱିଭାଷୀ ଆଙ୍କର", "as": "দ্বিভাষিক এংকৰ"}, icon: '🌐' }
                         ]
                     },
                     {
-                        name: { en: 'Band / Dhol' }, icon: '🥁',
+                        name: {"en": "Band / Dhol", "hi": "बैंड / ढोल", "bn": "ব্যান্ড / ঢোল", "or": "ବ୍ୟାଣ୍ଡ", "as": "বেণ্ড"}, icon: '🥁',
                         subsubcategories: [
-                            { name: { en: 'Baraat Band' }, icon: '🎺' },
-                            { name: { en: 'Dhol Players' }, icon: '🥁' },
-                            { name: { en: 'Brass Band' }, icon: '🎷' }
+                            { name: {"en": "Baraat Band", "hi": "बारात बैंड", "bn": "বরযাত্রা ব্যান্ড", "or": "ବାରାତ ବ୍ୟାଣ୍ଡ", "as": "বাৰাত বেণ্ড"}, icon: '🎺' },
+                            { name: {"en": "Dhol Players", "hi": "ढोल वादक", "bn": "ঢোল বাদক", "or": "ଢୋଲ ବାଦକ", "as": "ঢোল বাদক"}, icon: '🥁' },
+                            { name: {"en": "Brass Band", "hi": "ब्रास बैंड", "bn": "ব্রাস ব্যান্ড", "or": "ବ୍ରାସ ବ୍ୟାଣ୍ଡ", "as": "ব্ৰাছ বেণ্ড"}, icon: '🎷' }
                         ]
                     },
                     {
-                        name: { en: 'Folk Artists Booking' }, icon: '🎭',
+                        name: {"en": "Folk Artists Booking", "hi": "लोक कलाकार बुकिंग", "bn": "লোক শিল্পী বুকিং", "or": "ଲୋକ କଳାକାର ବୁକିଂ", "as": "লোক শিল্পী বুকিং"}, icon: '🎭',
                         subsubcategories: [
-                            { name: { en: 'Kalbelia Dancers' }, icon: '💃' },
-                            { name: { en: 'Kalbeliya Performers' }, icon: '🎭' },
-                            { name: { en: 'Folk Music Group' }, icon: '🎶' },
-                            { name: { en: 'Fire Show Artist' }, icon: '🔥' }
+                            { name: {"en": "Kalbelia Dancers", "hi": "कालबेलिया नर्तक", "bn": "কালবেলিয়া নৃত্যশিল্পী", "or": "କାଲ୍ବେଲିଆ ନର୍ତ୍ତକ", "as": "কালবেলিয়া নৃত্যশিল্পী"}, icon: '💃' },
+                            { name: {"en": "Kalbeliya Performers", "hi": "कालबेलिया कलाकार", "bn": "কালবেলিয়া শিল্পী", "or": "କାଲ୍ବେଲିଆ କଳାକାର", "as": "কালবেলিয়া শিল্পী"}, icon: '🎭' },
+                            { name: {"en": "Folk Music Group", "hi": "लोक संगीत समूह", "bn": "লোকসংগীত দল", "or": "ଲୋକ ସଂଗୀତ ଦଳ", "as": "লোক সংগীত দল"}, icon: '🎶' },
+                            { name: {"en": "Fire Show Artist", "hi": "फायर शो कलाकार", "bn": "ফায়ার শো শিল্পী", "or": "ଫାୟର ଶୋ କଳାକାର", "as": "জুই শ্বো শিল্পী"}, icon: '🔥' }
                         ]
                     }
                 ]
             },
             {
                 id: 'cat5',
-                name: { en: 'Travel & Transport' },
+                name: {"en": "Travel & Transport", "hi": "यात्रा और परिवहन", "bn": "ভ্রমণ ও পরিবহন", "gu": "પ્રвास", "mr": "प्रवास आणि वाहतूक", "kn": "ಪ್ರಯಾಣ ಮತ್ತು ಸಾರಿಗೆ", "te": "ప్రయాణం మరియు రవాణా", "ml": "യാത്രയും ഗതാഗതവും", "ta": "பயணம் மற்றும் போக்குவரத்து", "pa": "ਯਾਤਰਾ ਅਤੇ ਆਵਾਜਾਈ", "or": "ଯାତ୍ରା ଓ ପରିବହନ", "as": "ভ্ৰমণ আৰু পৰিবহন"},
                 icon: '🚗',
                 subcategories: [
                     {
-                        name: { en: 'Taxi Booking' }, icon: '🚕',
+                        name: {"en": "Taxi Booking", "hi": "टैक्सी बुकिंग", "bn": "ট্যাক্সি বুকিং", "or": "ଟ୍ୟାକ୍ସି ବୁକିଂ", "as": "টেক্সি বুকিং"}, icon: '🚕',
                         subsubcategories: [
-                            { name: { en: 'Local Taxi' }, icon: '🚕' },
-                            { name: { en: 'Outstation Taxi' }, icon: '🛣️' },
-                            { name: { en: 'Airport Transfer' }, icon: '✈️' }
+                            { name: {"en": "Local Taxi", "hi": "लोकल टैक्सी", "bn": "লোকাল ট্যাক্সি", "or": "ସ୍ଥାନୀୟ ଟ୍ୟାକ୍ସି", "as": "স্থানীয় টেক্সি"}, icon: '🚕' },
+                            { name: {"en": "Outstation Taxi", "hi": "आउटस्टेशन टैक्सी", "bn": "আউটস্টেশন ট্যাক্সি", "or": "ଆଉଟଷ୍ଟେସନ ଟ୍ୟାକ୍ସି", "as": "আউটষ্টেচন টেক্সি"}, icon: '🛣️' },
+                            { name: {"en": "Airport Transfer", "hi": "एयरपोर्ट ट्रांसफर", "bn": "বিমানবন্দর স্থানান্তর", "or": "ଏୟାରପୋର୍ଟ ଟ୍ରାନ୍ସଫର", "as": "বিমানবন্দৰ ট্ৰান্সফাৰ"}, icon: '✈️' }
                         ]
                     },
                     {
-                        name: { en: 'Tempo Traveller Rental' }, icon: '🚐',
+                        name: {"en": "Tempo Traveller Rental", "hi": "टेम्पो ट्रैवलर किराया", "bn": "টেম্পো ট্রাভেলার", "gu": "ટेम्पो", "mr": "टेम्पो ट्रॅव्हलर", "kn": "ಟೆಂಪೋ ಟ್ರ್ಯಾವೆಲರ್", "te": "టెంపో ట్రావెలర్", "ml": "ടെംപോ ട്രാവലർ", "ta": "டெம்போ டிராவலர்", "pa": "ਟੈਂਪੋ ਟਰੈਵਲਰ", "or": "ଟେମ୍ପୋ ଟ୍ରାଭେଲର", "as": "টেম্পো ট্ৰেভেলাৰ"}, icon: '🚐',
                         subsubcategories: [
-                            { name: { en: '9-Seater Tempo' }, icon: '🚐' },
-                            { name: { en: '12-Seater Tempo' }, icon: '🚌' },
-                            { name: { en: '17-Seater Tempo' }, icon: '🚌' }
+                            { name: {"en": "9-Seater Tempo", "hi": "9 सीटर टेम्पो", "bn": "9 আসনের টেম্পো", "or": "9 ସିଟ ଟେମ୍ପୋ", "as": "9 আসনৰ টেম্পো"}, icon: '🚐' },
+                            { name: {"en": "12-Seater Tempo", "hi": "12 सीटर टेम्पो", "bn": "12 আসনের টেম্পো", "or": "12 ସିଟ ଟେମ୍ପୋ", "as": "12 আসনৰ টেম্পো"}, icon: '🚌' },
+                            { name: {"en": "17-Seater Tempo", "hi": "17 सीटर टेम्पो", "bn": "17 আসনের টেম্পো", "or": "17 ସିଟ ଟେମ୍ପୋ", "as": "17 আসনৰ টেম্পো"}, icon: '🚌' }
                         ]
                     },
                     {
-                        name: { en: 'Car Rental with Driver' }, icon: '🚗',
+                        name: {"en": "Car Rental with Driver", "hi": "ड्राइवर के साथ कार", "bn": "ড্রাইভারসহ কার ভাড়া", "or": "ଡ୍ରାଇଭର ସହ କାର", "as": "ড্ৰাইভাৰসহ কাৰ"}, icon: '🚗',
                         subsubcategories: [
-                            { name: { en: 'Sedan Rental' }, icon: '🚗' },
-                            { name: { en: 'SUV Rental' }, icon: '🚙' },
-                            { name: { en: 'Luxury Car Rental' }, icon: '🏎️' }
+                            { name: {"en": "Sedan Rental", "hi": "सेडान किराया", "bn": "সেডান ভাড়া", "or": "ସେଡ଼ାନ ଭଡ଼ା", "as": "ছেডান ভাড়া"}, icon: '🚗' },
+                            { name: {"en": "SUV Rental", "hi": "एसयूवी किराया", "bn": "এসইউভি ভাড়া", "or": "SUV ଭଡ଼ା", "as": "SUV ভাড়া"}, icon: '🚙' },
+                            { name: {"en": "Luxury Car Rental", "hi": "लक्जरी कार किराया", "bn": "লাক্সারি কার ভাড়া", "or": "ଲକ୍ସୁରୀ କାର ଭଡ଼ା", "as": "লাক্সাৰী কাৰ ভাড়া"}, icon: '🏎️' }
                         ]
                     },
                     {
-                        name: { en: 'Bike Rental' }, icon: '🏍️',
+                        name: {"en": "Bike Rental", "hi": "बाइक किराया", "bn": "বাইক ভাড়া", "or": "ବାଇକ ଭଡ଼ା", "as": "বাইক ভাড়া"}, icon: '🏍️',
                         subsubcategories: [
-                            { name: { en: 'Scooter Rental' }, icon: '🛵' },
-                            { name: { en: 'Motorcycle Rental' }, icon: '🏍️' },
-                            { name: { en: 'Royal Enfield Rental' }, icon: '🏍️' }
+                            { name: {"en": "Scooter Rental", "hi": "स्कूटर किराया", "bn": "স্কুটার ভাড়া", "or": "ସ୍କୁଟର ଭଡ଼ା", "as": "স্কুটাৰ ভাড়া"}, icon: '🛵' },
+                            { name: {"en": "Motorcycle Rental", "hi": "मोटरसाइकिल किराया", "bn": "মোটরসাইকেল ভাড়া", "or": "ମୋଟରସାଇକଲ ଭଡ଼ା", "as": "মটৰচাইকেল ভাড়া"}, icon: '🏍️' },
+                            { name: {"en": "Royal Enfield Rental", "hi": "रॉयल एनफील्ड किराया", "bn": "রয়্যাল এনফিল্ড ভাড়া", "or": "ରୟାଲ ଏନଫିଲ୍ଡ ଭଡ଼ା", "as": "ৰয়েল এনফিল্ড ভাড়া"}, icon: '🏍️' }
                         ]
                     },
                     {
-                        name: { en: 'Local Tour Guide' }, icon: '🗺️',
+                        name: {"en": "Local Tour Guide", "hi": "लोकल टूर गाइड", "bn": "লোকাল ট্যুর গাইড", "or": "ସ୍ଥାନୀୟ ଟୁର ଗାଇଡ", "as": "স্থানীয় টুৰ গাইড"}, icon: '🗺️',
                         subsubcategories: [
-                            { name: { en: 'City Tour Guide' }, icon: '🏙️' },
-                            { name: { en: 'Heritage Walk Guide' }, icon: '🏛️' },
-                            { name: { en: 'Multilingual Guide' }, icon: '🌐' }
+                            { name: {"en": "City Tour Guide", "hi": "सिटी टूर गाइड", "bn": "শহর ট্যুর গাইড", "or": "ସିଟି ଟୁର ଗାଇଡ", "as": "চহৰ টুৰ গাইড"}, icon: '🏙️' },
+                            { name: {"en": "Heritage Walk Guide", "hi": "हेरिटेज वॉक गाइड", "bn": "হেরিটেজ ওয়াক গাইড", "or": "ହେରିଟେଜ ୱାକ ଗାଇଡ", "as": "হেৰিটেজ ৱাক গাইড"}, icon: '🏛️' },
+                            { name: {"en": "Multilingual Guide", "hi": "बहुभाषी गाइड", "bn": "বহুভাষী গাইড", "or": "ବହୁଭାଷୀ ଗାଇଡ", "as": "বহুভাষিক গাইড"}, icon: '🌐' }
                         ]
                     },
                     {
-                        name: { en: 'Desert Safari Booking' }, icon: '🐪',
+                        name: {"en": "Desert Safari Booking", "hi": "डेजर्ट सफारी बुकिंग", "bn": "মরু সাফারি বুকিং", "or": "ମରୁ ସଫାରି ବୁକିଂ", "as": "মৰু ছাফাৰী বুকিং"}, icon: '🐪',
                         subsubcategories: [
-                            { name: { en: 'Camel Safari' }, icon: '🐪' },
-                            { name: { en: 'Jeep Safari' }, icon: '🚙' },
-                            { name: { en: 'Overnight Desert Camp' }, icon: '⛺' }
+                            { name: {"en": "Camel Safari", "hi": "ऊंट सफारी", "bn": "উট সাফারি", "or": "ଊଠ ସଫାରି", "as": "উট ছাফাৰী"}, icon: '🐪' },
+                            { name: {"en": "Jeep Safari", "hi": "जीप सफारी", "bn": "জিপ সাফারি", "or": "ଜିପ ସଫାରି", "as": "জীপ ছাফাৰী"}, icon: '🚙' },
+                            { name: {"en": "Overnight Desert Camp", "hi": "ओवरनाइट डेजर्ट कैंप", "bn": "রাতের মরু শিবির", "or": "ରାତ ମରୁ ଶିବିର", "as": "ৰাতিৰ মৰু শিবিৰ"}, icon: '⛺' }
                         ]
                     },
                     {
-                        name: { en: 'Driver on Demand' }, icon: '🧑‍✈️',
+                        name: {"en": "Driver on Demand", "hi": "मांग पर ड्राइवर", "bn": "চাহিদামতো ড্রাইভার", "or": "ଆବଶ୍ୟକ ଡ୍ରାଇଭର", "as": "চাহিদামতে ড্ৰাইভাৰ"}, icon: '🧑‍✈️',
                         subsubcategories: [
-                            { name: { en: 'Personal Driver' }, icon: '🧑‍✈️' },
-                            { name: { en: 'Corporate Driver' }, icon: '💼' },
-                            { name: { en: 'Night Driver' }, icon: '🌙' }
+                            { name: {"en": "Personal Driver", "hi": "पर्सनल ड्राइवर", "bn": "ব্যক্তিগত ড্রাইভার", "or": "ବ୍ୟକ୍ତିଗତ ଡ୍ରାଇଭର", "as": "ব্যক্তিগত ড্ৰাইভাৰ"}, icon: '🧑‍✈️' },
+                            { name: {"en": "Corporate Driver", "hi": "कॉर्पोरेट ड्राइवर", "bn": "কর্পোরেট ড্রাইভার", "or": "କର୍ପୋରେଟ ଡ୍ରାଇଭର", "as": "কৰ্পোৰেট ড্ৰাইভাৰ"}, icon: '💼' },
+                            { name: {"en": "Night Driver", "hi": "नाइट ड्राइवर", "bn": "রাতের ড্রাইভার", "or": "ରାତ ଡ୍ରାଇଭର", "as": "ৰাতিৰ ড্ৰাইভাৰ"}, icon: '🌙' }
                         ]
                     }
                 ]
             },
             {
                 id: 'cat6',
-                name: { en: 'Real Estate & Property' },
+                name: {"en": "Real Estate & Property", "hi": "रियल एस्टेट और संपत्ति", "bn": "রিয়েল এস্টেট ও সম্পত্তি", "or": "ରିଏଲ ଏଷ୍ଟେଟ", "as": "ৰিয়েল এষ্টেট"},
                 icon: '🏢',
                 subcategories: [
                     {
-                        name: { en: 'Property Dealer' }, icon: '🏠',
+                        name: {"en": "Property Dealer", "hi": "संपत्ति डीलर", "bn": "সম্পত্তি ডিলার", "gu": "Property", "mr": "मालमत्ता डीलर", "kn": "ಆಸ್ತಿ ಡೀಲರ್", "te": "ఆస్తి డీలర్", "ml": "ആസ്തി ഡീലർ", "ta": "சொத்து டீலர்", "pa": "ਜਾਇਦਾਦ ਡੀਲਰ", "or": "ସଂପତ୍ତି ଡ଼ିଲର", "as": "সম্পত্তি ডিলাৰ"}, icon: '🏠',
                         subsubcategories: [
-                            { name: { en: 'Residential Property' }, icon: '🏡' },
-                            { name: { en: 'Commercial Property' }, icon: '🏢' },
-                            { name: { en: 'Land/Plot Dealing' }, icon: '🌾' }
+                            { name: {"en": "Residential Property", "hi": "आवासीय संपत्ति", "bn": "আবাসিক সম্পত্তি", "or": "ଆବାସିକ ସଂପତ୍ତି", "as": "আবাসিক সম্পত্তি"}, icon: '🏡' },
+                            { name: {"en": "Commercial Property", "hi": "व्यावसायिक संपत्ति", "bn": "বাণিজ্যিক সম্পত্তি", "or": "ବ୍ୟବସାୟିକ ସଂପତ୍ତି", "as": "বাণিজ্যিক সম্পত্তি"}, icon: '🏢' },
+                            { name: {"en": "Land/Plot Dealing", "hi": "जमीन डीलिंग", "bn": "জমি/প্লট ডিলিং", "or": "ଜମି ଡ଼ିଲିଂ", "as": "মাটি/প্লট ডিলিং"}, icon: '🌾' }
                         ]
                     },
                     {
-                        name: { en: 'Rental Listings' }, icon: '🔑',
+                        name: {"en": "Rental Listings", "hi": "किराया लिस्टिंग", "bn": "ভাড়া তালিকা", "gu": "Rental", "mr": "भाडे यादी", "kn": "ಬಾಡಿಗೆ ಪಟ್ಟಿ", "te": "అద్దె జాబితాలు", "ml": "വാടക ലിസ്റ്റിങ്", "ta": "வாடகை பட்டியல்", "pa": "ਕਿਰਾਏ ਦੀ ਸੂਚੀ", "or": "ଭଡ଼ା ତାଲିକା", "as": "ভাড়া তালিকা"}, icon: '🔑',
                         subsubcategories: [
-                            { name: { en: 'Flat/Apartment Rental' }, icon: '🏢' },
-                            { name: { en: 'PG Accommodation' }, icon: '🛏️' },
-                            { name: { en: 'Shop/Office Rental' }, icon: '🏪' }
+                            { name: {"en": "Flat/Apartment Rental", "hi": "फ्लैट किराया", "bn": "ফ্ল্যাট ভাড়া", "or": "ଫ୍ଲ୍ୟାଟ ଭଡ଼ା", "as": "ফ্লেট ভাড়া"}, icon: '🏢' },
+                            { name: {"en": "PG Accommodation", "hi": "पीजी आवास", "bn": "পিজি আবাস", "or": "PG ଆବାସ", "as": "PG আবাস"}, icon: '🛏️' },
+                            { name: {"en": "Shop/Office Rental", "hi": "दुकान/ऑफिस किराया", "bn": "দোকান/অফিস ভাড়া", "or": "ଦୋକାନ ଭଡ଼ା", "as": "দোকান/অফিচ ভাড়া"}, icon: '🏪' }
                         ]
                     },
                     {
-                        name: { en: 'Packers & Movers' }, icon: '📦',
+                        name: {"en": "Packers & Movers", "hi": "पैकर्स और मूवर्स", "bn": "প্যাকার্স ও মুভার্স", "gu": "Packers", "mr": "पॅकर्स आणि मूवर्स", "kn": "ಪ್ಯಾಕರ್ಸ್ ಮತ್ತು ಮೂವರ್ಸ್", "te": "ప్యాకర్స్ అండ్ మూవర్స్", "ml": "പ്യാക്കേഴ്സ് ആൻഡ് മൂവേഴ്സ്", "ta": "பேக்கர்ஸ் மற்றும் மூவர்ஸ்", "pa": "ਪੈਕਰਜ਼ ਅਤੇ ਮੂਵਰਜ਼", "or": "ପ୍ୟାକର୍ସ ଓ ମୁଭର୍ସ", "as": "পেকাৰ্চ আৰু মুভাৰ্চ"}, icon: '📦',
                         subsubcategories: [
-                            { name: { en: 'Home Shifting' }, icon: '🏠' },
-                            { name: { en: 'Office Relocation' }, icon: '🏢' },
-                            { name: { en: 'Vehicle Transportation' }, icon: '🚗' }
+                            { name: {"en": "Home Shifting", "hi": "घर स्थानांतरण", "bn": "বাড়ি স্থানান্তর", "or": "ଘର ସ୍ଥାନାନ୍ତର", "as": "ঘৰ স্থানান্তৰ"}, icon: '🏠' },
+                            { name: {"en": "Office Relocation", "hi": "ऑफिस रिलोकेशन", "bn": "অফিস স্থানান্তর", "or": "ଅଫିସ ସ୍ଥାନାନ୍ତର", "as": "অফিচ স্থানান্তৰ"}, icon: '🏢' },
+                            { name: {"en": "Vehicle Transportation", "hi": "वाहन परिवहन", "bn": "যানবাহন পরিবহন", "or": "ଯାନ ପରିବହନ", "as": "যান পৰিবহন"}, icon: '🚗' }
                         ]
                     },
                     {
-                        name: { en: 'Marble/Stone Contractor' }, icon: '🪨',
+                        name: {"en": "Marble/Stone Contractor", "hi": "मार्बल ठेकेदार", "bn": "মার্বেল ঠিকাদার", "or": "ମାର୍ବଲ ଠିକାଦାର", "as": "মাৰ্বেল ঠিকাদাৰ"}, icon: '🪨',
                         subsubcategories: [
-                            { name: { en: 'Marble Flooring' }, icon: '🪨' },
-                            { name: { en: 'Granite Work' }, icon: '🏗️' },
-                            { name: { en: 'Stone Cladding' }, icon: '🧱' }
+                            { name: {"en": "Marble Flooring", "hi": "मार्बल फ्लोरिंग", "bn": "মার্বেল ফ্লোরিং", "or": "ମାର୍ବଲ ଫ୍ଲୋରିଂ", "as": "মাৰ্বেল ফ্লোৰিং"}, icon: '🪨' },
+                            { name: {"en": "Granite Work", "hi": "ग्रेनाइट काम", "bn": "গ্রানাইট কাজ", "or": "ଗ୍ରାନାଇଟ କାମ", "as": "গ্ৰেনাইট কাম"}, icon: '🏗️' },
+                            { name: {"en": "Stone Cladding", "hi": "पत्थर क्लैडिंग", "bn": "পাথরের ক্লাডিং", "or": "ପଥର ଆବରଣ", "as": "শিল ক্লেডিং"}, icon: '🧱' }
                         ]
                     }
                 ]
             },
             {
                 id: 'cat7',
-                name: { en: 'Education & Skill Services' },
+                name: {"en": "Education & Skill Services", "hi": "शिक्षा और कौशल सेवाएं", "bn": "শিক্ষা ও দক্ষতা সেবা", "or": "ଶିକ୍ଷା ଓ କୌଶଲ", "as": "শিক্ষা আৰু দক্ষতা"},
                 icon: '📚',
                 subcategories: [
                     {
-                        name: { en: 'Home Tutor' }, icon: '📖',
+                        name: {"en": "Home Tutor", "hi": "होम ट्यूटर", "bn": "গৃহ শিক্ষক", "gu": "Tutor", "mr": "घरगुती शिक्षक", "kn": "ಮನೆ ಶಿಕ್ಷಕ", "te": "హోమ్ ట్యూటర్", "ml": "ഹോം ട്യൂടർ", "ta": "வீட்டு ஆசிரியர்", "pa": "ਘਰੇਲੂ ਅਧਿਆਪਕ", "or": "ଘରୋଇ ଶିକ୍ଷକ", "as": "ঘৰুৱা গৃহশিক্ষক"}, icon: '📖',
                         subsubcategories: [
-                            { name: { en: 'Primary School Tutor' }, icon: '✏️' },
-                            { name: { en: 'Secondary School Tutor' }, icon: '📐' },
-                            { name: { en: 'Science & Math Tutor' }, icon: '🔬' },
-                            { name: { en: 'Commerce Tutor' }, icon: '💹' }
+                            { name: {"en": "Primary School Tutor", "hi": "प्राथमिक ट्यूटर", "bn": "প্রাথমিক বিদ্যালয় শিক্ষক", "or": "ପ୍ରାଥମିକ ଶିକ୍ଷକ", "as": "প্ৰাথমিক শিক্ষক"}, icon: '✏️' },
+                            { name: {"en": "Secondary School Tutor", "hi": "माध्यमिक ट्यूटर", "bn": "মাধ্যমিক বিদ্যালয় শিক্ষক", "or": "ମାଧ୍ୟମିକ ଶିକ୍ଷକ", "as": "মাধ্যমিক শিক্ষক"}, icon: '📐' },
+                            { name: {"en": "Science & Math Tutor", "hi": "विज्ञान और गणित ट्यूटर", "bn": "বিজ্ঞান ও গণিত শিক্ষক", "or": "ବିଜ୍ଞାନ ଗଣିତ ଶିକ୍ଷକ", "as": "বিজ্ঞান আৰু গণিত শিক্ষক"}, icon: '🔬' },
+                            { name: {"en": "Commerce Tutor", "hi": "वाणिज्य ट्यूटर", "bn": "বাণিজ্য শিক্ষক", "or": "ବାଣିଜ୍ୟ ଶିକ୍ଷକ", "as": "বাণিজ্য শিক্ষক"}, icon: '💹' }
                         ]
                     },
                     {
-                        name: { en: 'Spoken English Trainer' }, icon: '🗣️',
+                        name: {"en": "Spoken English Trainer", "hi": "अंग्रेजी प्रशिक्षक", "bn": "ইংরেজি প্রশিক্ষক", "gu": "English", "mr": "इंग्रजी प्रशिक्षक", "kn": "ಇಂಗ್ಲೀಷ್ ತರಬೇತಿದಾರ", "te": "ఇంగ్లీష్ ట్రైనర్", "ml": "ഇംഗ്ലീഷ് ട്രൈനർ", "ta": "ஆங்கில பயிற்சியாளர்", "pa": "ਅੰਗਰੇਜ਼ੀ ਟ੍ਰੇਨਰ", "or": "ଇଂରାଜୀ ପ୍ରଶିକ୍ଷଣ", "as": "ইংৰাজী প্ৰশিক্ষক"}, icon: '🗣️',
                         subsubcategories: [
-                            { name: { en: 'Basic Spoken English' }, icon: '🗣️' },
-                            { name: { en: 'Business English' }, icon: '💼' },
-                            { name: { en: 'IELTS / TOEFL Coaching' }, icon: '📝' }
+                            { name: {"en": "Basic Spoken English", "hi": "बुनियादी अंग्रेजी", "bn": "মৌলিক ইংরেজি", "or": "ମୌଳିକ ଇଂଗ୍ରାଜୀ", "as": "মৌলিক ইংৰাজী"}, icon: '🗣️' },
+                            { name: {"en": "Business English", "hi": "बिजनेस अंग्रेजी", "bn": "ব্যবসায়িক ইংরেজি", "or": "ବ୍ୟବସାୟ ଇଂଗ୍ରାଜୀ", "as": "ব্যৱসায়িক ইংৰাজী"}, icon: '💼' },
+                            { name: {"en": "IELTS / TOEFL Coaching", "hi": "आईईएलटीएस कोचिंग", "bn": "আইইএলটিএস কোচিং", "or": "IELTS / TOEFL", "as": "IELTS / TOEFL কোচিং"}, icon: '📝' }
                         ]
                     },
                     {
-                        name: { en: 'Competitive Exam Tutor' }, icon: '🏆',
+                        name: {"en": "Competitive Exam Tutor", "hi": "प्रतियोगिता परीक्षा ट्यूटर", "bn": "প্রতিযোগিতামূলক পরীক্ষার শিক্ষক", "or": "ପ୍ରତିଯୋଗିତା ପରୀକ୍ଷା", "as": "প্ৰতিযোগিতামূলক পৰীক্ষা শিক্ষক"}, icon: '🏆',
                         subsubcategories: [
-                            { name: { en: 'UPSC Coaching' }, icon: '🏛️' },
-                            { name: { en: 'REET / RPSC Coaching' }, icon: '📋' },
-                            { name: { en: 'SSC / Railway Coaching' }, icon: '🚂' },
-                            { name: { en: 'JEE / NEET Coaching' }, icon: '🔬' }
+                            { name: {"en": "UPSC Coaching", "hi": "यूपीएससी कोचिंग", "bn": "ইউপিএসসি কোচিং", "or": "UPSC কୋଚିଂ", "as": "UPSC কোচিং"}, icon: '🏛️' },
+                            { name: {"en": "REET / RPSC Coaching", "hi": "आरईईटी कोचिंग", "bn": "আরইইটি কোচিং", "or": "REET / RPSC", "as": "REET / RPSC কোচিং"}, icon: '📋' },
+                            { name: {"en": "SSC / Railway Coaching", "hi": "एसएससी / रेलवे कोचिंग", "bn": "এসএসসি কোচিং", "or": "SSC ରେଲୱେ", "as": "SSC / ৰেলৱে কোচিং"}, icon: '🚂' },
+                            { name: {"en": "JEE / NEET Coaching", "hi": "जेईई / नीट कोचिंग", "bn": "জেইই / নিট কোচিং", "or": "JEE / NEET", "as": "JEE / NEET কোচিং"}, icon: '🔬' }
                         ]
                     },
                     {
-                        name: { en: 'Dance Teacher' }, icon: '💃',
+                        name: {"en": "Dance Teacher", "hi": "नृत्य शिक्षक", "bn": "নৃত্য শিক্ষক", "or": "ନୃତ୍ୟ ଶିକ୍ଷକ", "as": "নৃত্য শিক্ষক"}, icon: '💃',
                         subsubcategories: [
-                            { name: { en: 'Classical Dance' }, icon: '💃' },
-                            { name: { en: 'Bollywood Dance' }, icon: '🎬' },
-                            { name: { en: 'Western Dance' }, icon: '🕺' },
-                            { name: { en: 'Folk Dance' }, icon: '🎭' }
+                            { name: {"en": "Classical Dance", "hi": "शास्त्रीय नृत्य", "bn": "শাস্ত্রীয় নৃত্য", "or": "ଶାସ୍ତ୍ରୀୟ ନୃତ୍ୟ", "as": "শাস্ত্ৰীয় নৃত্য"}, icon: '💃' },
+                            { name: {"en": "Bollywood Dance", "hi": "बॉलीवुड डांस", "bn": "বলিউড ডান্স", "or": "ବଲିୱୁଡ ଡ଼ାନ୍ସ", "as": "বলিউড নৃত্য"}, icon: '🎬' },
+                            { name: {"en": "Western Dance", "hi": "वेस्टर्न डांस", "bn": "পশ্চিমা নৃত্য", "or": "ୱେଷ୍ଟର୍ନ ଡ଼ାନ୍ସ", "as": "পশ্চিমীয়া নৃত্য"}, icon: '🕺' },
+                            { name: {"en": "Folk Dance", "hi": "लोक नृत्य", "bn": "লোকনৃত্য", "or": "ଲୋକ ନୃତ୍ୟ", "as": "লোক নৃত্য"}, icon: '🎭' }
                         ]
                     },
                     {
-                        name: { en: 'Music Teacher' }, icon: '🎵',
+                        name: {"en": "Music Teacher", "hi": "संगीत शिक्षक", "bn": "সংগীত শিক্ষক", "or": "ସଂଗୀତ ଶିକ୍ଷକ", "as": "সংগীত শিক্ষক"}, icon: '🎵',
                         subsubcategories: [
-                            { name: { en: 'Guitar Classes' }, icon: '🎸' },
-                            { name: { en: 'Keyboard / Piano' }, icon: '🎹' },
-                            { name: { en: 'Vocals / Singing' }, icon: '🎤' },
-                            { name: { en: 'Tabla / Harmonium' }, icon: '🥁' }
+                            { name: {"en": "Guitar Classes", "hi": "गिटार कक्षाएं", "bn": "গিটার ক্লাস", "or": "ଗିଟାର ଶ୍ରେଣୀ", "as": "গিটাৰ ক্লাছ"}, icon: '🎸' },
+                            { name: {"en": "Keyboard / Piano", "hi": "कीबोर्ड / पियानो", "bn": "কীবোর্ড / পিয়ানো", "or": "କୀବୋର୍ଡ / ପିୟାନୋ", "as": "কীব'ৰ্ড / পিয়ানো"}, icon: '🎹' },
+                            { name: {"en": "Vocals / Singing", "hi": "गायन / संगीत", "bn": "কণ্ঠসংগীত / গান", "or": "ଗାୟନ / ସଂଗୀତ", "as": "কণ্ঠসংগীত / গান"}, icon: '🎤' },
+                            { name: {"en": "Tabla / Harmonium", "hi": "तबला / हारमोनियम", "bn": "তবলা / হারমোনিয়াম", "or": "ତବଲା / ହାର୍ମୋନିୟମ", "as": "তবলা / হাৰমনিয়াম"}, icon: '🥁' }
                         ]
                     }
                 ]
             },
             {
                 id: 'cat8',
-                name: { en: 'Business & Professional Services' },
+                name: {"en": "Business & Professional Services", "hi": "व्यापार और पेशेवर सेवाएं", "bn": "ব্যবসায়িক সেবা", "or": "ବ୍ୟବସାୟ ସେବା", "as": "ব্যৱসায়িক সেৱা"},
                 icon: '💼',
                 subcategories: [
                     {
-                        name: { en: 'CA / Tax Filing' }, icon: '📊',
+                        name: {"en": "CA / Tax Filing", "hi": "सीए / टैक्स फाइलिंग", "bn": "সিএ / ট্যাক্স ফাইলিং", "or": "CA / ଟ୍ୟାକ୍ସ ଫାଇଲ", "as": "CA / কৰ দাখিল"}, icon: '📊',
                         subsubcategories: [
-                            { name: { en: 'ITR Filing' }, icon: '📋' },
-                            { name: { en: 'GST Registration & Filing' }, icon: '🧾' },
-                            { name: { en: 'Business Accounting' }, icon: '📊' },
-                            { name: { en: 'Audit Services' }, icon: '🔍' }
+                            { name: {"en": "ITR Filing", "hi": "आईटीआर फाइलिंग", "bn": "আইটিআর ফাইলিং", "or": "ITR ଫାଇଲ", "as": "ITR দাখিল"}, icon: '📋' },
+                            { name: {"en": "GST Registration & Filing", "hi": "जीएसटी पंजीकरण", "bn": "জিএসটি নিবন্ধন", "or": "GST ପଞ୍ଜୀକରଣ", "as": "GST পঞ্জীয়ন"}, icon: '🧾' },
+                            { name: {"en": "Business Accounting", "hi": "व्यापार लेखा", "bn": "ব্যবসায়িক হিসাব", "or": "ବ୍ୟବସାୟ ଆକାଉଣ୍ଟ", "as": "ব্যৱসায়িক হিচাপ"}, icon: '📊' },
+                            { name: {"en": "Audit Services", "hi": "ऑडिट सेवाएं", "bn": "অডিট সেবা", "or": "ଅଡ଼ିଟ ସେବା", "as": "অডিট সেৱা"}, icon: '🔍' }
                         ]
                     },
                     {
-                        name: { en: 'Legal Advisor' }, icon: '⚖️',
+                        name: {"en": "Legal Advisor", "hi": "कानूनी सलाहकार", "bn": "আইনি উপদেষ্টা", "or": "ଆଇନ ସଲାହ", "as": "আইনি পৰামৰ্শদাতা"}, icon: '⚖️',
                         subsubcategories: [
-                            { name: { en: 'Property Legal Help' }, icon: '🏠' },
-                            { name: { en: 'Family Law / Divorce' }, icon: '👨‍👩‍👧' },
-                            { name: { en: 'Business Legal Services' }, icon: '💼' },
-                            { name: { en: 'Documentation Help' }, icon: '📄' }
+                            { name: {"en": "Property Legal Help", "hi": "संपत्ति कानूनी सहायता", "bn": "সম্পত্তি আইনি সাহায্য", "or": "ସଂପତ୍ତି ଆଇନ ସହାୟ", "as": "সম্পত্তি আইনি সহায়তা"}, icon: '🏠' },
+                            { name: {"en": "Family Law / Divorce", "hi": "पारिवारिक कानून / तलाक", "bn": "পারিবারিক আইন", "or": "ପারିବାରିକ ଆଇନ", "as": "পৰিয়াল আইন"}, icon: '👨‍👩‍👧' },
+                            { name: {"en": "Business Legal Services", "hi": "व्यापार कानूनी सेवाएं", "bn": "ব্যবসায়িক আইনি সেবা", "or": "ବ୍ୟବସାୟ ଆଇନ ସେବା", "as": "ব্যৱসায়িক আইনি সেৱা"}, icon: '💼' },
+                            { name: {"en": "Documentation Help", "hi": "दस्तावेज सहायता", "bn": "ডকুমেন্টেশন সাহায্য", "or": "ଦଲିଲ ସହାୟ", "as": "নথিপত্ৰ সহায়তা"}, icon: '📄' }
                         ]
                     },
                     {
-                        name: { en: 'Website Developer' }, icon: '💻',
+                        name: {"en": "Website Developer", "hi": "वेबसाइट डेवलपर", "bn": "ওয়েবসাইট ডেভেলপার", "or": "ୱେବ ଡ଼େଭେଲପର", "as": "ৱেবছাইট ডেভেলপাৰ"}, icon: '💻',
                         subsubcategories: [
-                            { name: { en: 'Business Website' }, icon: '🌐' },
-                            { name: { en: 'E-commerce Website' }, icon: '🛒' },
-                            { name: { en: 'App Development' }, icon: '📱' }
+                            { name: {"en": "Business Website", "hi": "बिजनेस वेबसाइट", "bn": "ব্যবসায়িক ওয়েবসাইট", "or": "ବ୍ୟବସାୟ ୱେବ", "as": "ব্যৱসায়িক ৱেবছাইট"}, icon: '🌐' },
+                            { name: {"en": "E-commerce Website", "hi": "ई-कॉमर्स वेबसाइट", "bn": "ই-কমার্স ওয়েবসাইট", "or": "ଇ-କମର୍ସ ୱେବ", "as": "ই-কমাৰ্ছ ৱেবছাইট"}, icon: '🛒' },
+                            { name: {"en": "App Development", "hi": "ऐप डेवलपमेंट", "bn": "অ্যাপ ডেভেলপমেন্ট", "or": "ଆପ ଡ଼େଭେଲପ", "as": "এপ ডেভেলপমেন্ট"}, icon: '📱' }
                         ]
                     },
                     {
-                        name: { en: 'Graphic Designer' }, icon: '🎨',
+                        name: {"en": "Graphic Designer", "hi": "ग्राफिक डिजाइनर", "bn": "গ্রাফিক ডিজাইনার", "or": "ଗ୍ରାଫିକ ଡିଜାଇନ", "as": "গ্ৰাফিক ডিজাইনাৰ"}, icon: '🎨',
                         subsubcategories: [
-                            { name: { en: 'Logo Design' }, icon: '🎯' },
-                            { name: { en: 'Brochure / Flyer Design' }, icon: '📰' },
-                            { name: { en: 'Banner & Poster Design' }, icon: '🖼️' }
+                            { name: {"en": "Logo Design", "hi": "लोगो डिजाइन", "bn": "লোগো ডিজাইন", "or": "ଲୋଗୋ ଡିଜାଇନ", "as": "ল'গো ডিজাইন"}, icon: '🎯' },
+                            { name: {"en": "Brochure / Flyer Design", "hi": "ब्रोशर डिजाइन", "bn": "ব্রোশার ডিজাইন", "or": "ବ୍ରୋଶର ଡିଜାଇନ", "as": "ব্ৰচাৰ ডিজাইন"}, icon: '📰' },
+                            { name: {"en": "Banner & Poster Design", "hi": "बैनर और पोस्टर डिजाइन", "bn": "ব্যানার ডিজাইন", "or": "ବ୍ୟାନର ଡିଜାଇନ", "as": "বেনাৰ ডিজাইন"}, icon: '🖼️' }
                         ]
                     },
                     {
-                        name: { en: 'Social Media Manager' }, icon: '📱',
+                        name: {"en": "Social Media Manager", "hi": "सोशल मीडिया मैनेजर", "bn": "সোশ্যাল মিডিয়া ম্যানেজার", "or": "ସୋଶ୍ୟାଲ ମିଡ଼ିଆ", "as": "চ'চিয়েল মিডিয়া মেনেজাৰ"}, icon: '📱',
                         subsubcategories: [
-                            { name: { en: 'Instagram Management' }, icon: '📸' },
-                            { name: { en: 'Facebook Marketing' }, icon: '👍' },
-                            { name: { en: 'Content Creation' }, icon: '✍️' },
-                            { name: { en: 'Paid Ads Management' }, icon: '💰' }
+                            { name: {"en": "Instagram Management", "hi": "इंस्टाग्राम मैनेजमेंट", "bn": "ইনস্টাগ্রাম ম্যানেজমেন্ট", "or": "ଇନ୍ସ୍ଟାଗ୍ରାମ", "as": "ইনষ্টাগ্ৰাম মেনেজমেন্ট"}, icon: '📸' },
+                            { name: {"en": "Facebook Marketing", "hi": "फेसबुक मार्केटिंग", "bn": "ফেসবুক মার্কেটিং", "or": "ଫେସବୁକ ମାର୍କେଟ", "as": "ফেচবুক মাৰ্কেটিং"}, icon: '👍' },
+                            { name: {"en": "Content Creation", "hi": "कंटेंट क्रिएशन", "bn": "কন্টেন্ট তৈরি", "or": "କଣ୍ଟେଣ୍ଟ ତିଆରି", "as": "কন্টেন্ট সৃষ্টি"}, icon: '✍️' },
+                            { name: {"en": "Paid Ads Management", "hi": "पेड ऐड्स मैनेजमेंट", "bn": "পেইড অ্যাডস ম্যানেজমেন্ট", "or": "ପେଡ ଆଡ ମ୍ୟାନେଜ", "as": "পেইড বিজ্ঞাপন মেনেজমেন্ট"}, icon: '💰' }
                         ]
                     },
                     {
-                        name: { en: 'Wedding Invitation Designer' }, icon: '💌',
+                        name: {"en": "Wedding Invitation Designer", "hi": "शादी निमंत्रण डिजाइनर", "bn": "বিবাহ আমন্ত্রণ ডিজাইনার", "or": "ବିବାହ ନିମନ୍ତ୍ରଣ ଡିଜାଇନ", "as": "বিবাহৰ নিমন্ত্ৰণ ডিজাইনাৰ"}, icon: '💌',
                         subsubcategories: [
-                            { name: { en: 'Digital Invitations' }, icon: '📱' },
-                            { name: { en: 'Printed Card Design' }, icon: '🖨️' },
-                            { name: { en: 'Video Invitations' }, icon: '🎥' }
+                            { name: {"en": "Digital Invitations", "hi": "डिजिटल निमंत्रण", "bn": "ডিজিটাল আমন্ত্রণ", "or": "ଡ଼ିଜିଟାଲ ନିମନ୍ତ୍ରଣ", "as": "ডিজিটেল নিমন্ত্ৰণ"}, icon: '📱' },
+                            { name: {"en": "Printed Card Design", "hi": "प्रिंटेड कार्ड डिजाइन", "bn": "প্রিন্টেড কার্ড ডিজাইন", "or": "ପ୍ରିଣ୍ଟ କାର୍ଡ ଡିଜାଇନ", "as": "প্ৰিণ্টেড কাৰ্ড ডিজাইন"}, icon: '🖨️' },
+                            { name: {"en": "Video Invitations", "hi": "वीडियो निमंत्रण", "bn": "ভিডিও আমন্ত্রণ", "or": "ଭିଡ଼ିଓ ନିମନ୍ତ୍ରଣ", "as": "ভিডিঅ নিমন্ত্ৰণ"}, icon: '🎥' }
                         ]
                     }
                 ]
             },
             {
                 id: 'cat9',
-                name: { en: 'Pet Services' },
+                name: {"en": "Pet Services", "hi": "पालतू जानवर सेवाएं", "bn": "পোষা প্রাণীর সেবা", "or": "ପୋଷା ପ୍ରାଣୀ ସେବା", "as": "পোহনীয়া জন্তুৰ সেৱা"},
                 icon: '🐾',
                 subcategories: [
                     {
-                        name: { en: 'Pet Grooming' }, icon: '🐶',
+                        name: {"en": "Pet Grooming", "hi": "पालतू की देखभाल", "bn": "পোষা প্রাণীর সাজসজ্জা", "or": "ପୋଷା ପ୍ରାଣୀ ଗ୍ରୁମିଂ", "as": "পোহনীয়া জন্তুৰ গ্ৰুমিং"}, icon: '🐶',
                         subsubcategories: [
-                            { name: { en: 'Dog Grooming at Home' }, icon: '🐕' },
-                            { name: { en: 'Cat Grooming' }, icon: '🐱' },
-                            { name: { en: 'Bath & Blow Dry' }, icon: '🚿' }
+                            { name: {"en": "Dog Grooming at Home", "hi": "घर पर कुत्ते की देखभाल", "bn": "বাড়িতে কুকুরের সাজসজ্জা", "or": "ଘରୋଇ କୁକୁର ଗ୍ରୁମିଂ", "as": "ঘৰত কুকুৰৰ গ্ৰুমিং"}, icon: '🐕' },
+                            { name: {"en": "Cat Grooming", "hi": "बिल्ली की देखभाल", "bn": "বিড়ালের সাজসজ্জা", "or": "ବିଲେଇ ଗ୍ରୁମିଂ", "as": "মেকুৰীৰ গ্ৰুমিং"}, icon: '🐱' },
+                            { name: {"en": "Bath & Blow Dry", "hi": "स्नान और ब्लो ड्राई", "bn": "স্নান ও ব্লো ড্রাই", "or": "ସ୍ନାନ ଓ ବ୍ଲୋ ଡ୍ରାୟ", "as": "গা ধোৱা আৰু ব্লো ড্ৰাই"}, icon: '🚿' }
                         ]
                     },
                     {
-                        name: { en: 'Pet Boarding' }, icon: '🏠',
+                        name: {"en": "Pet Boarding", "hi": "पालतू बोर्डिंग", "bn": "পোষা প্রাণীর বোর্ডিং", "or": "ପୋଷା ପ୍ରାଣୀ ବୋର୍ଡ଼ିଂ", "as": "পোহনীয়া জন্তুৰ বোৰ্ডিং"}, icon: '🏠',
                         subsubcategories: [
-                            { name: { en: 'Dog Boarding' }, icon: '🐕' },
-                            { name: { en: 'Cat Boarding' }, icon: '🐱' },
-                            { name: { en: 'Home-based Pet Sitting' }, icon: '🏡' }
+                            { name: {"en": "Dog Boarding", "hi": "कुत्ता बोर्डिंग", "bn": "কুকুর বোর্ডিং", "or": "କୁକୁର ବୋର୍ଡ଼ିଂ", "as": "কুকুৰ বোৰ্ডিং"}, icon: '🐕' },
+                            { name: {"en": "Cat Boarding", "hi": "बिल्ली बोर्डिंग", "bn": "বিড়াল বোর্ডিং", "or": "ବିଲେଇ ବୋର୍ଡ଼ିଂ", "as": "মেকুৰী বোৰ্ডিং"}, icon: '🐱' },
+                            { name: {"en": "Home-based Pet Sitting", "hi": "घर पर पालतू की देखभाल", "bn": "বাড়িতে পোষা প্রাণীর যত্ন", "or": "ଘରୋଇ ପୋଷା ଯତ୍ନ", "as": "ঘৰত পোহনীয়া জন্তুৰ যত্ন"}, icon: '🏡' }
                         ]
                     },
                     {
-                        name: { en: 'Dog Training' }, icon: '🦮',
+                        name: {"en": "Dog Training", "hi": "कुत्ता प्रशिक्षण", "bn": "কুকুর প্রশিক্ষণ", "or": "କୁକୁର ଟ୍ରେନିଂ", "as": "কুকুৰ প্ৰশিক্ষণ"}, icon: '🦮',
                         subsubcategories: [
-                            { name: { en: 'Basic Obedience Training' }, icon: '🦮' },
-                            { name: { en: 'Advanced Training' }, icon: '🏆' },
-                            { name: { en: 'Puppy Training' }, icon: '🐶' }
+                            { name: {"en": "Basic Obedience Training", "hi": "बुनियादी आज्ञाकारिता प्रशिक्षण", "bn": "মৌলিক আনুগত্য প্রশিক্ষণ", "or": "ବ୍ୟାସିକ ଟ୍ରେନିଂ", "as": "মৌলিক প্ৰশিক্ষণ"}, icon: '🦮' },
+                            { name: {"en": "Advanced Training", "hi": "उन्नत प्रशिक्षण", "bn": "উন্নত প্রশিক্ষণ", "or": "ଉନ୍ନତ ପ୍ରଶିକ୍ଷଣ", "as": "উন্নত প্ৰশিক্ষণ"}, icon: '🏆' },
+                            { name: {"en": "Puppy Training", "hi": "पिल्ला प्रशिक्षण", "bn": "কুকুরছানা প্রশিক্ষণ", "or": "ପପି ଟ୍ରେନିଂ", "as": "পোৱালি কুকুৰৰ প্ৰশিক্ষণ"}, icon: '🐶' }
                         ]
                     },
                     {
-                        name: { en: 'Vet on Call' }, icon: '🏥',
+                        name: {"en": "Vet on Call", "hi": "कॉल पर पशु चिकित्सक", "bn": "কলে পশু চিকিৎসক", "or": "ଭେଟ ଅନ କଲ", "as": "কলত পশু চিকিৎসক"}, icon: '🏥',
                         subsubcategories: [
-                            { name: { en: 'Home Visit Vet' }, icon: '🏥' },
-                            { name: { en: 'Vaccination at Home' }, icon: '💉' },
-                            { name: { en: 'Online Vet Consultation' }, icon: '💻' }
+                            { name: {"en": "Home Visit Vet", "hi": "घर पर पशु चिकित्सक", "bn": "বাড়িতে পশু চিকিৎসক", "or": "ଘରୋଇ ଭେଟ", "as": "ঘৰত পশু চিকিৎসক"}, icon: '🏥' },
+                            { name: {"en": "Vaccination at Home", "hi": "घर पर टीकाकरण", "bn": "বাড়িতে টিকাদান", "or": "ଘରୋଇ ଟୀକାକରଣ", "as": "ঘৰত টিকাদান"}, icon: '💉' },
+                            { name: {"en": "Online Vet Consultation", "hi": "ऑनलाइन पशु परामर्श", "bn": "অনলাইন পশু পরামর্শ", "or": "ଅନଲାଇନ ଭେଟ", "as": "অনলাইন পশু পৰামৰ্শ"}, icon: '💻' }
                         ]
                     }
                 ]
@@ -2852,21 +2896,47 @@
             return !!(nameObj.hi || nameObj.bn || nameObj.or || nameObj.as);
         }
 
-        // Merge multilingual names from ITI_CATEGORIES into existing Firebase categories
-        function mergeMultilingualNames(existing) {
+        // Find a multilingual name object from local category tree by English name
+        function findLocalName(enName, localCat) {
+            if (!enName) return null;
+            for (const sub of (localCat.subcategories || [])) {
+                const subEn = sub.name && (sub.name.en || sub.name);
+                if (subEn === enName && isMultilingual(sub.name)) return sub.name;
+                for (const svc of (sub.subsubcategories || [])) {
+                    const svcEn = svc.name && (svc.name.en || svc.name);
+                    if (svcEn === enName && isMultilingual(svc.name)) return svc.name;
+                }
+            }
+            return null;
+        }
+
+        // Merge multilingual names into existing Firebase categories
+        // Works for ALL categories: original (cat1-cat9) AND ITI (cat_engineering etc.)
+        function mergeMultilingualNames(existing, localCats) {
             return existing.map(cat => {
-                const itiCat = ITI_CATEGORIES.find(c => c.id === cat.id);
-                if (!itiCat) return cat; // keep original categories as-is
-                // Upgrade cat name if not multilingual
-                if (!isMultilingual(cat.name)) cat.name = itiCat.name;
-                // Upgrade subcategory names
-                (cat.subcategories || []).forEach((sub, si) => {
-                    const itiSub = (itiCat.subcategories || [])[si];
-                    if (itiSub && !isMultilingual(sub.name)) sub.name = itiSub.name;
-                    // Upgrade service names
-                    (sub.subsubcategories || []).forEach((svc, vi) => {
-                        const itiSvc = (itiSub?.subsubcategories || [])[vi];
-                        if (itiSvc && !isMultilingual(svc.name)) svc.name = itiSvc.name;
+                const catEnName = cat.name && (cat.name.en || cat.name);
+                // Match by id, then by English name
+                const localCat = localCats.find(c => c.id === cat.id) ||
+                                 localCats.find(c => c.name && c.name.en === catEnName);
+                if (!localCat) return cat;
+
+                // Upgrade category name
+                if (!isMultilingual(cat.name)) cat.name = localCat.name;
+
+                // Upgrade subcategory and service names
+                (cat.subcategories || []).forEach(sub => {
+                    const subEn = sub.name && (sub.name.en || sub.name);
+                    if (!isMultilingual(sub.name)) {
+                        const upgraded = findLocalName(subEn, localCat);
+                        if (upgraded) sub.name = upgraded;
+                    }
+                    (sub.subsubcategories || []).forEach(svc => {
+                        const svcEn = svc.name && (svc.name.en || svc.name);
+                        if (!isMultilingual(svc.name)) {
+                            // Search within matched subcategory first, then whole cat
+                            let upgraded = findLocalName(svcEn, localCat);
+                            if (upgraded) svc.name = upgraded;
+                        }
                     });
                 });
                 return cat;
@@ -2885,7 +2955,9 @@
                     console.log('✅ ITI categories seeded to Firebase:', categories.length);
                 } else {
                     // Merge multilingual names into existing categories
-                    categories = mergeMultilingualNames(existing);
+                    // Pass all local category definitions so ALL cats get upgraded
+                    const allLocalCats = [...(DEFAULT_CATEGORIES || []), ...ITI_CATEGORIES];
+                    categories = mergeMultilingualNames(existing, allLocalCats);
                     // Check if any ITI cat is missing — add it
                     let added = 0;
                     ITI_CATEGORIES.forEach(itiCat => {
@@ -3352,6 +3424,8 @@
             
             // Update results count
             document.getElementById('resultsCount').textContent = t('showingResults', { count: filteredProviders.length });
+            const rc2 = document.getElementById('browseResultsCount');
+            if (rc2 && rc2.textContent.startsWith('🔍')) rc2.textContent = '';
             
             // Render providers
             renderProviders(filteredProviders);
@@ -3412,8 +3486,9 @@
                             <div class="flex items-center gap-2 flex-wrap">
                                 <h3 class="text-lg font-bold text-gray-800 cursor-pointer hover:text-orange-600 transition" onclick="openProviderProfile('${p.id}')">${p.name}</h3>
                                 ${getVerifiedBadge(p)}
+                                ${getMembershipBadge(p)}
                             </div>
-                            <div class="text-orange-600 font-medium text-sm">${p.service}</div>
+                            <div class="text-orange-600 font-medium text-sm">${getTranslated(p.service)||p.service}</div>
                             ${p.language ? `<div class="text-xs text-gray-500 mt-0.5">🗣️ ${Array.isArray(p.language) ? p.language.join(', ') : p.language}${p.workingHours ? ' &nbsp;|&nbsp; ' + getWorkingHoursLabel(p.workingHours) : ''}</div>` : ''}
                         </div>
                         <div class="text-right flex-shrink-0">
@@ -4211,7 +4286,7 @@
         }
         
         function showAdminTab(tabName) {
-            ['users','reports','reviews','categories','idverify','settings'].forEach(t => {
+            ['users','reports','reviews','categories','idverify','subscriptions','settings'].forEach(t => {
                 document.getElementById('adminTab-' + t).classList.add('hidden');
                 document.getElementById('tab-' + t).classList.remove('border-orange-600','text-orange-600');
             });
@@ -4222,6 +4297,7 @@
             else if (tabName === 'reviews') { loadAdminReviews(); }
             else if (tabName === 'reports') { loadAdminReports(); }
             else if (tabName === 'idverify') { loadIdVerifications(); }
+            else if (tabName === 'subscriptions') { loadAdminSubscriptions(); }
         }
         
         function updateAdminStats() {
@@ -4601,24 +4677,24 @@
                 categories = [
                     {
                         id: 'cat1',
-                        name: { en: 'Home Services' },
+                        name: {"en": "Home Services", "hi": "घरेलू सेवाएं", "bn": "বাড়ির সেবা", "gu": "ઘरनी सेवाओ", "mr": "घर सेवा", "kn": "ಮನೆ ಸೇವೆಗಳು", "te": "ఇంటి సేవలు", "ml": "വീടിൻ്റെ സേവനങ്ങൾ", "ta": "வீட்டு சேவைகள்", "pa": "ਘਰੇਲੂ ਸੇਵਾਵਾਂ", "or": "ଘରୋଇ ସେବା", "as": "ঘৰুৱা সেৱা"},
                         icon: '🏠',
                         subcategories: [
                             {
-                                name: { en: 'Plumbing' },
+                                name: {"en": "Plumbing", "hi": "प्लंबिंग", "bn": "প্লাম্বিং", "or": "ପ୍ଲମ୍ବିଂ", "as": "প্লাম্বিং"},
                                 icon: '🔧',
                                 subsubcategories: [
-                                    { name: { en: 'Pipe Repair' }, icon: '🔧' },
-                                    { name: { en: 'Tank Installation' }, icon: '💧' },
-                                    { name: { en: 'Bathroom Fitting' }, icon: '🚿' }
+                                    { name: {"en": "Pipe Repair", "hi": "पाइप मरम्मत", "bn": "পাইপ মেরামত", "or": "ପାଇପ ମରାମତ", "as": "পাইপ মেৰামতি"}, icon: '🔧' },
+                                    { name: {"en": "Tank Installation", "hi": "टंकी स्थापना", "bn": "ট্যাঙ্ক স্থাপনা", "or": "ଟ୍ୟାଙ୍କ ସ୍ଥାପନ", "as": "টেংক স্থাপন"}, icon: '💧' },
+                                    { name: {"en": "Bathroom Fitting", "hi": "बाथरूम फिटिंग", "bn": "বাথরুম ফিটিং", "or": "ବାଥରୁମ ଫିଟିଂ", "as": "বাথৰুম ফিটিং"}, icon: '🚿' }
                                 ]
                             },
                             {
-                                name: { en: 'Electrical' },
+                                name: {"en": "Electrical", "hi": "विद्युत", "bn": "বৈদ্যুতিক", "or": "ବିଦ୍ୟୁତ", "as": "বিদ্যুৎ"},
                                 icon: '⚡',
                                 subsubcategories: [
-                                    { name: { en: 'Wiring' }, icon: '🔌' },
-                                    { name: { en: 'Appliance Repair' }, icon: '🔧' }
+                                    { name: {"en": "Wiring", "hi": "वायरिंग", "bn": "ওয়ারিং", "or": "ୱାୟରିଂ", "as": "ৱায়াৰিং"}, icon: '🔌' },
+                                    { name: {"en": "Appliance Repair", "hi": "उपकरण मरम्मत", "bn": "যন্ত্র মেরামত", "or": "ଉପକରଣ ମରାମତ", "as": "সঁজুলি মেৰামতি"}, icon: '🔧' }
                                 ]
                             }
                         ]
@@ -5389,7 +5465,7 @@
         }
 
         function showProfileTab(tab) {
-            ['myDetails','wallet','favourites','myReviews','myReports'].forEach(t => {
+            ['myDetails','bookings','wallet','favourites','myReviews','myReports'].forEach(t => {
                 document.getElementById('profileTab-' + t).classList.add('hidden');
                 document.getElementById('ptab-' + t).classList.remove('text-orange-600','border-orange-600');
                 document.getElementById('ptab-' + t).classList.add('text-gray-500','border-transparent');
@@ -5403,6 +5479,7 @@
             if (tab === 'favourites')  loadFavourites();
             if (tab === 'myReviews')   loadMyReviews();
             if (tab === 'myReports')   loadMyReports();
+            if (tab === 'bookings')    loadMyBookings();
         }
 
         function loadMyDetails() {
@@ -6256,6 +6333,753 @@ async function hmPaymentDone() {
   setTimeout(() => {
     window.location.replace('gratitude.html?lang=' + hmLang + '&type=' + gratType);
   }, 300);
+}
+</script>
+
+    <!-- ===== BOOKING MODAL ===== -->
+    <div id="bookingModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+            <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-5 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">📅 Book Service</h2>
+                    <button onclick="closeBookingModal()" class="text-white text-2xl font-bold hover:text-orange-200">✕</button>
+                </div>
+                <p class="text-orange-100 text-sm mt-1" id="bookingProviderName">Provider Name</p>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">📌 Service Required</label>
+                    <input type="text" id="bookingService" placeholder="e.g. Pipe repair, AC servicing..." class="w-full border rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">📅 Date</label>
+                        <input type="date" id="bookingDate" class="w-full border rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">⏰ Time</label>
+                        <input type="time" id="bookingTime" class="w-full border rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">📍 Your Address</label>
+                    <input type="text" id="bookingAddress" placeholder="Full address for the visit" class="w-full border rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">💬 Special Instructions</label>
+                    <textarea id="bookingNotes" rows="2" maxlength="200" placeholder="Any specific requirements..." class="w-full border rounded-xl px-4 py-2.5 resize-none focus:ring-2 focus:ring-orange-400 outline-none text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">💰 Budget (Optional)</label>
+                    <input type="number" id="bookingBudget" min="0" placeholder="₹ Expected budget" class="w-full border rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                </div>
+                <button onclick="submitBooking()" class="w-full bg-orange-600 text-white py-3.5 rounded-xl font-bold text-base hover:bg-orange-700 transition">✅ Confirm Booking</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CHAT MODAL ===== -->
+    <div id="chatModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-end sm:items-center justify-center">
+        <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md h-4/5 sm:h-auto sm:max-h-screen flex flex-col">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-3xl sm:rounded-t-2xl flex-shrink-0">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-lg font-bold" id="chatWithName">💬 Chat</h2>
+                        <p class="text-blue-200 text-xs" id="chatStatusLine">Online</p>
+                    </div>
+                    <button onclick="closeChatModal()" class="text-white text-2xl font-bold hover:text-blue-200">✕</button>
+                </div>
+            </div>
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50" style="min-height:300px;max-height:400px">
+                <div class="text-center text-gray-400 text-sm py-8">Loading messages... 💬</div>
+            </div>
+            <div class="p-3 border-t bg-white rounded-b-2xl flex-shrink-0">
+                <div class="flex gap-2 items-end">
+                    <textarea id="chatInput" rows="1" placeholder="Type a message..." maxlength="500"
+                        class="flex-1 border rounded-xl px-3 py-2 resize-none focus:ring-2 focus:ring-blue-400 outline-none text-sm"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
+                    <button onclick="sendChatMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 font-bold text-sm">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PORTFOLIO MODAL ===== -->
+    <div id="portfolioModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto">
+            <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                <h2 class="text-xl font-bold">📸 My Work Portfolio</h2>
+                <button onclick="closePortfolioModal()" class="text-white text-2xl font-bold hover:text-purple-200">✕</button>
+            </div>
+            <div class="p-5">
+                <div id="portfolioUploadSection" class="hidden mb-4 p-4 bg-purple-50 rounded-xl border-2 border-dashed border-purple-300">
+                    <p class="text-sm text-purple-700 font-semibold mb-2">📤 Add Work Photos (URLs)</p>
+                    <input type="url" id="portfolioImageUrl" placeholder="Paste image URL (e.g. from Google Drive, Imgur...)" class="w-full border rounded-lg px-3 py-2 text-sm mb-2 focus:ring-2 focus:ring-purple-400 outline-none">
+                    <input type="text" id="portfolioCaption" placeholder="Caption (e.g. 'AC installation at Jaipur client')" class="w-full border rounded-lg px-3 py-2 text-sm mb-2 focus:ring-2 focus:ring-purple-400 outline-none">
+                    <button onclick="addPortfolioItem()" class="w-full bg-purple-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-purple-700">+ Add to Portfolio</button>
+                </div>
+                <div id="portfolioGrid" class="grid grid-cols-2 gap-3">
+                    <div class="text-center col-span-2 text-gray-400 py-8">Loading portfolio... 📸</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PROVIDER DASHBOARD MODAL ===== -->
+    <div id="providerDashModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+            <div class="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                <h2 class="text-xl font-bold">📊 Provider Dashboard</h2>
+                <button onclick="closeProviderDash()" class="text-white text-2xl font-bold">✕</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-green-50 rounded-xl p-4 text-center">
+                        <div class="text-3xl font-bold text-green-600" id="dashBookingCount">0</div>
+                        <div class="text-xs text-green-700 mt-1 font-semibold">📅 Total Bookings</div>
+                    </div>
+                    <div class="bg-orange-50 rounded-xl p-4 text-center">
+                        <div class="text-3xl font-bold text-orange-600" id="dashRating">—</div>
+                        <div class="text-xs text-orange-700 mt-1 font-semibold">⭐ Avg Rating</div>
+                    </div>
+                    <div class="bg-blue-50 rounded-xl p-4 text-center">
+                        <div class="text-3xl font-bold text-blue-600" id="dashReviewCount">0</div>
+                        <div class="text-xs text-blue-700 mt-1 font-semibold">💬 Reviews</div>
+                    </div>
+                    <div class="bg-purple-50 rounded-xl p-4 text-center">
+                        <div class="text-3xl font-bold text-purple-600" id="dashProfileViews">0</div>
+                        <div class="text-xs text-purple-700 mt-1 font-semibold">👁️ Profile Views</div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <h3 class="font-bold text-gray-700 mb-3">📋 Recent Bookings</h3>
+                    <div id="dashRecentBookings" class="space-y-2 text-sm max-h-48 overflow-y-auto">
+                        <div class="text-gray-400 text-center py-3">No bookings yet</div>
+                    </div>
+                </div>
+                <div class="bg-yellow-50 rounded-xl p-4">
+                    <h3 class="font-bold text-yellow-700 mb-2">🏅 Membership Plan</h3>
+                    <div id="dashMembershipInfo" class="text-sm text-gray-600"></div>
+                    <button onclick="closeProviderDash(); openSubscriptionModal()" class="mt-2 w-full bg-yellow-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-yellow-600">Upgrade Plan →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SUBSCRIPTION MODAL ===== -->
+    <div id="subscriptionModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold">🏅 Membership Plans</h2>
+                    <p class="text-yellow-100 text-xs mt-1">Boost your visibility & get more customers</p>
+                </div>
+                <button onclick="closeSubscriptionModal()" class="text-white text-2xl font-bold">✕</button>
+            </div>
+            <div class="p-5 space-y-3">
+                <!-- Free Plan -->
+                <div class="border-2 border-gray-200 rounded-xl p-4 relative">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-gray-700">🆓 Free</h3>
+                            <p class="text-2xl font-bold text-gray-800 mt-1">₹0<span class="text-sm text-gray-500">/month</span></p>
+                        </div>
+                        <span id="planBadgeFree" class="hidden bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">✅ Current</span>
+                    </div>
+                    <ul class="mt-2 space-y-1 text-sm text-gray-600">
+                        <li>✅ Basic profile listing</li>
+                        <li>✅ Up to 5 portfolio photos</li>
+                        <li>✅ Receive bookings</li>
+                        <li>❌ No priority placement</li>
+                    </ul>
+                </div>
+                <!-- Silver Plan -->
+                <div class="border-2 border-blue-300 rounded-xl p-4 relative">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-blue-600">🥈 Silver</h3>
+                            <p class="text-2xl font-bold text-blue-700 mt-1">₹199<span class="text-sm text-gray-500">/month</span></p>
+                        </div>
+                        <span id="planBadgeSilver" class="hidden bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">✅ Current</span>
+                    </div>
+                    <ul class="mt-2 space-y-1 text-sm text-gray-600">
+                        <li>✅ All Free features</li>
+                        <li>✅ Priority in search results</li>
+                        <li>✅ Up to 15 portfolio photos</li>
+                        <li>✅ 🔵 Silver badge on profile</li>
+                    </ul>
+                    <button onclick="initiateSubscription('silver','199')" class="mt-3 w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Activate Silver →</button>
+                </div>
+                <!-- Gold Plan -->
+                <div class="border-2 border-yellow-400 rounded-xl p-4 relative bg-yellow-50">
+                    <div class="absolute top-3 right-3 bg-yellow-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">⭐ POPULAR</div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-yellow-700">🥇 Gold</h3>
+                            <p class="text-2xl font-bold text-yellow-700 mt-1">₹399<span class="text-sm text-gray-500">/month</span></p>
+                        </div>
+                        <span id="planBadgeGold" class="hidden bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-1 rounded-full">✅ Current</span>
+                    </div>
+                    <ul class="mt-2 space-y-1 text-sm text-gray-600">
+                        <li>✅ All Silver features</li>
+                        <li>✅ Featured on Home page</li>
+                        <li>✅ Unlimited portfolio photos</li>
+                        <li>✅ 🥇 Gold badge on profile</li>
+                        <li>✅ Analytics dashboard access</li>
+                    </ul>
+                    <button onclick="initiateSubscription('gold','399')" class="mt-3 w-full bg-yellow-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-yellow-600">Activate Gold →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== NOTIFICATION PANEL ===== -->
+    <div id="notifPanel" class="hidden fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 flex flex-col">
+        <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 flex justify-between items-center">
+            <h2 class="text-lg font-bold">🔔 Notifications</h2>
+            <div class="flex gap-2 items-center">
+                <button onclick="markAllNotifsRead()" class="text-xs text-orange-200 hover:text-white">Mark all read</button>
+                <button onclick="closeNotifPanel()" class="text-white text-xl font-bold">✕</button>
+            </div>
+        </div>
+        <div id="notifList" class="flex-1 overflow-y-auto p-3 space-y-2">
+            <div class="text-center text-gray-400 py-8 text-sm">No notifications yet 🔔</div>
+        </div>
+    </div>
+    <div id="notifOverlay" class="hidden fixed inset-0 bg-black bg-opacity-20 z-40" onclick="closeNotifPanel()"></div>
+
+
+<script>
+// ==================== BOOKING SYSTEM ====================
+let currentBookingProviderId = null;
+
+function openBookingModal(providerId) {
+    if (!firebaseUser) { openLoginModal(); return; }
+    currentBookingProviderId = providerId;
+    const p = providers.find(x => x.id === providerId);
+    if (!p) return;
+    document.getElementById('bookingProviderName').textContent = p.name + ' · ' + (getTranslated(p.service) || p.service || '');
+    document.getElementById('bookingService').value = getTranslated(p.service) || p.service || '';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('bookingDate').min = today;
+    document.getElementById('bookingDate').value = today;
+    document.getElementById('bookingTime').value = '10:00';
+    document.getElementById('bookingAddress').value = userProfile?.address || '';
+    document.getElementById('bookingNotes').value = '';
+    document.getElementById('bookingBudget').value = '';
+    document.getElementById('bookingModal').classList.remove('hidden');
+}
+function closeBookingModal() {
+    document.getElementById('bookingModal').classList.add('hidden');
+    currentBookingProviderId = null;
+}
+async function submitBooking() {
+    if (!firebaseUser) { openLoginModal(); return; }
+    const p = providers.find(x => x.id === currentBookingProviderId);
+    if (!p) return;
+    const service  = document.getElementById('bookingService').value.trim();
+    const date     = document.getElementById('bookingDate').value;
+    const time     = document.getElementById('bookingTime').value;
+    const address  = document.getElementById('bookingAddress').value.trim();
+    const notes    = document.getElementById('bookingNotes').value.trim();
+    const budget   = document.getElementById('bookingBudget').value;
+    if (!service || !date || !time || !address) {
+        showFirebaseStatus('Please fill all required fields', 'error'); return;
+    }
+    const booking = {
+        id: 'bk_' + Date.now(),
+        seekerUid: firebaseUser.uid,
+        seekerName: userProfile?.name || 'Customer',
+        seekerPhone: userProfile?.phone || '',
+        providerId: p.id,
+        providerName: p.name,
+        providerPhone: p.phone || '',
+        service, date, time, address, notes,
+        budget: budget ? parseInt(budget) : 0,
+        status: 'pending',
+        createdAt: Date.now(),
+        createdDate: new Date().toLocaleDateString('en-IN')
+    };
+    try {
+        await _firebase.set(_firebase.ref(_firebase.db, 'bookings/' + booking.id), booking);
+        await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/bookings/${booking.id}`), true);
+        await _firebase.set(_firebase.ref(_firebase.db, `providers/${p.id}/bookings/${booking.id}`), true);
+        if (p.ownerUid) {
+            await addNotification(p.ownerUid, {
+                type: 'new_booking',
+                title: '📅 New Booking Request!',
+                message: `${booking.seekerName} wants to book "${service}" on ${date} at ${time}`,
+                bookingId: booking.id,
+                timestamp: Date.now()
+            });
+        }
+        closeBookingModal();
+        showFirebaseStatus('✅ Booking sent! Provider will contact you shortly.', 'success');
+    } catch(e) { showFirebaseStatus('Booking failed: ' + e.message, 'error'); }
+}
+async function loadMyBookings() {
+    const list = document.getElementById('bookingsList');
+    if (!list) return;
+    list.innerHTML = '<div class="text-center text-gray-400 py-8">Loading... 🔄</div>';
+    if (!firebaseUser) { list.innerHTML = '<div class="text-center text-gray-400 py-8">Please login</div>'; return; }
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db, 'bookings'));
+        if (!snap.exists()) { list.innerHTML = '<div class="text-center text-gray-400 py-8">📅 No bookings yet</div>'; return; }
+        const all = Object.values(snap.val());
+        const seekerBtn = document.getElementById('bookViewSeeker');
+        const myMode = seekerBtn?.classList.contains('bg-orange-600') ? 'seeker' : 'provider';
+        const myProvider = providers.find(p => p.ownerUid === firebaseUser.uid);
+        let filtered = myMode === 'seeker'
+            ? all.filter(b => b.seekerUid === firebaseUser.uid)
+            : all.filter(b => myProvider && b.providerId === myProvider.id);
+        filtered.sort((a,b) => b.createdAt - a.createdAt);
+        if (!filtered.length) { list.innerHTML = '<div class="text-center text-gray-400 py-8">📅 No bookings yet</div>'; return; }
+        const sc = { pending:'bg-yellow-100 text-yellow-700', confirmed:'bg-green-100 text-green-700', completed:'bg-blue-100 text-blue-700', cancelled:'bg-red-100 text-red-600' };
+        list.innerHTML = filtered.map(b => `
+            <div class="bg-white border rounded-xl p-3 shadow-sm mb-2">
+                <div class="flex justify-between items-start mb-1">
+                    <div class="font-semibold text-gray-800 text-sm">${myMode==='seeker'?b.providerName:b.seekerName}</div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${sc[b.status]||'bg-gray-100 text-gray-500'}">${b.status.toUpperCase()}</span>
+                </div>
+                <div class="text-sm text-gray-600 mb-1">🔧 ${b.service}</div>
+                <div class="text-xs text-gray-500 mb-2">📅 ${b.date} · ⏰ ${b.time}</div>
+                <div class="text-xs text-gray-500 mb-2">📍 ${(b.address||'').substring(0,40)}${(b.address||'').length>40?'...':''}</div>
+                ${b.notes?`<div class="text-xs text-gray-400 mb-2 italic">"${b.notes}"</div>`:''}
+                <div class="flex gap-2 flex-wrap">
+                    ${myMode==='provider'&&b.status==='pending'?`
+                        <button onclick="updateBookingStatus('${b.id}','confirmed')" class="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-green-700">✅ Accept</button>
+                        <button onclick="updateBookingStatus('${b.id}','cancelled')" class="flex-1 bg-red-100 text-red-600 py-1.5 rounded-lg text-xs font-bold hover:bg-red-200">❌ Decline</button>
+                    `:''}
+                    ${b.status==='confirmed'?`<button onclick="updateBookingStatus('${b.id}','completed')" class="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700">✅ Mark Complete</button>`:''}
+                    <button onclick="openChatModal('${myMode==='seeker'?b.providerId:''}')" class="px-3 bg-blue-100 text-blue-600 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-200">💬 Chat</button>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) { list.innerHTML = '<div class="text-center text-red-400 py-4 text-sm">Error loading bookings</div>'; console.warn(e); }
+}
+function filterBookingsView(mode) {
+    const sb = document.getElementById('bookViewSeeker');
+    const pb = document.getElementById('bookViewProvider');
+    if (mode==='seeker') {
+        sb.className='flex-1 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm';
+        pb.className='flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold text-sm';
+    } else {
+        pb.className='flex-1 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm';
+        sb.className='flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold text-sm';
+    }
+    loadMyBookings();
+}
+async function updateBookingStatus(bookingId, newStatus) {
+    try {
+        await _firebase.update(_firebase.ref(_firebase.db, 'bookings/'+bookingId), {status:newStatus});
+        const snap = await _firebase.get(_firebase.ref(_firebase.db, 'bookings/'+bookingId));
+        const b = snap.val();
+        if (b && b.seekerUid) {
+            const msgs = {confirmed:'✅ Booking Confirmed!', completed:'🎉 Job Completed!', cancelled:'❌ Booking Declined'};
+            await addNotification(b.seekerUid, {
+                type:'booking_update', title: msgs[newStatus]||'Booking Updated',
+                message:`Your booking for "${b.service}" has been ${newStatus}`,
+                bookingId, timestamp:Date.now()
+            });
+        }
+        showFirebaseStatus('✅ Status updated!', 'success');
+        loadMyBookings();
+    } catch(e) { showFirebaseStatus('Update failed','error'); }
+}
+
+// ==================== CHAT SYSTEM ====================
+let currentChatProviderId = null;
+let chatUnsubscribe = null;
+
+function openChatModal(providerId) {
+    if (!providerId) return;
+    if (!firebaseUser) { openLoginModal(); return; }
+    currentChatProviderId = providerId;
+    const p = providers.find(x => x.id === providerId);
+    if (p) {
+        document.getElementById('chatWithName').textContent = '💬 ' + p.name;
+        document.getElementById('chatStatusLine').textContent = p.available!==false ? '🟢 Available' : '🔴 Busy';
+    }
+    document.getElementById('chatModal').classList.remove('hidden');
+    loadChatMessages();
+}
+function closeChatModal() {
+    document.getElementById('chatModal').classList.add('hidden');
+    if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe=null; }
+    currentChatProviderId = null;
+}
+function getChatRoomId() {
+    const uid = firebaseUser.uid;
+    const ids = [uid, currentChatProviderId].sort();
+    return 'chat_' + ids.join('_');
+}
+function loadChatMessages() {
+    const div = document.getElementById('chatMessages');
+    if (!div||!firebaseUser) return;
+    div.innerHTML = '<div class="text-center text-gray-400 text-sm py-4">Loading... 💬</div>';
+    const roomId = getChatRoomId();
+    const chatRef = _firebase.ref(_firebase.db, 'chats/'+roomId+'/messages');
+    if (chatUnsubscribe) chatUnsubscribe();
+    chatUnsubscribe = _firebase.onValue(chatRef, (snap) => {
+        const msgs = snap.exists() ? Object.values(snap.val()).sort((a,b)=>a.ts-b.ts) : [];
+        if (!msgs.length) {
+            div.innerHTML = '<div class="text-center text-gray-400 text-sm py-8">👋 Say hello! Start a conversation.</div>';
+        } else {
+            div.innerHTML = msgs.map(m => {
+                const isMe = m.senderUid===firebaseUser.uid;
+                return `<div class="flex ${isMe?'justify-end':'justify-start'} mb-2">
+                    <div class="max-w-xs px-3 py-2 rounded-2xl text-sm shadow-sm ${isMe?'bg-blue-600 text-white rounded-br-sm':'bg-white text-gray-800 border rounded-bl-sm'}">
+                        <div>${m.text}</div>
+                        <div class="text-xs ${isMe?'text-blue-200':'text-gray-400'} text-right mt-0.5">${new Date(m.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        div.scrollTop = div.scrollHeight;
+    });
+    _firebase.set(_firebase.ref(_firebase.db,`chats/${roomId}/read/${firebaseUser.uid}`), Date.now());
+}
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text||!firebaseUser||!currentChatProviderId) return;
+    input.value = '';
+    const roomId = getChatRoomId();
+    const p = providers.find(x=>x.id===currentChatProviderId);
+    const msg = { text, senderUid:firebaseUser.uid, senderName:userProfile?.name||'User', ts:Date.now() };
+    try {
+        await _firebase.set(_firebase.ref(_firebase.db,`chats/${roomId}/messages/${Date.now()}`), msg);
+        await _firebase.set(_firebase.ref(_firebase.db,`chats/${roomId}/meta`), {
+            participants:[firebaseUser.uid, currentChatProviderId],
+            lastMessage:text, lastTs:Date.now(),
+            providerName:p?.name||'', seekerName:userProfile?.name||''
+        });
+        if (p?.ownerUid && p.ownerUid!==firebaseUser.uid) {
+            await addNotification(p.ownerUid, {
+                type:'new_message', title:'💬 New Message',
+                message:(userProfile?.name||'Someone')+': '+text.substring(0,60),
+                chatProviderId:currentChatProviderId, timestamp:Date.now()
+            });
+        }
+    } catch(e) { showFirebaseStatus('Message failed','error'); }
+}
+
+// ==================== NOTIFICATIONS ====================
+let notifUnsubscribe = null;
+
+async function addNotification(uid, notif) {
+    try {
+        await _firebase.set(_firebase.ref(_firebase.db,`users/${uid}/notifications/${Date.now()}_${Math.random().toString(36).slice(2,6)}`), {...notif, read:false});
+    } catch(e) { console.warn('Notif error:',e); }
+}
+function listenForNotifications() {
+    if (!firebaseUser) return;
+    if (notifUnsubscribe) notifUnsubscribe();
+    const nRef = _firebase.ref(_firebase.db,`users/${firebaseUser.uid}/notifications`);
+    notifUnsubscribe = _firebase.onValue(nRef, (snap) => {
+        const notifs = snap.exists()
+            ? Object.entries(snap.val()).map(([id,n])=>({...n,id})).sort((a,b)=>b.timestamp-a.timestamp)
+            : [];
+        const unread = notifs.filter(n=>!n.read).length;
+        const badge = document.getElementById('notifBadge');
+        const bellBtn = document.getElementById('notifNavBtn');
+        if (badge) { badge.textContent = unread>9?'9+':unread; badge.classList.toggle('hidden', unread===0); }
+        if (bellBtn) bellBtn.classList.remove('hidden');
+        const list = document.getElementById('notifList');
+        if (!list) return;
+        if (!notifs.length) { list.innerHTML='<div class="text-center text-gray-400 py-8 text-sm">No notifications yet 🔔</div>'; return; }
+        list.innerHTML = notifs.slice(0,50).map(n=>`
+            <div class="p-3 rounded-xl border cursor-pointer hover:bg-gray-50 mb-2 ${n.read?'bg-white':'bg-orange-50 border-orange-200'}"
+                 onclick="handleNotifClick('${n.id}','${n.type||''}','${n.bookingId||''}','${n.chatProviderId||''}')">
+                <div class="font-semibold text-sm text-gray-800">${n.title||''}</div>
+                <div class="text-xs text-gray-500 mt-0.5">${n.message||''}</div>
+                <div class="text-xs text-gray-400 mt-1">${n.timestamp?new Date(n.timestamp).toLocaleString('en-IN'):''}</div>
+            </div>
+        `).join('');
+    });
+}
+function openNotifPanel() {
+    document.getElementById('notifPanel').classList.remove('hidden');
+    document.getElementById('notifOverlay').classList.remove('hidden');
+}
+function closeNotifPanel() {
+    document.getElementById('notifPanel').classList.add('hidden');
+    document.getElementById('notifOverlay').classList.add('hidden');
+}
+async function markAllNotifsRead() {
+    if (!firebaseUser) return;
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db,`users/${firebaseUser.uid}/notifications`));
+        if (!snap.exists()) return;
+        const updates = {};
+        Object.keys(snap.val()).forEach(k => updates[`users/${firebaseUser.uid}/notifications/${k}/read`]=true);
+        await _firebase.update(_firebase.ref(_firebase.db), updates);
+    } catch(e) { console.warn(e); }
+}
+async function handleNotifClick(notifId, type, bookingId, chatProviderId) {
+    if (!firebaseUser) return;
+    try { await _firebase.set(_firebase.ref(_firebase.db,`users/${firebaseUser.uid}/notifications/${notifId}/read`), true); } catch(e){}
+    closeNotifPanel();
+    if (type==='new_booking'||type==='booking_update') {
+        showPage('myProfile'); setTimeout(()=>showProfileTab('bookings'),300);
+    } else if (type==='new_message' && chatProviderId) {
+        openChatModal(chatProviderId);
+    }
+}
+// Hook auth state to start notifications
+window.addEventListener('authStateChanged', (e) => {
+    if (e.detail) {
+        setTimeout(()=>{ listenForNotifications(); }, 600);
+        const b = document.getElementById('notifNavBtn');
+        if (b) b.classList.remove('hidden');
+    } else {
+        if (notifUnsubscribe) { notifUnsubscribe(); notifUnsubscribe=null; }
+        const b = document.getElementById('notifNavBtn');
+        if (b) b.classList.add('hidden');
+    }
+});
+
+// ==================== PORTFOLIO ====================
+let portfolioProviderId = null;
+let isMyPortfolio = false;
+
+async function openPortfolioView(providerId) {
+    portfolioProviderId = providerId;
+    isMyPortfolio = false;
+    document.getElementById('portfolioUploadSection').classList.add('hidden');
+    document.getElementById('portfolioModal').classList.remove('hidden');
+    await loadPortfolio(providerId);
+    // Track profile view
+    trackProfileView(providerId);
+}
+async function openMyPortfolioModal() {
+    const myProvider = providers.find(p=>p.ownerUid===firebaseUser?.uid);
+    if (!myProvider) { showFirebaseStatus('Register as provider first','info'); return; }
+    portfolioProviderId = myProvider.id;
+    isMyPortfolio = true;
+    document.getElementById('portfolioUploadSection').classList.remove('hidden');
+    document.getElementById('portfolioModal').classList.remove('hidden');
+    await loadPortfolio(myProvider.id);
+}
+function closePortfolioModal() { document.getElementById('portfolioModal').classList.add('hidden'); }
+async function loadPortfolio(providerId) {
+    const grid = document.getElementById('portfolioGrid');
+    grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 py-6 text-sm">Loading portfolio... 📸</div>';
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${providerId}/portfolio`));
+        const items = snap.exists() ? Object.entries(snap.val()).map(([id,v])=>({...v,id})) : [];
+        if (!items.length) {
+            grid.innerHTML = `<div class="col-span-2 text-center text-gray-400 py-8">📸 No portfolio photos yet${isMyPortfolio?' — add your work above':''}</div>`;
+            return;
+        }
+        grid.innerHTML = items.map(item=>`
+            <div class="relative group rounded-xl overflow-hidden border shadow-sm">
+                <img src="${item.url}" alt="${item.caption||''}" class="w-full h-32 object-cover bg-gray-100"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div style="display:none" class="w-full h-32 bg-gray-100 items-center justify-center text-gray-400 text-3xl">📷</div>
+                <div class="p-2 bg-white"><p class="text-xs text-gray-600 truncate">${item.caption||'Work photo'}</p></div>
+                ${isMyPortfolio?`<button onclick="deletePortfolioItem('${item.id}')" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition">✕</button>`:''}
+            </div>
+        `).join('');
+    } catch(e) { grid.innerHTML='<div class="col-span-2 text-center text-red-400 py-4 text-sm">Error loading portfolio</div>'; }
+}
+async function addPortfolioItem() {
+    const url = document.getElementById('portfolioImageUrl').value.trim();
+    const caption = document.getElementById('portfolioCaption').value.trim();
+    if (!url) { showFirebaseStatus('Please enter an image URL','error'); return; }
+    if (!portfolioProviderId) return;
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/portfolio`));
+        const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+        const memSnap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/membership`));
+        const plan = memSnap.exists() ? (memSnap.val()?.plan||'free') : 'free';
+        const limits = {free:5, silver:15, gold:999};
+        if (count>=(limits[plan]||5)) {
+            showFirebaseStatus(`Portfolio full for ${plan} plan! Upgrade to add more.`,'error'); return;
+        }
+        await _firebase.set(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/portfolio/${Date.now()}`), {url, caption, addedAt:Date.now()});
+        document.getElementById('portfolioImageUrl').value='';
+        document.getElementById('portfolioCaption').value='';
+        showFirebaseStatus('✅ Photo added!','success');
+        loadPortfolio(portfolioProviderId);
+    } catch(e) { showFirebaseStatus('Failed: '+e.message,'error'); }
+}
+async function deletePortfolioItem(itemId) {
+    if (!portfolioProviderId||!confirm('Delete this photo?')) return;
+    await _firebase.remove(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/portfolio/${itemId}`));
+    loadPortfolio(portfolioProviderId);
+}
+
+// ==================== PROFILE VIEW TRACKING ====================
+function trackProfileView(providerId) {
+    if (!providerId) return;
+    const ref = _firebase.ref(_firebase.db,`providers/${providerId}/profileViews`);
+    _firebase.get(ref).then(s=>_firebase.set(ref,(s.exists()?(s.val()||0):0)+1)).catch(()=>{});
+}
+
+// ==================== PROVIDER DASHBOARD ====================
+async function openProviderDash() {
+    const myProvider = providers.find(p=>p.ownerUid===firebaseUser?.uid);
+    if (!myProvider) { showFirebaseStatus('Register as provider first','info'); return; }
+    document.getElementById('providerDashModal').classList.remove('hidden');
+    try {
+        // Bookings
+        const bkSnap = await _firebase.get(_firebase.ref(_firebase.db,'bookings'));
+        const myBookings = bkSnap.exists() ? Object.values(bkSnap.val()).filter(b=>b.providerId===myProvider.id) : [];
+        document.getElementById('dashBookingCount').textContent = myBookings.length;
+        // Reviews
+        const reviews = myProvider.reviews ? Object.values(myProvider.reviews) : [];
+        const avg = reviews.length ? (reviews.reduce((s,r)=>s+(r.rating||0),0)/reviews.length).toFixed(1) : '—';
+        document.getElementById('dashRating').textContent = avg;
+        document.getElementById('dashReviewCount').textContent = reviews.length;
+        // Views
+        const vSnap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${myProvider.id}/profileViews`));
+        document.getElementById('dashProfileViews').textContent = vSnap.exists()?vSnap.val():0;
+        // Recent bookings
+        const recent = myBookings.sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+        const sc = {pending:'bg-yellow-100 text-yellow-700',confirmed:'bg-green-100 text-green-700',completed:'bg-blue-100 text-blue-700',cancelled:'bg-red-100 text-red-600'};
+        document.getElementById('dashRecentBookings').innerHTML = recent.length
+            ? recent.map(b=>`
+                <div class="flex justify-between items-center py-1.5 border-b last:border-0">
+                    <div><div class="font-semibold text-gray-700 text-xs">${b.seekerName}</div>
+                    <div class="text-gray-500 text-xs">${b.service} · ${b.date}</div></div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${sc[b.status]||'bg-gray-100 text-gray-500'}">${b.status}</span>
+                </div>`).join('')
+            : '<div class="text-gray-400 text-center py-3 text-xs">No bookings yet</div>';
+        // Membership
+        const memSnap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${myProvider.id}/membership`));
+        const mem = memSnap.exists() ? memSnap.val() : {plan:'free'};
+        const planLabels = {free:'🆓 Free Plan', silver:'🥈 Silver Plan', gold:'🥇 Gold Plan'};
+        const expiry = mem.expiry ? ` · Expires: ${new Date(mem.expiry).toLocaleDateString('en-IN')}` : '';
+        const statusNote = mem.status==='pending_verification' ? ' ⏳ (Awaiting verification)' : '';
+        document.getElementById('dashMembershipInfo').textContent = (planLabels[mem.plan]||'🆓 Free Plan') + expiry + statusNote;
+    } catch(e) { console.warn('Dashboard error:',e); }
+}
+function closeProviderDash() { document.getElementById('providerDashModal').classList.add('hidden'); }
+
+// ==================== SUBSCRIPTION / MEMBERSHIP ====================
+function openSubscriptionModal() {
+    const myProvider = providers.find(p=>p.ownerUid===firebaseUser?.uid);
+    if (myProvider) {
+        _firebase.get(_firebase.ref(_firebase.db,`providers/${myProvider.id}/membership`)).then(snap=>{
+            const plan = snap.exists() ? (snap.val()?.plan||'free') : 'free';
+            ['free','silver','gold'].forEach(p=>{
+                const el = document.getElementById('planBadge'+p.charAt(0).toUpperCase()+p.slice(1));
+                if (el) el.classList.toggle('hidden', plan!==p);
+            });
+        });
+    }
+    document.getElementById('subscriptionModal').classList.remove('hidden');
+}
+function closeSubscriptionModal() { document.getElementById('subscriptionModal').classList.add('hidden'); }
+async function initiateSubscription(plan, amount) {
+    if (!firebaseUser) { openLoginModal(); return; }
+    const myProvider = providers.find(p=>p.ownerUid===firebaseUser.uid);
+    if (!myProvider) { showFirebaseStatus('Register as provider first','info'); return; }
+    const upiId = '9414055013@ybl';
+    const note = `SC_${plan.toUpperCase()}_${myProvider.id.slice(-6)}`;
+    const confirmed = confirm(`Pay ₹${amount} for ${plan.toUpperCase()} Plan
+
+UPI ID: ${upiId}
+Payment Note: ${note}
+
+You will be redirected to your UPI app. After payment, your plan activates within 24 hours after admin verification.`);
+    if (!confirmed) return;
+    try {
+        await _firebase.set(_firebase.ref(_firebase.db,`providers/${myProvider.id}/membership`), {
+            plan, amount:parseInt(amount),
+            expiry: Date.now()+30*24*60*60*1000,
+            requestedAt:Date.now(), status:'pending_verification',
+            payerUid:firebaseUser.uid, upiNote:note
+        });
+        await _firebase.set(_firebase.ref(_firebase.db,`admin/subscriptionRequests/${Date.now()}`), {
+            providerId:myProvider.id, providerName:myProvider.name,
+            plan, amount:parseInt(amount), timestamp:Date.now(), upiNote:note, status:'pending'
+        });
+        closeSubscriptionModal();
+        showFirebaseStatus(`✅ ${plan.toUpperCase()} plan request saved! Redirecting to UPI payment...`,'success');
+        setTimeout(()=>{
+            const upiUrl = `upi://pay?pa=${upiId}&pn=Sudarshan+Chakra&am=${amount}&cu=INR&tn=${note}`;
+            window.location.href = upiUrl;
+        }, 1000);
+    } catch(e) { showFirebaseStatus('Error: '+e.message,'error'); }
+}
+
+// ==================== ADVANCED GLOBAL SEARCH ====================
+function globalSearchSubmit(e) {
+    if (e && e.key && e.key!=='Enter') return;
+    const q = (document.getElementById('globalSearchInput')?.value||'').trim();
+    if (!q) return;
+    const lower = q.toLowerCase();
+    const results = providers.filter(p=>
+        (p.name||'').toLowerCase().includes(lower) ||
+        (getTranslated(p.service)||p.service||'').toLowerCase().includes(lower) ||
+        (p.location||'').toLowerCase().includes(lower) ||
+        (p.bio||'').toLowerCase().includes(lower) ||
+        (getTranslated(p.category)||'').toLowerCase().includes(lower)
+    );
+    showPage('browse');
+    setTimeout(()=>{
+        renderProviders(results);
+        const lbl = document.getElementById('browseResultsCount');
+        if (lbl) lbl.textContent = `🔍 "${q}" — ${results.length} result${results.length!==1?'s':''}`;
+    }, 150);
+}
+
+// ==================== MEMBERSHIP BADGE HELPER ====================
+function getMembershipBadge(provider) {
+    if (!provider?.membership) return '';
+    const plan = provider.membership.plan;
+    const valid = !provider.membership.expiry || provider.membership.expiry > Date.now();
+    const active = valid && provider.membership.status !== 'pending_verification';
+    if (plan==='gold'&&active) return '<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-1.5 py-0.5 rounded-full">🥇 Gold</span>';
+    if (plan==='silver'&&active) return '<span class="bg-blue-200 text-blue-800 text-xs font-bold px-1.5 py-0.5 rounded-full">🥈 Silver</span>';
+    return '';
+}
+
+// ==================== ADMIN: SUBSCRIPTION MANAGEMENT ====================
+async function loadAdminSubscriptions() {
+    const list = document.getElementById('adminSubsList');
+    if (!list) return;
+    list.innerHTML = '<p class="text-center text-gray-400 py-4">Loading...</p>';
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db,'admin/subscriptionRequests'));
+        if (!snap.exists()) { list.innerHTML='<div class="text-center py-8 text-gray-400">No subscription requests yet</div>'; return; }
+        const reqs = Object.entries(snap.val()).map(([id,v])=>({...v,reqId:id})).sort((a,b)=>b.timestamp-a.timestamp);
+        list.innerHTML = reqs.map(r=>`
+            <div class="border rounded-xl p-3 mb-2 ${r.status==='pending'?'bg-yellow-50 border-yellow-200':'bg-white'}">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="font-semibold text-sm">${r.providerName||r.providerId}</div>
+                        <div class="text-xs text-gray-500">Plan: <b>${r.plan?.toUpperCase()}</b> · ₹${r.amount} · Note: ${r.upiNote}</div>
+                        <div class="text-xs text-gray-400">${r.timestamp?new Date(r.timestamp).toLocaleString('en-IN'):''}</div>
+                    </div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${r.status==='pending'?'bg-yellow-100 text-yellow-700':r.status==='approved'?'bg-green-100 text-green-700':'bg-red-100 text-red-600'}">${r.status||'pending'}</span>
+                </div>
+                ${r.status==='pending'?`
+                <div class="flex gap-2 mt-2">
+                    <button onclick="approveSubscription('${r.providerId}','${r.plan}','${r.reqId}')" class="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-green-700">✅ Approve</button>
+                    <button onclick="rejectSubscription('${r.providerId}','${r.reqId}')" class="flex-1 bg-red-100 text-red-600 py-1.5 rounded-lg text-xs font-bold hover:bg-red-200">❌ Reject</button>
+                </div>`:''}
+            </div>
+        `).join('');
+    } catch(e) { list.innerHTML='<div class="text-center text-red-400 py-4 text-sm">Error loading</div>'; }
+}
+async function approveSubscription(providerId, plan, reqId) {
+    try {
+        await _firebase.update(_firebase.ref(_firebase.db,`providers/${providerId}/membership`), {plan, status:'active'});
+        await _firebase.update(_firebase.ref(_firebase.db,`admin/subscriptionRequests/${reqId}`), {status:'approved'});
+        showFirebaseStatus('✅ Subscription approved!','success');
+        loadAdminSubscriptions();
+    } catch(e) { showFirebaseStatus('Error: '+e.message,'error'); }
+}
+async function rejectSubscription(providerId, reqId) {
+    try {
+        await _firebase.update(_firebase.ref(_firebase.db,`providers/${providerId}/membership`), {plan:'free', status:'active'});
+        await _firebase.update(_firebase.ref(_firebase.db,`admin/subscriptionRequests/${reqId}`), {status:'rejected'});
+        showFirebaseStatus('Subscription rejected','info');
+        loadAdminSubscriptions();
+    } catch(e) { showFirebaseStatus('Error: '+e.message,'error'); }
 }
 </script>
 
