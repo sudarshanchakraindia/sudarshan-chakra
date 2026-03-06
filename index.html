@@ -285,6 +285,40 @@
                 </div>
             </div>
             
+            <!-- 🔱 Live Stats Banner -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                    <div class="text-4xl font-black" id="homeStatProviders">...</div>
+                    <div class="text-sm font-semibold mt-1 opacity-90">👷 Skilled Providers</div>
+                    <div class="text-xs mt-1 opacity-75">Ready to serve you</div>
+                </div>
+                <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                    <div class="text-4xl font-black" id="homeStatServices">...</div>
+                    <div class="text-sm font-semibold mt-1 opacity-90">🛠️ Services Listed</div>
+                    <div class="text-xs mt-1 opacity-75">Across all categories</div>
+                </div>
+                <div class="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                    <div class="text-4xl font-black" id="homeStatCategories">...</div>
+                    <div class="text-sm font-semibold mt-1 opacity-90">📋 Categories</div>
+                    <div class="text-xs mt-1 opacity-75">Find what you need</div>
+                </div>
+                <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                    <div class="text-4xl font-black" id="homeStatReviews">...</div>
+                    <div class="text-sm font-semibold mt-1 opacity-90">⭐ Happy Clients</div>
+                    <div class="text-xs mt-1 opacity-75">Verified reviews</div>
+                </div>
+            </div>
+
+            <!-- Motivational Join Strip -->
+            <div class="bg-gradient-to-r from-orange-600 to-orange-500 rounded-2xl p-5 mb-10 text-white text-center shadow-lg">
+                <div class="text-lg font-bold mb-1">🔱 Join Sudarshan Chakra Today!</div>
+                <div class="text-sm opacity-90 mb-3">Be part of India's growing skilled workforce network — get work, earn money, build reputation</div>
+                <div class="flex gap-3 justify-center flex-wrap">
+                    <button onclick="showPage('register')" class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition">👷 Register as Provider</button>
+                    <button onclick="showPage('seeker')" class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition">🙋 Register as Seeker</button>
+                </div>
+            </div>
+
             <h2 data-i18n="serviceCategories" class="text-2xl font-bold text-gray-800 mb-6 text-center">Service Categories</h2>
             <div id="categoriesGridHome" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
         </div>
@@ -989,6 +1023,9 @@
                         <button onclick="showAdminTab('reports')" id="tab-reports" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
                             🚨 Reports
                         </button>
+                        <button onclick="showAdminTab('reviews')" id="tab-reviews" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            ⭐ Reviews
+                        </button>
                         <button onclick="showAdminTab('categories')" id="tab-categories" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-orange-600">
                             📋 Categories
                         </button>
@@ -1029,6 +1066,48 @@
                         </div>
                         <div id="adminReportsList" class="space-y-4">
                             <p class="text-gray-400 text-center py-8">Click Refresh to load reports</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REVIEWS MANAGEMENT TAB -->
+                <div id="adminTab-reviews" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex flex-wrap justify-between items-center mb-6 gap-3">
+                            <h2 class="text-2xl font-bold text-gray-800">⭐ Reviews Management</h2>
+                            <div class="flex gap-2 flex-wrap">
+                                <select id="reviewFilterRating" onchange="loadAdminReviews()" class="border rounded-lg px-3 py-2 text-sm">
+                                    <option value="">All Ratings</option>
+                                    <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+                                    <option value="4">⭐⭐⭐⭐ 4 Stars</option>
+                                    <option value="3">⭐⭐⭐ 3 Stars</option>
+                                    <option value="2">⭐⭐ 2 Stars</option>
+                                    <option value="1">⭐ 1 Star</option>
+                                </select>
+                                <select id="reviewFilterSort" onchange="loadAdminReviews()" class="border rounded-lg px-3 py-2 text-sm">
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                    <option value="highest">Highest Rating</option>
+                                    <option value="lowest">Lowest Rating</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+                                <div class="text-3xl font-black text-yellow-600" id="adminRevTotal">0</div>
+                                <div class="text-sm text-gray-600 mt-1">Total Reviews</div>
+                            </div>
+                            <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                                <div class="text-3xl font-black text-green-600" id="adminRevAvg">0.0</div>
+                                <div class="text-sm text-gray-600 mt-1">Avg Rating ⭐</div>
+                            </div>
+                            <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                                <div class="text-3xl font-black text-red-600" id="adminRevFlagged">0</div>
+                                <div class="text-sm text-gray-600 mt-1">🚩 Flagged</div>
+                            </div>
+                        </div>
+                        <div id="adminReviewsList" class="space-y-4">
+                            <div class="text-center py-12 text-gray-400">Click the Reviews tab to load...</div>
                         </div>
                     </div>
                 </div>
@@ -2773,6 +2852,7 @@
                 }
                 // Refresh all UI that depends on categories
                 updateProviderCategorySelects();
+                updateHomeStats();
                 if (document.getElementById('page-home') && !document.getElementById('page-home').classList.contains('hidden')) {
                     renderHomeCategories && renderHomeCategories();
                 }
@@ -4075,7 +4155,7 @@
         }
         
         function showAdminTab(tabName) {
-            ['users','reports','categories','idverify','settings'].forEach(t => {
+            ['users','reports','reviews','categories','idverify','settings'].forEach(t => {
                 document.getElementById('adminTab-' + t).classList.add('hidden');
                 document.getElementById('tab-' + t).classList.remove('border-orange-600','text-orange-600');
             });
@@ -4083,6 +4163,7 @@
             document.getElementById('tab-' + tabName).classList.add('border-orange-600','text-orange-600');
             if (tabName === 'users') { loadProvidersList(); loadSeekersList(); }
             else if (tabName === 'categories') { loadAdminCategories(); }
+            else if (tabName === 'reviews') { loadAdminReviews(); }
             else if (tabName === 'reports') { loadAdminReports(); }
             else if (tabName === 'idverify') { loadIdVerifications(); }
         }
@@ -4434,6 +4515,24 @@
             `).join('');
         }
         
+        // Update live stats on home page
+        function updateHomeStats() {
+            const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+            // Count active providers
+            const activeProviders = providers.filter(p => !p.status || p.status === 'active').length;
+            set('homeStatProviders', activeProviders || '0');
+            // Count total services across all categories
+            let totalSvcs = 0;
+            categories.forEach(cat => (cat.subcategories||[]).forEach(sub => totalSvcs += (sub.subsubcategories||[]).filter(s=>!s.paused).length));
+            set('homeStatServices', totalSvcs || '0');
+            // Categories
+            set('homeStatCategories', categories.length || '0');
+            // Reviews
+            let totalRevs = 0;
+            providers.forEach(p => { if(p.reviews) totalRevs += Object.keys(p.reviews).length; });
+            set('homeStatReviews', totalRevs || '0');
+        }
+
         // Save categories to Firebase so ALL users see changes
         async function saveCategoriesToFirebase() {
             try {
@@ -4683,6 +4782,109 @@
         
         function closeServiceModal() {
             document.getElementById('serviceModal').classList.add('hidden');
+        }
+
+        function loadAdminReviews() {
+            const list = document.getElementById('adminReviewsList');
+            if (!list) return;
+
+            // Collect all reviews from all providers
+            let allReviews = [];
+            providers.forEach(p => {
+                if (p.reviews) {
+                    Object.values(p.reviews).forEach(r => {
+                        allReviews.push({
+                            ...r,
+                            providerName: p.name,
+                            providerService: p.service,
+                            providerId: p.id
+                        });
+                    });
+                }
+            });
+
+            // Filter by rating
+            const ratingFilter = document.getElementById('reviewFilterRating')?.value;
+            if (ratingFilter) allReviews = allReviews.filter(r => r.rating == ratingFilter);
+
+            // Sort
+            const sortBy = document.getElementById('reviewFilterSort')?.value || 'newest';
+            if (sortBy === 'newest') allReviews.sort((a,b) => new Date(b.date) - new Date(a.date));
+            else if (sortBy === 'oldest') allReviews.sort((a,b) => new Date(a.date) - new Date(b.date));
+            else if (sortBy === 'highest') allReviews.sort((a,b) => b.rating - a.rating);
+            else if (sortBy === 'lowest') allReviews.sort((a,b) => a.rating - b.rating);
+
+            // Update summary
+            const total = allReviews.length;
+            const avg = total > 0 ? (allReviews.reduce((s,r) => s + r.rating, 0) / total).toFixed(1) : '0.0';
+            const flagged = allReviews.filter(r => r.flagged).length;
+            const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+            set('adminRevTotal', total);
+            set('adminRevAvg', avg);
+            set('adminRevFlagged', flagged);
+
+            if (total === 0) {
+                list.innerHTML = '<div class="text-center py-12 text-gray-400"><div class="text-5xl mb-3">⭐</div><p>No reviews yet</p></div>';
+                return;
+            }
+
+            list.innerHTML = allReviews.map(r => {
+                const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+                const date = r.date ? new Date(r.date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '';
+                const flagClass = r.flagged ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white';
+                return `
+                <div class="border-2 ${flagClass} rounded-xl p-4 hover:shadow-md transition">
+                    <div class="flex flex-wrap justify-between items-start gap-2 mb-2">
+                        <div>
+                            <span class="font-bold text-gray-800">${r.reviewerName || 'Anonymous'}</span>
+                            <span class="text-gray-400 text-sm ml-2">${date}</span>
+                            ${r.flagged ? '<span class="ml-2 bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-semibold">🚩 Flagged</span>' : ''}
+                        </div>
+                        <div class="text-yellow-500 font-bold text-lg">${stars} <span class="text-gray-600 text-sm">(${r.rating}/5)</span></div>
+                    </div>
+                    <div class="text-gray-700 mb-2">${r.text || ''}</div>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                            Provider: <strong>${r.providerName}</strong> · ${r.providerService}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="flagReview('${r.providerId}','${r.id}',${!r.flagged})" 
+                                class="text-xs px-3 py-1 rounded-lg font-semibold ${r.flagged ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'}">
+                                ${r.flagged ? '✅ Unflag' : '🚩 Flag'}
+                            </button>
+                            <button onclick="deleteReview('${r.providerId}','${r.id}')" 
+                                class="text-xs px-3 py-1 rounded-lg font-semibold bg-red-100 text-red-700 hover:bg-red-200">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function flagReview(providerId, reviewId, flag) {
+            try {
+                await _firebase.set(_firebase.ref(_firebase.db, `providers/${providerId}/reviews/${reviewId}/flagged`), flag);
+                // Update local data
+                const p = providers.find(pr => pr.id === providerId);
+                if (p && p.reviews && p.reviews[reviewId]) p.reviews[reviewId].flagged = flag;
+                loadAdminReviews();
+                updateAdminStats();
+                showFirebaseStatus(flag ? '🚩 Review flagged' : '✅ Review unflagged', flag ? 'warning' : 'success');
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function deleteReview(providerId, reviewId) {
+            if (!confirm('🗑️ Permanently delete this review? This cannot be undone.')) return;
+            try {
+                await _firebase.remove(_firebase.ref(_firebase.db, `providers/${providerId}/reviews/${reviewId}`));
+                // Update local data
+                const p = providers.find(pr => pr.id === providerId);
+                if (p && p.reviews) delete p.reviews[reviewId];
+                loadAdminReviews();
+                updateAdminStats();
+                showFirebaseStatus('🗑️ Review deleted', 'success');
+            } catch(e) { alert('Error: ' + e.message); }
         }
 
         function togglePauseService(catIdx, subIdx, serviceIdx) {
