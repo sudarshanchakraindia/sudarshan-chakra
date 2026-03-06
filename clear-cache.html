@@ -1,1 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Clear Cache — Sudarshan Chakra</title>
+<style>
+  body { font-family: sans-serif; max-width: 400px; margin: 60px auto; padding: 20px; text-align: center; background: #fff7ed; }
+  h2 { color: #EA580C; }
+  .btn { background: #EA580C; color: white; border: none; padding: 16px 40px; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; margin: 10px; display: block; width: 100%; }
+  .btn.green { background: #059669; }
+  #log { margin-top: 20px; text-align: left; background: white; border-radius: 10px; padding: 16px; font-size: 13px; font-family: monospace; min-height: 80px; white-space: pre-wrap; border: 2px solid #E2E8F0; }
+</style>
+</head>
+<body>
+<div style="font-size:48px">🔱</div>
+<h2>Sudarshan Chakra</h2>
+<p>If you're seeing an old version of the app, tap below to force clear all cache and reload fresh.</p>
+<button class="btn" onclick="clearAll()">🗑️ Clear Cache & Reload</button>
+<div id="log">Ready...</div>
 
+<script>
+function log(msg) {
+  document.getElementById('log').textContent += msg + '\n';
+}
+
+async function clearAll() {
+  log('⏳ Unregistering service workers...');
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (let reg of regs) {
+      await reg.unregister();
+      log('✅ SW unregistered: ' + reg.scope);
+    }
+    if (regs.length === 0) log('ℹ️ No service workers found');
+  }
+
+  log('\n⏳ Clearing all caches...');
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    for (let key of keys) {
+      await caches.delete(key);
+      log('✅ Cache deleted: ' + key);
+    }
+    if (keys.length === 0) log('ℹ️ No caches found');
+  }
+
+  log('\n🎉 Done! Redirecting to fresh app in 2 seconds...');
+  setTimeout(() => {
+    window.location.href = './index.html?v=' + Date.now();
+  }, 2000);
+}
+</script>
+</body>
+</html>
