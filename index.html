@@ -572,11 +572,11 @@
                         <span id="dailyBonusStatus" class="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700">✅ Today's claimed</span>
                       </div>
                       <!-- 1. Make a Payment → goes to Browse -->
-                      <button onclick="showPage('browse'); setTimeout(()=>showFirebaseStatus('Browse providers and tap 💜 Hire to earn 10 pts!','info'),300)" class="w-full flex items-center gap-3 p-3 bg-purple-50 rounded-xl hover:bg-purple-100 active:scale-95 transition-all text-left border border-transparent hover:border-purple-200">
+                      <button onclick="showPage('browse'); setTimeout(()=>showFirebaseStatus('Browse providers and tap 💜 Hire to earn 10 pts! Points can offset portal fee.','info'),300)" class="w-full flex items-center gap-3 p-3 bg-purple-50 rounded-xl hover:bg-purple-100 active:scale-95 transition-all text-left border border-transparent hover:border-purple-200">
                         <span class="text-2xl">💳</span>
                         <div class="flex-1">
                           <div class="font-semibold text-sm text-gray-800">Make a Payment</div>
-                          <div class="text-xs text-gray-500">Earn <strong class="text-purple-600">10 pts</strong> (= ₹1) every time you hire a provider</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-purple-600">10 pts</strong> · Use points for portal fee, tips, charity &amp; upgrades</div>
                         </div>
                         <span class="text-purple-400 text-lg">→</span>
                       </button>
@@ -589,14 +589,23 @@
                         </div>
                         <span class="text-green-400 text-lg">→</span>
                       </button>
-                      <!-- 3. Share Gratitude → copies referral link -->
-                      <button onclick="shareReferralLink()" class="w-full flex items-center gap-3 p-3 bg-orange-50 rounded-xl hover:bg-orange-100 active:scale-95 transition-all text-left border border-transparent hover:border-orange-200">
-                        <span class="text-2xl">📤</span>
+                      <!-- 3. Share Gratitude Message → opens gratitude composer -->
+                      <button onclick="openGratitudeModal()" class="w-full flex items-center gap-3 p-3 bg-orange-50 rounded-xl hover:bg-orange-100 active:scale-95 transition-all text-left border border-transparent hover:border-orange-200">
+                        <span class="text-2xl">🙏</span>
                         <div class="flex-1">
-                          <div class="font-semibold text-sm text-gray-800">Share Gratitude Message</div>
-                          <div class="text-xs text-gray-500">Earn <strong class="text-orange-600">5 pts</strong> (= ₹0.50) for every friend who joins via your share</div>
+                          <div class="font-semibold text-sm text-gray-800">Send Gratitude Message</div>
+                          <div class="text-xs text-gray-500">Thank a provider · Share their profile · Earn <strong class="text-orange-600">3 pts</strong></div>
                         </div>
                         <span class="text-orange-400 text-lg">→</span>
+                      </button>
+                      <!-- 3b. Refer friends → share app referral link -->
+                      <button onclick="shareReferralLink()" class="w-full flex items-center gap-3 p-3 bg-pink-50 rounded-xl hover:bg-pink-100 active:scale-95 transition-all text-left border border-transparent hover:border-pink-200">
+                        <span class="text-2xl">📤</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Refer a Friend</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-pink-600">5 pts</strong> (= ₹0.50) for every friend who joins via your link</div>
+                        </div>
+                        <span class="text-pink-400 text-lg">→</span>
                       </button>
                       <!-- 4. Refer a Provider → opens provider registration -->
                       <button onclick="showReferProviderModal()" class="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-xl hover:bg-blue-100 active:scale-95 transition-all text-left border border-transparent hover:border-blue-200">
@@ -5313,6 +5322,7 @@
         // Listen for auth state changes
         window.addEventListener('authStateChanged', async (e) => {
             firebaseUser = e.detail;
+            window.firebaseUser = firebaseUser; // bridge for cross-script access
             if (firebaseUser) {
                 // Wait for Firebase to be ready
                 if (!window._firebase) {
@@ -5987,11 +5997,12 @@
             if (!type) { alert('Please select the type of issue'); return; }
             if (!desc || desc.length < 20) { alert('Please describe the issue in at least 20 characters'); return; }
 
+            const targetName = document.getElementById('reportTargetName').textContent.replace('Reporting: ', '');
             const report = {
                 id:          'rep_' + Date.now(),
                 targetId:    reportTargetId,
                 targetType:  reportTargetType,
-                targetName:  document.getElementById('reportTargetName').textContent.replace('Reporting: ', ''),
+                targetName,
                 type,
                 description: desc,
                 reporterName: name,
@@ -6003,9 +6014,57 @@
 
             try {
                 await _firebase.set(_firebase.ref(_firebase.db, `reports/${report.id}`), report);
+
+                const now       = Date.now();
+                const dateStr   = new Date().toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+                const isProvider = reportTargetType === 'provider';
+
+                // ── NOTIFICATION TO REPORTER (Regret message) ──
+                const regretMsg = isProvider
+                    ? `🙏 Dear ${name || 'User'}, we sincerely regret the inconvenience caused. Your report against provider "${targetName}" has been received by Sudarshan Chakra Portal. We have taken cognizance and have immediately initiated communication with the concerned party to resolve this issue at the earliest — with full consent and satisfaction of both parties. We assure you of a fair and transparent resolution. Thank you for trusting us. 🔱`
+                    : `🙏 Dear ${name || 'User'}, we sincerely regret the inconvenience caused. Your report against seeker "${targetName}" has been received by Sudarshan Chakra Portal. We have taken cognizance and have immediately initiated communication with the concerned party to resolve this issue at the earliest — with full consent and satisfaction of both parties. We assure you of a fair and transparent resolution. Thank you for trusting us. 🔱`;
+
+                await _firebase.set(
+                    _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/notifications/${now}_regret`),
+                    {
+                        type: 'portal_regret',
+                        title: '🔱 Sudarshan Chakra Portal',
+                        message: regretMsg,
+                        timestamp: now,
+                        date: dateStr,
+                        read: false,
+                        reportId: report.id
+                    }
+                );
+
+                // ── NOTIFICATION TO REPORTED PARTY (Information message) ──
+                const reportedUid = isProvider
+                    ? (providers.find(p => p.id === reportTargetId)?.ownerUid || reportTargetId)
+                    : reportTargetId;
+
+                const infoMsg = isProvider
+                    ? `ℹ️ Dear Provider, a concern has been raised by a customer regarding your service on Sudarshan Chakra Portal on ${dateStr}. Please be assured that our team has taken cognizance of this matter and is initiating a fair communication process. We will reach out to you to understand your perspective and work toward a mutually satisfactory resolution with the full consent of both parties. We appreciate your cooperation. 🔱`
+                    : `ℹ️ Dear User, a concern has been raised by a service provider regarding an interaction on Sudarshan Chakra Portal on ${dateStr}. Our team has taken note of this matter and is initiating a fair communication process with both parties. We will work toward a resolution that is agreeable to everyone involved. We appreciate your understanding. 🔱`;
+
+                if (reportedUid && reportedUid !== firebaseUser.uid) {
+                    await _firebase.set(
+                        _firebase.ref(_firebase.db, `users/${reportedUid}/notifications/${now}_info`),
+                        {
+                            type: 'portal_info',
+                            title: '🔱 Sudarshan Chakra Portal — Notice',
+                            message: infoMsg,
+                            timestamp: now,
+                            date: dateStr,
+                            read: false,
+                            reportId: report.id
+                        }
+                    );
+                }
+
                 closeReportModal();
-                showFirebaseStatus('🚨 Report submitted. Admin will review within 24 hours.', 'success');
+                showFirebaseStatus('✅ Report submitted. We have taken cognizance and will contact both parties to resolve this asap.', 'success');
             } catch(e) {
+                console.error('Report submit error:', e);
                 alert('Could not submit report. Please try again.');
             }
         }
@@ -6427,19 +6486,21 @@
     <p class="slbl">Optional Add-ons</p>
     <div class="ocard">
       <div class="orow">
-        <div style="flex:1"><p style="font-size:13px;font-weight:600">🙏 Tip to Provider</p><span style="font-size:10px;color:#64748B">100% goes to provider</span></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button style="width:32px;height:32px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('tip',-10)">−</button>
-          <span style="font-size:14px;font-weight:700;min-width:40px;text-align:center;color:#1E293B" id="hm-tip-disp">₹0</span>
-          <button style="width:32px;height:32px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('tip',10)">+</button>
+        <div style="flex:1"><p style="font-size:13px;font-weight:600">🙏 Tip to Provider</p><span style="font-size:10px;color:#64748B">100% goes to provider · min ₹10</span></div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('tip',-10)">−</button>
+          <span style="font-size:13px;font-weight:700;min-width:36px;text-align:center;color:#1E293B" id="hm-tip-disp">₹0</span>
+          <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('tip',10)">+</button>
+          <input type="number" id="hm-tip-input" min="0" placeholder="₹ amt" style="width:64px;border:1.5px solid #CBD5E1;border-radius:8px;padding:4px 6px;font-size:12px;font-weight:600;color:#1E293B;text-align:center" oninput="hmSetAmt('tip',Math.max(0,parseInt(this.value)||0))">
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:0">
-        <div style="flex:1"><p style="font-size:13px;font-weight:600">🌱 Charity Donation</p><span style="font-size:10px;color:#64748B">100% social welfare</span></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button style="width:32px;height:32px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('charity',-10)">−</button>
-          <span style="font-size:14px;font-weight:700;min-width:40px;text-align:center;color:#1E293B" id="hm-charity-disp">₹0</span>
-          <button style="width:32px;height:32px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('charity',10)">+</button>
+        <div style="flex:1"><p style="font-size:13px;font-weight:600">🌱 Charity Donation</p><span style="font-size:10px;color:#64748B">100% social welfare · min ₹10</span></div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('charity',-10)">−</button>
+          <span style="font-size:13px;font-weight:700;min-width:36px;text-align:center;color:#1E293B" id="hm-charity-disp">₹0</span>
+          <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('charity',10)">+</button>
+          <input type="number" id="hm-charity-input" min="0" placeholder="₹ amt" style="width:64px;border:1.5px solid #CBD5E1;border-radius:8px;padding:4px 6px;font-size:12px;font-weight:600;color:#1E293B;text-align:center" oninput="hmSetAmt('charity',Math.max(0,parseInt(this.value)||0))">
         </div>
       </div>
     </div>
@@ -6457,6 +6518,27 @@
       </div>
       <div class="bdiv"></div>
       <div class="trow"><span class="tl">Total Payable</span><span class="tr" id="hm-total">₹10</span></div>
+    </div>
+
+    <!-- Wallet Points Redemption -->
+    <div id="hm-wallet-section" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:16px;padding:12px 14px;margin-bottom:12px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#92400e">🌟 Redeem Wallet Points</div>
+          <div id="hm-wallet-balance-txt" style="font-size:10px;color:#b45309;margin-top:2px">Loading balance...</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <span style="font-size:11px;font-weight:600;color:#92400e" id="hm-use-pts-label">Use pts</span>
+          <div style="position:relative;width:38px;height:22px">
+            <input type="checkbox" id="hm-use-wallet" onchange="hmToggleWalletPts()" style="opacity:0;width:0;height:0;position:absolute">
+            <span id="hm-wallet-toggle-bg" style="position:absolute;inset:0;background:#d1d5db;border-radius:11px;transition:.3s;cursor:pointer" onclick="document.getElementById('hm-use-wallet').click()"></span>
+            <span id="hm-wallet-toggle-dot" style="position:absolute;left:3px;top:3px;width:16px;height:16px;background:white;border-radius:50%;transition:.3s;pointer-events:none"></span>
+          </div>
+        </label>
+      </div>
+      <div id="hm-pts-applied-row" style="display:none;margin-top:8px;font-size:11px;color:#065f46;font-weight:600;text-align:center;background:rgba(255,255,255,.5);border-radius:8px;padding:4px 8px">
+        ✅ <span id="hm-pts-applied-txt">0 pts</span> applied → ₹<span id="hm-pts-savings">0</span> off!
+      </div>
     </div>
 
     <button class="paybtn" onclick="hmOpenQR()">
@@ -6519,6 +6601,8 @@ function openHireModal(name, service, location, rating, lang, providerId, ownerU
   hmTipAmt = 0; hmCharityAmt = 0; hmLang = lang || 'hi';
   hmProviderId = providerId || null;
   hmProviderOwnerUid = ownerUid || null;
+  // Load wallet balance for points redemption
+  setTimeout(() => { if (typeof hmLoadWalletBalance === 'function') hmLoadWalletBalance(); }, 400);
   // Decode URL params
   try {
     document.getElementById('hm-pname').textContent = decodeURIComponent(name);
@@ -6554,11 +6638,28 @@ function hmChangeAmt(type, delta) {
     document.getElementById('hm-tip-disp').textContent = '₹' + hmTipAmt;
     document.getElementById('hm-bill-tip').textContent = '₹' + hmTipAmt;
     document.getElementById('hm-mb-tip').textContent = '₹' + hmTipAmt;
+    const inp = document.getElementById('hm-tip-input'); if(inp) inp.value = hmTipAmt || '';
   } else {
     hmCharityAmt = Math.max(0, hmCharityAmt + delta);
     document.getElementById('hm-charity-disp').textContent = '₹' + hmCharityAmt;
     document.getElementById('hm-bill-charity').textContent = '₹' + hmCharityAmt;
     document.getElementById('hm-mb-charity').textContent = '₹' + hmCharityAmt;
+    const inp = document.getElementById('hm-charity-input'); if(inp) inp.value = hmCharityAmt || '';
+  }
+  hmUpdateTotal();
+}
+
+function hmSetAmt(type, val) {
+  if (type === 'tip') {
+    hmTipAmt = val;
+    document.getElementById('hm-tip-disp').textContent = '₹' + hmTipAmt;
+    document.getElementById('hm-bill-tip').textContent = '₹' + hmTipAmt;
+    document.getElementById('hm-mb-tip').textContent   = '₹' + hmTipAmt;
+  } else {
+    hmCharityAmt = val;
+    document.getElementById('hm-charity-disp').textContent = '₹' + hmCharityAmt;
+    document.getElementById('hm-bill-charity').textContent = '₹' + hmCharityAmt;
+    document.getElementById('hm-mb-charity').textContent   = '₹' + hmCharityAmt;
   }
   hmUpdateTotal();
 }
@@ -6835,6 +6936,35 @@ async function hmPaymentDone() {
     </div>
 
     <!-- ===== CHARITY MODAL ===== -->
+    <!-- ===== GRATITUDE MESSAGE MODAL ===== -->
+    <div id="gratitudeModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div class="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-bold">🙏 Send Gratitude</h2>
+                    <p class="text-orange-100 text-xs mt-0.5">Thank a provider · Share their work</p>
+                </div>
+                <button onclick="closeGratitudeModal()" class="text-white text-2xl font-bold">✕</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-sm text-gray-600 text-center">Write a thank-you message and share it. Earn <strong class="text-orange-600">3 wallet points</strong>!</p>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Provider Name</label>
+                    <input id="gratProviderName" type="text" placeholder="e.g. Ramesh Electrician" class="w-full mt-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-orange-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Your Message</label>
+                    <textarea id="gratMessage" rows="4" placeholder="e.g. Ramesh did an excellent job fixing our wiring. Very professional and on time. Highly recommended!" class="w-full mt-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-orange-400 focus:outline-none resize-none"></textarea>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="sendGratitudeWhatsApp()" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-green-700 transition">📲 Share on WhatsApp</button>
+                    <button onclick="copyGratitudeMessage()" class="flex-1 bg-orange-500 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-orange-600 transition">📋 Copy Message</button>
+                </div>
+                <p class="text-center text-xs text-gray-400">3 pts credited after sharing · Sudarshan Chakra 🙏</p>
+            </div>
+        </div>
+    </div>
+
     <div id="charityModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
             <div class="bg-gradient-to-r from-teal-600 to-green-600 text-white p-5 rounded-t-2xl flex justify-between items-center">
@@ -6844,17 +6974,25 @@ async function hmPaymentDone() {
             <div class="p-5 space-y-4">
                 <p class="text-sm text-gray-600 text-center">Your donation goes 100% to social welfare. No platform fee charged.</p>
                 <div class="bg-teal-50 rounded-xl p-4">
-                    <div class="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Donation Amount</div>
-                    <div class="flex items-center justify-center gap-4">
-                        <button onclick="charityAmtChange(-10)" class="w-10 h-10 rounded-full border-2 border-teal-300 bg-white text-xl font-bold text-teal-600 hover:bg-teal-100">−</button>
-                        <span class="text-3xl font-bold text-teal-700" id="charityAmtDisp">₹10</span>
-                        <button onclick="charityAmtChange(10)" class="w-10 h-10 rounded-full border-2 border-teal-300 bg-white text-xl font-bold text-teal-600 hover:bg-teal-100">+</button>
+                    <div class="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Donation Amount (min ₹10)</div>
+                    <div class="flex items-center justify-center gap-3 mb-3">
+                        <button onclick="charityAmtChange(-10)" class="w-10 h-10 rounded-full border-2 border-teal-300 bg-white text-xl font-bold text-teal-600 hover:bg-teal-100 flex-shrink-0">−</button>
+                        <span class="text-3xl font-bold text-teal-700 min-w-16 text-center" id="charityAmtDisp">₹10</span>
+                        <button onclick="charityAmtChange(10)" class="w-10 h-10 rounded-full border-2 border-teal-300 bg-white text-xl font-bold text-teal-600 hover:bg-teal-100 flex-shrink-0">+</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-500 text-sm font-semibold">₹</span>
+                        <input type="number" id="charityCustomInput" min="10" placeholder="Enter amount" 
+                            class="flex-1 border-2 border-teal-200 rounded-xl px-3 py-2 text-sm font-semibold text-teal-800 focus:border-teal-500 focus:outline-none"
+                            oninput="setCharityAmt(Math.max(10, parseInt(this.value)||10))">
+                        <span class="text-xs text-gray-400">or type</span>
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-2">
-                    <button onclick="setCharityAmt(10)" class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹10</button>
-                    <button onclick="setCharityAmt(51)" class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹51</button>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setCharityAmt(10)"  class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹10</button>
+                    <button onclick="setCharityAmt(51)"  class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹51</button>
                     <button onclick="setCharityAmt(101)" class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹101</button>
+                    <button onclick="setCharityAmt(251)" class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹251</button>
                 </div>
                 <button onclick="proceedCharityPayment()" class="w-full bg-teal-600 text-white py-3 rounded-xl font-bold text-base hover:bg-teal-700 shadow-md">
                     🙏 Donate via UPI
@@ -6985,15 +7123,15 @@ async function hmPaymentDone() {
                 </div>
               </div>
               <div class="text-right">
-                <div class="text-2xl font-extrabold text-white">₹299</div>
-                <div class="text-xs text-blue-200">per month</div>
+                <div class="text-2xl font-extrabold text-white">₹99</div>
+                <div class="text-xs text-blue-200">per quarter (3 months)</div>
               </div>
             </div>
             <div class="px-4 py-3 bg-blue-50">
               <div class="flex flex-wrap gap-2 mb-3">
                 <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">📋 Type: Professional</span>
-                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹299/mo</span>
-                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">📅 30-day validity</span>
+                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹99/Quarter</span>
+                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">📅 90-day (Quarter) validity</span>
               </div>
               <ul class="space-y-1.5 text-sm text-gray-700">
                 <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✓</span> Everything in Basic</li>
@@ -7009,7 +7147,10 @@ async function hmPaymentDone() {
                 💡 Providers on Professional get <strong>3× more views</strong> on average
               </div>
               <span id="planBadgeSilver" class="hidden mt-3 w-full bg-blue-100 text-blue-700 py-2 rounded-xl text-sm font-semibold text-center block">✅ Your Current Plan</span>
-              <button onclick="initiateSubscription('silver','299')" class="mt-3 w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow">Activate Professional → ₹299/mo</button>
+              <div class="mt-3 flex gap-2">
+                <button onclick="redeemPointsForUpgrade('silver',99)" class="flex-1 bg-amber-400 text-amber-900 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500 transition">🌟 Use Points</button>
+                <button onclick="initiateSubscription('silver','99')" class="flex-2 flex-grow bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow">Pay ₹99 via UPI →</button>
+              </div>
             </div>
           </div>
 
@@ -7025,15 +7166,15 @@ async function hmPaymentDone() {
                 </div>
               </div>
               <div class="text-right">
-                <div class="text-2xl font-extrabold text-white">₹599</div>
-                <div class="text-xs text-yellow-100">per month</div>
+                <div class="text-2xl font-extrabold text-white">₹199</div>
+                <div class="text-xs text-yellow-100">per quarter</div>
               </div>
             </div>
             <div class="px-4 py-3 bg-yellow-50">
               <div class="flex flex-wrap gap-2 mb-3">
                 <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">📋 Type: Elite</span>
-                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹599/mo</span>
-                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">📅 30-day validity</span>
+                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹199/Quarter</span>
+                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">📅 90-day (Quarter) validity</span>
                 <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full font-semibold">🔥 Save ₹99 vs Pro×2</span>
               </div>
               <ul class="space-y-1.5 text-sm text-gray-700">
@@ -7051,15 +7192,18 @@ async function hmPaymentDone() {
                 🏆 Elite providers earn on average <strong>8× more bookings</strong> per month
               </div>
               <span id="planBadgeGold" class="hidden mt-3 w-full bg-yellow-100 text-yellow-700 py-2 rounded-xl text-sm font-semibold text-center block">✅ Your Current Plan</span>
-              <button onclick="initiateSubscription('gold','599')" class="mt-3 w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 rounded-xl text-sm font-bold hover:from-yellow-600 hover:to-orange-600 transition shadow-lg">Activate Elite → ₹599/mo</button>
+              <div class="mt-3 flex gap-2">
+                <button onclick="redeemPointsForUpgrade('gold',199)" class="flex-1 bg-amber-400 text-amber-900 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500 transition">🌟 Use Points</button>
+                <button onclick="initiateSubscription('gold','199')" class="flex-2 flex-grow bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 rounded-xl text-sm font-bold hover:from-yellow-600 hover:to-orange-600 transition shadow-lg">Pay ₹199 via UPI →</button>
+              </div>
             </div>
           </div>
 
           <!-- UPI/Payment note -->
           <div class="bg-gray-50 rounded-2xl p-4 text-center">
             <p class="text-xs text-gray-500 font-medium">💳 Payment via UPI (PhonePe / GPay / Paytm)</p>
-            <p class="text-xs text-gray-400 mt-1">Plans activate within <strong>2–4 hours</strong> after admin approval</p>
-            <p class="text-xs text-gray-400">Renewal is manual — you'll get a reminder 3 days before expiry</p>
+            <p class="text-xs text-gray-400 mt-1">Plans valid for <strong>90 days (1 Quarter)</strong> · Activates in 2–4 hrs after admin approval</p>
+            <p class="text-xs text-gray-400">Renewal is manual — reminder sent 7 days before expiry · Points redeemable toward plan cost</p>
           </div>
 
           <!-- FAQ toggle -->
@@ -7070,7 +7214,8 @@ async function hmPaymentDone() {
             </summary>
             <div class="mt-3 space-y-3 text-gray-700">
               <div><strong>Q: Can I upgrade mid-month?</strong><br>A: Yes. Upgrading starts a fresh 30-day cycle from payment date.</div>
-              <div><strong>Q: Is there a yearly plan?</strong><br>A: Coming soon! You'll get 2 months free on annual billing.</div>
+              <div><strong>Q: Is there a yearly plan?</strong><br>A: Coming soon! You'll get 1 month free on annual billing.</div>
+              <div><strong>Q: Can I use my wallet points?</strong><br>A: Yes! Click "🌟 Use Points" on any plan to apply your referral/earned points toward the cost.</div>
               <div><strong>Q: What if I don't renew?</strong><br>A: Your profile reverts to Basic. All your data stays safe.</div>
               <div><strong>Q: How do I prove payment?</strong><br>A: Screenshot your UPI receipt and send it via WhatsApp to our admin.</div>
             </div>
@@ -7674,8 +7819,12 @@ async function rejectSubscription(providerId, reqId) {
 
 <script>
 // ==================== WALLET EARN ACTIONS ====================
+// Safe accessor — works across script blocks
+function _getFirebaseUser() { return window.firebaseUser || (typeof firebaseUser !== 'undefined' ? firebaseUser : null); }
+function _getFirebase()     { return window._firebase || null; }
 
 function shareReferralLink() {
+    const firebaseUser = _getFirebaseUser();
     if (!firebaseUser) { openLoginModal(); return; }
     const uid = firebaseUser.uid;
     const baseUrl = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/';
@@ -7717,6 +7866,7 @@ function fallbackCopyReferral(url, msg) {
 
 let charityAmt = 10;
 function openCharityModal() {
+    const firebaseUser = _getFirebaseUser();
     if (!firebaseUser) { openLoginModal(); return; }
     charityAmt = 10;
     document.getElementById('charityAmtDisp').textContent = '₹' + charityAmt;
@@ -7728,8 +7878,10 @@ function charityAmtChange(delta) {
     document.getElementById('charityAmtDisp').textContent = '₹' + charityAmt;
 }
 function setCharityAmt(amt) {
-    charityAmt = amt;
+    charityAmt = Math.max(10, amt);
     document.getElementById('charityAmtDisp').textContent = '₹' + charityAmt;
+    const inp = document.getElementById('charityCustomInput');
+    if (inp) inp.value = charityAmt;
 }
 async function proceedCharityPayment() {
     const UPI_ID = '9414055013@ybl';
@@ -7737,7 +7889,8 @@ async function proceedCharityPayment() {
     const upiUrl = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${charityAmt}&cu=INR&tn=${note}`;
     
     // Save transaction to Firebase
-    if (window._firebase && firebaseUser) {
+    const firebaseUser = _getFirebaseUser(); const _firebase = _getFirebase();
+    if (_firebase && firebaseUser) {
         try {
             const txnId = Date.now();
             await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${txnId}`), {
@@ -7753,6 +7906,7 @@ async function proceedCharityPayment() {
 }
 
 function showReferProviderModal() {
+    const firebaseUser = _getFirebaseUser();
     if (!firebaseUser) { openLoginModal(); return; }
     const uid = firebaseUser.uid;
     const baseUrl = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/';
@@ -7801,6 +7955,7 @@ function showReferProviderModal() {
 }
 
 async function awardWalletPoints(pts, type, reason) {
+    const firebaseUser = _getFirebaseUser(); const _firebase = _getFirebase();
     if (!firebaseUser || pts <= 0) return;
     try {
         const credRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`);
@@ -7825,6 +7980,143 @@ async function awardWalletPoints(pts, type, reason) {
         }
     } catch(e) { console.warn('Award points error:', e); }
 }
+
+// ==================== GRATITUDE MODAL ====================
+function openGratitudeModal() {
+    const fu = _getFirebaseUser();
+    if (!fu) { openLoginModal(); return; }
+    document.getElementById('gratitudeModal').classList.remove('hidden');
+}
+function closeGratitudeModal() {
+    document.getElementById('gratitudeModal').classList.add('hidden');
+}
+function sendGratitudeWhatsApp() {
+    const provider = document.getElementById('gratProviderName').value.trim();
+    const msg      = document.getElementById('gratMessage').value.trim();
+    if (!provider) { alert('Please enter the provider name'); return; }
+    if (!msg || msg.length < 10) { alert('Please write a message (at least 10 characters)'); return; }
+    const fullMsg  = `🙏 ${msg}
+
+— Shared via Sudarshan Chakra · India's trusted service marketplace
+https://sudarshanchakraindia.github.io/sudarshan-chakra/`;
+    window.open('https://wa.me/?text=' + encodeURIComponent(fullMsg), '_blank');
+    awardWalletPoints(3, 'gratitude_share', 'Sent gratitude message via WhatsApp');
+    closeGratitudeModal();
+}
+function copyGratitudeMessage() {
+    const provider = document.getElementById('gratProviderName').value.trim();
+    const msg      = document.getElementById('gratMessage').value.trim();
+    if (!msg) { alert('Please write a message first'); return; }
+    const fullMsg  = `🙏 ${msg}
+
+— Shared via Sudarshan Chakra
+https://sudarshanchakraindia.github.io/sudarshan-chakra/`;
+    navigator.clipboard.writeText(fullMsg)
+        .then(() => {
+            showFirebaseStatus('✅ Gratitude message copied! Share it anywhere.', 'success');
+            awardWalletPoints(3, 'gratitude_share', 'Copied gratitude message');
+            closeGratitudeModal();
+        })
+        .catch(() => showFirebaseStatus('Message: ' + fullMsg, 'info'));
+}
+
+// ==================== WALLET TOGGLE IN HIRE MODAL ====================
+let hmWalletPtsAvailable = 0;
+function hmLoadWalletBalance() {
+    const fu = _getFirebaseUser(); const fb = _getFirebase();
+    if (!fu || !fb) return;
+    const section = document.getElementById('hm-wallet-section');
+    if (section) section.style.display = 'block';
+    fb.get(fb.ref(fb.db, `users/${fu.uid}/walletCredits`)).then(snap => {
+        hmWalletPtsAvailable = snap.exists() ? (snap.val() || 0) : 0;
+        const txt = document.getElementById('hm-wallet-balance-txt');
+        if (txt) txt.textContent = `You have ${hmWalletPtsAvailable} pts (₹${(hmWalletPtsAvailable/10).toFixed(1)}) available`;
+    }).catch(() => {});
+}
+function hmToggleWalletPts() {
+    const cb  = document.getElementById('hm-use-wallet');
+    const bg  = document.getElementById('hm-wallet-toggle-bg');
+    const dot = document.getElementById('hm-wallet-toggle-dot');
+    const row = document.getElementById('hm-pts-applied-row');
+    if (cb.checked) {
+        if (bg)  { bg.style.background = '#f97316'; }
+        if (dot) { dot.style.left = '19px'; }
+        if (row) row.style.display = 'block';
+    } else {
+        if (bg)  { bg.style.background = '#d1d5db'; }
+        if (dot) { dot.style.left = '3px'; }
+        if (row) row.style.display = 'none';
+    }
+    hmUpdateTotalWithWallet();
+}
+function hmUpdateTotalWithWallet() {
+    // Recalculate total applying wallet discount
+    const cb = document.getElementById('hm-use-wallet');
+    const useWallet = cb && cb.checked;
+    const HM_CONV_FEE = 10;
+    const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
+    const baseFee = hasTipOrCharity ? 0 : HM_CONV_FEE;
+    const subtotal = baseFee + hmTipAmt + hmCharityAmt;
+    
+    let discount = 0;
+    if (useWallet && hmWalletPtsAvailable > 0) {
+        // 1 pt = ₹0.10; max discount = available pts value or subtotal, whichever is less
+        const maxDiscount = Math.floor(hmWalletPtsAvailable / 10);
+        discount = Math.min(maxDiscount, subtotal);
+    }
+    const total = Math.max(0, subtotal - discount);
+    
+    const ptsUsed = discount * 10;
+    const ptsEl   = document.getElementById('hm-pts-applied-txt');
+    const savEl   = document.getElementById('hm-pts-savings');
+    if (ptsEl) ptsEl.textContent = ptsUsed + ' pts';
+    if (savEl) savEl.textContent = discount;
+    
+    ['hm-total','hm-qr-amount','hm-mb-total'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '₹' + total;
+    });
+    // Store for payment
+    window._hmFinalTotal   = total;
+    window._hmWalletDiscount = discount;
+    window._hmPtsUsed = ptsUsed;
+}
+
+// ==================== REFERRAL POINTS TOWARD UPGRADE ====================
+function redeemPointsForUpgrade(plan, originalAmount) {
+    const fu = _getFirebaseUser(); const fb = _getFirebase();
+    if (!fu || !fb) { openLoginModal(); return; }
+    fb.get(fb.ref(fb.db, `users/${fu.uid}/walletCredits`)).then(snap => {
+        const pts = snap.exists() ? (snap.val() || 0) : 0;
+        const maxRedeem = Math.floor(pts / 10); // 10pts = ₹1
+        const redeemable = Math.min(maxRedeem, originalAmount);
+        const toPay = originalAmount - redeemable;
+        const msg = redeemable > 0
+            ? `You have ${pts} pts (₹${(pts/10).toFixed(0)}).
+Redeem ${redeemable * 10} pts → save ₹${redeemable}!
+You pay: ₹${toPay} via UPI.`
+            : `You have ${pts} pts but need 100+ pts to redeem.
+Full amount: ₹${originalAmount}`;
+        if (redeemable > 0 && confirm(msg + '
+
+Proceed?')) {
+            initiateSubscription(plan, toPay, redeemable * 10);
+        } else if (redeemable === 0) {
+            initiateSubscription(plan, originalAmount, 0);
+        }
+    }).catch(() => initiateSubscription(plan, originalAmount, 0));
+}
+
+// Expose to window scope for onclick= attributes
+window.shareReferralLink   = shareReferralLink;
+window.fallbackCopyReferral= fallbackCopyReferral;
+window.openCharityModal    = openCharityModal;
+window.closeCharityModal   = closeCharityModal;
+window.charityAmtChange    = charityAmtChange;
+window.setCharityAmt       = setCharityAmt;
+window.proceedCharityPayment = proceedCharityPayment;
+window.showReferProviderModal = showReferProviderModal;
+window.awardWalletPoints   = awardWalletPoints;
 
 // ==================== CHECK REFERRAL ON LOAD ====================
 (function checkReferral() {
