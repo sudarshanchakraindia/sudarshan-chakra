@@ -58,7 +58,7 @@
         // ==================== FIREBASE SETUP ====================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getDatabase, ref, set, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -73,6 +73,9 @@
         const app = initializeApp(firebaseConfig);
         const db  = getDatabase(app);
         const auth = getAuth(app);
+
+        // ── Persist login across sessions (survives browser close/refresh) ──
+        setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence error:', e));
 
         // Expose to global scope
         window._firebase = { db, ref, set, push, onValue, update, remove, get };
@@ -559,8 +562,17 @@
                     <h3 class="font-bold text-gray-800 mb-3">🎁 How to Earn Points</h3>
                     <div class="text-xs text-gray-400 mb-3 bg-gray-50 rounded-lg px-3 py-2">💡 <strong>10 points = ₹1</strong> &nbsp;·&nbsp; Redeem points for discounts on future hires</div>
                     <div class="space-y-3">
+                      <!-- 0. Daily Login Bonus -->
+                      <div class="flex items-center gap-3 p-3 bg-yellow-50 rounded-xl border border-yellow-100" id="dailyLoginBonusCard">
+                        <span class="text-2xl">🌟</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Daily Login Bonus</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-yellow-600">2 pts</strong> (= ₹0.20) every day you open the app</div>
+                        </div>
+                        <span id="dailyBonusStatus" class="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700">✅ Today's claimed</span>
+                      </div>
                       <!-- 1. Make a Payment → goes to Browse -->
-                      <button onclick="showPage('browse')" class="w-full flex items-center gap-3 p-3 bg-purple-50 rounded-xl hover:bg-purple-100 active:scale-95 transition-all text-left border border-transparent hover:border-purple-200">
+                      <button onclick="showPage('browse'); setTimeout(()=>showFirebaseStatus('Browse providers and tap 💜 Hire to earn 10 pts!','info'),300)" class="w-full flex items-center gap-3 p-3 bg-purple-50 rounded-xl hover:bg-purple-100 active:scale-95 transition-all text-left border border-transparent hover:border-purple-200">
                         <span class="text-2xl">💳</span>
                         <div class="flex-1">
                           <div class="font-semibold text-sm text-gray-800">Make a Payment</div>
@@ -1487,8 +1499,16 @@
             </div>
 
             <div class="mb-4">
-                <label class="block text-gray-700 font-medium mb-2">Your Name *</label>
-                <input type="text" id="reviewerName" placeholder="Your name" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-400 outline-none">
+                <label class="block text-gray-700 font-medium mb-2">
+                    Reviewing as
+                    <span class="text-xs text-green-600 font-normal ml-1">🔒 from your profile</span>
+                </label>
+                <div class="flex items-center gap-2 w-full px-4 py-2 border rounded-lg bg-gray-50 text-gray-600">
+                    <span class="text-green-500 text-sm">✅</span>
+                    <input type="text" id="reviewerName" readonly
+                        class="flex-1 outline-none bg-transparent text-gray-700 font-semibold cursor-not-allowed"
+                        placeholder="Login to write a review">
+                </div>
             </div>
             <div class="mb-5">
                 <label class="block text-gray-700 font-medium mb-2">Your Review *</label>
@@ -3183,10 +3203,20 @@
                 </div>
             `).join('');
             
-            // Reset selection
+            // Reset selection — always restore categories grid too
+            const stepCat = document.getElementById('step-category');
+            if (stepCat) stepCat.classList.remove('hidden');
             document.getElementById('subcategorySection').classList.add('hidden');
             document.getElementById('serviceSection').classList.add('hidden');
             document.getElementById('providersSection').classList.add('hidden');
+            // Reset breadcrumb
+            const crumb = document.getElementById('browseCrumb');
+            if (crumb) crumb.innerHTML = '<span class="text-gray-400 cursor-pointer hover:text-orange-600" onclick="loadBrowseCategories()">🏠 Categories</span>';
+            // Reset selected highlights
+            document.querySelectorAll('#browseCategoriesGrid .category-card').forEach(c => c.classList.remove('selected'));
+            // Reset page title
+            const browseTitle = document.getElementById('browsePageTitle');
+            if (browseTitle) browseTitle.textContent = 'Find Service Providers Near You';
         }
         
         function selectCategory(catId, el) {
@@ -5234,6 +5264,10 @@
                 }
                 await loadUserProfile(firebaseUser.uid);
                 updateNavForLoggedIn();
+                // Check and award daily login bonus (2 pts per day)
+                await checkDailyLoginBonus(firebaseUser.uid);
+                // Start notification listener
+                listenForNotifications && listenForNotifications();
             } else {
                 firebaseUser = null;
                 userProfile  = null;
@@ -5252,6 +5286,45 @@
                 const snap = await _firebase.get(_firebase.ref(_firebase.db, 'users/' + uid));
                 userProfile = snap.exists() ? snap.val() : null;
             } catch(e) { console.warn('Profile load error:', e); }
+        }
+
+        // ── Daily Login Bonus: 2 pts per day ──
+        async function checkDailyLoginBonus(uid) {
+            try {
+                const today = new Date().toISOString().split('T')[0]; // "2026-03-07"
+                const bonusRef = _firebase.ref(_firebase.db, `users/${uid}/lastLoginBonus`);
+                const snap = await _firebase.get(bonusRef);
+                const lastDate = snap.exists() ? snap.val() : null;
+
+                if (lastDate === today) return; // already got bonus today
+
+                // Award 2 pts
+                const credRef = _firebase.ref(_firebase.db, `users/${uid}/walletCredits`);
+                const credSnap = await _firebase.get(credRef);
+                const current = credSnap.exists() ? (credSnap.val() || 0) : 0;
+                await _firebase.set(credRef, current + 2);
+
+                // Save today's date as last bonus date
+                await _firebase.set(bonusRef, today);
+
+                // Log transaction
+                const txnRef = _firebase.ref(_firebase.db, `users/${uid}/transactions/${Date.now()}`);
+                await _firebase.set(txnRef, {
+                    type: 'daily_login',
+                    amount: 0,
+                    points: 2,
+                    fee: 0,
+                    timestamp: Date.now(),
+                    date: new Date().toLocaleDateString('en-IN'),
+                    reason: 'Daily login bonus'
+                });
+
+                // Show toast (only if profile page not loading to avoid flash)
+                setTimeout(() => {
+                    showFirebaseStatus('🌟 +2 pts daily login bonus! Keep coming back 🙏', 'success');
+                }, 1500);
+
+            } catch(e) { console.warn('Daily bonus error:', e); }
         }
 
         function updateNavForLoggedIn() {
@@ -5438,12 +5511,13 @@
         }
 
         async function logoutUser() {
-            if (!confirm('Are you sure you want to logout?')) return;
+            if (!confirm('⚠️ Logout will end your session.\n\nYou will need to verify your mobile number with OTP again to log back in.\n\nAre you sure?')) return;
             await _auth.signOut(_auth.auth);
             firebaseUser = null; userProfile = null;
+            if (notifUnsubscribe) { notifUnsubscribe(); notifUnsubscribe = null; }
             updateNavForLoggedOut();
             showPage('home');
-            showFirebaseStatus('👋 Logged out successfully', 'info');
+            showFirebaseStatus('👋 Logged out. See you tomorrow for your daily bonus! 🌟', 'info');
         }
 
         // ==================== PHASE F: PROFILE PAGE ====================
@@ -5524,6 +5598,21 @@
         async function loadWallet() {
             if (!firebaseUser || !window._firebase) return;
             try {
+                // Update daily bonus card status
+                const today = new Date().toISOString().split('T')[0];
+                const bonusSnap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/lastLoginBonus`));
+                const claimedToday = bonusSnap.exists() && bonusSnap.val() === today;
+                const bonusStatus = document.getElementById('dailyBonusStatus');
+                if (bonusStatus) {
+                    if (claimedToday) {
+                        bonusStatus.textContent = '✅ Claimed today';
+                        bonusStatus.className = 'text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700';
+                    } else {
+                        bonusStatus.textContent = '⏳ Not yet — login again!';
+                        bonusStatus.className = 'text-xs font-bold px-2 py-1 rounded-full bg-yellow-100 text-yellow-700';
+                    }
+                }
+
                 // Load balance
                 const balSnap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`));
                 const balance = balSnap.exists() ? (balSnap.val() || 0) : 0;
@@ -5543,8 +5632,8 @@
                 }
 
                 const txns = txnSnap.val();
-                const typeIcons = { portal: '🔱', tip: '🙏', charity: '🌱' };
-                const typeLabels = { portal: 'Portal Fee', tip: 'Tip to Provider', charity: 'Charity Donation' };
+                const typeIcons = { portal: '🔱', tip: '🙏', charity: '🌱', daily_login: '🌟', write_review: '⭐', share_referral: '📤', refer_provider: '🤝', booking: '📅' };
+                const typeLabels = { portal: 'Portal Fee', tip: 'Tip to Provider', charity: 'Charity Donation', daily_login: 'Daily Login Bonus', write_review: 'Review Written', share_referral: 'App Share Bonus', refer_provider: 'Provider Referral', booking: 'Service Booked' };
 
                 const rows = Object.entries(txns)
                     .sort(([a],[b]) => b - a) // newest first
@@ -5559,7 +5648,7 @@
                             </div>
                             <div class="text-right">
                                 <div class="font-bold text-gray-800">₹${t.amount} paid</div>
-                                <div class="text-xs text-green-600 font-semibold">+10 pts earned</div>
+                                <div class="text-xs ${(t.points > 0) ? 'text-green-600' : 'text-gray-400'} font-semibold">${t.points > 0 ? '+' + t.points + ' pts earned' : t.type === 'charity' ? '🌱 Charity' : ''}</div>
                             </div>
                         </div>`).join('');
 
@@ -5850,13 +5939,33 @@
         let currentReviewRating = 0;
 
         function openReviewModal(providerId) {
+            // Must be logged in to write a review
+            if (!firebaseUser) {
+                openLoginModal();
+                return;
+            }
             const provider = providers.find(p => p.id === providerId);
             if (!provider) return;
+
+            // Prevent provider from reviewing themselves
+            if (provider.ownerUid === firebaseUser.uid) {
+                showFirebaseStatus('You cannot review your own profile.', 'error');
+                return;
+            }
+
             currentReviewProviderId = providerId;
             currentReviewRating = 0;
 
-            document.getElementById('reviewProviderName').textContent = provider.name + ' — ' + provider.service;
-            document.getElementById('reviewerName').value = currentUser ? currentUser.name : '';
+            document.getElementById('reviewProviderName').textContent = provider.name + ' — ' + (getTranslated(provider.service) || provider.service);
+
+            // Auto-fill name from logged-in user profile — locked, not editable
+            const loggedInName = userProfile?.name || firebaseUser.displayName || '';
+            const nameInput = document.getElementById('reviewerName');
+            nameInput.value = loggedInName;
+            nameInput.readOnly = true;
+            nameInput.classList.add('bg-gray-50', 'text-gray-500', 'cursor-not-allowed');
+            nameInput.title = 'Your name is taken from your profile';
+
             document.getElementById('reviewText').value = '';
             updateStarUI(0);
             document.getElementById('reviewModal').classList.remove('hidden');
@@ -5891,28 +6000,54 @@
         });
 
         async function submitReview() {
-            if (!currentReviewRating) { alert('Please select a star rating!'); return; }
-            const name = document.getElementById('reviewerName').value.trim();
+            // Must be logged in
+            if (!firebaseUser) {
+                closeReviewModal();
+                openLoginModal();
+                return;
+            }
+            if (!currentReviewRating) { showFirebaseStatus('Please select a star rating!', 'error'); return; }
+            const name = (userProfile?.name || firebaseUser.displayName || document.getElementById('reviewerName').value).trim();
             const text = document.getElementById('reviewText').value.trim();
-            if (!name) { alert('Please enter your name!'); return; }
-            if (!text) { alert('Please write your review!'); return; }
+            if (!name) { showFirebaseStatus('Could not detect your name. Please update your profile.', 'error'); return; }
+            if (!text) { showFirebaseStatus('Please write your review!', 'error'); return; }
+            if (text.length < 5) { showFirebaseStatus('Review is too short — please write at least a few words.', 'error'); return; }
+
+            // Check: one review per user per provider
+            const provider = providers.find(p => p.id === currentReviewProviderId);
+            if (provider?.reviews) {
+                const existingReview = Object.values(provider.reviews).find(r => r.reviewerUid === firebaseUser.uid);
+                if (existingReview) {
+                    showFirebaseStatus('You have already reviewed this provider.', 'error');
+                    return;
+                }
+            }
 
             const review = {
                 id: 'r_' + Date.now(),
+                reviewerUid:  firebaseUser.uid,
                 reviewerName: name,
+                reviewerPhone: userProfile?.phone || '',
                 text: text,
                 rating: currentReviewRating,
-                date: new Date().toISOString()
+                date: new Date().toISOString(),
+                verified: true
             };
 
             try {
-                if (!_db) throw new Error('Firebase not ready');
-                await _set(_ref(_db, `providers/${currentReviewProviderId}/reviews/${review.id}`), review);
+                await _firebase.set(
+                    _firebase.ref(_firebase.db, `providers/${currentReviewProviderId}/reviews/${review.id}`),
+                    review
+                );
                 closeReviewModal();
                 showFirebaseStatus('⭐ Review submitted! Thank you.', 'success');
+                // Award 2 wallet points for writing a review
+                awardWalletPoints(2, 'write_review', 'Wrote a review for ' + (provider?.name || ''));
+                // Reload providers to reflect new review
+                loadProvidersFromFirebase && loadProvidersFromFirebase();
             } catch (err) {
                 console.error('Review save error:', err);
-                alert('Could not save review. Please check your connection.');
+                showFirebaseStatus('Could not save review. Please check your connection.', 'error');
             }
         }
 
@@ -6275,8 +6410,15 @@ function hmChangeAmt(type, delta) {
 }
 
 function hmUpdateTotal() {
-  const total = HM_CONV_FEE + hmTipAmt + hmCharityAmt;
+  // Portal fee (₹10) is ONLY charged when there is no tip and no charity.
+  // If user adds a tip or charity, they pay that amount only — no platform fee on top.
+  const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
+  const fee = hasTipOrCharity ? 0 : HM_CONV_FEE;
+  const total = fee + hmTipAmt + hmCharityAmt;
   ['hm-total','hm-qr-amount','hm-mb-total'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent='₹'+total; });
+  // Show/hide portal fee row in bill breakdown
+  const feeRow = document.getElementById('hm-fee-row');
+  if (feeRow) feeRow.style.display = hasTipOrCharity ? 'none' : '';
   const sub = document.getElementById('hm-sheet-sub');
   if(sub) sub.textContent = 'Pay ₹' + total + ' via PhonePe / any UPI app';
 }
@@ -6291,9 +6433,13 @@ function hmCloseQR() {
 }
 
 function hmOpenUPI(app) {
-  const total = HM_CONV_FEE + hmTipAmt + hmCharityAmt;
+  // Same logic as hmUpdateTotal: portal fee only when no tip/charity
+  const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
+  const fee = hasTipOrCharity ? 0 : HM_CONV_FEE;
+  const total = fee + hmTipAmt + hmCharityAmt;
   const UPI_ID = '9414055013@ybl';
-  const note = encodeURIComponent('Sudarshan Chakra - Platform Fee');
+  const noteText = hmTipAmt > 0 ? 'SC Tip to Provider' : hmCharityAmt > 0 ? 'SC Charity Donation' : 'Sudarshan Chakra - Platform Fee';
+  const note = encodeURIComponent(noteText);
   const upiUrl = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${total}&cu=INR&tn=${note}`;
   const appUrls = {
     phonepe: `phonepe://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${total}&cu=INR&tn=${note}`,
@@ -6307,37 +6453,60 @@ function hmOpenUPI(app) {
 async function hmPaymentDone() {
   hmCloseQR();
   closeHireModal();
-  // Determine type
-  let gratType = 'portal';
-  if (hmTipAmt > 0) gratType = 'tip';
-  else if (hmCharityAmt > 0) gratType = 'charity';
+
+  // Determine correct transaction type and amount
+  // Rule: Portal Fee (₹10) is ONLY when there is NO tip and NO charity.
+  //       If tip or charity → that is the transaction, no platform fee charged.
+  const hasTip      = hmTipAmt > 0;
+  const hasCharity  = hmCharityAmt > 0;
+  const hasTipOrCharity = hasTip || hasCharity;
+
+  let gratType, amount, fee, pointsEarned;
+
+  if (hasTip) {
+    gratType     = 'tip';
+    amount       = hmTipAmt;          // only the tip amount
+    fee          = 0;                  // no portal fee
+    pointsEarned = Math.floor(hmTipAmt / 10); // 1 pt per ₹1 of tip
+  } else if (hasCharity) {
+    gratType     = 'charity';
+    amount       = hmCharityAmt;
+    fee          = 0;
+    pointsEarned = 0;                  // no points for charity
+  } else {
+    gratType     = 'portal';
+    amount       = HM_CONV_FEE;       // ₹10 portal fee only
+    fee          = HM_CONV_FEE;
+    pointsEarned = 10;                 // 10 pts for hiring
+  }
 
   // ── Save transaction to Firebase ──
   if (window._firebase && firebaseUser) {
     try {
-      const total = 10 + hmTipAmt + hmCharityAmt;
       const txn = {
-        type: gratType,
-        amount: total,
-        tip: hmTipAmt,
-        charity: hmCharityAmt,
-        fee: 10,
+        type:      gratType,
+        amount:    amount,
+        fee:       fee,
+        tip:       hmTipAmt,
+        charity:   hmCharityAmt,
+        points:    pointsEarned,
         timestamp: Date.now(),
-        date: new Date().toLocaleDateString('en-IN')
+        date:      new Date().toLocaleDateString('en-IN')
       };
-      // Save transaction record
       const txnRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${Date.now()}`);
       await _firebase.set(txnRef, txn);
 
-      // Award 10 points per payment (10 points = ₹1)
-      const creditsRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`);
-      const snap = await _firebase.get(creditsRef);
-      const current = snap.exists() ? (snap.val() || 0) : 0;
-      await _firebase.set(creditsRef, current + 10);
+      // Award points based on transaction type
+      if (pointsEarned > 0) {
+        const creditsRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`);
+        const snap = await _firebase.get(creditsRef);
+        const current = snap.exists() ? (snap.val() || 0) : 0;
+        await _firebase.set(creditsRef, current + pointsEarned);
+      }
     } catch(e) { console.warn('Wallet save error:', e); }
   }
 
-  // Go to gratitude — replaces current page in history
+  // Go to gratitude page
   setTimeout(() => {
     window.location.replace('gratitude.html?lang=' + hmLang + '&type=' + gratType);
   }, 300);
