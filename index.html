@@ -559,34 +559,42 @@
                     <h3 class="font-bold text-gray-800 mb-3">🎁 How to Earn Points</h3>
                     <div class="text-xs text-gray-400 mb-3 bg-gray-50 rounded-lg px-3 py-2">💡 <strong>10 points = ₹1</strong> &nbsp;·&nbsp; Redeem points for discounts on future hires</div>
                     <div class="space-y-3">
-                      <div class="flex items-center gap-3 p-3 bg-purple-50 rounded-xl">
+                      <!-- 1. Make a Payment → goes to Browse -->
+                      <button onclick="showPage('browse')" class="w-full flex items-center gap-3 p-3 bg-purple-50 rounded-xl hover:bg-purple-100 active:scale-95 transition-all text-left border border-transparent hover:border-purple-200">
                         <span class="text-2xl">💳</span>
-                        <div>
-                          <div class="font-semibold text-sm">Make a Payment</div>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Make a Payment</div>
                           <div class="text-xs text-gray-500">Earn <strong class="text-purple-600">10 pts</strong> (= ₹1) every time you hire a provider</div>
                         </div>
-                      </div>
-                      <div class="flex items-center gap-3 p-3 bg-green-50 rounded-xl">
+                        <span class="text-purple-400 text-lg">→</span>
+                      </button>
+                      <!-- 2. Write a Review → goes to Browse to find a provider to review -->
+                      <button onclick="showPage('browse'); showFirebaseStatus('Browse providers and tap ⭐ Write Review on any provider card', 'info')" class="w-full flex items-center gap-3 p-3 bg-green-50 rounded-xl hover:bg-green-100 active:scale-95 transition-all text-left border border-transparent hover:border-green-200">
                         <span class="text-2xl">⭐</span>
-                        <div>
-                          <div class="font-semibold text-sm">Write a Review</div>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Write a Review</div>
                           <div class="text-xs text-gray-500">Earn <strong class="text-green-600">2 pts</strong> (= ₹0.20) for every verified review you write</div>
                         </div>
-                      </div>
-                      <div class="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
+                        <span class="text-green-400 text-lg">→</span>
+                      </button>
+                      <!-- 3. Share Gratitude → copies referral link -->
+                      <button onclick="shareReferralLink()" class="w-full flex items-center gap-3 p-3 bg-orange-50 rounded-xl hover:bg-orange-100 active:scale-95 transition-all text-left border border-transparent hover:border-orange-200">
                         <span class="text-2xl">📤</span>
-                        <div>
-                          <div class="font-semibold text-sm">Share Gratitude Message</div>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Share Gratitude Message</div>
                           <div class="text-xs text-gray-500">Earn <strong class="text-orange-600">5 pts</strong> (= ₹0.50) for every friend who joins via your share</div>
                         </div>
-                      </div>
-                      <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                        <span class="text-orange-400 text-lg">→</span>
+                      </button>
+                      <!-- 4. Refer a Provider → opens provider registration -->
+                      <button onclick="showReferProviderModal()" class="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-xl hover:bg-blue-100 active:scale-95 transition-all text-left border border-transparent hover:border-blue-200">
                         <span class="text-2xl">🤝</span>
-                        <div>
-                          <div class="font-semibold text-sm">Refer a Provider</div>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Refer a Provider</div>
                           <div class="text-xs text-gray-500">Earn <strong class="text-blue-600">10 pts</strong> (= ₹1) when your referred provider gets their first hire</div>
                         </div>
-                      </div>
+                        <span class="text-blue-400 text-lg">→</span>
+                      </button>
                     </div>
                   </div>
                   <div class="bg-white rounded-2xl shadow-md p-5">
@@ -7081,6 +7089,136 @@ async function rejectSubscription(providerId, reqId) {
         loadAdminSubscriptions();
     } catch(e) { showFirebaseStatus('Error: '+e.message,'error'); }
 }
+</script>
+
+<script>
+// ==================== WALLET EARN ACTIONS ====================
+
+function shareReferralLink() {
+    if (!firebaseUser) { openLoginModal(); return; }
+    const uid = firebaseUser.uid;
+    const baseUrl = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/';
+    const referralUrl = baseUrl + '?ref=' + uid.slice(0, 8);
+    const msg = `🙏 Namaste! I use Sudarshan Chakra to find trusted local service providers — plumbers, electricians, beauticians & more near you!
+
+📲 Join here: ${referralUrl}
+
+🌟 Verified providers · Real reviews · Book easily!`;
+
+    if (navigator.share) {
+        navigator.share({ title: 'Sudarshan Chakra', text: msg, url: referralUrl })
+            .then(() => {
+                // Award 5 points for sharing
+                awardWalletPoints(5, 'share_referral', 'Shared app referral link');
+            })
+            .catch(() => fallbackCopyReferral(referralUrl, msg));
+    } else {
+        fallbackCopyReferral(referralUrl, msg);
+    }
+}
+
+function fallbackCopyReferral(url, msg) {
+    // Try WhatsApp
+    const waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
+    const choice = confirm('Share via WhatsApp?
+
+Tap OK for WhatsApp, or Cancel to copy the link.');
+    if (choice) {
+        window.open(waUrl, '_blank');
+        awardWalletPoints(5, 'share_referral', 'Shared via WhatsApp');
+    } else {
+        navigator.clipboard.writeText(url).then(() => {
+            showFirebaseStatus('✅ Referral link copied! Share it with friends.', 'success');
+            awardWalletPoints(5, 'share_referral', 'Copied referral link');
+        }).catch(() => {
+            showFirebaseStatus('Your referral link: ' + url, 'info');
+        });
+    }
+}
+
+function showReferProviderModal() {
+    if (!firebaseUser) { openLoginModal(); return; }
+    const uid = firebaseUser.uid;
+    const baseUrl = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/';
+    const referralUrl = baseUrl + '?page=register&ref=' + uid.slice(0, 8);
+    const msg = `🛠️ Are you a skilled professional? Join Sudarshan Chakra and get customers near you!
+
+✅ Free to join
+✅ Get verified
+✅ Grow your business
+
+📲 Register here: ${referralUrl}`;
+
+    // Show a modal with the referral link and WhatsApp share
+    const existing = document.getElementById('referProviderModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'referProviderModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold">🤝 Refer a Provider</h2>
+                    <button onclick="document.getElementById('referProviderModal').remove()" class="text-white text-2xl font-bold">✕</button>
+                </div>
+                <p class="text-blue-200 text-xs mt-1">Earn 10 pts when they get their first hire</p>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="bg-blue-50 rounded-xl p-3 text-xs text-blue-800 leading-relaxed">${msg.replace(/
+/g,'<br>')}</div>
+                <div class="bg-gray-50 rounded-xl p-3 text-xs break-all text-gray-600 border">
+                    <span class="font-semibold">Your referral link:</span><br>
+                    <span id="referUrlText">${referralUrl}</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="window.open('https://wa.me/?text='+encodeURIComponent(document.querySelector('#referProviderModal .bg-blue-50').innerText),'_blank'); awardWalletPoints(0,'refer_provider_share','Shared provider referral')" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-green-700">📲 WhatsApp</button>
+                    <button onclick="navigator.clipboard.writeText('${referralUrl}').then(()=>showFirebaseStatus('Link copied!','success'))" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-200">📋 Copy Link</button>
+                </div>
+                <p class="text-xs text-gray-400 text-center">Points are credited automatically when the referred provider completes their first hire.</p>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function awardWalletPoints(pts, type, reason) {
+    if (!firebaseUser || pts <= 0) return;
+    try {
+        const credRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`);
+        const snap = await _firebase.get(credRef);
+        const current = snap.exists() ? (snap.val() || 0) : 0;
+        await _firebase.set(credRef, current + pts);
+
+        // Log transaction
+        const txnRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${Date.now()}`);
+        await _firebase.set(txnRef, {
+            type, reason, points: pts,
+            amount: pts / 10,
+            timestamp: Date.now(),
+            date: new Date().toLocaleDateString('en-IN')
+        });
+
+        showFirebaseStatus(`🌟 +${pts} pts earned! (₹${(pts/10).toFixed(1)})`, 'success');
+        // Refresh wallet if open
+        const walletTab = document.getElementById('profileTab-wallet');
+        if (walletTab && !walletTab.classList.contains('hidden')) {
+            loadWallet();
+        }
+    } catch(e) { console.warn('Award points error:', e); }
+}
+
+// ==================== CHECK REFERRAL ON LOAD ====================
+(function checkReferral() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+        // Store referrer in localStorage for when user registers
+        localStorage.setItem('referredBy', ref);
+    }
+})();
 </script>
 
 </body>
