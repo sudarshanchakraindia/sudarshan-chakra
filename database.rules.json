@@ -1,0 +1,60 @@
+{
+  "rules": {
+    ".read": true,
+    "providers": {
+      ".read": true,
+      "$providerId": {
+        ".write": "auth != null && (root.child('providers').child($providerId).child('ownerUid').val() === auth.uid || root.child('admins').child(auth.uid).exists())",
+        "reviews": {
+          ".write": "auth != null"
+        },
+        "earnings": {
+          ".write": "auth != null"
+        },
+        "totalEarnings": {
+          ".write": "auth != null"
+        },
+        "profileViews": {
+          ".write": "auth != null"
+        },
+        "bookings": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "reviews": {
+      ".read": true,
+      "$providerId": {
+        "$reviewId": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "bookings": {
+      ".read": "auth != null",
+      "$bookingId": {
+        ".write": "auth != null"
+      }
+    },
+    "chats": {
+      ".read": "auth != null",
+      "$roomId": {
+        ".write": "auth != null"
+      }
+    },
+    "seekers": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "admin": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
