@@ -533,7 +533,7 @@
                     <div class="flex border-b overflow-x-auto">
                         <button onclick="showProfileTab('myDetails')" id="ptab-myDetails" class="flex-1 px-3 py-3 font-semibold text-sm text-orange-600 border-b-2 border-orange-600 whitespace-nowrap">👤 Details</button>
                         <button onclick="showProfileTab('bookings')" id="ptab-bookings" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">📅 Bookings</button>
-                        <button onclick="showProfileTab('wallet')" id="ptab-wallet" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">💰 Wallet</button>
+
                         <button onclick="showProfileTab('favourites')" id="ptab-favourites" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">❤️ Saved</button>
                         <button onclick="showProfileTab('myReviews')" id="ptab-myReviews" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">⭐ Reviews</button>
                         <button onclick="showProfileTab('myReports')" id="ptab-myReports" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">🚨 Reports</button>
@@ -1785,6 +1785,47 @@
             'Event Services':                   { hi:'इवेंट सेवाएं',           bn:'ইভেন্ট সেবা',             gu:'इवेंट सेवाओ',           mr:'इव्हेंट सेवा',       kn:'ಇವೆಂಟ್ ಸೇವೆಗಳು',     te:'ఈవెంట్ సేవలు',        ml:'ഇവന്റ് സേവനങ്ങൾ',    ta:'நிகழ்வு சேவைகள்',   pa:'ਇਵੈਂਟ ਸੇਵਾਵਾਂ', or:'ଇଭେଣ୍ଟ ସେବା', as:'ইভেন্ট সেৱা' },
             'Business & Professional Services': { hi:'व्यापार और पेशेवर सेवाएं', bn:'ব্যবসায়িক ও পেশাদার সেবা', gu:'व्यापार अने व्यावसायिक', mr:'व्यवसाय आणि व्यावसायिक सेवा', kn:'ವ್ಯಾಪಾರ ಮತ್ತು ವೃತ್ತಿಪರ ಸೇವೆಗಳು', te:'వ్యాపార మరియు వృత్తిపర సేవలు', ml:'ബിസിനസ്സ് ആൻഡ് പ്രൊഫഷണൽ സേവനങ്ങൾ', ta:'வணிக மற்றும் தொழில்முறை சேவைகள்', pa:'ਵਪਾਰ ਅਤੇ ਪੇਸ਼ੇਵਰ ਸੇਵਾਵਾਂ', or:'ବ୍ୟବସାୟ ସେବା', as:'ব্যৱসায়িক সেৱা' },
             'Pet Services':                     { hi:'पालतू जानवर सेवाएं',     bn:'পোষা প্রাণীর সেবা',      gu:'पालतु प्राणी सेवाओ',    mr:'पाळीव प्राणी सेवा',  kn:'ಸಾಕುಪ್ರಾಣಿ ಸೇವೆಗಳು',  te:'పెంపుడు జంతువుల సేవలు', ml:'പോഷ്യ മൃഗ സേവനങ്ങൾ', ta:'செல்ல விலங்கு சேவைகள்', pa:'ਪਾਲਤੂ ਜਾਨਵਰ ਸੇਵਾਵਾਂ', or:'ପୋଷା ପ୍ରାଣୀ ସେବା', as:'পোহনীয়া জন্তু সেৱা' },
+
+            // ===== ITI SUBCATEGORY GROUP NAMES (missing languages) =====
+            'Machining & Fabrication':   { hi:'मशीनिंग',              bn:'মেশিনিং',          gu:'મشیningg',          mr:'मशीनिंग',            kn:'ಮಶಿನಿಂಗ್',          te:'మెషినింగ్',          ml:'മഷിനിങ്',           ta:'இயந்திரவேலை',       pa:'ਮਸ਼ੀਨਿੰਗ',           or:'ମେସିନିଂ',   as:'মেচিনিং' },
+            'Welding':                   { hi:'वेल्डिंग',              bn:'ওয়েল্ডিং',         gu:'વेल्डिंग',           mr:'वेल्डिंग',           kn:'ವೆಲ್ಡಿಂಗ್',          te:'వెల్డింగ్',          ml:'വെൽഡിങ്',           ta:'வெல்டிங்',          pa:'ਵੇਲਡਿੰਗ',            or:'ୱେଲ୍ଡିଂ',   as:'ৱেল্ডিং' },
+            'Industrial & Manufacturing':{ hi:'औद्योगिक निर्माण',     bn:'শিল্প',             gu:'ઉद्योग',             mr:'औद्योगिक',           kn:'ಕೈಗಾರಿಕೆ',          te:'పారిశ్రామిక',        ml:'വ്യവസായ',           ta:'தொழில்துறை',        pa:'ਉਦਯੋਗਿਕ',           or:'ଶିଳ୍ପ',    as:'উদ্যোগ' },
+            'Draughting & Surveying':    { hi:'ड्राफ्टिंग',            bn:'ড্রাফটিং',          gu:'ড্রाফटिंग',          mr:'ड्राफ्टिंग',          kn:'ಡ್ರಾಫ್ಟಿಂಗ್',         te:'డ్రాఫ్టింగ్',         ml:'ഡ്രാഫ്റ്റിങ്',        ta:'வரைவு',             pa:'ਡਰਾਫਟਿੰਗ',          or:'ଡ୍ରାଫ୍ଟିଂ', as:'ড্ৰাফটিং' },
+            'Electrical':                { hi:'विद्युत',               bn:'বৈদ্যুতিক',         gu:'ਵਿਦ੍ਯੁਤ',            mr:'विद्युत',            kn:'ವಿದ್ಯುತ್',           te:'విద్యుత్',           ml:'ഇലക്ട്രിക്കൽ',       ta:'மின்சாரம்',          pa:'ਬਿਜਲੀ',              or:'ବିଦ୍ୟୁତ',   as:'বিদ্যুৎ' },
+            'Electronics & Instruments': { hi:'इलेक्ट्रॉनिक्स',       bn:'ইলেকট্রনিক্স',      gu:'ઇলेक्ट्रॉनिक्स',     mr:'इलेक्ट्रॉनिक्स',    kn:'ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್',    te:'ఎలక్ట్రానిక్స్',     ml:'ഇലക്ട്രോണിക്സ്',    ta:'மின்னணுவியல்',       pa:'ਇਲੈਕਟ੍ਰੋਨਿਕਸ',      or:'ଇଲେକ୍ଟ୍ରୋନିକ୍ସ', as:'ইলেকট্ৰনিক্স' },
+            'Renewable & Green Energy':  { hi:'हरित ऊर्जा',            bn:'নবায়নযোগ্য শক্তি',  gu:'हरित ऊर्जा',         mr:'हरित ऊर्जा',         kn:'ನವೀಕರಿಸಬಹುದಾದ ಶಕ್ತಿ', te:'పునరుత్పాదక శక్తి', ml:'പുനരുപയോഗ ഊർജം',   ta:'புதுப்பிக்கத்தக்க ஆற்றல்', pa:'ਨਵਿਆਉਣਯੋਗ ਊਰਜਾ', or:'ସ୍ୱଚ୍ଛ ଶକ୍ତି', as:'নবীকৰণযোগ্য শক্তি' },
+            'Telecom & Networking':      { hi:'दूरसंचार',              bn:'টেলিকম',            gu:'ਟੈਲੀਕਮ',              mr:'दूरसंचार',           kn:'ಟೆಲಿಕಾಂ',            te:'టెలికమ్',            ml:'ടെലികോം',            ta:'தொலைத்தொடர்பு',     pa:'ਟੈਲੀਕਾਮ',           or:'ଟେଲିକମ',   as:'টেলিকম' },
+            'Vehicle Mechanics':         { hi:'वाहन मैकेनिक',          bn:'যান মেকানিক',       gu:'ਵਾਹਨ ਮਕੈਨਿਕ',         mr:'वाहन मैकेनिक',       kn:'ವಾಹನ ಮೆಕ್ಯಾನಿಕ್',   te:'వాహన మెకానిక్',     ml:'വാഹന മെക്കാനിക്',   ta:'வாகன இயந்திரவாதி', pa:'ਵਾਹਨ ਮਕੈਨਿਕ',       or:'ଯାନ ମ୍ୟାକାନିକ', as:'যান মেকানিক' },
+            'Auto Body & Paint':         { hi:'ऑटो बॉडी',              bn:'অটো বডি',           gu:'ਆਟੋ ਬਾਡੀ',            mr:'ऑटो बॉडी',           kn:'ಆಟೋ ಬಾಡಿ',           te:'ఆటో బాడీ',           ml:'ഓട്ടോ ബോഡി',         ta:'வாகன உடல்',         pa:'ਆਟੋ ਬਾਡੀ',          or:'ଅଟୋ ବଡ଼ି',  as:'অটো বডি' },
+            'Marine & Logistics':        { hi:'समुद्री',               bn:'নৌ',                gu:'ਸਮੁੰਦਰੀ',             mr:'समुद्री',            kn:'ಸಮುದ್ರ',             te:'సముద్ర',             ml:'സമുദ്ര',             ta:'கடல்',              pa:'ਸਮੁੰਦਰੀ',           or:'ସାମୁଦ୍ରିକ', as:'সামুদ্ৰিক' },
+            'Plumbing & Sanitation':     { hi:'प्लंबिंग',              bn:'প্লাম্বিং',         gu:'ਪਲੰਬਿੰਗ',             mr:'प्लंबिंग',           kn:'ಪ್ಲಂಬಿಂಗ್',          te:'ప్లంబింగ్',          ml:'പ്ലംബിങ്',           ta:'குழாய்வேலை',        pa:'ਪਲੰਬਿੰਗ',           or:'ପ୍ଲମ୍ବିଂ',   as:'প্লাম্বিং' },
+            'Painting & Finishing':      { hi:'पेंटिंग',               bn:'রঙ করা',            gu:'ਪੇਂਟਿੰਗ',             mr:'पेंटिंग',            kn:'ಪೇಂಟಿಂಗ್',           te:'పెయింటింగ్',         ml:'പെയിന്റിങ്',        ta:'வண்ணமிடுதல்',       pa:'ਪੇਂਟਿੰਗ',           or:'ରଙ୍ଗ',       as:'ৰং' },
+            'Masonry & Civil':           { hi:'राजमिस्त्री',           bn:'রাজমিস্ত্রি',       gu:'ਰਾਜਮਿਸਤ੍ਰੀ',          mr:'राजमिस्त्री',        kn:'ರಾಜಮೇಸ್ತ್ರಿ',        te:'రాజుమేస్త్రి',       ml:'ആശാരി',             ta:'கட்டுமான தொழிலாளி', pa:'ਰਾਜਮਿਸਤਰੀ',        or:'ମିସ୍ତ୍ରୀ',   as:'ৰাজমিস্ত্ৰী' },
+            'Refrigeration & AC':        { hi:'रेफ्रिजरेशन',           bn:'রেফ্রিজারেশন',      gu:'ਰੇਫ੍ਰਿਜਰੇਸ਼ਨ',         mr:'रेफ्रिजरेशन',        kn:'ರೆಫ್ರಿಜರೇಷನ್',       te:'రెఫ్రిజరేషన్',       ml:'റഫ്രിജറേഷൻ',        ta:'குளிர்சாதன',        pa:'ਰੈਫ੍ਰਿਜਰੇਸ਼ਨ',      or:'ରେଫ୍ରିଜରେଶନ', as:'ৰেফ্ৰিজাৰেচন' },
+            'Fire & Safety':             { hi:'अग्नि सुरक्षा',         bn:'অগ্নি নিরাপত্তা',   gu:'ਅੱਗ ਸੁਰੱਖਿਆ',         mr:'अग्नि सुरक्षा',      kn:'ಅಗ್ನಿ ಸುರಕ್ಷತೆ',     te:'అగ్ని భద్రత',        ml:'അഗ്നി സുരക്ഷ',       ta:'தீ பாதுகாப்பு',     pa:'ਅੱਗ ਸੁਰੱਖਿਆ',       or:'ଅଗ୍ନି ସୁରକ୍ଷା', as:'অগ্নি সুৰক্ষা' },
+            'Garment Making':            { hi:'वस्त्र निर्माण',        bn:'পোশাক তৈরি',        gu:'ਵਸਤਰ ਨਿਰਮਾਣ',         mr:'वस्त्र निर्माण',     kn:'ಉಡುಪು ತಯಾರಿಕೆ',     te:'దుస్తుల తయారీ',      ml:'വസ്ത്ര നിർമ്മാണം',   ta:'ஆடை தயாரிப்பு',     pa:'ਕੱਪੜੇ ਬਣਾਉਣਾ',     or:'ବସ୍ତ୍ର ନିର୍ମାଣ', as:'কাপোৰ তৈয়াৰ' },
+            'Weaving & Textiles':        { hi:'बुनाई',                 bn:'বুনন',              gu:'ਬੁਣਾਈ',               mr:'विणकाम',             kn:'ನೇಯ್ಗೆ',             te:'నేత',                ml:'നെയ്ത്ത്',           ta:'நெசவு',             pa:'ਬੁਣਾਈ',             or:'ବୁଣା',       as:'বোৱা' },
+            'Embroidery & Artisan':      { hi:'कढ़ाई',                 bn:'সূচিকর্ম',          gu:'ਕਢ਼ਾਈ',               mr:'भरतकाम',             kn:'ಕಸೂತಿ',              te:'కుట్టుపని',          ml:'തുന്നൽ',             ta:'கோலமிடல்',          pa:'ਕਢਾਈ',              or:'କଢ଼ାଇ',      as:'সূচীকৰ্ম' },
+            'Leather & Footwear':        { hi:'चमड़ा',                 bn:'চামড়া',             gu:'ਚਮੜਾ',                mr:'चामडे',              kn:'ಚರ್ಮ',               te:'చర్మం',              ml:'തുകൽ',               ta:'தோல்',              pa:'ਚਮੜਾ',              or:'ଚମ୍ଡ଼ା',      as:'চামৰা' },
+            'Food Production':           { hi:'खाद्य उत्पादन',         bn:'খাদ্য উৎপাদন',      gu:'ਖਾਦ ਉਤਪਾਦਨ',          mr:'अन्न उत्पादन',       kn:'ಆಹಾರ ಉತ್ಪಾದನೆ',     te:'ఆహార ఉత్పత్తి',      ml:'ഭക്ഷ്യ ഉൽപ്പാദനം',  ta:'உணவு உற்பத்தி',     pa:'ਭੋਜਨ ਉਤਪਾਦਨ',      or:'ଖାଦ୍ୟ ଉତ୍ପାଦନ', as:'খাদ্য উৎপাদন' },
+            'Hotel & Front Office':      { hi:'होटल',                  bn:'হোটেল',             gu:'ਹੋਟਲ',                mr:'हॉटेल',              kn:'ಹೋಟೆಲ್',             te:'హోటల్',              ml:'ഹോട്ടൽ',             ta:'ஹோட்டல்',            pa:'ਹੋਟਲ',              or:'ହୋଟେଲ',      as:'হোটেল' },
+            'Tourism & Travel':          { hi:'पर्यटन',                bn:'পর্যটন',            gu:'ਸੈਰ ਸਪਾਟਾ',           mr:'पर्यटन',             kn:'ಪ್ರವಾಸೋದ್ಯಮ',        te:'పర్యాటకం',           ml:'ടൂറിസം',             ta:'சுற்றுலா',          pa:'ਸੈਰ ਸਪਾਟਾ',        or:'ପର୍ୟଟନ',    as:'পৰ্যটন' },
+            'Farming & Horticulture':    { hi:'बागवानी',               bn:'বাগান',             gu:'ਬਾਗਬਾਨੀ',             mr:'बागकाम',             kn:'ತೋಟಗಾರಿಕೆ',          te:'ఉద్యానవనం',          ml:'ഗാർഡനിങ്',          ta:'தோட்டக்கலை',        pa:'ਬਾਗਬਾਨੀ',           or:'ବଗିଚା',      as:'বাগিচা' },
+            'Dairy & Food Tech':         { hi:'डेयरी',                 bn:'দুগ্ধ',             gu:'ਡੇਅਰੀ',               mr:'दुग्ध',              kn:'ಡೈರಿ',               te:'పాడి',               ml:'ഡയറി',              ta:'பால் பண்ணை',        pa:'ਡੇਅਰੀ',             or:'ଡେୟାରୀ',    as:'দুগ্ধ' },
+            'Mining & Stone':            { hi:'खनन',                   bn:'খনন',               gu:'ਖਨਨ',                 mr:'खाण',                kn:'ಗಣಿ',                te:'మైనింగ్',            ml:'ഖനനം',              ta:'சுரங்கம்',          pa:'ਖਨਨ',               or:'ଖଣି',        as:'খনন' },
+            'Medical Technicians':       { hi:'चिकित्सा तकनीशियन',    bn:'মেডিকেল টেকনিশিয়ান', gu:'ਡਾਕਟਰੀ ਤਕਨੀਸ਼ੀਅਨ', mr:'वैद्यकीय तंत्रज्ञ', kn:'ವೈದ್ಯಕೀಯ ತಂತ್ರಜ್ಞ',  te:'వైద్య సాంకేతికుడు', ml:'മെഡിക്കൽ ടെക്നീഷ്യൻ', ta:'மருத்துவ தொழில்நுட்பர்', pa:'ਮੈਡੀਕਲ ਟੈਕਨੀਸ਼ੀਅਨ', or:'ଡ଼ାକ୍ତରୀ ଟେକ୍ନିଶିୟାନ', as:'চিকিৎসা কৌশলী' },
+            'Care & Support':            { hi:'देखभाल',                bn:'যত্ন',              gu:'ਦੇਖਭਾਲ',              mr:'काळजी',              kn:'ಆರೈಕೆ',              te:'సంరక్షణ',            ml:'പരിചരണം',           ta:'பராமரிப்பு',        pa:'ਦੇਖਭਾਲ',            or:'ଯତ୍ନ',       as:'যত্ন' },
+            'Chemical & Lab':            { hi:'रासायनिक',              bn:'রাসায়নিক',         gu:'ਰਸਾਇਣਿਕ',             mr:'रासायनिक',           kn:'ರಾಸಾಯನಿಕ',           te:'రసాయన',              ml:'രസതന്ത്ര',           ta:'வேதியியல்',         pa:'ਰਸਾਇਣਿਕ',           or:'ରାସାୟନିକ',   as:'ৰাসায়নিক' },
+            'Visual Arts & Crafts':      { hi:'दृश्य कला',             bn:'চিত্রকলা',          gu:'ਦ੍ਰਿਸ਼ ਕਲਾ',           mr:'दृश्य कला',          kn:'ದೃಶ್ಯ ಕಲೆ',          te:'దృశ్య కళలు',         ml:'ദൃശ്യ കല',           ta:'காட்சி கலை',        pa:'ਦਿੱਖ ਕਲਾ',          or:'ଚିତ୍ରକଳା',   as:'চিত্ৰকলা' },
+            'Wood & Furniture':          { hi:'लकड़ी',                 bn:'কাঠ',               gu:'ਲੱਕੜ',                mr:'लाकूड',              kn:'ಮರ',                 te:'చెక్క',              ml:'മരം',                ta:'மரம்',              pa:'ਲੱਕੜ',              or:'କାଠ',        as:'কাঠ' },
+            'Media & Photography':       { hi:'मीडिया',                bn:'মিডিয়া',            gu:'ਮੀਡੀਆ',               mr:'माध्यम',             kn:'ಮಾಧ್ಯಮ',             te:'మీడియా',             ml:'മീഡിയ',             ta:'ஊடகம்',             pa:'ਮੀਡੀਆ',             or:'ମିଡ଼ିଆ',      as:'মিডিয়া' },
+            'Office Administration':     { hi:'कार्यालय प्रशासन',      bn:'অফিস প্রশাসন',      gu:'ਦਫ਼ਤਰ ਪ੍ਰਬੰਧਨ',        mr:'कार्यालय प्रशासन',   kn:'ಕಚೇರಿ ಆಡಳಿತ',        te:'కార్యాలయ నిర్వహణ',  ml:'ഓഫീസ് ഭരണം',        ta:'அலுவலக நிர்வாகம்',  pa:'ਦਫ਼ਤਰ ਪ੍ਰਸ਼ਾਸਨ',     or:'ଦଫ୍ତର',      as:'কাৰ্যালয়' },
+            'Finance & HR':              { hi:'वित्त',                 bn:'ফিনান্স',           gu:'ਵਿੱਤ',                mr:'वित्त',              kn:'ಹಣಕಾಸು',             te:'ఆర్థికం',            ml:'ധനകാര്യം',           ta:'நிதி',              pa:'ਵਿੱਤ',              or:'ଅର୍ଥ',       as:'বিত্ত' },
+            'Programming & Software':    { hi:'प्रोग्रामिंग',          bn:'প্রোগ্রামিং',       gu:'ਪ੍ਰੋਗ੍ਰਾਮਿੰਗ',         mr:'प्रोग्रामिंग',       kn:'ಪ್ರೋಗ್ರಾಮಿಂಗ್',      te:'ప్రోగ్రామింగ్',      ml:'പ്രോഗ്രാമിങ്',      ta:'நிரலாக்கம்',        pa:'ਪ੍ਰੋਗ੍ਰਾਮਿੰਗ',      or:'ପ୍ରୋଗ୍ରାମିଂ',  as:'প্ৰগ্ৰামিং' },
+            'Cyber & Security':          { hi:'साइबर सुरक्षा',         bn:'সাইবার নিরাপত্তা',  gu:'ਸਾਈਬਰ ਸੁਰੱਖਿਆ',       mr:'सायबर सुरक्षा',      kn:'ಸೈಬರ್ ಭದ್ರತೆ',       te:'సైబర్ భద్రత',        ml:'സൈബർ സുരക്ഷ',        ta:'சைபர் பாதுகாப்பு',  pa:'ਸਾਈਬਰ ਸੁਰੱਖਿਆ',    or:'ସାଇବର',     as:'চাইবাৰ' },
+            'Design & Media':            { hi:'डिजाइन और मीडिया',      bn:'ডিজাইন',            gu:'ਡਿਜ਼ਾਈਨ',              mr:'डिझाइन',             kn:'ವಿನ್ಯಾಸ',             te:'డిజైన్',             ml:'ഡിസൈൻ',             ta:'வடிவமைப்பு',        pa:'ਡਿਜ਼ਾਈਨ',           or:'ଡିଜାଇନ',     as:'ডিজাইন' },
+            'IoT & Smart Tech':          { hi:'IoT तकनीक',             bn:'আইওটি',             gu:'IoT ਤਕਨੀਕ',           mr:'IoT',                kn:'IoT ತಂತ್ರಜ್ಞಾನ',    te:'IoT సాంకేతికత',     ml:'IoT സാങ്കേതികത',     ta:'IoT தொழில்நுட்பம்', pa:'IoT ਤਕਨੀਕ',         or:'IoT',        as:'আইঅটি' },
+            'Drones & Aviation':         { hi:'ड्रोन और विमानन',       bn:'ড্রোন',             gu:'ਡਰੋਨ',                mr:'ड्रोन',              kn:'ಡ್ರೋನ್',             te:'డ్రోన్',             ml:'ഡ്രോൺ',             ta:'ட்ரோன்',            pa:'ਡਰੋਨ',              or:'ଡ୍ରୋନ',      as:'ড্ৰোন' },
             // ===== SUBCATEGORIES =====
             'Plumber':                          { hi:'प्लंबर',                 bn:'প্লাম্বার',              gu:'પ્لmbar',               mr:'प्लंबर',             kn:'ಪ್ಲಂಬರ್',             te:'ప్లంబర్',             ml:'പ്ലംബർ',             ta:'பம்பர்',            pa:'ਪਲੰਬਰ', or:'ପ୍ଲମ୍ବର', as:'প্লাম্বাৰ' },
             'Electrician':                      { hi:'इलेक्ट्रीशियन',          bn:'ইলেকট্রিশিয়ান',         gu:'ઇलेक्ट्रिशियन',         mr:'इलेक्ट्रिशियन',      kn:'ಎಲೆಕ್ಟ್ರಿಷಿಯನ್',       te:'ఎలక్ట్రిషియన్',      ml:'ഇലക്ട്രിഷ്യൻ',       ta:'மின்சாரி',          pa:'ਇਲੈਕਟ੍ਰਿਸ਼ੀਅਨ', or:'ବିଦ୍ୟୁତ ମିସ୍ତ୍ରୀ', as:'বিদ্যুৎ মিস্ত্ৰী' },
@@ -3022,17 +3063,22 @@
         function getTranslated(obj, defaultText = '') {
             if (!obj) return defaultText;
             if (typeof obj === 'string') {
+                // Direct CATEGORY_TRANSLATIONS lookup
                 if (CATEGORY_TRANSLATIONS[obj]) {
                     return CATEGORY_TRANSLATIONS[obj][currentLanguage] ||
-                           CATEGORY_TRANSLATIONS[obj]['hi'] ||
                            CATEGORY_TRANSLATIONS[obj]['en'] || obj;
                 }
                 return obj;
             }
             // For object with language keys (e.g. {en:'Fitter', hi:'फिटर', or:'ଫିଟର'})
-            return obj[currentLanguage] ||
-                   (CATEGORY_TRANSLATIONS[obj.en] && (CATEGORY_TRANSLATIONS[obj.en][currentLanguage] || CATEGORY_TRANSLATIONS[obj.en]['hi'])) ||
-                   obj.hi || obj.en || defaultText;
+            // 1. Try exact language key in object
+            if (obj[currentLanguage]) return obj[currentLanguage];
+            // 2. Try CATEGORY_TRANSLATIONS lookup by English name for the current language
+            if (obj.en && CATEGORY_TRANSLATIONS[obj.en] && CATEGORY_TRANSLATIONS[obj.en][currentLanguage]) {
+                return CATEGORY_TRANSLATIONS[obj.en][currentLanguage];
+            }
+            // 3. Fall back to English (never Hindi for non-Hindi users)
+            return obj.en || obj.hi || defaultText;
         }
         
         // Haversine formula for distance calculation
@@ -5262,6 +5308,7 @@
         let _recaptchaVerifier   = null;
         let firebaseUser         = null; // logged-in Firebase user
         let userProfile          = null; // our app profile from /users/{uid}
+        let _authInitialized     = false; // true after first onAuthStateChanged fires
 
         // Listen for auth state changes
         window.addEventListener('authStateChanged', async (e) => {
@@ -5273,6 +5320,12 @@
                 }
                 await loadUserProfile(firebaseUser.uid);
                 updateNavForLoggedIn();
+                // Persist session hint in localStorage so UI restores gracefully
+                try {
+                    localStorage.setItem('sc_auth_uid', firebaseUser.uid);
+                    localStorage.setItem('sc_auth_name', userProfile?.name || firebaseUser.phoneNumber || '');
+                    localStorage.setItem('sc_auth_phone', firebaseUser.phoneNumber || '');
+                } catch(e) {}
                 // Check and award daily login bonus (2 pts per day)
                 await checkDailyLoginBonus(firebaseUser.uid);
                 // Start notification listener
@@ -5280,8 +5333,15 @@
             } else {
                 firebaseUser = null;
                 userProfile  = null;
+                // Only clear localStorage hint on explicit logout (not on null during init)
+                // We check: if Firebase just initialized and user is null, keep the hint
+                if (_authInitialized) {
+                    try { localStorage.removeItem('sc_auth_uid'); localStorage.removeItem('sc_auth_name'); } catch(e) {}
+                }
                 updateNavForLoggedOut();
             }
+            // Mark auth as initialized (suppresses logout on initial null state)
+            _authInitialized = true;
             // Refresh profile page if currently open
             const profilePage = document.getElementById('page-myProfile');
             if (profilePage && !profilePage.classList.contains('hidden')) {
@@ -5352,6 +5412,18 @@
         }
 
         function updateNavForLoggedOut() {
+            // Check localStorage for a session hint — if found, show "Restoring..." briefly
+            const savedName = (() => { try { return localStorage.getItem('sc_auth_name'); } catch(e) { return null; } })();
+            if (savedName && !_authInitialized) {
+                // Session may still be restoring — show a temporary avatar
+                const initials = savedName.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() || '?';
+                document.getElementById('navAuthBtn').innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-bold animate-pulse">${initials}</div>
+                        <span class="text-xs text-gray-400 hidden md:inline">Restoring…</span>
+                    </div>`;
+                return;
+            }
             document.getElementById('navAuthBtn').innerHTML = `
                 <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>`;
             // Hide wallet, show register/admin buttons
