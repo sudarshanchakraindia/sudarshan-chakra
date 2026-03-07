@@ -607,6 +607,15 @@
                         </div>
                         <span class="text-blue-400 text-lg">→</span>
                       </button>
+                      <!-- 5. Donate to Charity → opens charity modal directly -->
+                      <button onclick="openCharityModal()" class="w-full flex items-center gap-3 p-3 bg-teal-50 rounded-xl hover:bg-teal-100 active:scale-95 transition-all text-left border border-transparent hover:border-teal-200">
+                        <span class="text-2xl">🌱</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Donate to Charity</div>
+                          <div class="text-xs text-gray-500">Support social welfare — <strong class="text-teal-600">100% goes to charity</strong>, no platform fee</div>
+                        </div>
+                        <span class="text-teal-400 text-lg">→</span>
+                      </button>
                     </div>
                   </div>
                   <div class="bg-white rounded-2xl shadow-md p-5">
@@ -3548,7 +3557,7 @@
                         <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">⭐ Review</button>
                         <button onclick="toggleFavourite('${p.id}')" id="fav-${p.id}" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-500 border-gray-200 hover:bg-red-50 hover:text-red-500">🤍</button>
                         <button onclick="openReportModal('${p.id}','provider','${p.name}')" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-400 border-gray-200 hover:bg-red-50 hover:text-red-500" title="Report">🚨</button>
-                        <button onclick="openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}')" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2.5 rounded-xl font-bold text-sm transition hover:from-purple-700 hover:to-indigo-700 shadow-md">⚡ Hire Now &nbsp;<span class="text-xs font-normal opacity-80">(₹10 fee)</span></button>
+                        <button onclick="openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}')" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2.5 rounded-xl font-bold text-sm transition hover:from-purple-700 hover:to-indigo-700 shadow-md">⚡ Hire Now &nbsp;<span class="text-xs font-normal opacity-80">(₹10 fee)</span></button>
                     </div>
                 </div>`;
             }).join('');
@@ -5938,6 +5947,21 @@
         let currentReviewProviderId = null;
         let currentReviewRating = 0;
 
+        async function loadProviderReviews(providerId) {
+            // Load reviews from top-level reviews/ node into the providers array in memory
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `reviews/${providerId}`));
+                const provider = providers.find(p => p.id === providerId);
+                if (provider) {
+                    provider.reviews = snap.exists() ? snap.val() : {};
+                }
+                return snap.exists() ? snap.val() : {};
+            } catch(e) {
+                console.warn('Could not load reviews:', e);
+                return {};
+            }
+        }
+
         function openReviewModal(providerId) {
             // Must be logged in to write a review
             if (!firebaseUser) {
@@ -6013,15 +6037,19 @@
             if (!text) { showFirebaseStatus('Please write your review!', 'error'); return; }
             if (text.length < 5) { showFirebaseStatus('Review is too short — please write at least a few words.', 'error'); return; }
 
-            // Check: one review per user per provider
+            // Check: one review per user per provider (check Firebase directly for accuracy)
             const provider = providers.find(p => p.id === currentReviewProviderId);
-            if (provider?.reviews) {
-                const existingReview = Object.values(provider.reviews).find(r => r.reviewerUid === firebaseUser.uid);
-                if (existingReview) {
-                    showFirebaseStatus('You have already reviewed this provider.', 'error');
-                    return;
+            try {
+                const reviewsSnap = await _firebase.get(_firebase.ref(_firebase.db, `reviews/${currentReviewProviderId}`));
+                if (reviewsSnap.exists()) {
+                    const existingReview = Object.values(reviewsSnap.val()).find(r => r.reviewerUid === firebaseUser.uid);
+                    if (existingReview) {
+                        showFirebaseStatus('You have already reviewed this provider. ✅', 'info');
+                        closeReviewModal();
+                        return;
+                    }
                 }
-            }
+            } catch(e) { /* proceed if check fails */ }
 
             const review = {
                 id: 'r_' + Date.now(),
@@ -6035,26 +6063,37 @@
             };
 
             try {
+                // Write to top-level `reviews/{providerId}/{reviewId}` 
+                // (not inside providers/ which requires admin access)
                 await _firebase.set(
-                    _firebase.ref(_firebase.db, `providers/${currentReviewProviderId}/reviews/${review.id}`),
+                    _firebase.ref(_firebase.db, `reviews/${currentReviewProviderId}/${review.id}`),
                     review
                 );
                 closeReviewModal();
                 showFirebaseStatus('⭐ Review submitted! Thank you.', 'success');
                 // Award 2 wallet points for writing a review
                 awardWalletPoints(2, 'write_review', 'Wrote a review for ' + (provider?.name || ''));
-                // Reload providers to reflect new review
-                loadProvidersFromFirebase && loadProvidersFromFirebase();
+                // Reload reviews for this provider in memory
+                await loadProviderReviews(currentReviewProviderId);
             } catch (err) {
                 console.error('Review save error:', err);
-                showFirebaseStatus('Could not save review. Please check your connection.', 'error');
+                // Check if it's a permission error
+                if (err.code === 'PERMISSION_DENIED' || err.message?.includes('permission')) {
+                    showFirebaseStatus('Permission denied. Please ensure you are logged in.', 'error');
+                } else {
+                    showFirebaseStatus('Could not save review. Please check your connection.', 'error');
+                }
             }
         }
 
         // ==================== PHASE E: PROVIDER PROFILE MODAL ====================
-        function openProviderProfile(providerId) {
+        async function openProviderProfile(providerId) {
             const p = providers.find(pr => pr.id === providerId);
             if (!p) return;
+
+            // Load fresh reviews from reviews/ node
+            const freshReviews = await loadProviderReviews(providerId);
+            p.reviews = freshReviews;
 
             const { avg, count } = getAvgRating(p);
             const reviews = p.reviews ? Object.values(p.reviews).sort((a,b) => new Date(b.date) - new Date(a.date)) : [];
@@ -6106,7 +6145,8 @@
                         <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-600 transition" style="text-decoration:none;">💬 WhatsApp</a>
                         ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-blue-700 transition" style="text-decoration:none;">🗺️ Get Directions</a>` : '<div></div>'}
                         <button onclick="document.getElementById('profileModal').classList.add('hidden'); openReviewModal('${p.id}')" class="bg-orange-100 text-orange-700 py-3 rounded-xl font-semibold hover:bg-orange-200 transition border border-orange-200">⭐ Write Review</button>
-                        <button onclick="openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}')" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-base transition hover:from-purple-700 hover:to-indigo-700 shadow-lg">⚡ Hire Now &nbsp;<span class="text-sm font-normal opacity-80">(₹10 convenience fee)</span></button>
+                        <button onclick="document.getElementById('profileModal').classList.add('hidden'); openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}','tip')" class="bg-pink-100 text-pink-700 py-3 rounded-xl font-semibold hover:bg-pink-200 transition border border-pink-200">🙏 Send Tip</button>
+                        <button onclick="openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}')" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-base transition hover:from-purple-700 hover:to-indigo-700 shadow-lg">⚡ Hire Now &nbsp;<span class="text-sm font-normal opacity-80">(₹10 convenience fee)</span></button>
                     </div>
 
                     <!-- Reviews section -->
@@ -6370,9 +6410,13 @@
 let hmTipAmt = 0, hmCharityAmt = 0;
 const HM_CONV_FEE = 10;
 let hmLang = 'hi';
+let hmProviderId = null;
+let hmProviderOwnerUid = null;
 
-function openHireModal(name, service, location, rating, lang) {
+function openHireModal(name, service, location, rating, lang, providerId, ownerUid, mode) {
   hmTipAmt = 0; hmCharityAmt = 0; hmLang = lang || 'hi';
+  hmProviderId = providerId || null;
+  hmProviderOwnerUid = ownerUid || null;
   // Decode URL params
   try {
     document.getElementById('hm-pname').textContent = decodeURIComponent(name);
@@ -6386,6 +6430,14 @@ function openHireModal(name, service, location, rating, lang) {
   hmUpdateTotal();
   document.getElementById('hireModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  // If opened directly for tipping, pre-set tip amount to ₹10 and highlight it
+  if (mode === 'tip') {
+    setTimeout(() => {
+      hmChangeAmt('tip', 10);
+      const tipSection = document.getElementById('hm-tip-disp');
+      if (tipSection) tipSection.closest('.scard')?.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 150);
+  }
 }
 
 function closeHireModal() {
@@ -6483,18 +6535,20 @@ async function hmPaymentDone() {
   // ── Save transaction to Firebase ──
   if (window._firebase && firebaseUser) {
     try {
+      const txnId = Date.now();
       const txn = {
-        type:      gratType,
-        amount:    amount,
-        fee:       fee,
-        tip:       hmTipAmt,
-        charity:   hmCharityAmt,
-        points:    pointsEarned,
-        timestamp: Date.now(),
-        date:      new Date().toLocaleDateString('en-IN')
+        type:        gratType,
+        amount:      amount,
+        fee:         fee,
+        tip:         hmTipAmt,
+        charity:     hmCharityAmt,
+        points:      pointsEarned,
+        providerId:  hmProviderId || '',
+        timestamp:   txnId,
+        date:        new Date().toLocaleDateString('en-IN')
       };
-      const txnRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${Date.now()}`);
-      await _firebase.set(txnRef, txn);
+      // Save to seeker's transactions
+      await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${txnId}`), txn);
 
       // Award points based on transaction type
       if (pointsEarned > 0) {
@@ -6502,6 +6556,31 @@ async function hmPaymentDone() {
         const snap = await _firebase.get(creditsRef);
         const current = snap.exists() ? (snap.val() || 0) : 0;
         await _firebase.set(creditsRef, current + pointsEarned);
+      }
+
+      // ── Credit tip to PROVIDER's earnings ──
+      if (hasTip && hmProviderId && hmTipAmt > 0) {
+        const earning = {
+          type:       'tip',
+          amount:     hmTipAmt,
+          fromUid:    firebaseUser.uid,
+          fromName:   window.userProfile?.name || 'Customer',
+          timestamp:  txnId,
+          date:       new Date().toLocaleDateString('en-IN')
+        };
+        await _firebase.set(_firebase.ref(_firebase.db, `providers/${hmProviderId}/earnings/${txnId}`), earning);
+        // Also update provider's total earnings counter
+        const earnRef = _firebase.ref(_firebase.db, `providers/${hmProviderId}/totalEarnings`);
+        const earnSnap = await _firebase.get(earnRef);
+        await _firebase.set(earnRef, (earnSnap.exists() ? (earnSnap.val()||0) : 0) + hmTipAmt);
+        // Notify provider
+        if (hmProviderOwnerUid) {
+          await addNotification(hmProviderOwnerUid, {
+            type: 'tip_received', title: '🙏 Tip Received!',
+            message: `${earning.fromName} sent you a ₹${hmTipAmt} tip!`,
+            timestamp: txnId
+          });
+        }
       }
     } catch(e) { console.warn('Wallet save error:', e); }
   }
@@ -6627,6 +6706,16 @@ async function hmPaymentDone() {
                         <div class="text-3xl font-bold text-purple-600" id="dashProfileViews">0</div>
                         <div class="text-xs text-purple-700 mt-1 font-semibold">👁️ Profile Views</div>
                     </div>
+                    <div class="bg-teal-50 rounded-xl p-4 text-center col-span-2">
+                        <div class="text-3xl font-bold text-teal-600" id="dashTotalEarnings">₹0</div>
+                        <div class="text-xs text-teal-700 mt-1 font-semibold">💰 Total Tips Earned</div>
+                    </div>
+                </div>
+                <div class="bg-teal-50 rounded-xl p-4">
+                    <h3 class="font-bold text-teal-700 mb-3">💰 Tip Earnings</h3>
+                    <div id="dashEarningsList" class="space-y-1 text-sm max-h-40 overflow-y-auto">
+                        <div class="text-gray-400 text-center py-3 text-xs">No tips received yet</div>
+                    </div>
                 </div>
                 <div class="bg-gray-50 rounded-xl p-4">
                     <h3 class="font-bold text-gray-700 mb-3">📋 Recent Bookings</h3>
@@ -6639,6 +6728,36 @@ async function hmPaymentDone() {
                     <div id="dashMembershipInfo" class="text-sm text-gray-600"></div>
                     <button onclick="closeProviderDash(); openSubscriptionModal()" class="mt-2 w-full bg-yellow-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-yellow-600">Upgrade Plan →</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CHARITY MODAL ===== -->
+    <div id="charityModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div class="bg-gradient-to-r from-teal-600 to-green-600 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                <h2 class="text-lg font-bold">🌱 Donate to Charity</h2>
+                <button onclick="closeCharityModal()" class="text-white text-2xl font-bold">✕</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-sm text-gray-600 text-center">Your donation goes 100% to social welfare. No platform fee charged.</p>
+                <div class="bg-teal-50 rounded-xl p-4">
+                    <div class="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Donation Amount</div>
+                    <div class="flex items-center justify-center gap-4">
+                        <button onclick="charityAmtChange(-10)" class="w-10 h-10 rounded-full border-2 border-teal-300 bg-white text-xl font-bold text-teal-600 hover:bg-teal-100">−</button>
+                        <span class="text-3xl font-bold text-teal-700" id="charityAmtDisp">₹10</span>
+                        <button onclick="charityAmtChange(10)" class="w-10 h-10 rounded-full border-2 border-teal-300 bg-white text-xl font-bold text-teal-600 hover:bg-teal-100">+</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setCharityAmt(10)" class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹10</button>
+                    <button onclick="setCharityAmt(51)" class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹51</button>
+                    <button onclick="setCharityAmt(101)" class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹101</button>
+                </div>
+                <button onclick="proceedCharityPayment()" class="w-full bg-teal-600 text-white py-3 rounded-xl font-bold text-base hover:bg-teal-700 shadow-md">
+                    🙏 Donate via UPI
+                </button>
+                <p class="text-center text-xs text-gray-400">Powered by Sudarshan Chakra · Dharma &amp; Seva 🌸</p>
             </div>
         </div>
     </div>
@@ -7130,6 +7249,27 @@ async function openProviderDash() {
         const expiry = mem.expiry ? ` · Expires: ${new Date(mem.expiry).toLocaleDateString('en-IN')}` : '';
         const statusNote = mem.status==='pending_verification' ? ' ⏳ (Awaiting verification)' : '';
         document.getElementById('dashMembershipInfo').textContent = (planLabels[mem.plan]||'🆓 Free Plan') + expiry + statusNote;
+
+        // ── Earnings ──
+        const earnSnap = await _firebase.get(_firebase.ref(_firebase.db, `providers/${myProvider.id}/earnings`));
+        const totalSnap = await _firebase.get(_firebase.ref(_firebase.db, `providers/${myProvider.id}/totalEarnings`));
+        const totalEarned = totalSnap.exists() ? totalSnap.val() : 0;
+        document.getElementById('dashTotalEarnings').textContent = '₹' + totalEarned;
+
+        const earnings = earnSnap.exists() ? Object.values(earnSnap.val()).sort((a,b)=>b.timestamp-a.timestamp) : [];
+        const earningsEl = document.getElementById('dashEarningsList');
+        if (earningsEl) {
+            earningsEl.innerHTML = earnings.length
+                ? earnings.map(e => `
+                    <div class="flex justify-between items-center py-1.5 border-b last:border-0">
+                        <div>
+                            <div class="font-semibold text-gray-700 text-xs">🙏 Tip from ${e.fromName||'Customer'}</div>
+                            <div class="text-gray-400 text-xs">${e.date||''}</div>
+                        </div>
+                        <span class="text-green-700 font-bold text-sm">+₹${e.amount}</span>
+                    </div>`).join('')
+                : '<div class="text-gray-400 text-center py-3 text-xs">No tips received yet</div>';
+        }
     } catch(e) { console.warn('Dashboard error:',e); }
 }
 function closeProviderDash() { document.getElementById('providerDashModal').classList.add('hidden'); }
@@ -7303,6 +7443,43 @@ Tap OK for WhatsApp, or Cancel to copy the link.');
             showFirebaseStatus('Your referral link: ' + url, 'info');
         });
     }
+}
+
+let charityAmt = 10;
+function openCharityModal() {
+    if (!firebaseUser) { openLoginModal(); return; }
+    charityAmt = 10;
+    document.getElementById('charityAmtDisp').textContent = '₹' + charityAmt;
+    document.getElementById('charityModal').classList.remove('hidden');
+}
+function closeCharityModal() { document.getElementById('charityModal').classList.add('hidden'); }
+function charityAmtChange(delta) {
+    charityAmt = Math.max(10, charityAmt + delta);
+    document.getElementById('charityAmtDisp').textContent = '₹' + charityAmt;
+}
+function setCharityAmt(amt) {
+    charityAmt = amt;
+    document.getElementById('charityAmtDisp').textContent = '₹' + charityAmt;
+}
+async function proceedCharityPayment() {
+    const UPI_ID = '9414055013@ybl';
+    const note = encodeURIComponent('SC Charity Donation');
+    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${charityAmt}&cu=INR&tn=${note}`;
+    
+    // Save transaction to Firebase
+    if (window._firebase && firebaseUser) {
+        try {
+            const txnId = Date.now();
+            await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${txnId}`), {
+                type: 'charity', amount: charityAmt, fee: 0, points: 0,
+                timestamp: txnId, date: new Date().toLocaleDateString('en-IN')
+            });
+        } catch(e) { console.warn('Charity txn save error:', e); }
+    }
+    
+    closeCharityModal();
+    window.location.href = upiUrl;
+    setTimeout(() => showFirebaseStatus('🌱 Thank you for your donation! 🙏', 'success'), 1000);
 }
 
 function showReferProviderModal() {
