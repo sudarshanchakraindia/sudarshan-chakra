@@ -8087,36 +8087,46 @@ function redeemPointsForUpgrade(plan, originalAmount) {
     const fu = _getFirebaseUser(); const fb = _getFirebase();
     if (!fu || !fb) { openLoginModal(); return; }
     fb.get(fb.ref(fb.db, `users/${fu.uid}/walletCredits`)).then(snap => {
-        const pts = snap.exists() ? (snap.val() || 0) : 0;
-        const maxRedeem = Math.floor(pts / 10); // 10pts = ₹1
+        const pts        = snap.exists() ? (snap.val() || 0) : 0;
+        const maxRedeem  = Math.floor(pts / 10);
         const redeemable = Math.min(maxRedeem, originalAmount);
-        const toPay = originalAmount - redeemable;
-        const msg = redeemable > 0
-            ? `You have ${pts} pts (₹${(pts/10).toFixed(0)}).
-Redeem ${redeemable * 10} pts → save ₹${redeemable}!
-You pay: ₹${toPay} via UPI.`
-            : `You have ${pts} pts but need 100+ pts to redeem.
-Full amount: ₹${originalAmount}`;
-        if (redeemable > 0 && confirm(msg + '
-
-Proceed?')) {
-            initiateSubscription(plan, toPay, redeemable * 10);
-        } else if (redeemable === 0) {
-            initiateSubscription(plan, originalAmount, 0);
+        const toPay      = originalAmount - redeemable;
+        const ptsToUse   = redeemable * 10;
+        let confirmMsg;
+        if (redeemable > 0) {
+            confirmMsg = 'You have ' + pts + ' pts (\u20B9' + Math.floor(pts/10) + ').\nRedeem ' + ptsToUse + ' pts \u2192 save \u20B9' + redeemable + '!\nYou pay: \u20B9' + toPay + ' via UPI.\n\nProceed?';
+        } else {
+            confirmMsg = 'You have ' + pts + ' pts (need 100+ to redeem).\nFull payment: \u20B9' + originalAmount + ' via UPI.\n\nProceed?';
         }
-    }).catch(() => initiateSubscription(plan, originalAmount, 0));
+        if (confirm(confirmMsg)) {
+            if (redeemable > 0) {
+                initiateSubscription(plan, String(toPay), ptsToUse);
+            } else {
+                initiateSubscription(plan, String(originalAmount), 0);
+            }
+        }
+    }).catch(() => initiateSubscription(plan, String(originalAmount), 0));
 }
 
-// Expose to window scope for onclick= attributes
-window.shareReferralLink   = shareReferralLink;
-window.fallbackCopyReferral= fallbackCopyReferral;
-window.openCharityModal    = openCharityModal;
-window.closeCharityModal   = closeCharityModal;
-window.charityAmtChange    = charityAmtChange;
-window.setCharityAmt       = setCharityAmt;
-window.proceedCharityPayment = proceedCharityPayment;
+// ── Expose ALL functions to window for onclick= attribute calls ──
+window.shareReferralLink      = shareReferralLink;
+window.fallbackCopyReferral   = fallbackCopyReferral;
+window.openCharityModal       = openCharityModal;
+window.closeCharityModal      = closeCharityModal;
+window.charityAmtChange       = charityAmtChange;
+window.setCharityAmt          = setCharityAmt;
+window.proceedCharityPayment  = proceedCharityPayment;
 window.showReferProviderModal = showReferProviderModal;
-window.awardWalletPoints   = awardWalletPoints;
+window.awardWalletPoints      = awardWalletPoints;
+window.openGratitudeModal     = openGratitudeModal;
+window.closeGratitudeModal    = closeGratitudeModal;
+window.sendGratitudeWhatsApp  = sendGratitudeWhatsApp;
+window.copyGratitudeMessage   = copyGratitudeMessage;
+window.hmLoadWalletBalance    = hmLoadWalletBalance;
+window.hmToggleWalletPts      = hmToggleWalletPts;
+window.hmUpdateTotalWithWallet= hmUpdateTotalWithWallet;
+window.redeemPointsForUpgrade = redeemPointsForUpgrade;
+window.hmSetAmt               = hmSetAmt;
 
 // ==================== CHECK REFERRAL ON LOAD ====================
 (function checkReferral() {
