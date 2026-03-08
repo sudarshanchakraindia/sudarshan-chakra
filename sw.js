@@ -1,49 +1,8663 @@
-// Sudarshan Chakra — Service Worker
-// Version bump forces cache refresh on every deploy
-const CACHE_NAME = 'sc-cache-v42';
-const URLS_TO_CACHE = [
-  './',
-  './index.html',
-  './gratitude.html',
-  './hire_checkout.html',
-  './manifest.json'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Sudarshan Chakra - Find Service Providers Near You</title>
+
+    <!-- ===== PWA META TAGS ===== -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ea580c">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sudarshan Chakra">
+    <meta name="application-name" content="Sudarshan Chakra">
+    <meta name="description" content="Find verified service providers near you — plumbers, electricians, beauticians, caterers and more.">
+
+    <!-- PWA Icons — Real PNG files required by iOS Safari -->
+    <!-- iOS apple-touch-icons (specific sizes for each device) -->
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <link rel="apple-touch-icon" sizes="57x57"   href="icons/icon-57.png">
+    <link rel="apple-touch-icon" sizes="60x60"   href="icons/icon-60.png">
+    <link rel="apple-touch-icon" sizes="72x72"   href="icons/icon-72.png">
+    <link rel="apple-touch-icon" sizes="76x76"   href="icons/icon-76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="icons/icon-114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+    <!-- Standard favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+    <!-- Open Graph (for sharing) -->
+    <meta property="og:title" content="Sudarshan Chakra">
+    <meta property="og:description" content="Find verified service providers near you">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sudarshanchakraindia.github.io/sudarshan-chakra/">
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => {
+                        console.log('✅ Service Worker registered:', reg.scope);
+                        // When a new SW is waiting, activate it immediately
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'activated') {
+                                    console.log('[SW] New version activated — reloading for fresh cache');
+                                    window.location.reload();
+                                }
+                            });
+                        });
+                    })
+                    .catch(err => console.warn('⚠️ Service Worker failed:', err));
+            });
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // ==================== FIREBASE SETUP ====================
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
+            authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
+            databaseURL: "https://sudarshan-chakra-b0ac1-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sudarshan-chakra-b0ac1",
+            storageBucket: "sudarshan-chakra-b0ac1.firebasestorage.app",
+            messagingSenderId: "357210144411",
+            appId: "1:357210144411:web:b440a94cf78b04b58b103e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db  = getDatabase(app);
+        const auth = getAuth(app);
+
+        // ── Persist login across sessions (survives browser close/refresh) ──
+        setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence error:', e));
+
+        // Expose to global scope
+        window._firebase = { db, ref, set, push, onValue, update, remove, get };
+        window._auth = { auth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged };
+        window._firebaseReady = true;
+
+        // Auth state listener — fires whenever user logs in or out
+        onAuthStateChanged(auth, (user) => {
+            window._firebaseUser = user || null;
+            // Small delay to ensure main script variables are ready
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('authStateChanged', { detail: user }));
+            }, 300);
+        });
+
+        window.dispatchEvent(new Event('firebaseReady'));
+        console.log('✅ Firebase + Auth initialized');
+    </script>
+    <style>
+        .map-container { height: 500px; width: 100%; border-radius: 12px; }
+        .reg-map { height: 350px; width: 100%; border-radius: 8px; margin-top: 10px; }
+        .lang-option { cursor: pointer; padding: 20px; border-radius: 12px; transition: all 0.3s; }
+        .lang-option:hover { transform: scale(1.05); }
+        .category-card { cursor: pointer; transition: all 0.3s; }
+        .browse-step { animation: stepFadeIn 0.35s ease forwards; }
+        @keyframes stepFadeIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+        .bc-item { cursor:pointer; color:#ea580c; font-weight:600; }
+        .bc-item:hover { text-decoration:underline; }
+        .category-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .category-card.selected { border: 3px solid #ea580c; background: #fff7ed; }
+        .star-rating { color: #fbbf24; }
+
+        /* Multi-select chips for language & service type */
+        .lang-chip, .service-chip {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            border: 2px solid #e5e7eb; border-radius: 10px;
+            padding: 8px 10px; cursor: pointer;
+            transition: all 0.2s; font-size: 13px; font-weight: 500;
+            background: #fff; user-select: none;
+        }
+        .lang-chip:hover, .service-chip:hover { border-color: #fb923c; background: #fff7ed; }
+        .lang-chip input, .service-chip input { display: none; }
+        .lang-chip.checked, .service-chip.checked {
+            border-color: #ea580c; background: #fff7ed; color: #c2410c; font-weight: 700;
+            box-shadow: 0 0 0 2px #fed7aa;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- ===== PWA INSTALL BANNER ===== -->
+    <div id="pwaInstallBanner" class="hidden fixed bottom-0 left-0 right-0 z-50 p-3 bg-white border-t-2 border-orange-500 shadow-2xl" style="padding-bottom: env(safe-area-inset-bottom, 12px);">
+        <div class="max-w-lg mx-auto flex items-center gap-3">
+            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow flex-shrink-0">SC</div>
+            <div class="flex-1 min-w-0">
+                <div class="font-bold text-gray-800 text-sm">Install Sudarshan Chakra</div>
+                <div class="text-xs text-gray-500 truncate">Add to home screen for the full app experience</div>
+            </div>
+            <button id="pwaInstallBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-700 flex-shrink-0">
+                Install
+            </button>
+            <button id="pwaInstallDismiss" class="text-gray-400 hover:text-gray-600 text-xl flex-shrink-0 px-1" title="Dismiss">✕</button>
+        </div>
+    </div>
+
+    <!-- iOS Install Instructions (shown on Safari/iOS) -->
+    <div id="iosInstallBanner" class="hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-orange-500 shadow-2xl" style="padding-bottom: env(safe-area-inset-bottom, 12px);">
+        <div class="p-4 max-w-lg mx-auto">
+            <div class="flex justify-between items-start mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0">SC</div>
+                    <div>
+                        <div class="font-bold text-gray-800 text-sm">Install on iPhone / iPad</div>
+                        <div class="text-xs text-gray-500">Works like a real app — no App Store needed!</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('iosInstallBanner').classList.add('hidden'); localStorage.setItem('pwaDismissed','1')" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <div class="flex items-center gap-4 text-sm text-gray-700 bg-orange-50 rounded-xl p-3">
+                <div class="text-center flex-1">
+                    <div class="text-2xl mb-1">⬆️</div>
+                    <div class="text-xs">Tap <strong>Share</strong></div>
+                </div>
+                <div class="text-gray-400 text-lg">›</div>
+                <div class="text-center flex-1">
+                    <div class="text-2xl mb-1">➕</div>
+                    <div class="text-xs">Tap <strong>"Add to Home Screen"</strong></div>
+                </div>
+                <div class="text-gray-400 text-lg">›</div>
+                <div class="text-center flex-1">
+                    <div class="text-2xl mb-1">📱</div>
+                    <div class="text-xs">Tap <strong>Add</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LANGUAGE SELECTOR MODAL -->
+    <div id="languageModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 class="text-3xl font-bold text-center mb-2">🌏 Select Your Language</h2>
+            <p class="text-center text-gray-600 mb-8">अपनी भाषा चुनें / Choose Your Language</p>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="lang-option bg-gradient-to-br from-orange-500 to-orange-600 text-white text-center" onclick="selectLanguage('en')">
+                    <div class="text-4xl mb-1">🇬🇧</div>
+                    <div class="font-bold text-base leading-tight">English</div>
+                    <div class="text-xs opacity-80 mt-1">अंग्रेज़ी • English</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-green-500 to-green-600 text-white text-center" onclick="selectLanguage('hi')">
+                    <div class="text-4xl mb-1">🇮🇳</div>
+                    <div class="font-bold text-base leading-tight">Hindi</div>
+                    <div class="text-xs opacity-80 mt-1">हिंदी • हिन्दी</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-blue-500 to-blue-600 text-white text-center" onclick="selectLanguage('bn')">
+                    <div class="text-4xl mb-1">🪷</div>
+                    <div class="font-bold text-base leading-tight">Bengali</div>
+                    <div class="text-xs opacity-80 mt-1">बंगाली • বাংলা</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-yellow-500 to-yellow-600 text-white text-center" onclick="selectLanguage('gu')">
+                    <div class="text-4xl mb-1">🦁</div>
+                    <div class="font-bold text-base leading-tight">Gujarati</div>
+                    <div class="text-xs opacity-80 mt-1">गुजराती • ગુજ</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-red-500 to-red-600 text-white text-center" onclick="selectLanguage('mr')">
+                    <div class="text-4xl mb-1">🏯</div>
+                    <div class="font-bold text-base leading-tight">Marathi</div>
+                    <div class="text-xs opacity-80 mt-1">मराठी • मराठी</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-purple-500 to-purple-600 text-white text-center" onclick="selectLanguage('kn')">
+                    <div class="text-4xl mb-1">🌿</div>
+                    <div class="font-bold text-base leading-tight">Kannada</div>
+                    <div class="text-xs opacity-80 mt-1">कन्नड़ • ಕನ್ನಡ</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-teal-500 to-teal-600 text-white text-center" onclick="selectLanguage('te')">
+                    <div class="text-4xl mb-1">🌺</div>
+                    <div class="font-bold text-base leading-tight">Telugu</div>
+                    <div class="text-xs opacity-80 mt-1">तेलुगू • తెలుగు</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-pink-500 to-pink-600 text-white text-center" onclick="selectLanguage('ml')">
+                    <div class="text-4xl mb-1">🌴</div>
+                    <div class="font-bold text-base leading-tight">Malayalam</div>
+                    <div class="text-xs opacity-80 mt-1">मलयालम • മലയ</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-indigo-500 to-indigo-600 text-white text-center" onclick="selectLanguage('ta')">
+                    <div class="text-4xl mb-1">🏛️</div>
+                    <div class="font-bold text-base leading-tight">Tamil</div>
+                    <div class="text-xs opacity-80 mt-1">तमिल • தமிழ்</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-amber-500 to-amber-600 text-white text-center" onclick="selectLanguage('pa')">
+                    <div class="text-4xl mb-1">🌾</div>
+                    <div class="font-bold text-base leading-tight">Punjabi</div>
+                    <div class="text-xs opacity-80 mt-1">पंजाबी • ਪੰਜਾਬੀ</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-center" onclick="selectLanguage('or')">
+                    <div class="text-4xl mb-1">🏵️</div>
+                    <div class="font-bold text-base leading-tight">Odia</div>
+                    <div class="text-xs opacity-80 mt-1">ओडिया • ଓଡ଼ିଆ</div>
+                </div>
+                <div class="lang-option bg-gradient-to-br from-cyan-500 to-cyan-600 text-white text-center" onclick="selectLanguage('as')">
+                    <div class="text-4xl mb-1">🦏</div>
+                    <div class="font-bold text-base leading-tight">Assamese</div>
+                    <div class="text-xs opacity-80 mt-1">असमिया • অসমীয়া</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <nav class="bg-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="showPage('home')">
+                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg">SC</div>
+                <span class="text-2xl font-bold text-orange-600">Sudarshan Chakra</span>
+            </div>
+            <div class="flex gap-2 flex-wrap items-center">
+                <button data-i18n="home" onclick="showPage('home')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Home</button>
+                <button data-i18n="browse" onclick="showPage('browse')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Browse</button>
+                <button data-i18n="map" onclick="showPage('map')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Map</button>
+                <button data-i18n="aboutNav" onclick="showPage('info'); buildFAQ();" class="px-3 py-2 text-orange-600 hover:text-orange-800 font-medium text-sm">ℹ️ About</button>
+                <!-- Show register/admin buttons only when NOT logged in -->
+                <div id="navGuestButtons" class="flex gap-2 items-center">
+                    <button data-i18n="registerProvider" onclick="showPage('register')" class="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">Register Provider</button>
+                    <button data-i18n="registerSeeker" onclick="showPage('seeker')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Register Seeker</button>
+                    <button data-i18n="admin" onclick="showPage('admin')" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">🔐 Admin</button>
+                </div>
+                <!-- Wallet button — shown only when logged in -->
+                <button id="walletNavBtn" onclick="showPage('myProfile'); setTimeout(()=>showProfileTab('wallet'),300)" class="hidden px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-semibold border border-green-300">💰 Wallet</button>
+                <button onclick="changeLang()" class="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm">🌏 <span id="currentLang">EN</span></button>
+                <button id="notifNavBtn" onclick="openNotifPanel()" class="hidden relative px-3 py-2 text-gray-700 hover:text-orange-600">
+                    🔔 <span id="notifBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
+                </button>
+                <div id="navAuthBtn">
+                    <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HOME PAGE -->
+    <div id="page-home" class="page">
+        <div class="max-w-7xl mx-auto px-4 py-12">
+            <div class="text-center mb-12">
+                <h1 class="text-5xl font-bold text-gray-800 mb-4">Find the Perfect Service Provider Near You</h1>
+                <p class="text-xl text-gray-600 mb-8">Rated, verified professionals in your area</p>
+                <!-- Global Search Bar -->
+                <div class="max-w-xl mx-auto mb-6">
+                    <div class="flex gap-2 bg-white rounded-2xl shadow-lg border-2 border-orange-200 px-4 py-2">
+                        <span class="text-2xl">🔍</span>
+                        <input id="globalSearchInput" type="text" placeholder="Search for plumber, AC repair, beautician..."
+                            class="flex-1 outline-none text-gray-700 text-base bg-transparent"
+                            onkeydown="globalSearchSubmit(event)">
+                        <button onclick="globalSearchSubmit()" class="bg-orange-600 text-white px-4 py-1.5 rounded-xl text-sm font-bold hover:bg-orange-700">Search</button>
+                    </div>
+                </div>
+                <div class="flex gap-4 justify-center flex-wrap">
+                    <button data-i18n="browseServices" onclick="showPage('browse')" class="bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-700 text-lg">Browse Services</button>
+                    <button data-i18n="becomeProvider" onclick="showPage('register')" class="bg-white text-orange-600 border-2 border-orange-600 px-8 py-3 rounded-lg font-semibold hover:bg-orange-50 text-lg">Become a Provider</button>
+                    <!-- PHASE C: Voice Search Button -->
+                    <button data-i18n="voiceSearch" onclick="startVoiceSearch()" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 text-lg">
+                        🎤 Voice Search
+                    </button>
+                </div>
+                
+                <!-- Voice Search Status -->
+                <div id="voiceStatus" class="hidden mt-4 text-center">
+                    <div class="inline-block bg-red-100 border border-red-300 rounded-lg px-6 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="animate-pulse">🔴</div>
+                            <span id="voiceStatusText" class="font-medium text-red-800">Listening...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 🔱 Live Stats Banner -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                    <div class="text-4xl font-black" id="homeStatProviders">...</div>
+                    <div class="text-sm font-semibold mt-1 opacity-90"><span data-i18n="statProviders">👷 Skilled Providers</span></div>
+                    <div class="text-xs mt-1 opacity-75" data-i18n="statReadyToServe">Ready to serve you</div>
+                </div>
+                <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                    <div class="text-4xl font-black" id="homeStatServices">...</div>
+                    <div class="text-sm font-semibold mt-1 opacity-90"><span data-i18n="statServices">🛠️ Services Listed</span></div>
+                    <div class="text-xs mt-1 opacity-75" data-i18n="statAcrossAll">Across all categories</div>
+                </div>
+                <div class="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                    <div class="text-4xl font-black" id="homeStatCategories">...</div>
+                    <div class="text-sm font-semibold mt-1 opacity-90"><span data-i18n="statCategories">📋 Categories</span></div>
+                    <div class="text-xs mt-1 opacity-75" data-i18n="statFindWhat">Find what you need</div>
+                </div>
+                <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                    <div class="text-4xl font-black" id="homeStatReviews">...</div>
+                    <div class="text-sm font-semibold mt-1 opacity-90"><span data-i18n="statClients">⭐ Happy Clients</span></div>
+                    <div class="text-xs mt-1 opacity-75" data-i18n="statVerified">Verified reviews</div>
+                </div>
+            </div>
+
+            <!-- Motivational Join Strip -->
+            <div class="bg-gradient-to-r from-orange-600 to-orange-500 rounded-2xl p-5 mb-10 text-white text-center shadow-lg">
+                <div class="text-lg font-bold mb-1" data-i18n="joinTitle">🔱 Join Sudarshan Chakra Today!</div>
+                <div class="text-sm opacity-90 mb-3" data-i18n="joinSubtitle">Be part of India's growing skilled workforce network — get work, earn money, build reputation</div>
+                <div class="flex gap-3 justify-center flex-wrap">
+                    <button onclick="showPage('register')" class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition">👷 Register as Provider</button>
+                    <button onclick="showPage('seeker')" class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition">🙋 Register as Seeker</button>
+                </div>
+            </div>
+
+            <h2 data-i18n="serviceCategories" class="text-2xl font-bold text-gray-800 mb-6 text-center">Service Categories</h2>
+            <div id="categoriesGridHome" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+        </div>
+    </div>
+
+    <!-- NEW BROWSE PAGE WITH GRID VIEW -->
+    <div id="page-browse" class="page hidden">
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <h1 data-i18n="findServiceProviders" class="text-3xl font-bold text-gray-800 mb-6">Find Service Providers Near You</h1>
+            
+            <!-- Breadcrumb -->
+            <div id="breadcrumb-trail" class="hidden flex items-center gap-2 flex-wrap mb-4 text-sm bg-orange-50 rounded-xl px-4 py-2 border border-orange-100">
+                <span class="bc-item" onclick="browseGoTo('category')">🏠 Categories</span>
+                <span id="bc-sep1" class="text-gray-400 hidden">›</span>
+                <span id="bc-cat" class="bc-item hidden" onclick="browseGoTo('subcategory')"></span>
+                <span id="bc-sep2" class="text-gray-400 hidden">›</span>
+                <span id="bc-sub" class="bc-item hidden" onclick="browseGoTo('service')"></span>
+                <span id="bc-sep3" class="text-gray-400 hidden">›</span>
+                <span id="bc-svc" class="text-gray-600 font-medium hidden"></span>
+            </div>
+
+            <!-- Step 1: Category -->
+            <div id="step-category" class="browse-step mb-6">
+                <h2 data-i18n="selectCategory" class="text-xl font-bold text-gray-700 mb-4">1️⃣ Select Category</h2>
+                <div id="browseCategoriesGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            </div>
+
+            <!-- Step 2: Subcategory -->
+            <div id="subcategorySection" class="browse-step mb-6 hidden">
+                <h2 data-i18n="selectSubcategory" class="text-xl font-bold text-gray-700 mb-4">2️⃣ Select Subcategory</h2>
+                <div id="browseSubcategoriesGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            </div>
+
+            <!-- Step 3: Service Type -->
+            <div id="serviceSection" class="browse-step mb-6 hidden">
+                <h2 data-i18n="selectService" class="text-xl font-bold text-gray-700 mb-4">3️⃣ Select Service Type</h2>
+                <div id="browseServicesGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+            </div>
+            
+            <!-- Providers List (Sorted intelligently) -->
+            <div id="providersSection" class="hidden">
+                <!-- PHASE B: Sort & Filter Controls -->
+                <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                    <div class="flex flex-wrap gap-4 items-center">
+                        <!-- Sort Dropdown -->
+                        <div class="flex items-center gap-2">
+                            <label data-i18n="sortBy" class="font-medium text-gray-700">Sort By</label>
+                            <select id="sortSelect" onchange="applySortAndFilter()" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                                <option value="rating" data-i18n="rating">Rating (High to Low)</option>
+                                <option value="price" data-i18n="priceLowToHigh">Price (Low to High)</option>
+                                <option value="distance" data-i18n="distanceNearToFar">Distance (Near to Far)</option>
+                                <option value="experience" data-i18n="experienceHighToLow">Experience (High to Low)</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Filter Button -->
+                        <button data-i18n="filters" onclick="toggleFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                            🔍 Filters
+                        </button>
+                        
+                        <!-- Results Count -->
+                        <div id="browseResultsCount" class="text-blue-600 font-semibold text-sm"></span> <span id="resultsCount" class="ml-auto text-sm text-gray-600 font-medium"></div>
+                    </div>
+                    
+                    <!-- Filter Panel (Hidden by default) -->
+                    <div id="filterPanel" class="hidden mt-4 pt-4 border-t">
+                        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <!-- Language Filter -->
+                            <div>
+                                <label data-i18n="languageFilter" class="block text-sm font-medium text-gray-700 mb-2">Language</label>
+                                <select id="filterLanguage" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="" data-i18n="anyLanguage">Any Language</option>
+                                    <option value="English">English</option>
+                                    <option value="Hindi">हिंदी (Hindi)</option>
+                                    <option value="Bengali">বাংলা (Bengali)</option>
+                                    <option value="Gujarati">ગુજરાતી (Gujarati)</option>
+                                    <option value="Marathi">मराठी (Marathi)</option>
+                                    <option value="Kannada">ಕನ್ನಡ (Kannada)</option>
+                                    <option value="Telugu">తెలుగు (Telugu)</option>
+                                    <option value="Malayalam">മലയാളം (Malayalam)</option>
+                                    <option value="Tamil">தமிழ் (Tamil)</option>
+                                    <option value="Punjabi">ਪੰਜਾਬੀ (Punjabi)</option>
+                                    <option value="Urdu">اردو (Urdu)</option>
+                                    <option value="Odia">ଓଡ଼ିଆ (Odia)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Religion Filter -->
+                            <div>
+                                <label data-i18n="religionFilter" class="block text-sm font-medium text-gray-700 mb-2">Religion</label>
+                                <select id="filterReligion" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="" data-i18n="anyReligion">Any Religion</option>
+                                    <option value="Hindu">Hindu 🕉️</option>
+                                    <option value="Muslim">Muslim ☪️</option>
+                                    <option value="Christian">Christian ✝️</option>
+                                    <option value="Sikh">Sikh ☬</option>
+                                    <option value="Buddhist">Buddhist ☸️</option>
+                                    <option value="Jain">Jain ☸️</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Price Range Filter -->
+                            <div>
+                                <label data-i18n="priceRange" class="block text-sm font-medium text-gray-700 mb-2">Price Range (₹/hr)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="filterPriceMin" placeholder="Min" class="w-full px-3 py-2 border rounded-lg" min="0" value="0">
+                                    <span>-</span>
+                                    <input type="number" id="filterPriceMax" placeholder="Max" class="w-full px-3 py-2 border rounded-lg" min="0" value="2000">
+                                </div>
+                            </div>
+                            
+                            <!-- Distance Filter -->
+                            <div>
+                                <label data-i18n="maxDistanceFilter" class="block text-sm font-medium text-gray-700 mb-2">Maximum Distance</label>
+                                <select id="filterDistance" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="999">Any Distance</option>
+                                    <option value="5">Within 5 km</option>
+                                    <option value="10">Within 10 km</option>
+                                    <option value="20">Within 20 km</option>
+                                    <option value="50">Within 50 km</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Filter Action Buttons -->
+                        <div class="flex gap-3 mt-4">
+                            <button data-i18n="applyFilters" onclick="applySortAndFilter()" class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium">
+                                Apply Filters
+                            </button>
+                            <button data-i18n="clearFilters" onclick="clearFilters()" class="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-medium">
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Provider Results -->
+                <div id="providersGridNew" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Other pages remain similar, will add them below -->
+    <!-- MAP PAGE (unchanged) -->
+    <div id="page-map" class="page hidden">
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">Service Providers & Seekers Map</h1>
+                <button onclick="showPage('home')" class="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 font-semibold">
+                    ← Back to Home
+                </button>
+            </div>
+            <div id="mainMap" class="map-container bg-white rounded-xl shadow-md"></div>
+        </div>
+    </div>
+
+    <!-- PROFILE, REGISTRATION PAGES - Simplified versions below -->
+    <div id="page-myProfile" class="page hidden">
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <!-- Not logged in state -->
+            <div id="profileNotLoggedIn" class="text-center py-16">
+                <div class="text-7xl mb-4">🔱</div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Your Sudarshan Chakra Account</h2>
+                <p class="text-gray-500 mb-6">Login to manage your profile, save favourites and write reviews</p>
+                <button onclick="openLoginModal()" class="bg-orange-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-orange-700 text-lg transition">
+                    🔑 Login with Mobile OTP
+                </button>
+            </div>
+
+            <!-- Logged in state -->
+            <div id="profileLoggedIn" class="hidden">
+                <!-- Profile Header -->
+                <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white mb-6 shadow-lg">
+                    <div class="flex items-center gap-4">
+                        <div id="myProfileAvatar" class="w-20 h-20 rounded-full bg-white bg-opacity-20 flex items-center justify-center text-3xl font-bold border-3 border-white overflow-hidden flex-shrink-0"></div>
+                        <div class="flex-1">
+                            <h1 id="myProfileName" class="text-2xl font-bold"></h1>
+                            <p id="myProfilePhone" class="text-orange-100 mt-1"></p>
+                            <p id="myProfileRole" class="text-orange-200 text-sm mt-1"></p>
+                        </div>
+                        <button onclick="logoutUser()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-xl text-sm font-medium transition">Logout</button>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="bg-white rounded-2xl shadow-md mb-6 overflow-hidden">
+                    <div class="flex border-b overflow-x-auto">
+                        <button onclick="showProfileTab('myDetails')" id="ptab-myDetails" class="flex-1 px-3 py-3 font-semibold text-sm text-orange-600 border-b-2 border-orange-600 whitespace-nowrap" data-i18n="profileDetails">👤 Details</button>
+                        <button onclick="showProfileTab('bookings')" id="ptab-bookings" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap" data-i18n="profileBookings">📅 Bookings</button>
+
+                        <button onclick="showProfileTab('favourites')" id="ptab-favourites" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap" data-i18n="profileSaved">❤️ Saved</button>
+                        <button onclick="showProfileTab('myReviews')" id="ptab-myReviews" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap" data-i18n="profileReviews">⭐ Reviews</button>
+                        <button onclick="showProfileTab('myReports')" id="ptab-myReports" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap" data-i18n="profileReports">🚨 Reports</button>
+                    </div>
+                </div>
+
+                <!-- Tab: Wallet -->
+                <!-- Bookings Tab -->
+                <div id="profileTab-bookings" class="hidden">
+                    <div class="mb-4 flex gap-2">
+                        <button onclick="filterBookingsView('seeker')" id="bookViewSeeker" class="flex-1 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm">📋 My Requests</button>
+                        <button onclick="filterBookingsView('provider')" id="bookViewProvider" class="flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold text-sm">🏷️ Received Jobs</button>
+                    </div>
+                    <div id="bookingsList" class="space-y-3 max-h-96 overflow-y-auto">
+                        <div class="text-center text-gray-400 py-8">Loading bookings... 🔄</div>
+                    </div>
+                </div>
+
+                <div id="profileTab-wallet" class="hidden">
+                  <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white mb-4 shadow-lg">
+                    <div class="text-sm font-medium opacity-80 mb-1" data-i18n="walletBalance">🌟 Reward Points Balance</div>
+                    <div class="text-4xl font-bold mb-1"><span id="walletBalance">0</span> <span style="font-size:20px;font-weight:600">pts</span></div>
+                    <div class="text-green-100 text-sm">= ₹<span id="walletRupees">0.00</span> &nbsp;·&nbsp; 10 points = ₹1</div>
+                  </div>
+                  <div class="bg-white rounded-2xl shadow-md p-5 mb-4">
+                    <h3 class="font-bold text-gray-800 mb-3" data-i18n="howToEarnTitle">🎁 How to Earn Points</h3>
+                    <div class="text-xs text-gray-400 mb-3 bg-gray-50 rounded-lg px-3 py-2">💡 <strong>10 points = ₹1</strong> &nbsp;·&nbsp; Redeem points for discounts on future hires</div>
+                    <div class="space-y-3">
+                      <!-- 0. Daily Login Bonus -->
+                      <div class="flex items-center gap-3 p-3 bg-yellow-50 rounded-xl border border-yellow-100" id="dailyLoginBonusCard">
+                        <span class="text-2xl">🌟</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Daily Login Bonus</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-yellow-600">2 pts</strong> (= ₹0.20) every day you open the app</div>
+                        </div>
+                        <span id="dailyBonusStatus" class="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700">✅ Today's claimed</span>
+                      </div>
+                      <!-- 1. Make a Payment → goes to Browse -->
+                      <button onclick="showPage('browse'); setTimeout(()=>showFirebaseStatus('Browse providers and tap 💜 Hire to earn 10 pts! Points can offset portal fee.','info'),300)" class="w-full flex items-center gap-3 p-3 bg-purple-50 rounded-xl hover:bg-purple-100 active:scale-95 transition-all text-left border border-transparent hover:border-purple-200">
+                        <span class="text-2xl">💳</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Make a Payment</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-purple-600">10 pts</strong> · Use points for portal fee, tips, charity &amp; upgrades</div>
+                        </div>
+                        <span class="text-purple-400 text-lg">→</span>
+                      </button>
+                      <!-- 2. Write a Review → goes to Browse to find a provider to review -->
+                      <button onclick="showPage('browse'); showFirebaseStatus('Browse providers and tap ⭐ Write Review on any provider card', 'info')" class="w-full flex items-center gap-3 p-3 bg-green-50 rounded-xl hover:bg-green-100 active:scale-95 transition-all text-left border border-transparent hover:border-green-200">
+                        <span class="text-2xl">⭐</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Write a Review</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-green-600">2 pts</strong> (= ₹0.20) for every verified review you write</div>
+                        </div>
+                        <span class="text-green-400 text-lg">→</span>
+                      </button>
+                      <!-- 3. Share Gratitude Message → opens gratitude composer -->
+                      <button onclick="openGratitudeModal()" class="w-full flex items-center gap-3 p-3 bg-orange-50 rounded-xl hover:bg-orange-100 active:scale-95 transition-all text-left border border-transparent hover:border-orange-200">
+                        <span class="text-2xl">🙏</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Send Gratitude Message</div>
+                          <div class="text-xs text-gray-500">Thank a provider · Share their profile · Earn <strong class="text-orange-600">3 pts</strong></div>
+                        </div>
+                        <span class="text-orange-400 text-lg">→</span>
+                      </button>
+                      <!-- 3b. Refer friends → share app referral link -->
+                      <button onclick="shareReferralLink()" class="w-full flex items-center gap-3 p-3 bg-pink-50 rounded-xl hover:bg-pink-100 active:scale-95 transition-all text-left border border-transparent hover:border-pink-200">
+                        <span class="text-2xl">📤</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Refer a Friend</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-pink-600">5 pts</strong> (= ₹0.50) for every friend who joins via your link</div>
+                        </div>
+                        <span class="text-pink-400 text-lg">→</span>
+                      </button>
+                      <!-- 4. Refer a Provider → opens provider registration -->
+                      <button onclick="showReferProviderModal()" class="w-full flex items-center gap-3 p-3 bg-blue-50 rounded-xl hover:bg-blue-100 active:scale-95 transition-all text-left border border-transparent hover:border-blue-200">
+                        <span class="text-2xl">🤝</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Refer a Provider</div>
+                          <div class="text-xs text-gray-500">Earn <strong class="text-blue-600">10 pts</strong> (= ₹1) when your referred provider gets their first hire</div>
+                        </div>
+                        <span class="text-blue-400 text-lg">→</span>
+                      </button>
+                      <!-- 5. Donate to Charity → opens charity modal directly -->
+                      <button onclick="openCharityModal()" class="w-full flex items-center gap-3 p-3 bg-teal-50 rounded-xl hover:bg-teal-100 active:scale-95 transition-all text-left border border-transparent hover:border-teal-200">
+                        <span class="text-2xl">🌱</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-gray-800">Donate to Charity</div>
+                          <div class="text-xs text-gray-500">Support social welfare — <strong class="text-teal-600">100% goes to charity</strong>, no platform fee</div>
+                        </div>
+                        <span class="text-teal-400 text-lg">→</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="bg-white rounded-2xl shadow-md p-5">
+                    <h3 class="font-bold text-gray-800 mb-3" data-i18n="transHistory">📋 Transaction History</h3>
+                    <div id="walletHistory" class="text-center text-gray-400 py-6 text-sm">Loading... 🔄</div>
+                  </div>
+                </div>
+
+                <!-- Tab: My Details -->
+                <div id="profileTab-myDetails" class="space-y-4">
+                    <!-- Provider profile edit card -->
+                    <div id="myProviderCard" class="hidden bg-white rounded-2xl shadow-md p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-800">🛠️ My Provider Profile</h3>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-gray-500">Available</span>
+                                <div id="availabilityToggle" onclick="toggleAvailability()" class="w-12 h-6 bg-gray-300 rounded-full cursor-pointer transition-all relative">
+                                    <div class="w-5 h-5 bg-white rounded-full shadow absolute top-0.5 left-0.5 transition-all"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="myProviderInfo" class="space-y-3 text-sm text-gray-600"></div>
+                        <button onclick="openEditProviderModal()" class="mt-4 w-full bg-orange-100 text-orange-700 py-2.5 rounded-xl font-medium hover:bg-orange-200 transition">
+                            ✏️ Edit My Profile
+                        </button>
+                        <button onclick="openSubscriptionModal()" class="mt-2 w-full bg-yellow-500 text-white py-2.5 rounded-xl font-medium hover:bg-yellow-600 transition">
+                            🏅 <span data-i18n="managePlan">Manage Membership Plan</span>
+                        </button>
+                    </div>
+
+                    <!-- Seeker profile card -->
+                    <div id="mySeekerCard" class="hidden bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3">🔍 My Seeker Profile</h3>
+                        <div id="mySeekerInfo" class="space-y-2 text-sm text-gray-600"></div>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div id="myRecommendations" class="bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">💡 Recommended For You</h3>
+                        <div id="recommendationsList" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Tab: Favourites -->
+                <div id="profileTab-favourites" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">❤️ Saved Providers</h3>
+                        <div id="favouritesList" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Tab: My Reviews -->
+                <div id="profileTab-myReviews" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">⭐ Reviews I've Written</h3>
+                        <div id="myReviewsList" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Tab: My Reports -->
+                <div id="profileTab-myReports" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">🚨 My Complaints / Reports</h3>
+                        <div id="myReportsList" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHASE F: Edit Provider Profile Modal -->
+    <div id="editProviderModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-orange-600 p-5 rounded-t-2xl text-white flex justify-between items-center">
+                <h3 class="text-lg font-bold">✏️ Edit My Profile</h3>
+                <button onclick="document.getElementById('editProviderModal').classList.add('hidden')" class="text-2xl opacity-75 hover:opacity-100">✕</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <!-- Photo -->
+                <div class="flex flex-col items-center">
+                    <div class="relative">
+                        <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-orange-300 flex items-center justify-center bg-orange-50">
+                            <img id="editPhotoPreview" class="w-full h-full object-cover" alt="Photo">
+                        </div>
+                        <label for="editProviderPhoto" class="absolute bottom-0 right-0 bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center cursor-pointer text-sm hover:bg-orange-700">📷</label>
+                        <input type="file" id="editProviderPhoto" accept="image/*" class="hidden" onchange="previewEditPhoto(this)">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">About / Bio</label>
+                    <textarea id="editBio" rows="3" maxlength="250" class="w-full border rounded-xl px-4 py-2 resize-none outline-none focus:ring-2 focus:ring-orange-400" placeholder="Tell customers about yourself..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Rate (₹/hour)</label>
+                    <input type="number" id="editRate" min="50" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">WhatsApp Number</label>
+                    <input type="tel" id="editWhatsapp" maxlength="10" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="10-digit number">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Working Hours</label>
+                    <select id="editWorkingHours" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400">
+                        <option value="mon-fri">Mon-Fri (9 AM - 6 PM)</option>
+                        <option value="weekends">Weekends Only</option>
+                        <option value="all-days">All Days</option>
+                        <option value="24x7">24×7 Available</option>
+                    </select>
+                </div>
+                <button onclick="saveProviderEdits()" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition">
+                    💾 Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTER PROVIDER (with rating field) -->
+    <div id="page-register" class="page hidden">
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Register as Service Provider</h1>
+            
+            <form id="providerForm" class="bg-white rounded-xl shadow-md p-6">
+
+                <!-- PHASE E: Profile Photo Upload -->
+                <div class="flex flex-col items-center mb-6">
+                    <div class="relative">
+                        <div id="photoPreviewContainer" class="w-28 h-28 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 border-4 border-orange-400 flex items-center justify-center overflow-hidden shadow-lg">
+                            <span id="photoPlaceholder" class="text-5xl">👤</span>
+                            <img id="photoPreview" class="hidden w-full h-full object-cover" alt="Profile Photo">
+                        </div>
+                        <label for="providerPhoto" class="absolute bottom-0 right-0 bg-orange-600 text-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer shadow-md hover:bg-orange-700 transition">
+                            📷
+                        </label>
+                        <input type="file" id="providerPhoto" accept="image/*" class="hidden" onchange="previewProviderPhoto(this)">
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">Upload your profile photo (optional)</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Full Name *</label>
+                        <input type="text" id="providerName" required class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Mobile Number *</label>
+                        <input type="tel" id="providerMobile" required pattern="[0-9]{10}" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <!-- PHASE E: WhatsApp Number -->
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2" data-i18n="whatsappLabel">WhatsApp Number (if different from mobile)</label>
+                        <div class="flex items-center border rounded-lg overflow-hidden">
+                            <span class="bg-green-500 text-white px-3 py-2 text-lg">💬</span>
+                            <input type="tel" id="providerWhatsapp" pattern="[0-9]{10}" placeholder="10-digit number" class="flex-1 px-3 py-2 outline-none">
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Leave blank to use mobile number for WhatsApp</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Category (Optional)</label>
+                        <select id="providerCategory" class="w-full px-4 py-2 border rounded-lg" onchange="updateProviderSubcategories()"></select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Subcategory (Optional)</label>
+                        <select id="providerSubcategory" class="w-full px-4 py-2 border rounded-lg" onchange="updateProviderSubSubcategories()"></select>
+                    </div>
+                    <div class="md:col-span-2" id="serviceTypeSection" style="display:none">
+                        <label class="block text-gray-700 font-medium mb-2">🔧 Services Offered <span class="text-sm text-gray-400 font-normal">(select all that apply)</span></label>
+                        <div id="providerServiceChips" class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2"></div>
+                        <p class="text-xs text-gray-400 mt-1">You can offer multiple service types</p>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2" data-i18n="religion">Religion *</label>
+                        <select id="providerReligion" required class="w-full px-4 py-2 border rounded-lg">
+                            <option value="">Select Religion</option>
+                            <option value="Hindu">Hindu 🕉️</option>
+                            <option value="Muslim">Muslim ☪️</option>
+                            <option value="Christian">Christian ✝️</option>
+                            <option value="Sikh">Sikh ☬</option>
+                            <option value="Buddhist">Buddhist ☸️</option>
+                            <option value="Jain">Jain ☸️</option>
+                        </select>
+                    </div>
+                    
+                    <!-- PHASE B: Language Field - Multi-select -->
+                    <div class="md:col-span-2">
+                        <label class="block text-gray-700 font-medium mb-2" data-i18n="langSpoken">🗣️ Languages Spoken</label>
+                        <div id="providerLanguageChips" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="English"><span>🇬🇧 English</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Hindi"><span>हिंदी</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Bengali"><span>বাংলা</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Gujarati"><span>ગુજરાતી</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Marathi"><span>मराठी</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Kannada"><span>ಕನ್ನಡ</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Telugu"><span>తెలుగు</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Malayalam"><span>മലയാളം</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Tamil"><span>தமிழ்</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Punjabi"><span>ਪੰਜਾਬੀ</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Urdu"><span>اردو</span></label>
+                            <label class="lang-chip"><input type="checkbox" name="providerLang" value="Odia"><span>ଓଡ଼ିଆ</span></label>
+                        </div>
+                        <p id="langError" class="text-red-500 text-xs mt-1 hidden">Please select at least one language.</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Experience (years) *</label>
+                        <input type="number" id="providerExperience" required min="0" max="50" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Rate (₹/hour) *</label>
+                        <input type="number" id="providerRate" required min="50" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+                
+                <!-- PHASE B: Working Hours -->
+                <div class="mt-6">
+                    <label data-i18n="workingHours" class="block text-gray-700 font-medium mb-3">Working Hours *</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="workingHours" value="mon-fri" required class="mr-2">
+                            <span data-i18n="monFri" class="font-medium">Mon-Fri (9 AM - 6 PM)</span>
+                        </label>
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="workingHours" value="weekends" class="mr-2">
+                            <span data-i18n="weekends" class="font-medium">Weekends Only</span>
+                        </label>
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="workingHours" value="all-days" class="mr-2">
+                            <span data-i18n="allDays" class="font-medium">All Days (7 days/week)</span>
+                        </label>
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="workingHours" value="24x7" class="mr-2">
+                            <span data-i18n="available24x7" class="font-medium">24×7 Available</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- PHASE B: Service Area -->
+                <div class="mt-6">
+                    <label data-i18n="serviceArea" class="block text-gray-700 font-medium mb-3">Service Area *</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="serviceArea" value="10km" required class="mr-2">
+                            <span data-i18n="within10km" class="font-medium">Within 10 km</span>
+                        </label>
+                        <label class="border rounded-lg p-3 cursor-pointer hover:bg-orange-50 transition">
+                            <input type="radio" name="serviceArea" value="city" class="mr-2">
+                            <span data-i18n="withinCity" class="font-medium">Within City</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- PHASE E: Short Bio -->
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2" data-i18n="bioLabel">About You / Bio (optional)</label>
+                    <textarea id="providerBio" rows="3" maxlength="250" placeholder="Tell customers about your skills, experience and what makes you special... (max 250 characters)" class="w-full px-4 py-2 border rounded-lg resize-none" oninput="document.getElementById('bioCount').textContent=this.value.length"></textarea>
+                    <p class="text-xs text-gray-400 text-right"><span id="bioCount">0</span>/250</p>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">Location/Address *</label>
+                    <input type="text" id="providerLocation" required class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                
+                <div class="mt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-gray-700 font-medium">Set Your Location on Map</label>
+                        <button type="button" onclick="useMyLocation('provider')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">
+                            📍 Use My Location
+                        </button>
+                    </div>
+                    <div id="registerMap" class="reg-map bg-gray-100"></div>
+                    <p class="text-sm text-gray-600 mt-2">Click "Use My Location" to auto-detect, or click/drag marker on map</p>
+                    <input type="hidden" id="providerLat">
+                    <input type="hidden" id="providerLng">
+                </div>
+                
+                <div class="mt-6">
+                    <button type="submit" class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 text-lg" data-i18n="registerProviderBtn">Register as Provider</button>
+                </div>
+
+                <!-- PHASE G: ID Proof Upload -->
+                <div class="mt-6 border-t pt-6">
+                    <h3 class="font-bold text-gray-800 text-lg mb-1" data-i18n="idVerify">🪪 Identity Verification</h3>
+                    <p class="text-sm text-gray-500 mb-4">Upload your Aadhaar Card or Driving License. This is seen only by admin and helps you earn a ✅ Verified badge. Your document will never be shared publicly.</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">ID Type</label>
+                            <select id="providerIdType" class="w-full px-4 py-2 border rounded-lg">
+                                <option value="">Select ID Type</option>
+                                <option value="aadhaar">Aadhaar Card</option>
+                                <option value="driving">Driving License</option>
+                                <option value="voter">Voter ID</option>
+                                <option value="pan">PAN Card</option>
+                                <option value="passport">Passport</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">ID Number</label>
+                            <input type="text" id="providerIdNumber" class="w-full px-4 py-2 border rounded-lg" placeholder="Enter ID number">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-gray-700 font-medium mb-2">Upload ID Document Photo</label>
+                        <label class="cursor-pointer block">
+                            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-orange-400 hover:bg-orange-50 transition">
+                                <div id="idDocPreviewArea">
+                                    <div class="text-4xl mb-2">📄</div>
+                                    <div class="font-medium text-gray-600">Click to upload ID document</div>
+                                    <div class="text-xs text-gray-400 mt-1">PNG, JPG (max 1MB) — visible to admin only</div>
+                                </div>
+                                <img id="idDocPreview" class="hidden mx-auto max-h-32 rounded-lg mt-2" alt="ID Document">
+                            </div>
+                            <input type="file" id="providerIdDoc" accept="image/*" class="hidden" onchange="previewIdDoc(this)">
+                        </label>
+                    </div>
+                </div>
+            </form>
+            
+            <div id="providerSuccess" class="hidden mt-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                ✓ Registration successful!
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTER SEEKER (with location) -->
+    <div id="page-seeker" class="page hidden">
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Register as Service Seeker</h1>
+            
+            <form id="seekerForm" class="bg-white rounded-xl shadow-md p-6">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Full Name *</label>
+                        <input type="text" id="seekerName" required class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Mobile Number *</label>
+                        <input type="tel" id="seekerMobile" required pattern="[0-9]{10}" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Religion *</label>
+                        <select id="seekerReligion" required class="w-full px-4 py-2 border rounded-lg">
+                            <option value="">Select Religion</option>
+                            <option value="Hindu">Hindu 🕉️</option>
+                            <option value="Muslim">Muslim ☪️</option>
+                            <option value="Christian">Christian ✝️</option>
+                            <option value="Sikh">Sikh ☬</option>
+                            <option value="Buddhist">Buddhist ☸️</option>
+                            <option value="Jain">Jain ☸️</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Multi-language for seeker -->
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">🗣️ Preferred Languages * <span class="text-sm text-gray-400 font-normal">(select all you understand)</span></label>
+                    <div id="seekerLanguageChips" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="English"><span>🇬🇧 English</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Hindi"><span>हिंदी</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Bengali"><span>বাংলা</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Gujarati"><span>ગુજરાતી</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Marathi"><span>मराठी</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Kannada"><span>ಕನ್ನಡ</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Telugu"><span>తెలుగు</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Malayalam"><span>മലയാളം</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Tamil"><span>தமிழ்</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Punjabi"><span>ਪੰਜਾਬੀ</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Urdu"><span>اردو</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="seekerLang" value="Odia"><span>ଓଡ଼ିଆ</span></label>
+                    </div>
+                    <p id="seekerLangError" class="text-red-500 text-xs mt-1 hidden">Please select at least one language.</p>
+                </div>
+                
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">Location/Address *</label>
+                    <input type="text" id="seekerLocation" required class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                
+                <div class="mt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-gray-700 font-medium">Set Your Location on Map</label>
+                        <button type="button" onclick="useMyLocation('seeker')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">
+                            📍 Use My Location
+                        </button>
+                    </div>
+                    <div id="seekerMap" class="reg-map bg-gray-100"></div>
+                    <p class="text-sm text-gray-600 mt-2">Click "Use My Location" to auto-detect, or click/drag marker on map</p>
+                    <input type="hidden" id="seekerLat">
+                    <input type="hidden" id="seekerLng">
+                </div>
+                
+                <div class="mt-6">
+                    <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 text-lg">Register Now</button>
+                </div>
+            </form>
+            
+            <div id="seekerSuccess" class="hidden mt-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                ✓ Registration successful!
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN PAGE -->
+    <div id="page-admin" class="page hidden">
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <div id="adminLogin" class="max-w-md mx-auto">
+                <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">🔐 Admin Login</h1>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <input type="password" id="adminPassword" placeholder="Enter admin password" class="w-full px-4 py-2 border rounded-lg mb-4" onkeydown="if(event.key==='Enter') adminLogin()">
+                    <button onclick="adminLogin()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">Login</button>
+                </div>
+            </div>
+            
+            <div id="adminDashboard" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+                    <button onclick="adminLogout()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">Logout</button>
+                </div>
+                
+                <!-- Stats Cards Row 1 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalProviders">0</div>
+                        <div class="text-xs mt-1 opacity-90">👷 Total Providers</div>
+                        <div class="text-xs mt-1 opacity-75"><span id="activeProviders">0</span> active · <span id="pausedProviders">0</span> paused</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalSeekers">0</div>
+                        <div class="text-xs mt-1 opacity-90">🙋 Total Seekers</div>
+                        <div class="text-xs mt-1 opacity-75"><span id="activeSeekers">0</span> active · <span id="pausedSeekers">0</span> paused</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalCategories">0</div>
+                        <div class="text-xs mt-1 opacity-90">📋 Categories</div>
+                        <div class="text-xs mt-1 opacity-75"><span id="totalSubcategories">0</span> subcategories</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalServices">0</div>
+                        <div class="text-xs mt-1 opacity-90">🛠️ Total Services</div>
+                        <div class="text-xs mt-1 opacity-75"><span id="pausedServices">0</span> paused</div>
+                    </div>
+                </div>
+                <!-- Stats Cards Row 2 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalReviews">0</div>
+                        <div class="text-xs mt-1 opacity-90">⭐ Total Reviews</div>
+                        <div class="text-xs mt-1 opacity-75">Avg: <span id="avgRating">0</span> stars</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalRestricted">0</div>
+                        <div class="text-xs mt-1 opacity-90">🚫 Restricted</div>
+                        <div class="text-xs mt-1 opacity-75">Flagged users</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalPayments">0</div>
+                        <div class="text-xs mt-1 opacity-90">💳 Payments</div>
+                        <div class="text-xs mt-1 opacity-75">₹<span id="totalRevenue">0</span> total</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-pink-500 to-pink-600 text-white p-5 rounded-xl shadow-lg">
+                        <div class="text-3xl font-bold" id="totalReports">0</div>
+                        <div class="text-xs mt-1 opacity-90">🚨 Reports</div>
+                        <div class="text-xs mt-1 opacity-75">Pending review</div>
+                    </div>
+                </div>
+                
+                <!-- Tabs for different sections -->
+                <div class="bg-white rounded-xl shadow-lg mb-6">
+                    <div class="flex border-b">
+                        <button onclick="showAdminTab('users')" id="tab-users" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            👥 Users
+                        </button>
+                        <button onclick="showAdminTab('reports')" id="tab-reports" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            🚨 Reports
+                        </button>
+                        <button onclick="showAdminTab('reviews')" id="tab-reviews" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            ⭐ Reviews
+                        </button>
+                        <button onclick="showAdminTab('categories')" id="tab-categories" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-orange-600">
+                            📋 Categories
+                        </button>
+                        <button onclick="showAdminTab('idverify')" id="tab-idverify" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            🪪 ID Verify
+                        </button>
+                        <button onclick="showAdminTab('subscriptions')" id="tab-subscriptions" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            🏅 Plans
+                        </button>
+                        <button onclick="showAdminTab('settings')" id="tab-settings" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
+                            ⚙️ Settings
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- USER MANAGEMENT TAB -->
+                <div id="adminTab-users" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-800">👥 Providers Management</h2>
+                            <input type="text" id="searchProviders" placeholder="Search providers..." class="px-4 py-2 border rounded-lg" onkeyup="filterProvidersList()">
+                        </div>
+                        <div id="providersListAdmin" class="space-y-3"></div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-800">👤 Seekers Management</h2>
+                            <input type="text" id="searchSeekers" placeholder="Search seekers..." class="px-4 py-2 border rounded-lg" onkeyup="filterSeekersList()">
+                        </div>
+                        <div id="seekersListAdmin" class="space-y-3"></div>
+                    </div>
+                </div>
+                
+                <!-- REPORTS TAB -->
+                <div id="adminTab-reports" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-800">🚨 Complaints & Reports</h2>
+                            <button onclick="loadAdminReports()" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-orange-700">🔄 Refresh</button>
+                        </div>
+                        <div id="adminReportsList" class="space-y-4">
+                            <p class="text-gray-400 text-center py-8">Click Refresh to load reports</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REVIEWS MANAGEMENT TAB -->
+                <div id="adminTab-reviews" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex flex-wrap justify-between items-center mb-6 gap-3">
+                            <h2 class="text-2xl font-bold text-gray-800">⭐ Reviews Management</h2>
+                            <div class="flex gap-2 flex-wrap">
+                                <select id="reviewFilterRating" onchange="loadAdminReviews()" class="border rounded-lg px-3 py-2 text-sm">
+                                    <option value="">All Ratings</option>
+                                    <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+                                    <option value="4">⭐⭐⭐⭐ 4 Stars</option>
+                                    <option value="3">⭐⭐⭐ 3 Stars</option>
+                                    <option value="2">⭐⭐ 2 Stars</option>
+                                    <option value="1">⭐ 1 Star</option>
+                                </select>
+                                <select id="reviewFilterSort" onchange="loadAdminReviews()" class="border rounded-lg px-3 py-2 text-sm">
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                    <option value="highest">Highest Rating</option>
+                                    <option value="lowest">Lowest Rating</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+                                <div class="text-3xl font-black text-yellow-600" id="adminRevTotal">0</div>
+                                <div class="text-sm text-gray-600 mt-1">Total Reviews</div>
+                            </div>
+                            <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                                <div class="text-3xl font-black text-green-600" id="adminRevAvg">0.0</div>
+                                <div class="text-sm text-gray-600 mt-1">Avg Rating ⭐</div>
+                            </div>
+                            <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                                <div class="text-3xl font-black text-red-600" id="adminRevFlagged">0</div>
+                                <div class="text-sm text-gray-600 mt-1">🚩 Flagged</div>
+                            </div>
+                        </div>
+                        <div id="adminReviewsList" class="space-y-4">
+                            <div class="text-center py-12 text-gray-400">Click the Reviews tab to load...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CATEGORY MANAGEMENT TAB -->
+                <div id="adminTab-categories" class="">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800">📋 Category Management</h2>
+                            <div class="flex gap-2">
+                                <button onclick="resetToDefaults()" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 font-medium">
+                                    🔄 Reset to Defaults
+                                </button>
+                                <button onclick="showAddCategoryModal()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold shadow">
+                                    ➕ Add New Category
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="categoriesListAdmin" class="space-y-4"></div>
+                    </div>
+                </div>
+
+                <!-- ID VERIFICATION TAB -->
+                <div id="adminTab-idverify" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-800">🪪 Provider ID Verification</h2>
+                            <button onclick="loadIdVerifications()" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-orange-700">🔄 Refresh</button>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
+                            🔒 ID documents are visible only to admin. Providers earn a ✅ Verified badge visible to seekers upon approval.
+                        </div>
+                        <div id="idVerifyList" class="space-y-4">
+                            <p class="text-gray-400 text-center py-8">Click Refresh to load pending verifications</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SETTINGS TAB -->
+                <!-- Subscriptions Panel -->
+                <div id="adminTab-subscriptions" class="hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-700">🏅 Subscription Requests</h3>
+                        <button onclick="loadAdminSubscriptions()" class="text-sm text-orange-600 hover:text-orange-700 font-semibold">🔄 Refresh</button>
+                    </div>
+                    <div id="adminSubsList">
+                        <p class="text-center text-gray-400 py-4">Loading...</p>
+                    </div>
+                </div>
+
+                <div id="adminTab-settings" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6 max-w-md">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6">⚙️ Admin Settings</h2>
+                        <div class="space-y-4">
+                            <h3 class="font-semibold text-gray-700 text-lg border-b pb-2">🔑 Change Password</h3>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-1">Current Password</label>
+                                <input type="password" id="settingsCurrentPass" class="w-full px-4 py-2 border rounded-lg" onkeydown="if(event.key==='Enter') changeAdminPassword()">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-1">New Password</label>
+                                <input type="password" id="settingsNewPass" class="w-full px-4 py-2 border rounded-lg" onkeydown="if(event.key==='Enter') changeAdminPassword()">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-1">Confirm New Password</label>
+                                <input type="password" id="settingsConfirmPass" class="w-full px-4 py-2 border rounded-lg" onkeydown="if(event.key==='Enter') changeAdminPassword()">
+                            </div>
+                            <button onclick="changeAdminPassword()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">
+                                🔑 Update Password
+                            </button>
+                            <div id="passwordChangeMsg" class="hidden text-center font-medium py-2 rounded-lg"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODALS FOR ADMIN -->
+    
+    <!-- Add/Edit Category Modal -->
+    <div id="categoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 class="text-2xl font-bold mb-4" id="categoryModalTitle">Add Category</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Category Name (English)</label>
+                    <input type="text" id="modalCategoryName" class="w-full px-4 py-2 border rounded-lg" placeholder="e.g., Home Services">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Icon Type</label>
+                    <div class="flex gap-3 mb-3">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="catIconType" value="emoji" checked onchange="toggleCatIconType('emoji')">
+                            <span class="font-medium">Emoji</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="catIconType" value="image" onchange="toggleCatIconType('image')">
+                            <span class="font-medium">Upload Image</span>
+                        </label>
+                    </div>
+                    <div id="catEmojiInput">
+                        <input type="text" id="modalCategoryIcon" class="w-full px-4 py-2 border rounded-lg text-center text-3xl" placeholder="🏠" maxlength="2">
+                    </div>
+                    <div id="catImageInput" class="hidden">
+                        <div class="flex items-center gap-4">
+                            <div id="catImgPreviewBox" class="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300">
+                                <span class="text-gray-400 text-xs">No image</span>
+                            </div>
+                            <label class="flex-1 cursor-pointer">
+                                <div class="bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-3 text-center hover:bg-blue-100 transition">
+                                    <div class="text-blue-600 font-medium">📂 Choose Image</div>
+                                    <div class="text-xs text-gray-400 mt-1">PNG, JPG (max 200KB)</div>
+                                </div>
+                                <input type="file" id="modalCategoryImage" accept="image/*" class="hidden" onchange="previewCatImage(this)">
+                            </label>
+                        </div>
+                        <input type="hidden" id="modalCategoryImageData">
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveCategoryModal()" class="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-semibold">Save</button>
+                    <button onclick="closeCategoryModal()" class="flex-1 bg-gray-400 text-white py-3 rounded-lg hover:bg-gray-500 font-semibold">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Subcategory Modal -->
+    <div id="subcategoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 class="text-2xl font-bold mb-4" id="subcategoryModalTitle">Add Subcategory</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Subcategory Name (English)</label>
+                    <input type="text" id="modalSubcategoryName" class="w-full px-4 py-2 border rounded-lg" placeholder="e.g., Plumbing">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Icon Type</label>
+                    <div class="flex gap-3 mb-3">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="subIconType" value="emoji" checked onchange="toggleSubIconType('emoji')">
+                            <span class="font-medium">Emoji</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="subIconType" value="image" onchange="toggleSubIconType('image')">
+                            <span class="font-medium">Upload Image</span>
+                        </label>
+                    </div>
+                    <div id="subEmojiInput">
+                        <input type="text" id="modalSubcategoryIcon" class="w-full px-4 py-2 border rounded-lg text-center text-3xl" placeholder="🔧" maxlength="2">
+                    </div>
+                    <div id="subImageInput" class="hidden">
+                        <div class="flex items-center gap-4">
+                            <div id="subImgPreviewBox" class="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300">
+                                <span class="text-gray-400 text-xs">No image</span>
+                            </div>
+                            <label class="flex-1 cursor-pointer">
+                                <div class="bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-3 text-center hover:bg-blue-100 transition">
+                                    <div class="text-blue-600 font-medium">📂 Choose Image</div>
+                                    <div class="text-xs text-gray-400 mt-1">PNG, JPG (max 200KB)</div>
+                                </div>
+                                <input type="file" id="modalSubcategoryImage" accept="image/*" class="hidden" onchange="previewSubImage(this)">
+                            </label>
+                        </div>
+                        <input type="hidden" id="modalSubcategoryImageData">
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveSubcategoryModal()" class="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold">Save</button>
+                    <button onclick="closeSubcategoryModal()" class="flex-1 bg-gray-400 text-white py-3 rounded-lg hover:bg-gray-500 font-semibold">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ===== PHASE F: PHONE OTP LOGIN MODAL ===== -->
+    <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-6 text-white text-center">
+                <div class="text-4xl mb-2">🔱</div>
+                <h2 class="text-xl font-bold">Sudarshan Chakra</h2>
+                <p class="text-orange-100 text-sm mt-1">Login with your mobile number</p>
+            </div>
+
+            <!-- Step 1: Enter Phone -->
+            <div id="loginStep1" class="p-6">
+                <label class="block text-gray-700 font-medium mb-3">📱 Mobile Number</label>
+                <div class="flex gap-2 mb-4">
+                    <div class="bg-gray-100 border rounded-xl px-3 py-3 text-gray-600 font-medium flex-shrink-0">🇮🇳 +91</div>
+                    <input type="tel" id="loginPhone" maxlength="10" pattern="[0-9]{10}" placeholder="10-digit number"
+                        class="flex-1 border rounded-xl px-4 py-3 text-lg focus:ring-2 focus:ring-orange-400 outline-none"
+                        oninput="this.value=this.value.replace(/\D/g,'').substring(0,10)">
+                </div>
+                <!-- reCAPTCHA container — may show security check -->
+                <div id="recaptcha-container" class="mb-2"></div>
+                <p class="text-xs text-gray-400 text-center mb-2">🔒 If a security check appears below, please complete it to receive your OTP.</p>
+                <button onclick="sendOTP()" id="sendOtpBtn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition text-lg">
+                    Send OTP
+                </button>
+                <p class="text-xs text-gray-400 text-center mt-3">OTP will be sent via SMS. Standard rates apply.</p>
+                <button onclick="closeLoginModal()" class="w-full mt-2 text-gray-500 py-2 text-sm hover:text-gray-700">Cancel</button>
+            </div>
+
+            <!-- Step 2: Enter OTP -->
+            <div id="loginStep2" class="p-6 hidden">
+                <div class="text-center mb-4">
+                    <div class="text-3xl mb-2">📲</div>
+                    <p class="text-gray-700 font-medium">OTP sent to <span id="loginPhoneDisplay" class="text-orange-600 font-bold"></span></p>
+                    <p class="text-sm text-gray-500 mt-1">Enter the 6-digit code</p>
+                </div>
+                <div class="flex gap-2 justify-center mb-5">
+                    <input type="tel" id="otpInput" maxlength="6" placeholder="— — — — — —"
+                        class="w-full text-center border-2 rounded-xl px-4 py-4 text-2xl font-bold tracking-widest focus:ring-2 focus:ring-orange-400 outline-none"
+                        oninput="this.value=this.value.replace(/\D/g,'').substring(0,6)">
+                </div>
+                <button onclick="verifyOTP()" id="verifyOtpBtn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition text-lg">
+                    Verify & Login
+                </button>
+                <div class="text-center mt-3 min-h-[26px]">
+                    <p id="resendCountdown" class="text-sm text-gray-500">Resend OTP in <span id="resendTimer" class="font-bold text-orange-500">30</span>s</p>
+                    <button id="resendOtpBtn" onclick="resendOTP()" class="hidden text-sm font-semibold text-orange-600 hover:text-orange-800 underline">🔄 Resend OTP</button>
+                </div>
+                <button onclick="document.getElementById('loginStep1').classList.remove('hidden'); document.getElementById('loginStep2').classList.add('hidden')" class="w-full mt-2 text-gray-500 py-2 text-sm hover:text-gray-700">
+                    ← Change Number
+                </button>
+            </div>
+
+            <!-- Step 3: New User Setup -->
+            <div id="loginStep3" class="p-6 hidden">
+                <div class="text-center mb-4">
+                    <div class="text-3xl mb-2">👋</div>
+                    <p class="font-bold text-gray-800 text-lg">Welcome! Tell us about yourself</p>
+                    <p class="text-sm text-gray-500">First time login — quick setup</p>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-1">Your Name *</label>
+                        <input type="text" id="newUserName" placeholder="Full name" class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-1">I am a...</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="border-2 rounded-xl p-3 cursor-pointer hover:border-orange-400 transition text-center has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
+                                <input type="radio" name="userRole" value="seeker" class="hidden"> 
+                                <div class="text-2xl mb-1">🔍</div>
+                                <div class="font-medium text-sm">Service Seeker</div>
+                                <div class="text-xs text-gray-500">Looking for services</div>
+                            </label>
+                            <label class="border-2 rounded-xl p-3 cursor-pointer hover:border-orange-400 transition text-center has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50">
+                                <input type="radio" name="userRole" value="provider" class="hidden">
+                                <div class="text-2xl mb-1">🛠️</div>
+                                <div class="font-medium text-sm">Service Provider</div>
+                                <div class="text-xs text-gray-500">Offering services</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="completeNewUserSetup()" class="w-full mt-4 bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition">
+                    Get Started 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PHASE F: REPORT / COMPLAINT MODAL ===== -->
+    <div id="reportModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div class="bg-red-600 p-5 rounded-t-2xl text-white">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold">🚨 Report / Complaint</h3>
+                    <button onclick="closeReportModal()" class="text-white text-2xl opacity-75 hover:opacity-100">✕</button>
+                </div>
+                <p id="reportTargetName" class="text-red-100 text-sm mt-1"></p>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Type of Issue *</label>
+                    <select id="reportType" class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-400 outline-none">
+                        <option value="">Select issue type</option>
+                        <option value="misconduct">😤 Misconduct / Rude Behaviour</option>
+                        <option value="improper_service">⚠️ Improper / Poor Service Quality</option>
+                        <option value="payment_issue">💸 Payment Dispute / Overcharging</option>
+                        <option value="no_show">🚫 No Show / Did Not Arrive</option>
+                        <option value="fraud">🔴 Fraud / Scam</option>
+                        <option value="harassment">🛑 Harassment / Threats</option>
+                        <option value="fake_profile">👤 Fake Profile / Wrong Information</option>
+                        <option value="other">📝 Other Issue</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Describe the Issue *</label>
+                    <textarea id="reportDescription" rows="4" maxlength="500" placeholder="Please describe what happened in detail. Date, time, what was promised and what happened..." class="w-full border rounded-xl px-4 py-3 resize-none focus:ring-2 focus:ring-red-400 outline-none"></textarea>
+                    <p class="text-xs text-gray-400 text-right mt-1"><span id="reportCharCount">0</span>/500</p>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Your Name (for admin contact)</label>
+                    <input type="text" id="reporterNameInput" placeholder="Your name" class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-400 outline-none">
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm text-yellow-800">
+                    ⚠️ Your report will be reviewed by admin within 24 hours. The reported person will NOT see your identity.
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="submitReport()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition">Submit Report</button>
+                    <button onclick="closeReportModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PHASE E: REVIEW MODAL ===== -->
+    <div id="reviewModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">⭐ Write a Review</h3>
+                <button onclick="closeReviewModal()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            </div>
+            <div id="reviewProviderName" class="text-orange-600 font-semibold mb-4 text-center text-lg"></div>
+
+            <!-- Star Rating Selector -->
+            <div class="text-center mb-5">
+                <p class="text-gray-600 mb-3 font-medium">Your Rating *</p>
+                <div id="starSelector" class="flex justify-center gap-2 text-4xl cursor-pointer">
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="1">★</span>
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="2">★</span>
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="3">★</span>
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="4">★</span>
+                    <span class="star-btn text-gray-300 hover:text-yellow-400 transition" data-val="5">★</span>
+                </div>
+                <p id="ratingLabel" class="text-sm text-gray-400 mt-2">Tap to rate</p>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-2">
+                    Reviewing as
+                    <span class="text-xs text-green-600 font-normal ml-1">🔒 from your profile</span>
+                </label>
+                <div class="flex items-center gap-2 w-full px-4 py-2 border rounded-lg bg-gray-50 text-gray-600">
+                    <span class="text-green-500 text-sm">✅</span>
+                    <input type="text" id="reviewerName" readonly
+                        class="flex-1 outline-none bg-transparent text-gray-700 font-semibold cursor-not-allowed"
+                        placeholder="Login to write a review">
+                </div>
+            </div>
+            <div class="mb-5">
+                <label class="block text-gray-700 font-medium mb-2">Your Review *</label>
+                <textarea id="reviewText" rows="3" maxlength="300" placeholder="Share your experience with this provider..." class="w-full px-4 py-2 border rounded-lg resize-none focus:ring-2 focus:ring-orange-400 outline-none"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="submitReview()" class="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 font-semibold">Submit Review</button>
+                <button onclick="closeReviewModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-semibold">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PHASE E: PROVIDER PROFILE MODAL ===== -->
+    <div id="profileModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div id="profileModalContent"></div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Service Modal -->
+    <div id="serviceModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 class="text-2xl font-bold mb-4" id="serviceModalTitle">Add Service Type</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Service Name (English)</label>
+                    <input type="text" id="modalServiceName" class="w-full px-4 py-2 border rounded-lg" placeholder="e.g., Pipe Repair">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Emoji Icon</label>
+                    <input type="text" id="modalServiceIcon" class="w-full px-4 py-2 border rounded-lg text-center text-3xl" placeholder="🔧" maxlength="2">
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveServiceModal()" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-semibold">Save</button>
+                    <button onclick="closeServiceModal()" class="flex-1 bg-gray-400 text-white py-3 rounded-lg hover:bg-gray-500 font-semibold">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: INFO — About / Features / Vision / FAQ / Office / AI -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div id="page-info" class="page hidden">
+      <div class="max-w-4xl mx-auto px-4 py-6 space-y-8">
+
+        <button onclick="showPage('home')" class="flex items-center gap-2 text-orange-600 hover:text-orange-800 font-medium text-sm">← Back to Home</button>
+
+        <!-- ABOUT -->
+        <div class="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100 shadow-sm">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-700 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow">SC</div>
+            <div><h2 class="text-xl font-bold text-orange-700">🔱 Sudarshan Chakra India</h2><p class="text-xs text-gray-500">Connecting India's Skilled Hands with Every Home</p></div>
+          </div>
+          <p class="text-sm text-gray-700 leading-relaxed mb-3"><strong>Sudarshan Chakra India</strong> is a hyperlocal service marketplace built for the heart of India — its skilled, hardworking people. Named after the sacred spinning disc of Lord Vishnu, our platform embodies perpetual motion, protection and prosperity for every community it serves.</p>
+          <p class="text-sm text-gray-700 leading-relaxed mb-3">We bridge the gap between <strong>service seekers</strong> — families who need reliable, trusted help at home — and <strong>service providers</strong> — the plumbers, electricians, teachers, beauticians, cooks and countless other skilled workers who form the backbone of India's economy.</p>
+          <p class="text-sm text-gray-700 leading-relaxed mb-4">Built ground-up for India: <strong>12 regional languages</strong>, voice search, verified profiles, genuine reviews, Wallet rewards, in-app chat, Charity program and community referrals — all in one platform that works beautifully even on slow connections.</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full">12 Languages</span>
+            <span class="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full">Community First</span>
+            <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full">Verified Providers</span>
+            <span class="bg-purple-100 text-purple-700 text-xs font-semibold px-3 py-1 rounded-full">Charity Program</span>
+            <span class="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full">Wallet Rewards</span>
+            <span class="bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full">Voice Search</span>
+          </div>
+        </div>
+
+        <!-- SEEKERS & PROVIDERS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-blue-900 text-white rounded-2xl p-5">
+            <div class="text-3xl mb-2">🏡</div>
+            <h3 class="font-bold text-base mb-1">For Service Seekers</h3>
+            <p class="text-blue-200 text-xs mb-3">Find trusted help for your home — fast, reliable, affordable.</p>
+            <ul class="space-y-1.5 text-xs text-blue-100">
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Search 50+ categories in your language</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>View photos, reviews and ratings before booking</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Call or WhatsApp providers directly — no middleman</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Save favourite providers for quick rebooking</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Earn Wallet points on every referral</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Report concerns safely and confidentially</li>
+            </ul>
+          </div>
+          <div class="bg-orange-900 text-white rounded-2xl p-5">
+            <div class="text-3xl mb-2">⚙️</div>
+            <h3 class="font-bold text-base mb-1">For Service Providers</h3>
+            <p class="text-orange-200 text-xs mb-3">Build your profile, get discovered, earn more — no middlemen.</p>
+            <ul class="space-y-1.5 text-xs text-orange-100">
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Free professional profile in minutes</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Discovered by hundreds of nearby families</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>✅ Verified badge with government ID check</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Upload portfolio photos to showcase your work</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Professional and Elite membership tiers</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Earn Wallet commission on every referral</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- KEY FEATURES -->
+        <div>
+          <h3 class="text-base font-bold text-gray-800 mb-3">✨ Key Features That Make Us Special</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🌏</span><div><h4 class="font-semibold text-xs">12 Indian Languages</h4><p class="text-xs text-gray-500">Entire app in Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese and English — switch any time with 🌏</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🎙️</span><div><h4 class="font-semibold text-xs">Voice Search</h4><p class="text-xs text-gray-500">Speak your service need in any Indian language — no typing required, making the app accessible to everyone</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">✅</span><div><h4 class="font-semibold text-xs">Verified Provider Badges</h4><p class="text-xs text-gray-500">Government ID-verified providers earn a trusted badge — seekers can book with full confidence</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">⭐</span><div><h4 class="font-semibold text-xs">Genuine Reviews & Ratings</h4><p class="text-xs text-gray-500">Only real users who interacted with a provider can leave reviews — no fake ratings, ever</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">💬</span><div><h4 class="font-semibold text-xs">In-App Chat</h4><p class="text-xs text-gray-500">Real-time messaging without sharing phone numbers upfront — chat history saved for reference</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">💰</span><div><h4 class="font-semibold text-xs">Wallet & Reward Points</h4><p class="text-xs text-gray-500">Earn points for daily logins, reviews, referrals and bookings — redeem for membership upgrades</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">❤️</span><div><h4 class="font-semibold text-xs">Charity Program</h4><p class="text-xs text-gray-500">Donate Wallet points to fund vocational skill training for underprivileged youth in India</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🤝</span><div><h4 class="font-semibold text-xs">Referral & Earn</h4><p class="text-xs text-gray-500">Share your unique link — earn Wallet points when new providers join through you</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🗺️</span><div><h4 class="font-semibold text-xs">Location-Based Discovery</h4><p class="text-xs text-gray-500">Interactive map shows verified providers near you in real time — find someone who can reach you quickly</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🏆</span><div><h4 class="font-semibold text-xs">Membership Tiers</h4><p class="text-xs text-gray-500">Basic (free), Professional and Elite tiers give providers greater visibility and priority listing</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🙏</span><div><h4 class="font-semibold text-xs">Gratitude Tips</h4><p class="text-xs text-gray-500">Send a tip to an exceptional provider via the Gratitude button — rewards excellence beyond the standard rate</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">📱</span><div><h4 class="font-semibold text-xs">Installable PWA</h4><p class="text-xs text-gray-500">Add to phone home screen — works offline, loads fast on 3G, no app store needed</p></div></div>
+          </div>
+        </div>
+
+        <!-- VISION -->
+        <div class="bg-gradient-to-br from-green-900 to-green-800 text-white rounded-2xl p-5">
+          <h3 class="text-base font-bold mb-2">🌱 Our Vision — Skill. Dignity. Livelihood for All.</h3>
+          <p class="text-green-200 text-xs leading-relaxed mb-4">We believe every skilled worker in India deserves a fair chance to earn a dignified living from their craft. Our platform is more than a marketplace — it is a movement to formalise the informal economy and give every skilled Indian the digital presence they deserve.</p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-white/10 rounded-xl p-3"><div class="text-lg mb-1">🎓</div><strong>Skill Development Fund</strong><p class="text-green-200 mt-1">Premium membership fees fund vocational training for underprivileged youth</p></div>
+            <div class="bg-white/10 rounded-xl p-3"><div class="text-lg mb-1">🌾</div><strong>Rural Outreach</strong><p class="text-green-200 mt-1">Taking the platform to villages and tier-2/3 cities across India</p></div>
+            <div class="bg-white/10 rounded-xl p-3"><div class="text-lg mb-1">♀️</div><strong>Women in Services</strong><p class="text-green-200 mt-1">Dedicated support for women providers to earn independently</p></div>
+            <div class="bg-white/10 rounded-xl p-3"><div class="text-lg mb-1">🔗</div><strong>Community Commerce</strong><p class="text-green-200 mt-1">When any member thrives, the entire community benefits</p></div>
+          </div>
+        </div>
+
+        <!-- USER MANUAL -->
+        <div>
+          <h3 class="text-base font-bold text-gray-800 mb-3">📖 How to Use the App</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white border border-blue-100 rounded-xl p-4 shadow-sm">
+              <h4 class="font-bold text-blue-800 mb-3 text-xs uppercase tracking-wide">👤 For Seekers — Step by Step</h4>
+              <ol class="space-y-2 text-xs text-gray-600">
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">1</span><span><strong>Choose language</strong> — Tap 🌏 to switch the entire app to your language instantly</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">2</span><span><strong>Browse or search</strong> — Search bar, 🎤 voice, or tap Browse Services for 50+ categories</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">3</span><span><strong>View profiles</strong> — See photos, rates, reviews, working hours, verification status</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">4</span><span><strong>Contact or book</strong> — Tap 📞 Call, 💬 WhatsApp, or Hire Now for a formal request</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">5</span><span><strong>Login and review</strong> — OTP login (no password), leave reviews, earn Wallet points</span></li>
+              </ol>
+            </div>
+            <div class="bg-white border border-orange-100 rounded-xl p-4 shadow-sm">
+              <h4 class="font-bold text-orange-700 mb-3 text-xs uppercase tracking-wide">⚙️ For Providers — Step by Step</h4>
+              <ol class="space-y-2 text-xs text-gray-600">
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">1</span><span><strong>Register</strong> — Tap Register as Provider, fill name, category, rate, area, photo</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">2</span><span><strong>Verify ID</strong> — Upload Aadhaar or Driving Licence for ✅ Verified badge</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">3</span><span><strong>Add portfolio</strong> — Upload 5–10 photos of your work to win more clients</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">4</span><span><strong>Upgrade membership</strong> — Use earned Wallet points to offset upgrade cost</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">5</span><span><strong>Refer and earn</strong> — Share your link, earn commission for every new provider who joins</span></li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div>
+          <h3 class="text-base font-bold text-gray-800 mb-3">❓ Frequently Asked Questions</h3>
+          <div id="faqList" class="space-y-2"></div>
+        </div>
+
+        <!-- ABOUT US -->
+        <div class="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-5 border border-orange-100">
+          <h3 class="text-base font-bold text-gray-800 mb-4">👥 About Us</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div class="text-center bg-white rounded-xl p-4 shadow-sm">
+              <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full mx-auto mb-2 flex items-center justify-center text-xl">🔱</div>
+              <h4 class="font-bold text-xs mb-1">Founder & Vision</h4>
+              <p class="text-xs text-gray-500">Driven by the belief that every skilled worker deserves a digital platform that respects their craft, language and dignity.</p>
+            </div>
+            <div class="text-center bg-white rounded-xl p-4 shadow-sm">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full mx-auto mb-2 flex items-center justify-center text-xl">💻</div>
+              <h4 class="font-bold text-xs mb-1">Technology Team</h4>
+              <p class="text-xs text-gray-500">Building India's most accessible service marketplace — mobile-first, language-first, community-first, always improving.</p>
+            </div>
+            <div class="text-center bg-white rounded-xl p-4 shadow-sm">
+              <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full mx-auto mb-2 flex items-center justify-center text-xl">🌱</div>
+              <h4 class="font-bold text-xs mb-1">Community & Impact</h4>
+              <p class="text-xs text-gray-500">Running the Charity program and ensuring every user feels heard, safe and valued in our growing community.</p>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-4 text-center border border-orange-100">
+            <div class="text-xl mb-1">🔱</div>
+            <p class="text-xs text-gray-700 leading-relaxed"><strong>Our Promise:</strong> We will always put the community before profit. We will always protect your data and privacy. We will always build for India's diverse needs — in every language, every region, every community. <strong>Jai Hind 🇮🇳</strong></p>
+          </div>
+        </div>
+
+        <!-- CORPORATE OFFICE & CONTACT -->
+        <div>
+          <h3 class="text-base font-bold text-gray-800 mb-3">🏢 Corporate Office & Connect Us</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">🏢 Corporate Office</h4>
+              <div class="space-y-2 text-xs">
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">🔱</span><div><strong class="text-sm">Sudarshan Chakra India Pvt. Ltd.</strong><div class="text-gray-400">Registered in India under the Companies Act</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">📍</span><div class="text-gray-600">Head Office: India<div class="text-gray-400">(Address available to registered partners)</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">⏰</span><span class="text-gray-600">Mon–Sat · 9:00 AM – 6:00 PM IST</span></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">🌐</span><a href="https://sudarshanchakraindia.github.io/sudarshan-chakra/" class="text-orange-600 break-all" target="_blank">sudarshanchakraindia.github.io</a></div>
+              </div>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📞 Get in Touch</h4>
+              <div class="space-y-2 text-xs">
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">✉️</span><div><a href="/cdn-cgi/l/email-protection#1c6f696c6c736e685c6f69787d6e6f747d727f747d776e7d757278757d327f7371" class="text-orange-600"><span class="__cf_email__" data-cfemail="25565055554a5751655650414457564d444b464d444e57444c4b414c440b464a48">[email&#160;protected]</span></a><div class="text-gray-400">General support and queries</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">🤝</span><div><a href="/cdn-cgi/l/email-protection#a2d2c3d0d6ccc7d0d1e2d1d7c6c3d0d1cac3ccc1cac3c9d0c3cbccc6cbc38cc1cdcf" class="text-orange-600"><span class="__cf_email__" data-cfemail="93e3f2e1e7fdf6e1e0d3e0e6f7f2e1e0fbf2fdf0fbf2f8e1f2fafdf7faf2bdf0fcfe">[email&#160;protected]</span></a><div class="text-gray-400">Business partnerships</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">💡</span><span class="text-gray-600">Have a feature idea? Tap 👎 in the app or email us — our best features come from the community.</span></div>
+              </div>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">🆘 Help Guide</h4>
+              <ul class="space-y-1.5 text-xs text-gray-600">
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🤖</span>Use the <strong>AI Guide chatbot below</strong> for instant 24x7 answers</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">❓</span>Read the FAQ section above for quick answers</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">📖</span>Follow the User Manual steps above</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🐛</span>Found a bug? Email us a screenshot — we fix fast</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🚩</span>Tap Report on any provider profile for safety issues</li>
+              </ul>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📲 Stay Connected</h4>
+              <ul class="space-y-1.5 text-xs text-gray-600">
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🏗️</span>New cities, categories and features added every month</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">📱</span>Install PWA: Chrome menu → Add to Home Screen (Android) or Safari Share → Add to Home Screen (iPhone)</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🙏</span>Thank you for being part of this journey — every review, referral and booking builds something meaningful for India</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI GUIDE CHATBOT -->
+        <div class="bg-gradient-to-br from-gray-900 to-orange-900 rounded-2xl overflow-hidden shadow-xl">
+          <div class="p-5 pb-2">
+            <h3 class="text-white text-base font-bold mb-1">🤖 AI Guide — Ask Anything</h3>
+            <p class="text-orange-200 text-xs mb-1">Your 24x7 AI assistant powered by Claude. Ask anything about the app in any language.</p>
+          </div>
+          <div id="infoChatMessages" class="mx-5 bg-black/20 rounded-xl h-52 overflow-y-auto p-3 space-y-2 mb-3 text-xs">
+            <div class="flex gap-2"><div class="bg-white/15 text-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-xs leading-relaxed">Namaste! 🙏 I am your Sudarshan Guide. Ask me anything about the app — registration, Wallet points, bookings, verification, Charity, referrals, or anything else!</div></div>
+          </div>
+          <div class="mx-5 flex gap-2 flex-wrap mb-3">
+            <button onclick="infoQuick('How do I register as a provider?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Register as provider</button>
+            <button onclick="infoQuick('How does the Wallet work?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Wallet and Points</button>
+            <button onclick="infoQuick('How do I get a Verified badge?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Get Verified badge</button>
+            <button onclick="infoQuick('How does the Charity program work?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Charity program</button>
+            <button onclick="infoQuick('How do I book a service?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Book a service</button>
+          </div>
+          <div class="mx-5 mb-5 flex gap-2">
+            <input id="infoChatInput" type="text" placeholder="Ask anything about the app…"
+              class="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2.5 text-white text-xs placeholder-white/40 outline-none focus:border-orange-400"
+              onkeydown="if(event.key==='Enter')infoChatSend()">
+            <button id="infoChatSend" onclick="infoChatSend()" class="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-2 text-sm font-bold transition-colors">➤</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- ═══════════ END PAGE-INFO ═══════════ -->
+
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+        // ==================== DATA & INITIALIZATION ====================
+        let currentLanguage = localStorage.getItem('language') || 'en';
+        let providers = []; // Populated from Firebase Realtime Database
+        let seekers = [];   // Populated from Firebase Realtime Database
+        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+        let maps = {};
+        
+        // Firebase references (set when Firebase is ready)
+        let _db = null, _ref = null, _set = null, _push = null, _onValue = null, _update = null, _remove = null, _get = null;
+        let firebaseListenersAttached = false;
+        
+        // ==================== FIREBASE HELPERS ====================
+        function fbRef(path) { return _ref(_db, path); }
+        
+        function showFirebaseStatus(msg, type = 'info') {
+            // Show a small non-blocking toast
+            const existing = document.getElementById('fb-toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'fb-toast';
+            const colors = { info: '#2563eb', success: '#16a34a', error: '#dc2626' };
+            toast.style.cssText = `position:fixed;bottom:20px;right:20px;z-index:9999;background:${colors[type]||colors.info};color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.3s`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+        
+        // Save a provider to Firebase using push() for guaranteed unique keys
+        async function saveProviderToFirebase(provider) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                // Use Firebase push() — server generates a unique, ordered key (no collisions)
+                const newRef = await _push(fbRef('providers'), provider);
+                // Also store the Firebase key as the provider's id (overwrite the temp id)
+                await _update(newRef, { id: newRef.key });
+                return true;
+            } catch (err) {
+                console.error('Firebase save provider error:', err);
+                showFirebaseStatus('❌ Error saving provider. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Save a seeker to Firebase using push() for guaranteed unique keys
+        async function saveSeekerToFirebase(seeker) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                const newRef = await _push(fbRef('seekers'), seeker);
+                await _update(newRef, { id: newRef.key });
+                return true;
+            } catch (err) {
+                console.error('Firebase save seeker error:', err);
+                showFirebaseStatus('❌ Error saving seeker. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Update a provider field in Firebase
+        async function updateProviderInFirebase(providerId, updates) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _update(fbRef('providers/' + providerId), updates);
+                return true;
+            } catch (err) {
+                console.error('Firebase update provider error:', err);
+                showFirebaseStatus('❌ Error updating provider. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Update a seeker field in Firebase
+        async function updateSeekerInFirebase(seekerId, updates) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _update(fbRef('seekers/' + seekerId), updates);
+                return true;
+            } catch (err) {
+                console.error('Firebase update seeker error:', err);
+                showFirebaseStatus('❌ Error updating seeker. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Delete a provider from Firebase
+        async function deleteProviderFromFirebase(providerId) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _remove(fbRef('providers/' + providerId));
+                return true;
+            } catch (err) {
+                console.error('Firebase delete provider error:', err);
+                showFirebaseStatus('❌ Error deleting provider. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Delete a seeker from Firebase
+        async function deleteSeekerFromFirebase(seekerId) {
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                await _remove(fbRef('seekers/' + seekerId));
+                return true;
+            } catch (err) {
+                console.error('Firebase delete seeker error:', err);
+                showFirebaseStatus('❌ Error deleting seeker. Check connection.', 'error');
+                return false;
+            }
+        }
+        
+        // Attach real-time listeners for providers and seekers
+        function attachFirebaseListeners() {
+            if (firebaseListenersAttached || !_db) return;
+            firebaseListenersAttached = true;
+            
+            // Listen for providers changes (real-time)
+            _onValue(fbRef('providers'), (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Map each entry with its Firebase key as id (handles both push() and old set() records)
+                    providers = Object.entries(data).map(([key, val]) => {
+                        if (!val.id) val.id = key; // ensure id field is always set
+                        return val;
+                    });
+                } else {
+                    providers = [];
+                }
+                console.log('🔄 Providers updated from Firebase:', providers.length);
+                // Refresh UI if browse page is visible
+                if (!document.getElementById('page-browse').classList.contains('hidden')) {
+                    if (selectedServiceIdx !== null) applySortAndFilter();
+                }
+                // Refresh admin if open
+                if (!document.getElementById('page-admin').classList.contains('hidden')) {
+                    updateAdminStats();
+                    if (!document.getElementById('adminTab-users').classList.contains('hidden')) {
+                        loadProvidersList();
+                    }
+                }
+                // Refresh map if open
+                if (!document.getElementById('page-map').classList.contains('hidden')) {
+                    initMainMap();
+                }
+            }, (err) => {
+                console.error('Firebase providers listener error:', err);
+                showFirebaseStatus('⚠️ Firebase connection issue. Data may be outdated.', 'error');
+            });
+            
+            // Listen for seekers changes (real-time)
+            _onValue(fbRef('seekers'), (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    seekers = Object.entries(data).map(([key, val]) => {
+                        if (!val.id) val.id = key;
+                        return val;
+                    });
+                } else {
+                    seekers = [];
+                }
+                console.log('🔄 Seekers updated from Firebase:', seekers.length);
+                if (!document.getElementById('page-admin').classList.contains('hidden')) {
+                    updateAdminStats();
+                    if (!document.getElementById('adminTab-users').classList.contains('hidden')) {
+                        loadSeekersList();
+                    }
+                }
+            }, (err) => {
+                console.error('Firebase seekers listener error:', err);
+            });
+            
+            showFirebaseStatus('🔥 Connected to Firebase — real-time sync active!', 'success');
+        }
+        
+        // Initialize Firebase when ready
+        function onFirebaseReady() {
+            const fb = window._firebase;
+            _db = fb.db;
+            _ref = fb.ref;
+            _set = fb.set;
+            _push = fb.push;
+            _onValue = fb.onValue;
+            _update = fb.update;
+            _remove = fb.remove;
+            _get = fb.get;
+            
+            attachFirebaseListeners();
+        }
+        
+        // Check if Firebase is already ready (race condition safety)
+        if (window._firebaseReady) {
+            onFirebaseReady();
+        } else {
+            window.addEventListener('firebaseReady', onFirebaseReady);
+        }
+        
+        // Selected browsing state
+        let selectedCategoryId = null;
+        let selectedSubcategoryIdx = null;
+        let selectedServiceIdx = null;
+        
+        const ADMIN_PASSWORD_KEY = 'sc_admin_password';
+        let ADMIN_PASSWORD = localStorage.getItem(ADMIN_PASSWORD_KEY) || 'admin123';
+
+        // ==================== FIX A: CATEGORY TRANSLATIONS ====================
+        // Add multilingual translations for all default categories
+        const CATEGORY_TRANSLATIONS = {
+            // ===== MAIN CATEGORIES =====
+            'Home Services':                    { hi:'घरेलू सेवाएं',          bn:'বাড়ির সেবা',            gu:'ઘरनी सेवाओ',         mr:'घर सेवा',            kn:'ಮನೆ ಸೇವೆಗಳು',         te:'ఇంటి సేవలు',         ml:'വീടിൻ്റെ സേവനങ്ങൾ',  ta:'வீட்டு சேவைகள்',    pa:'ਘਰੇਲੂ ਸੇਵਾਵਾਂ', or:'ଘରୋଇ ସେବା', as:'ঘৰুৱা সেৱা' },
+            'Beauty & Wellness':                { hi:'सौंदर्य और स्वास्थ्य',  bn:'সৌন্দর্য ও স্বাস্থ্য',  gu:'સૌంदर्य अने स्वास्थ्य', mr:'सौंदर्य आणि आरोग्य', kn:'ಸೌಂದರ್ಯ ಮತ್ತು ಆರೋಗ್ಯ', te:'అందం మరియు ఆరోగ్యం', ml:'സൗന്ദര്യവും ആരോഗ്യവും', ta:'அழகு மற்றும் ஆரோக்கியம்', pa:'ਸੁੰਦਰਤਾ ਅਤੇ ਸਿਹਤ', or:'ସୌନ୍ଦର୍ୟ ଓ ସ୍ୱାସ୍ଥ୍ୟ', as:'সৌন্দৰ্য আৰু স্বাস্থ্য' },
+            'Food & Catering':                  { hi:'खाना और कैटरिंग',        bn:'খাবার ও ক্যাটারিং',     gu:'ખోरак अने केटरिंग',     mr:'अन्न आणि कॅटरिंग',  kn:'ಆಹಾರ ಮತ್ತು ಕ್ಯಾಟರಿಂಗ್', te:'ఆహారం మరియు కేటరింగ్', ml:'ഭക്ഷണവും കേറ്ററിങ്ങും', ta:'உணவு மற்றும் கேட்டரிங்', pa:'ਖਾਣਾ ਅਤੇ ਕੇਟਰਿੰਗ', or:'ଖାଦ୍ୟ ଓ କ୍ୟାଟରିଂ', as:'খাদ্য আৰু কেটাৰিং' },
+            'Health & Medical':                 { hi:'स्वास्थ्य और चिकित्सा', bn:'স্বাস্থ্য ও চিকিৎসা',   gu:'आरोग्य अने तबीब',       mr:'आरोग्य आणि वैद्यकीय', kn:'ಆರೋಗ್ಯ ಮತ್ತು ವೈದ್ಯಕೀಯ', te:'ఆరోగ్యం మరియు వైద్యం',  ml:'ആരോഗ്യവും വൈദ്യവും',  ta:'சுகாதாரம் மற்றும் மருத்துவம்', pa:'ਸਿਹਤ ਅਤੇ ਡਾਕਟਰੀ', or:'ସ୍ୱାସ୍ଥ୍ୟ ଓ ଚିକିତ୍ସା', as:'স্বাস্থ্য আৰু চিকিৎসা' },
+            'Transport & Travel':               { hi:'परिवहन और यात्रा',       bn:'পরিবহন ও ভ্রমণ',        gu:'परिवहन अने प्रवास',     mr:'वाहतूक आणि प्रवास',  kn:'ಸಾರಿಗೆ ಮತ್ತು ಪ್ರಯಾಣ', te:'రవాణా మరియు ప్రయాణం',  ml:'ഗതാഗതവും യാത്രയും',   ta:'போக்குவரத்து மற்றும் பயணம்', pa:'ਆਵਾਜਾਈ ਅਤੇ ਯਾਤਰਾ', or:'ପରିବହନ ଓ ଯାତ୍ରା', as:'পৰিবহন আৰু ভ্ৰমণ' },
+            'Real Estate & Property':           { hi:'रियल एस्टेट और संपत्ति', bn:'রিয়েল এস্টেট ও সম্পত্তি', gu:'रियल एस्टेट अने मिलकत', mr:'रिअल इस्टेट आणि मालमत्ता', kn:'ರಿಯಲ್ ಎಸ್ಟೇಟ್ ಮತ್ತು ಆಸ್ತಿ', te:'రియల్ ఎస్టేట్ మరియు ఆస్తి', ml:'റിയൽ എസ്റ്റേറ്റും ആസ്തിയും', ta:'ரியல் எஸ்டேட் மற்றும் சொத்து', pa:'ਰਿਆਲ ਅਸਟੇਟ ਅਤੇ ਜਾਇਦਾਦ', or:'ରିଏଲ ଏଷ୍ଟେଟ', as:'ৰিয়েল এষ্টেট' },
+            'Education & Skill Services':       { hi:'शिक्षा और कौशल सेवाएं', bn:'শিক্ষা ও দক্ষতা সেবা',  gu:'शिक्षण अने कौशल सेवाओ', mr:'शिक्षण आणि कौशल्य सेवा', kn:'ಶಿಕ್ಷಣ ಮತ್ತು ಕೌಶಲ್ಯ ಸೇವೆಗಳು', te:'విద్య మరియు నైపుణ్య సేవలు', ml:'വിദ്യാഭ്യാസവും നൈപുണ്യ സേവനങ്ങളും', ta:'கல்வி மற்றும் திறன் சேவைகள்', pa:'ਸਿੱਖਿਆ ਅਤੇ ਕੌਸ਼ਲ ਸੇਵਾਵਾਂ', or:'ଶିକ୍ଷା ଓ କୌଶଲ', as:'শিক্ষা আৰু দক্ষতা' },
+            'Events & Entertainment':           { hi:'कार्यक्रम और मनोरंजन',  bn:'ইভেন্ট ও বিনোদন',       gu:'इवेन्ट्स अने मनोरंजन',  mr:'कार्यक्रम आणि मनोरंजन', kn:'ಈವೆಂಟ್ಸ್ ಮತ್ತು ಮನರಂಜನೆ', te:'ఈవెంట్లు మరియు వినోదం', ml:'ഇവന്റുകളും വിനോദവും',   ta:'நிகழ்வுகள் மற்றும் பொழுதுபோக்கு', pa:'ਸਮਾਗਮ ਅਤੇ ਮਨੋਰੰਜਨ', or:'ଉତ୍ସବ ଓ ମନୋରଞ୍ଜନ', as:'অনুষ্ঠান আৰু বিনোদন' },
+            'Finance & Legal':                  { hi:'वित्त और कानून',         bn:'অর্থ ও আইন',            gu:'फाइनान्स अने कानून',    mr:'वित्त आणि कायदा',    kn:'ಹಣಕಾಸು ಮತ್ತು ಕಾನೂನು', te:'ఆర్థికం మరియు చట్టం',  ml:'ധനകാര്യവും നിയമവും',  ta:'நிதி மற்றும் சட்டம்', pa:'ਵਿੱਤ ਅਤੇ ਕਾਨੂੰਨ', or:'ଅର୍ଥ ଓ ଆଇନ', as:'বিত্ত আৰু আইন' },
+            // Admin-added custom categories
+            'Travell':                          { hi:'यात्रा',                 bn:'ভ্রমণ',                  gu:'પ્rवास',                mr:'प्रवास',             kn:'ಪ್ರಯಾಣ',              te:'ప్రయాణం',             ml:'യാത്ര',               ta:'பயணம்',             pa:'ਯਾਤਰਾ', or:'', as:'' },
+            'Travel':                           { hi:'यात्रा',                 bn:'ভ্রমণ',                  gu:'પ્rवास',                mr:'प्रवास',             kn:'ಪ್ರಯಾಣ',              te:'ప్రయాణం',             ml:'യാത്ര',               ta:'பயணம்',             pa:'ਯਾਤਰਾ', or:'', as:'' },
+            'movers & packers':                 { hi:'मूवर्स और पैकर्स',       bn:'মুভার্স ও প্যাকার্স',    gu:'मूवर्स अने पेकर्स',    mr:'मूवर्स आणि पॅकर्स', kn:'ಮೂವರ್ಸ್ ಮತ್ತು ಪ್ಯಾಕರ್ಸ್', te:'మూవర్స్ అండ్ ప్యాకర్స్', ml:'മൂവേഴ്സ് ആൻഡ് പ്യാക്കേഴ്സ്', ta:'மூவர்ஸ் மற்றும் பேக்கர்ஸ்', pa:'ਮੂਵਰਜ਼ ਅਤੇ ਪੈਕਰਜ਼', or:'', as:'' },
+            'Movers & Packers':                 { hi:'मूवर्स और पैकर्स',       bn:'মুভার্স ও প্যাকার্স',    gu:'मूवर्स अने पेकर्स',    mr:'मूवर्स आणि पॅकर्स', kn:'ಮೂವರ್ಸ್ ಮತ್ತು ಪ್ಯಾಕರ್ಸ್', te:'మూవర్స్ అండ్ ప్యాకర్స్', ml:'മൂവേഴ്സ് ആൻഡ് പ്യാക്കേഴ്സ്', ta:'மூவர்ஸ் மற்றும் பேக்கர்ஸ்', pa:'ਮੂਵਰਜ਼ ਅਤੇ ਪੈਕਰਜ਼', or:'', as:'' },
+            'Education':                        { hi:'शिक्षा',                 bn:'শিক্ষা',                 gu:'શিक्षण',                mr:'शिक्षण',             kn:'ಶಿಕ್ಷಣ',              te:'విద్య',               ml:'വിദ്യാഭ്യാസം',        ta:'கல்வி',             pa:'ਸਿੱਖਿਆ', or:'', as:'' },
+            'Personal Care':                    { hi:'व्यक्तिगत देखभाल',       bn:'ব্যক্তিগত যত্ন',         gu:'व्यक्तिगत देखभाल',     mr:'वैयक्तिक काळजी',     kn:'ವೈಯಕ್ತಿಕ ಆರೈಕೆ',     te:'వ్యక్తిగత సంరక్షణ',  ml:'വ്യക്തിഗത പരിചരണം', ta:'தனிப்பட்ட பராமரிப்பு', pa:'ਨਿੱਜੀ ਦੇਖਭਾਲ', or:'', as:'' },
+            'Cleaning Services':                { hi:'सफाई सेवाएं',            bn:'পরিষ্কার সেবা',           gu:'સफाई सेवाओ',            mr:'स्वच्छता सेवा',      kn:'ಸ್ವಚ್ಛತೆ ಸೇವೆಗಳು',    te:'శుభ్రత సేవలు',        ml:'ക്ലീനിങ്ങ് സേവനങ്ങൾ', ta:'சுத்தம் செய்யும் சேவைகள்', pa:'ਸਫ਼ਾਈ ਸੇਵਾਵਾਂ', or:'ସଫେଇ ସେବା', as:'পৰিষ্কাৰ সেৱা' },
+            'Event Services':                   { hi:'इवेंट सेवाएं',           bn:'ইভেন্ট সেবা',             gu:'इवेंट सेवाओ',           mr:'इव्हेंट सेवा',       kn:'ಇವೆಂಟ್ ಸೇವೆಗಳು',     te:'ఈవెంట్ సేవలు',        ml:'ഇവന്റ് സേവനങ്ങൾ',    ta:'நிகழ்வு சேவைகள்',   pa:'ਇਵੈਂਟ ਸੇਵਾਵਾਂ', or:'ଇଭେଣ୍ଟ ସେବା', as:'ইভেন্ট সেৱা' },
+            'Business & Professional Services': { hi:'व्यापार और पेशेवर सेवाएं', bn:'ব্যবসায়িক ও পেশাদার সেবা', gu:'व्यापार अने व्यावसायिक', mr:'व्यवसाय आणि व्यावसायिक सेवा', kn:'ವ್ಯಾಪಾರ ಮತ್ತು ವೃತ್ತಿಪರ ಸೇವೆಗಳು', te:'వ్యాపార మరియు వృత్తిపర సేవలు', ml:'ബിസിനസ്സ് ആൻഡ് പ്രൊഫഷണൽ സേവനങ്ങൾ', ta:'வணிக மற்றும் தொழில்முறை சேவைகள்', pa:'ਵਪਾਰ ਅਤੇ ਪੇਸ਼ੇਵਰ ਸੇਵਾਵਾਂ', or:'ବ୍ୟବସାୟ ସେବା', as:'ব্যৱসায়িক সেৱা' },
+            'Pet Services':                     { hi:'पालतू जानवर सेवाएं',     bn:'পোষা প্রাণীর সেবা',      gu:'पालतु प्राणी सेवाओ',    mr:'पाळीव प्राणी सेवा',  kn:'ಸಾಕುಪ್ರಾಣಿ ಸೇವೆಗಳು',  te:'పెంపుడు జంతువుల సేవలు', ml:'പോഷ്യ മൃഗ സേവനങ്ങൾ', ta:'செல்ல விலங்கு சேவைகள்', pa:'ਪਾਲਤੂ ਜਾਨਵਰ ਸੇਵਾਵਾਂ', or:'ପୋଷା ପ୍ରାଣୀ ସେବା', as:'পোহনীয়া জন্তু সেৱা' },
+
+            // ===== ITI SUBCATEGORY GROUP NAMES (missing languages) =====
+            'Machining & Fabrication':   { hi:'मशीनिंग',              bn:'মেশিনিং',          gu:'મشیningg',          mr:'मशीनिंग',            kn:'ಮಶಿನಿಂಗ್',          te:'మెషినింగ్',          ml:'മഷിനിങ്',           ta:'இயந்திரவேலை',       pa:'ਮਸ਼ੀਨਿੰਗ',           or:'ମେସିନିଂ',   as:'মেচিনিং' },
+            'Welding':                   { hi:'वेल्डिंग',              bn:'ওয়েল্ডিং',         gu:'વेल्डिंग',           mr:'वेल्डिंग',           kn:'ವೆಲ್ಡಿಂಗ್',          te:'వెల్డింగ్',          ml:'വെൽഡിങ്',           ta:'வெல்டிங்',          pa:'ਵੇਲਡਿੰਗ',            or:'ୱେଲ୍ଡିଂ',   as:'ৱেল্ডিং' },
+            'Industrial & Manufacturing':{ hi:'औद्योगिक निर्माण',     bn:'শিল্প',             gu:'ઉद्योग',             mr:'औद्योगिक',           kn:'ಕೈಗಾರಿಕೆ',          te:'పారిశ్రామిక',        ml:'വ്യവസായ',           ta:'தொழில்துறை',        pa:'ਉਦਯੋਗਿਕ',           or:'ଶିଳ୍ପ',    as:'উদ্যোগ' },
+            'Draughting & Surveying':    { hi:'ड्राफ्टिंग',            bn:'ড্রাফটিং',          gu:'ড্রाফटिंग',          mr:'ड्राफ्टिंग',          kn:'ಡ್ರಾಫ್ಟಿಂಗ್',         te:'డ్రాఫ్టింగ్',         ml:'ഡ്രാഫ്റ്റിങ്',        ta:'வரைவு',             pa:'ਡਰਾਫਟਿੰਗ',          or:'ଡ୍ରାଫ୍ଟିଂ', as:'ড্ৰাফটিং' },
+            'Electrical':                { hi:'विद्युत',               bn:'বৈদ্যুতিক',         gu:'ਵਿਦ੍ਯੁਤ',            mr:'विद्युत',            kn:'ವಿದ್ಯುತ್',           te:'విద్యుత్',           ml:'ഇലക്ട്രിക്കൽ',       ta:'மின்சாரம்',          pa:'ਬਿਜਲੀ',              or:'ବିଦ୍ୟୁତ',   as:'বিদ্যুৎ' },
+            'Electronics & Instruments': { hi:'इलेक्ट्रॉनिक्स',       bn:'ইলেকট্রনিক্স',      gu:'ઇলेक्ट्रॉनिक्स',     mr:'इलेक्ट्रॉनिक्स',    kn:'ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್',    te:'ఎలక్ట్రానిక్స్',     ml:'ഇലക്ട്രോണിക്സ്',    ta:'மின்னணுவியல்',       pa:'ਇਲੈਕਟ੍ਰੋਨਿਕਸ',      or:'ଇଲେକ୍ଟ୍ରୋନିକ୍ସ', as:'ইলেকট্ৰনিক্স' },
+            'Renewable & Green Energy':  { hi:'हरित ऊर्जा',            bn:'নবায়নযোগ্য শক্তি',  gu:'हरित ऊर्जा',         mr:'हरित ऊर्जा',         kn:'ನವೀಕರಿಸಬಹುದಾದ ಶಕ್ತಿ', te:'పునరుత్పాదక శక్తి', ml:'പുനരുപയോഗ ഊർജം',   ta:'புதுப்பிக்கத்தக்க ஆற்றல்', pa:'ਨਵਿਆਉਣਯੋਗ ਊਰਜਾ', or:'ସ୍ୱଚ୍ଛ ଶକ୍ତି', as:'নবীকৰণযোগ্য শক্তি' },
+            'Telecom & Networking':      { hi:'दूरसंचार',              bn:'টেলিকম',            gu:'ਟੈਲੀਕਮ',              mr:'दूरसंचार',           kn:'ಟೆಲಿಕಾಂ',            te:'టెలికమ్',            ml:'ടെലികോം',            ta:'தொலைத்தொடர்பு',     pa:'ਟੈਲੀਕਾਮ',           or:'ଟେଲିକମ',   as:'টেলিকম' },
+            'Vehicle Mechanics':         { hi:'वाहन मैकेनिक',          bn:'যান মেকানিক',       gu:'ਵਾਹਨ ਮਕੈਨਿਕ',         mr:'वाहन मैकेनिक',       kn:'ವಾಹನ ಮೆಕ್ಯಾನಿಕ್',   te:'వాహన మెకానిక్',     ml:'വാഹന മെക്കാനിക്',   ta:'வாகன இயந்திரவாதி', pa:'ਵਾਹਨ ਮਕੈਨਿਕ',       or:'ଯାନ ମ୍ୟାକାନିକ', as:'যান মেকানিক' },
+            'Auto Body & Paint':         { hi:'ऑटो बॉडी',              bn:'অটো বডি',           gu:'ਆਟੋ ਬਾਡੀ',            mr:'ऑटो बॉडी',           kn:'ಆಟೋ ಬಾಡಿ',           te:'ఆటో బాడీ',           ml:'ഓട്ടോ ബോഡി',         ta:'வாகன உடல்',         pa:'ਆਟੋ ਬਾਡੀ',          or:'ଅଟୋ ବଡ଼ି',  as:'অটো বডি' },
+            'Marine & Logistics':        { hi:'समुद्री',               bn:'নৌ',                gu:'ਸਮੁੰਦਰੀ',             mr:'समुद्री',            kn:'ಸಮುದ್ರ',             te:'సముద్ర',             ml:'സമുദ്ര',             ta:'கடல்',              pa:'ਸਮੁੰਦਰੀ',           or:'ସାମୁଦ୍ରିକ', as:'সামুদ্ৰিক' },
+            'Plumbing & Sanitation':     { hi:'प्लंबिंग',              bn:'প্লাম্বিং',         gu:'ਪਲੰਬਿੰਗ',             mr:'प्लंबिंग',           kn:'ಪ್ಲಂಬಿಂಗ್',          te:'ప్లంబింగ్',          ml:'പ്ലംബിങ്',           ta:'குழாய்வேலை',        pa:'ਪਲੰਬਿੰਗ',           or:'ପ୍ଲମ୍ବିଂ',   as:'প্লাম্বিং' },
+            'Painting & Finishing':      { hi:'पेंटिंग',               bn:'রঙ করা',            gu:'ਪੇਂਟਿੰਗ',             mr:'पेंटिंग',            kn:'ಪೇಂಟಿಂಗ್',           te:'పెయింటింగ్',         ml:'പെയിന്റിങ്',        ta:'வண்ணமிடுதல்',       pa:'ਪੇਂਟਿੰਗ',           or:'ରଙ୍ଗ',       as:'ৰং' },
+            'Masonry & Civil':           { hi:'राजमिस्त्री',           bn:'রাজমিস্ত্রি',       gu:'ਰਾਜਮਿਸਤ੍ਰੀ',          mr:'राजमिस्त्री',        kn:'ರಾಜಮೇಸ್ತ್ರಿ',        te:'రాజుమేస్త్రి',       ml:'ആശാരി',             ta:'கட்டுமான தொழிலாளி', pa:'ਰਾਜਮਿਸਤਰੀ',        or:'ମିସ୍ତ୍ରୀ',   as:'ৰাজমিস্ত্ৰী' },
+            'Refrigeration & AC':        { hi:'रेफ्रिजरेशन',           bn:'রেফ্রিজারেশন',      gu:'ਰੇਫ੍ਰਿਜਰੇਸ਼ਨ',         mr:'रेफ्रिजरेशन',        kn:'ರೆಫ್ರಿಜರೇಷನ್',       te:'రెఫ్రిజరేషన్',       ml:'റഫ്രിജറേഷൻ',        ta:'குளிர்சாதன',        pa:'ਰੈਫ੍ਰਿਜਰੇਸ਼ਨ',      or:'ରେଫ୍ରିଜରେଶନ', as:'ৰেফ্ৰিজাৰেচন' },
+            'Fire & Safety':             { hi:'अग्नि सुरक्षा',         bn:'অগ্নি নিরাপত্তা',   gu:'ਅੱਗ ਸੁਰੱਖਿਆ',         mr:'अग्नि सुरक्षा',      kn:'ಅಗ್ನಿ ಸುರಕ್ಷತೆ',     te:'అగ్ని భద్రత',        ml:'അഗ്നി സുരക്ഷ',       ta:'தீ பாதுகாப்பு',     pa:'ਅੱਗ ਸੁਰੱਖਿਆ',       or:'ଅଗ୍ନି ସୁରକ୍ଷା', as:'অগ্নি সুৰক্ষা' },
+            'Garment Making':            { hi:'वस्त्र निर्माण',        bn:'পোশাক তৈরি',        gu:'ਵਸਤਰ ਨਿਰਮਾਣ',         mr:'वस्त्र निर्माण',     kn:'ಉಡುಪು ತಯಾರಿಕೆ',     te:'దుస్తుల తయారీ',      ml:'വസ്ത്ര നിർമ്മാണം',   ta:'ஆடை தயாரிப்பு',     pa:'ਕੱਪੜੇ ਬਣਾਉਣਾ',     or:'ବସ୍ତ୍ର ନିର୍ମାଣ', as:'কাপোৰ তৈয়াৰ' },
+            'Weaving & Textiles':        { hi:'बुनाई',                 bn:'বুনন',              gu:'ਬੁਣਾਈ',               mr:'विणकाम',             kn:'ನೇಯ್ಗೆ',             te:'నేత',                ml:'നെയ്ത്ത്',           ta:'நெசவு',             pa:'ਬੁਣਾਈ',             or:'ବୁଣା',       as:'বোৱা' },
+            'Embroidery & Artisan':      { hi:'कढ़ाई',                 bn:'সূচিকর্ম',          gu:'ਕਢ਼ਾਈ',               mr:'भरतकाम',             kn:'ಕಸೂತಿ',              te:'కుట్టుపని',          ml:'തുന്നൽ',             ta:'கோலமிடல்',          pa:'ਕਢਾਈ',              or:'କଢ଼ାଇ',      as:'সূচীকৰ্ম' },
+            'Leather & Footwear':        { hi:'चमड़ा',                 bn:'চামড়া',             gu:'ਚਮੜਾ',                mr:'चामडे',              kn:'ಚರ್ಮ',               te:'చర్మం',              ml:'തുകൽ',               ta:'தோல்',              pa:'ਚਮੜਾ',              or:'ଚମ୍ଡ଼ା',      as:'চামৰা' },
+            'Food Production':           { hi:'खाद्य उत्पादन',         bn:'খাদ্য উৎপাদন',      gu:'ਖਾਦ ਉਤਪਾਦਨ',          mr:'अन्न उत्पादन',       kn:'ಆಹಾರ ಉತ್ಪಾದನೆ',     te:'ఆహార ఉత్పత్తి',      ml:'ഭക്ഷ്യ ഉൽപ്പാദനം',  ta:'உணவு உற்பத்தி',     pa:'ਭੋਜਨ ਉਤਪਾਦਨ',      or:'ଖାଦ୍ୟ ଉତ୍ପାଦନ', as:'খাদ্য উৎপাদন' },
+            'Hotel & Front Office':      { hi:'होटल',                  bn:'হোটেল',             gu:'ਹੋਟਲ',                mr:'हॉटेल',              kn:'ಹೋಟೆಲ್',             te:'హోటల్',              ml:'ഹോട്ടൽ',             ta:'ஹோட்டல்',            pa:'ਹੋਟਲ',              or:'ହୋଟେଲ',      as:'হোটেল' },
+            'Tourism & Travel':          { hi:'पर्यटन',                bn:'পর্যটন',            gu:'ਸੈਰ ਸਪਾਟਾ',           mr:'पर्यटन',             kn:'ಪ್ರವಾಸೋದ್ಯಮ',        te:'పర్యాటకం',           ml:'ടൂറിസം',             ta:'சுற்றுலா',          pa:'ਸੈਰ ਸਪਾਟਾ',        or:'ପର୍ୟଟନ',    as:'পৰ্যটন' },
+            'Farming & Horticulture':    { hi:'बागवानी',               bn:'বাগান',             gu:'ਬਾਗਬਾਨੀ',             mr:'बागकाम',             kn:'ತೋಟಗಾರಿಕೆ',          te:'ఉద్యానవనం',          ml:'ഗാർഡനിങ്',          ta:'தோட்டக்கலை',        pa:'ਬਾਗਬਾਨੀ',           or:'ବଗିଚା',      as:'বাগিচা' },
+            'Dairy & Food Tech':         { hi:'डेयरी',                 bn:'দুগ্ধ',             gu:'ਡੇਅਰੀ',               mr:'दुग्ध',              kn:'ಡೈರಿ',               te:'పాడి',               ml:'ഡയറി',              ta:'பால் பண்ணை',        pa:'ਡੇਅਰੀ',             or:'ଡେୟାରୀ',    as:'দুগ্ধ' },
+            'Mining & Stone':            { hi:'खनन',                   bn:'খনন',               gu:'ਖਨਨ',                 mr:'खाण',                kn:'ಗಣಿ',                te:'మైనింగ్',            ml:'ഖനനം',              ta:'சுரங்கம்',          pa:'ਖਨਨ',               or:'ଖଣି',        as:'খনন' },
+            'Medical Technicians':       { hi:'चिकित्सा तकनीशियन',    bn:'মেডিকেল টেকনিশিয়ান', gu:'ਡਾਕਟਰੀ ਤਕਨੀਸ਼ੀਅਨ', mr:'वैद्यकीय तंत्रज्ञ', kn:'ವೈದ್ಯಕೀಯ ತಂತ್ರಜ್ಞ',  te:'వైద్య సాంకేతికుడు', ml:'മെഡിക്കൽ ടെക്നീഷ്യൻ', ta:'மருத்துவ தொழில்நுட்பர்', pa:'ਮੈਡੀਕਲ ਟੈਕਨੀਸ਼ੀਅਨ', or:'ଡ଼ାକ୍ତରୀ ଟେକ୍ନିଶିୟାନ', as:'চিকিৎসা কৌশলী' },
+            'Care & Support':            { hi:'देखभाल',                bn:'যত্ন',              gu:'ਦੇਖਭਾਲ',              mr:'काळजी',              kn:'ಆರೈಕೆ',              te:'సంరక్షణ',            ml:'പരിചരണം',           ta:'பராமரிப்பு',        pa:'ਦੇਖਭਾਲ',            or:'ଯତ୍ନ',       as:'যত্ন' },
+            'Chemical & Lab':            { hi:'रासायनिक',              bn:'রাসায়নিক',         gu:'ਰਸਾਇਣਿਕ',             mr:'रासायनिक',           kn:'ರಾಸಾಯನಿಕ',           te:'రసాయన',              ml:'രസതന്ത്ര',           ta:'வேதியியல்',         pa:'ਰਸਾਇਣਿਕ',           or:'ରାସାୟନିକ',   as:'ৰাসায়নিক' },
+            'Visual Arts & Crafts':      { hi:'दृश्य कला',             bn:'চিত্রকলা',          gu:'ਦ੍ਰਿਸ਼ ਕਲਾ',           mr:'दृश्य कला',          kn:'ದೃಶ್ಯ ಕಲೆ',          te:'దృశ్య కళలు',         ml:'ദൃശ്യ കല',           ta:'காட்சி கலை',        pa:'ਦਿੱਖ ਕਲਾ',          or:'ଚିତ୍ରକଳା',   as:'চিত্ৰকলা' },
+            'Wood & Furniture':          { hi:'लकड़ी',                 bn:'কাঠ',               gu:'ਲੱਕੜ',                mr:'लाकूड',              kn:'ಮರ',                 te:'చెక్క',              ml:'മരം',                ta:'மரம்',              pa:'ਲੱਕੜ',              or:'କାଠ',        as:'কাঠ' },
+            'Media & Photography':       { hi:'मीडिया',                bn:'মিডিয়া',            gu:'ਮੀਡੀਆ',               mr:'माध्यम',             kn:'ಮಾಧ್ಯಮ',             te:'మీడియా',             ml:'മീഡിയ',             ta:'ஊடகம்',             pa:'ਮੀਡੀਆ',             or:'ମିଡ଼ିଆ',      as:'মিডিয়া' },
+            'Office Administration':     { hi:'कार्यालय प्रशासन',      bn:'অফিস প্রশাসন',      gu:'ਦਫ਼ਤਰ ਪ੍ਰਬੰਧਨ',        mr:'कार्यालय प्रशासन',   kn:'ಕಚೇರಿ ಆಡಳಿತ',        te:'కార్యాలయ నిర్వహణ',  ml:'ഓഫീസ് ഭരണം',        ta:'அலுவலக நிர்வாகம்',  pa:'ਦਫ਼ਤਰ ਪ੍ਰਸ਼ਾਸਨ',     or:'ଦଫ୍ତର',      as:'কাৰ্যালয়' },
+            'Finance & HR':              { hi:'वित्त',                 bn:'ফিনান্স',           gu:'ਵਿੱਤ',                mr:'वित्त',              kn:'ಹಣಕಾಸು',             te:'ఆర్థికం',            ml:'ധനകാര്യം',           ta:'நிதி',              pa:'ਵਿੱਤ',              or:'ଅର୍ଥ',       as:'বিত্ত' },
+            'Programming & Software':    { hi:'प्रोग्रामिंग',          bn:'প্রোগ্রামিং',       gu:'ਪ੍ਰੋਗ੍ਰਾਮਿੰਗ',         mr:'प्रोग्रामिंग',       kn:'ಪ್ರೋಗ್ರಾಮಿಂಗ್',      te:'ప్రోగ్రామింగ్',      ml:'പ്രോഗ്രാമിങ്',      ta:'நிரலாக்கம்',        pa:'ਪ੍ਰੋਗ੍ਰਾਮਿੰਗ',      or:'ପ୍ରୋଗ୍ରାମିଂ',  as:'প্ৰগ্ৰামিং' },
+            'Cyber & Security':          { hi:'साइबर सुरक्षा',         bn:'সাইবার নিরাপত্তা',  gu:'ਸਾਈਬਰ ਸੁਰੱਖਿਆ',       mr:'सायबर सुरक्षा',      kn:'ಸೈಬರ್ ಭದ್ರತೆ',       te:'సైబర్ భద్రత',        ml:'സൈബർ സുരക്ഷ',        ta:'சைபர் பாதுகாப்பு',  pa:'ਸਾਈਬਰ ਸੁਰੱਖਿਆ',    or:'ସାଇବର',     as:'চাইবাৰ' },
+            'Design & Media':            { hi:'डिजाइन और मीडिया',      bn:'ডিজাইন',            gu:'ਡਿਜ਼ਾਈਨ',              mr:'डिझाइन',             kn:'ವಿನ್ಯಾಸ',             te:'డిజైన్',             ml:'ഡിസൈൻ',             ta:'வடிவமைப்பு',        pa:'ਡਿਜ਼ਾਈਨ',           or:'ଡିଜାଇନ',     as:'ডিজাইন' },
+            'IoT & Smart Tech':          { hi:'IoT तकनीक',             bn:'আইওটি',             gu:'IoT ਤਕਨੀਕ',           mr:'IoT',                kn:'IoT ತಂತ್ರಜ್ಞಾನ',    te:'IoT సాంకేతికత',     ml:'IoT സാങ്കേതികത',     ta:'IoT தொழில்நுட்பம்', pa:'IoT ਤਕਨੀਕ',         or:'IoT',        as:'আইঅটি' },
+            'Drones & Aviation':         { hi:'ड्रोन और विमानन',       bn:'ড্রোন',             gu:'ਡਰੋਨ',                mr:'ड्रोन',              kn:'ಡ್ರೋನ್',             te:'డ్రోన్',             ml:'ഡ്രോൺ',             ta:'ட்ரோன்',            pa:'ਡਰੋਨ',              or:'ଡ୍ରୋନ',      as:'ড্ৰোন' },
+            // ===== SUBCATEGORIES =====
+            'Plumber':                          { hi:'प्लंबर',                 bn:'প্লাম্বার',              gu:'પ્لmbar',               mr:'प्लंबर',             kn:'ಪ್ಲಂಬರ್',             te:'ప్లంబర్',             ml:'പ്ലംബർ',             ta:'பம்பர்',            pa:'ਪਲੰਬਰ', or:'ପ୍ଲମ୍ବର', as:'প্লাম্বাৰ' },
+            'Electrician':                      { hi:'इलेक्ट्रीशियन',          bn:'ইলেকট্রিশিয়ান',         gu:'ઇलेक्ट्रिशियन',         mr:'इलेक्ट्रिशियन',      kn:'ಎಲೆಕ್ಟ್ರಿಷಿಯನ್',       te:'ఎలక్ట్రిషియన్',      ml:'ഇലക്ട്രിഷ്യൻ',       ta:'மின்சாரி',          pa:'ਇਲੈਕਟ੍ਰਿਸ਼ੀਅਨ', or:'ବିଦ୍ୟୁତ ମିସ୍ତ୍ରୀ', as:'বিদ্যুৎ মিস্ত্ৰী' },
+            'Carpenter':                        { hi:'बढ़ई',                   bn:'কাঠমিস্ত্রী',             gu:'સুथार',                 mr:'सुतार',              kn:'ಬಡಗಿ',               te:'వడ్రంగి',             ml:'ആശാരി',              ta:'தச்சர்',            pa:'ਤਰਖਾਣ', or:'ଛୁତାର', as:'ছুতাৰ' },
+            'AC Repair & Servicing':            { hi:'एसी मरम्मत',             bn:'এসি মেরামত',              gu:'एसी रिपेर',             mr:'एसी दुरुस्ती',       kn:'ಎಸಿ ರಿಪೇರಿ',          te:'ఎసి రిపేర్',          ml:'എസി റിപ്പേർ',        ta:'ஏசி பழுதுபார்ப்பு', pa:'ਏਸੀ ਮੁਰੰਮਤ', or:'ଏସି ମରାମତ', as:'এচি মেৰামতি' },
+            'Painter':                          { hi:'पेंटर',                  bn:'পেইন্টার',               gu:'পেन्टर',                mr:'पेंटर',              kn:'ಪೇಂಟರ್',              te:'పెయింటర్',            ml:'പെയിന്റർ',           ta:'வண்ணப்பூச்சாளர்',   pa:'ਪੇਂਟਰ', or:'ରଙ୍ଗ ମିସ୍ତ୍ରୀ', as:'ৰং কৰোঁতা' },
+            'Beautician':                       { hi:'ब्यूटीशियन',             bn:'বিউটিশিয়ান',             gu:'ब्यूटिशियन',            mr:'ब्युटिशियन',         kn:'ಬ್ಯೂಟಿಷಿಯನ್',         te:'బ్యూటీషియన్',         ml:'ബ്യൂട്ടീഷ്യൻ',       ta:'அழகுக்கலைஞர்',      pa:'ਬਿਊਟੀਸ਼ੀਅਨ', or:'ବ୍ୟୁଟିଶିଆନ', as:'বিউটিচিয়ান' },
+            'Hair Stylist':                     { hi:'हेयर स्टाइलिस्ट',        bn:'হেয়ার স্টাইলিস্ট',       gu:'हेर स्टाइलिस्ट',        mr:'हेअर स्टायलिस्ट',    kn:'ಹೇರ್ ಸ್ಟೈಲಿಸ್ಟ್',     te:'హెయిర్ స్టైలిస్ట్',  ml:'ഹെയർ സ്റ്റൈലിസ്റ്റ്', ta:'கேசம் வடிவமைப்பாளர்', pa:'ਹੇਅਰ ਸਟਾਈਲਿਸਟ', or:'ହେୟାର ଷ୍ଟାଇଲିଷ୍ଟ', as:'হেয়াৰ ষ্টাইলিষ্ট' },
+            'Cook / Chef':                      { hi:'रसोइया',                 bn:'রাঁধুনি',                gu:'રสोइयो',                mr:'स्वयंपाकी',          kn:'ಅಡುಗೆಯವರು',           te:'వంటవాడు',             ml:'പാചകക്കാരൻ',         ta:'சமையல்காரர்',       pa:'ਰਸੋਈਆ', or:'ରାଶ‍ୋଇ', as:'পাচক' },
+            'Catering Service':                 { hi:'कैटरिंग सेवा',           bn:'ক্যাটারিং সেবা',         gu:'केटरिंग सेवा',          mr:'कॅटरिंग सेवा',       kn:'ಕ್ಯಾಟರಿಂಗ್ ಸೇವೆ',     te:'కేటరింగ్ సేవ',        ml:'കേറ്ററിങ്ങ് സേവനം',  ta:'கேட்டரிங் சேவை',    pa:'ਕੇਟਰਿੰਗ ਸੇਵਾ', or:'କ୍ୟାଟରିଂ ସେବା', as:'কেটাৰিং সেৱা' },
+            'Doctor':                           { hi:'डॉक्टर',                 bn:'ডাক্তার',                gu:'ডॉक्टर',                mr:'डॉक्टर',             kn:'ವೈದ್ಯರು',             te:'డాక్టర్',             ml:'ഡോക്ടർ',             ta:'மருத்துவர்',         pa:'ਡਾਕਟਰ', or:'ଡ଼ାକ୍ତର', as:'ডাক্তাৰ' },
+            'Nurse':                            { hi:'नर्स',                   bn:'নার্স',                  gu:'नर्स',                  mr:'परिचारिका',          kn:'ನರ್ಸ್',               te:'నర్స్',               ml:'നഴ്സ്',              ta:'செவிலியர்',         pa:'ਨਰਸ', or:'ନର୍ସ', as:'নাৰ্ছ' },
+            'Taxi Driver':                      { hi:'टैक्सी ड्राइवर',         bn:'ট্যাক্সি চালক',           gu:'टेक्सी ड्राइवर',        mr:'टॅक्सी चालक',        kn:'ಟ್ಯಾಕ್ಸಿ ಚಾಲಕ',        te:'టాక్సీ డ్రైవర్',      ml:'ടാക്സി ഡ്രൈവർ',     ta:'டாக்ஸி ஓட்டுனர்',   pa:'ਟੈਕਸੀ ਡਰਾਈਵਰ', or:'ଟ୍ୟାକ୍ସି ଚାଳକ', as:'টেক্সি চালক' },
+            'Home Tutor':                       { hi:'होम ट्यूटर',             bn:'গৃহ শিক্ষক',              gu:'घरे ट्यूटर',            mr:'घरगुती शिक्षक',      kn:'ಮನೆ ಶಿಕ್ಷಕ',          te:'హోమ్ ట్యూటర్',        ml:'ഹോം ട്യൂടർ',        ta:'வீட்டு ஆசிரியர்',   pa:'ਘਰੇਲੂ ਅਧਿਆਪਕ', or:'ଘରୋଇ ଶିକ୍ଷକ', as:'ঘৰুৱা গৃহশিক্ষক' },
+            'kitchen':                          { hi:'रसोई',                   bn:'রান্নাঘর',               gu:'रसोडु',                 mr:'स्वयंपाकघर',         kn:'ಅಡುಗೆಮನೆ',            te:'వంటగది',              ml:'അടുക്കള',            ta:'சமையலறை',           pa:'ਰਸੋਈ', or:'', as:'' },
+            'Kitchen':                          { hi:'रसोई',                   bn:'রান্নাঘর',               gu:'रसोडु',                 mr:'स्वयंपाकघर',         kn:'ಅಡುಗೆಮನೆ',            te:'వంటగది',              ml:'അടുക്കള',            ta:'சமையலறை',           pa:'ਰਸੋਈ', or:'', as:'' },
+            'Furniture':                        { hi:'फर्नीचर',                bn:'আসবাবপত্র',              gu:'फर्निचर',               mr:'फर्निचर',            kn:'ಪೀಠೋಪಕರಣ',            te:'ఫర్నీచర్',            ml:'ഫർണിച്ചർ',           ta:'தளபாடங்கள்',         pa:'ਫਰਨੀਚਰ', or:'', as:'' },
+            'cleaner':                          { hi:'सफाईकर्मी',              bn:'পরিষ্কারক',              gu:'सफाईकर्मी',             mr:'स्वच्छता कर्मचारी',  kn:'ಸ್ವಚ್ಛತಾ ಕಾರ್ಮಿಕ',    te:'క్లీనర్',             ml:'ക്ലീനർ',             ta:'சுத்தம் செய்பவர்',  pa:'ਸਫ਼ਾਈ ਕਰਮਚਾਰੀ', or:'', as:'' },
+            'Cleaner':                          { hi:'सफाईकर्मी',              bn:'পরিষ্কারক',              gu:'सफाईकर्मी',             mr:'स्वच्छता कर्मचारी',  kn:'ಸ್ವಚ್ಛತಾ ಕಾರ್ಮಿಕ',    te:'క్లీనర్',             ml:'ക്ലീനർ',             ta:'சுத்தம் செய்பவர்',  pa:'ਸਫ਼ਾਈ ਕਰਮਚਾਰੀ', or:'', as:'' },
+            'Washermen':                        { hi:'धोबी',                   bn:'ধোপা',                   gu:'धोबी',                  mr:'परिट',               kn:'ಅಗಸರು',               te:'ఉతికే వాడు',          ml:'അലക്കുകാരൻ',         ta:'வண்ணான்',           pa:'ਧੋਬੀ', or:'', as:'' },
+            'Washerman':                        { hi:'धोबी',                   bn:'ধোপা',                   gu:'धोबी',                  mr:'परिट',               kn:'ಅಗಸರು',               te:'ఉతికే వాడు',          ml:'അലക്കുകാരൻ',         ta:'வண்ணான்',           pa:'ਧੋਬੀ', or:'', as:'' },
+            'Kitchen appliance repair':         { hi:'रसोई उपकरण मरम्मत',     bn:'রান্নাঘরের যন্ত্র মেরামত', gu:'रसोई उपकरण मरम्मत',  mr:'स्वयंपाकघर उपकरण दुरुस्ती', kn:'ಅಡುಗೆಮನೆ ಉಪಕರಣ ರಿಪೇರಿ', te:'వంటగది పరికర మరమ్మత్', ml:'അടുക്കള ഉപകരണ റിപ്പേർ', ta:'சமையலறை கருவி பழுது', pa:'ਰਸੋਈ ਉਪਕਰਣ ਮੁਰੰਮਤ', or:'', as:'' },
+            'RO Repair & Installation':         { hi:'आरओ मरम्मत और स्थापना', bn:'আরও মেরামত ও স্থাপনা',   gu:'आरओ मरम्मत अने स्थापना', mr:'आरओ दुरुस्ती आणि बसवणे', kn:'ಆರ್ಒ ರಿಪೇರಿ ಮತ್ತು ಅಳವಡಿಕೆ', te:'ఆర్ఓ రిపేర్ మరియు ఇన్‌స్టాలేషన్', ml:'ആർഒ റിപ്പേർ ആൻഡ് ഇൻസ്റ്റലേഷൻ', ta:'ஆர்ஓ பழுதுபார்ப்பு மற்றும் நிறுவல்', pa:'ਆਰਓ ਮੁਰੰਮਤ ਅਤੇ ਸਥਾਪਨਾ', or:'', as:'' },
+            'Geyser Repair':                    { hi:'गीजर मरम्मत',            bn:'গিজার মেরামত',           gu:'गीजर मरम्मत',           mr:'गीझर दुरुस्ती',      kn:'ಗೀಸರ್ ರಿಪೇರಿ',         te:'గీజర్ రిపేర్',         ml:'ഗീസർ റിപ്പേർ',       ta:'கீசர் பழுது',        pa:'ਗੀਜ਼ਰ ਮੁਰੰਮਤ', or:'ଗିଜର ମରାମତ', as:'গিজাৰ মেৰামতি' },
+            'Inverter/Battery Service':         { hi:'इन्वर्टर/बैटरी सेवा',    bn:'ইনভার্টার/ব্যাটারি সেবা', gu:'इन्वर्टर/बेटरी सेवा',  mr:'इन्व्हर्टर/बॅटरी सेवा', kn:'ಇನ್ವರ್ಟರ್/ಬ್ಯಾಟರಿ ಸೇವೆ', te:'ఇన్వర్టర్/బ్యాటరీ సర్వీస్', ml:'ഇൻവർട്ടർ/ബാറ്ററി സർവ്വീസ്', ta:'இன்வெர்டர்/பேட்டரி சேவை', pa:'ਇਨਵਰਟਰ/ਬੈਟਰੀ ਸੇਵਾ', or:'ଇନ୍ଭର୍ଟର ସେବା', as:'ইনভাৰ্টাৰ সেৱা' },
+            'CCTV Installation':                { hi:'सीसीटीवी स्थापना',       bn:'সিসিটিভি স্থাপনা',       gu:'सीसीटीवी स्थापना',      mr:'सीसीटीव्ही बसवणे',   kn:'ಸಿಸಿಟಿವಿ ಅಳವಡಿಕೆ',    te:'సీసీటీవీ ఇన్‌స్టాలేషన్', ml:'സിസിടിവി ഇൻസ്റ്റലേഷൻ', ta:'சிசிடிவி நிறுவல்',   pa:'ਸੀਸੀਟੀਵੀ ਸਥਾਪਨਾ', or:'ସିସିଟିଭି ସ୍ଥାପନ', as:'চিচিটিভি স্থাপন' },
+            'Property Dealer':                  { hi:'संपत्ति डीलर',           bn:'সম্পত্তি ডিলার',          gu:'संपत्ति डीलर',          mr:'मालमत्ता डीलर',      kn:'ಆಸ್ತಿ ಡೀಲರ್',         te:'ఆస్తి డీలర్',          ml:'ആസ്തി ഡീലർ',         ta:'சொத்து டீலர்',       pa:'ਜਾਇਦਾਦ ਡੀਲਰ', or:'', as:'' },
+            'Rental Listings':                  { hi:'किराया लिस्टिंग',        bn:'ভাড়া তালিকা',            gu:'भाड़ा लिस्टिंग',        mr:'भाडे यादी',          kn:'ಬಾಡಿಗೆ ಪಟ್ಟಿ',         te:'అద్దె జాబితాలు',       ml:'വാടക ലിസ്റ്റിങ്',    ta:'வாடகை பட்டியல்',     pa:'ਕਿਰਾਏ ਦੀ ਸੂਚੀ', or:'', as:'' },
+            'Packers & Movers':                 { hi:'पैकर्स और मूवर्स',       bn:'প্যাকার্স ও মুভার্স',    gu:'पेकर्स अने मूवर्स',    mr:'पॅकर्स आणि मूवर्स',  kn:'ಪ್ಯಾಕರ್ಸ್ ಮತ್ತು ಮೂವರ್ಸ್', te:'ప్యాకర్స్ అండ్ మూవర్స్', ml:'പ്യാക്കേഴ്സ് ആൻഡ് മൂവേഴ്സ്', ta:'பேக்கர்ஸ் மற்றும் மூவர்ஸ்', pa:'ਪੈਕਰਜ਼ ਅਤੇ ਮੂਵਰਜ਼', or:'', as:'' },
+            'Spoken English Trainer':           { hi:'अंग्रेजी प्रशिक्षक',    bn:'ইংরেজি প্রশিক্ষক',       gu:'अंग्रेजी प्रशिक्षक',   mr:'इंग्रजी प्रशिक्षक',  kn:'ಇಂಗ್ಲೀಷ್ ತರಬೇತಿದಾರ',  te:'ఇంగ్లీష్ ట్రైనర్',   ml:'ഇംഗ്ലീഷ് ട്രൈനർ',   ta:'ஆங்கில பயிற்சியாளர்', pa:'ਅੰਗਰੇਜ਼ੀ ਟ੍ਰੇਨਰ', or:'', as:'' },
+            'Dance Teacher':                    { hi:'नृत्य शिक्षक',           bn:'নৃত্য শিক্ষক',            gu:'नृत्य शिक्षक',          mr:'नृत्य शिक्षक',       kn:'ನೃತ್ಯ ಶಿಕ್ಷಕ',         te:'నృత్య గురువు',         ml:'നൃത്ത അധ്യാപകൻ',    ta:'நடன ஆசிரியர்',      pa:'ਨਾਚ ਅਧਿਆਪਕ', or:'', as:'' }
+        };
+
+        // Enhanced getTranslated that also checks CATEGORY_TRANSLATIONS
+        function getTranslatedWithFallback(obj, defaultText = '') {
+            if (!obj) return defaultText;
+            if (typeof obj === 'string') {
+                // Check if we have a translation for this string
+                if (CATEGORY_TRANSLATIONS[obj] && CATEGORY_TRANSLATIONS[obj][currentLanguage]) {
+                    return CATEGORY_TRANSLATIONS[obj][currentLanguage];
+                }
+                return obj;
+            }
+            // It is an object like { en: 'Home Services', hi: '...' }
+            return obj[currentLanguage] || (CATEGORY_TRANSLATIONS[obj.en] && CATEGORY_TRANSLATIONS[obj.en][currentLanguage]) || obj.en || defaultText;
+        }
+
+        // ==================== FIX C: CHANGE ADMIN PASSWORD ====================
+        function changeAdminPassword() {
+            const current = document.getElementById('settingsCurrentPass').value;
+            const newPass  = document.getElementById('settingsNewPass').value;
+            const confirm  = document.getElementById('settingsConfirmPass').value;
+            const msg      = document.getElementById('passwordChangeMsg');
+
+            if (current !== ADMIN_PASSWORD) {
+                msg.className = 'text-center font-medium py-2 rounded-lg bg-red-100 text-red-700';
+                msg.textContent = '❌ Current password is incorrect';
+                msg.classList.remove('hidden');
+                return;
+            }
+            if (newPass.length < 6) {
+                msg.className = 'text-center font-medium py-2 rounded-lg bg-red-100 text-red-700';
+                msg.textContent = '❌ New password must be at least 6 characters';
+                msg.classList.remove('hidden');
+                return;
+            }
+            if (newPass !== confirm) {
+                msg.className = 'text-center font-medium py-2 rounded-lg bg-red-100 text-red-700';
+                msg.textContent = '❌ Passwords do not match';
+                msg.classList.remove('hidden');
+                return;
+            }
+            ADMIN_PASSWORD = newPass;
+            localStorage.setItem(ADMIN_PASSWORD_KEY, newPass);
+            document.getElementById('settingsCurrentPass').value = '';
+            document.getElementById('settingsNewPass').value = '';
+            document.getElementById('settingsConfirmPass').value = '';
+            msg.className = 'text-center font-medium py-2 rounded-lg bg-green-100 text-green-700';
+            msg.textContent = '✅ Password updated successfully!';
+            msg.classList.remove('hidden');
+            setTimeout(() => msg.classList.add('hidden'), 3000);
+        }
+
+        // ==================== FIX D: IMAGE/EMOJI TOGGLE FOR CATEGORY MODALS ====================
+        function toggleCatIconType(type) {
+            document.getElementById('catEmojiInput').classList.toggle('hidden', type !== 'emoji');
+            document.getElementById('catImageInput').classList.toggle('hidden', type !== 'image');
+        }
+        function toggleSubIconType(type) {
+            document.getElementById('subEmojiInput').classList.toggle('hidden', type !== 'emoji');
+            document.getElementById('subImageInput').classList.toggle('hidden', type !== 'image');
+        }
+        function previewCatImage(input) {
+            if (!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('modalCategoryImageData').value = e.target.result;
+                const box = document.getElementById('catImgPreviewBox');
+                box.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover">';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+        function previewSubImage(input) {
+            if (!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('modalSubcategoryImageData').value = e.target.result;
+                const box = document.getElementById('subImgPreviewBox');
+                box.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover">';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        // ==================== FIX E: ID PROOF PREVIEW ====================
+        function previewIdDoc(input) {
+            if (!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('idDocPreview');
+                const area    = document.getElementById('idDocPreviewArea');
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                area.innerHTML = '<p class="text-green-600 font-medium text-sm">✅ Document uploaded</p>';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        // ==================== FIX E: ID VERIFICATION ADMIN PANEL ====================
+        async function loadIdVerifications() {
+            const list = document.getElementById('idVerifyList');
+            list.innerHTML = '<p class="text-center text-gray-400 py-4">Loading...</p>';
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'providers'));
+                if (!snap.exists()) {
+                    list.innerHTML = '<p class="text-center text-gray-400 py-8">No providers found.</p>';
+                    return;
+                }
+                const allProviders = Object.values(snap.val()).filter(p => p.idVerification);
+                if (allProviders.length === 0) {
+                    list.innerHTML = '<div class="text-center py-12 text-gray-400"><div class="text-5xl mb-3">✅</div><p>No ID submissions yet.</p></div>';
+                    return;
+                }
+                const statusColors = {
+                    pending:  'bg-yellow-100 text-yellow-700 border-yellow-200',
+                    approved: 'bg-green-100 text-green-700 border-green-200',
+                    rejected: 'bg-red-100 text-red-700 border-red-200'
+                };
+                list.innerHTML = allProviders.map(p => {
+                    const iv = p.idVerification;
+                    const sc = statusColors[iv.status] || statusColors.pending;
+                    const idTypeLabels = { aadhaar:'Aadhaar Card', driving:'Driving License', voter:'Voter ID', pan:'PAN Card', passport:'Passport' };
+                    return `
+                    <div class="border-2 rounded-xl p-4 ${sc}">
+                        <div class="flex justify-between items-start flex-wrap gap-3">
+                            <div class="flex items-center gap-3">
+                                ${p.photo ? '<img src="' + p.photo + '" class="w-12 h-12 rounded-full object-cover border-2 border-white shadow">' : '<div class="w-12 h-12 rounded-full bg-orange-200 flex items-center justify-center text-2xl">👤</div>'}
+                                <div>
+                                    <div class="font-bold text-gray-800 text-lg">${p.name}</div>
+                                    <div class="text-sm text-gray-600">📞 ${p.mobile} | 🔧 ${p.service}</div>
+                                    <div class="text-sm">🪪 ${idTypeLabels[iv.type] || iv.type || 'Unknown'} ${iv.number ? '| #' + iv.number : ''}</div>
+                                </div>
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold border ${sc}">${(iv.status||'pending').toUpperCase()}</span>
+                        </div>
+                        ${iv.document ? '<div class="mt-3"><p class="text-xs text-gray-500 mb-1 font-medium">ID Document (admin only):</p><img src="' + iv.document + '" class="max-h-40 rounded-lg border shadow-sm cursor-pointer" onclick="this.style.maxHeight = this.style.maxHeight===\'none\' ? \'160px\' : \'none\'" title="Click to expand"></div>' : '<p class="mt-2 text-xs text-gray-400 italic">No document image uploaded</p>'}
+                        <div class="mt-3 flex gap-2 flex-wrap">
+                            ${iv.status !== 'approved' ? '<button onclick="approveIdVerification(\'' + p.id + '\')" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 font-medium">✅ Approve & Verify</button>' : ''}
+                            ${iv.status !== 'rejected' ? '<button onclick="rejectIdVerification(\'' + p.id + '\')" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-600 font-medium">❌ Reject</button>' : ''}
+                            <button onclick="shareProviderDetails(\'' + p.id + '\')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 font-medium">📤 Share with Seeker</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                list.innerHTML = '<p class="text-red-400 text-center">Could not load verifications.</p>';
+            }
+        }
+
+        async function approveIdVerification(providerId) {
+            await _firebase.update(_firebase.ref(_firebase.db, 'providers/' + providerId), {
+                verified: true,
+                'idVerification/status': 'approved',
+                'idVerification/reviewedAt': new Date().toISOString()
+            });
+            showFirebaseStatus('✅ Provider verified!', 'success');
+            loadIdVerifications();
+        }
+
+        async function rejectIdVerification(providerId) {
+            const reason = prompt('Reason for rejection (optional):') || '';
+            await _firebase.update(_firebase.ref(_firebase.db, 'providers/' + providerId), {
+                verified: false,
+                'idVerification/status': 'rejected',
+                'idVerification/rejectionReason': reason,
+                'idVerification/reviewedAt': new Date().toISOString()
+            });
+            showFirebaseStatus('ID verification rejected', 'info');
+            loadIdVerifications();
+        }
+
+        function shareProviderDetails(providerId) {
+            // Find provider from Firebase cache
+            _firebase.get(_firebase.ref(_firebase.db, 'providers/' + providerId)).then(snap => {
+                if (!snap.exists()) { showFirebaseStatus('Provider not found.', 'error'); return; }
+                const p = snap.val();
+                p.id = providerId;
+                showShareProviderModal(p);
+            });
+        }
+
+        function showShareProviderModal(p) {
+            // Remove existing modal if any
+            const existing = document.getElementById('shareProviderModal');
+            if (existing) existing.remove();
+
+            const iv = p.idVerification || {};
+            const docHtml = iv.document
+                ? `<div class="mt-3">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">📄 ID Document:</p>
+                    <img src="${iv.document}" class="max-h-48 rounded-xl border-2 border-gray-200 shadow cursor-pointer w-full object-contain bg-gray-50"
+                         onclick="this.style.maxHeight = this.style.maxHeight==='none' ? '12rem' : 'none'" title="Click to expand">
+                    <p class="text-xs text-gray-400 mt-1 text-center">Tap image to expand</p>
+                   </div>`
+                : `<div class="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700">⚠️ No ID document uploaded by this provider.</div>`;
+
+            const idTypeLabels = { aadhaar:'Aadhaar Card', driving:'Driving License', voter:'Voter ID', pan:'PAN Card', passport:'Passport' };
+
+            const modal = document.createElement('div');
+            modal.id = 'shareProviderModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+              <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-5 rounded-t-2xl flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    ${p.photo ? `<img src="${p.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow">` : `<div class="w-14 h-14 rounded-full bg-white bg-opacity-30 flex items-center justify-center text-3xl">👤</div>`}
+                    <div>
+                      <div class="font-bold text-lg leading-tight">${p.name}</div>
+                      <div class="text-sm opacity-90">${p.service}</div>
+                      ${p.verified ? '<div class="text-xs mt-0.5">✅ Verified</div>' : '<div class="text-xs mt-0.5">⏳ Unverified</div>'}
+                    </div>
+                  </div>
+                  <button onclick="document.getElementById('shareProviderModal').remove()" class="text-white text-2xl hover:opacity-70 leading-none">✕</button>
+                </div>
+
+                <!-- Details -->
+                <div class="p-5 space-y-3">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">📞 Mobile</div>
+                      <div class="font-semibold text-sm">${p.mobile}</div>
+                    </div>
+                    ${p.whatsapp ? `<div class="bg-green-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-0.5">💬 WhatsApp</div><div class="font-semibold text-sm">${p.whatsapp}</div></div>` : ''}
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">📍 Location</div>
+                      <div class="font-semibold text-sm">${p.location || 'N/A'}</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">💰 Rate</div>
+                      <div class="font-semibold text-sm">₹${p.rate}/hr</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">🗣️ Language</div>
+                      <div class="font-semibold text-sm">${Array.isArray(p.language) ? p.language.join(', ') : (p.language || 'N/A')}</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-3">
+                      <div class="text-gray-400 text-xs mb-0.5">⭐ Experience</div>
+                      <div class="font-semibold text-sm">${p.experience} yrs</div>
+                    </div>
+                  </div>
+
+                  <!-- ID Verification Info -->
+                  ${iv.type ? `<div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm">
+                    <div class="font-semibold text-blue-800 mb-1">🪪 ID Verification</div>
+                    <div class="text-blue-700">Type: ${idTypeLabels[iv.type] || iv.type}</div>
+                    ${iv.number ? `<div class="text-blue-700">Number: ${iv.number}</div>` : ''}
+                    <div class="text-blue-700">Status: <span class="font-bold uppercase">${iv.status || 'pending'}</span></div>
+                  </div>` : ''}
+
+                  ${docHtml}
+
+                  <!-- Portfolio & Dashboard Buttons -->
+                  <div class="flex gap-2 mb-3">
+                      <button onclick="openPortfolioView('${p.id}')" class="flex-1 bg-purple-100 text-purple-700 py-2 rounded-xl text-sm font-semibold hover:bg-purple-200">📸 Portfolio</button>
+                      <button onclick="openChatModal('${p.id}')" class="flex-1 bg-blue-100 text-blue-700 py-2 rounded-xl text-sm font-semibold hover:bg-blue-200">💬 Chat</button>
+                      <button onclick="openBookingModal('${p.id}')" class="flex-1 bg-green-100 text-green-700 py-2 rounded-xl text-sm font-semibold hover:bg-green-200">📅 Book</button>
+                  </div>
+                  <!-- Share Buttons -->
+                  <div class="pt-2 space-y-2">
+                    <p class="text-sm font-semibold text-gray-700">📤 Share with Seeker:</p>
+                    <div class="grid grid-cols-2 gap-2">
+                      <button onclick="doShareProvider('${p.id}', 'whatsapp')"
+                        class="bg-green-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-green-600 flex items-center justify-center gap-2">
+                        💬 WhatsApp
+                      </button>
+                      <button onclick="doShareProvider('${p.id}', 'copy')"
+                        class="bg-blue-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 flex items-center justify-center gap-2">
+                        📋 Copy Details
+                      </button>
+                      <button onclick="doShareProvider('${p.id}', 'native')"
+                        class="bg-orange-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-600 flex items-center justify-center gap-2 col-span-2">
+                        📱 Share via Device
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>`;
+            document.body.appendChild(modal);
+            // Close on backdrop click
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        async function doShareProvider(providerId, method) {
+            const snap = await _firebase.get(_firebase.ref(_firebase.db, 'providers/' + providerId));
+            if (!snap.exists()) return;
+            const p = snap.val();
+            const iv = p.idVerification || {};
+            const langs = Array.isArray(p.language) ? p.language.join(', ') : (p.language || 'N/A');
+            const services = Array.isArray(p.services) ? p.services.join(', ') : (p.service || 'N/A');
+            const text = `🌟 *Sudarshan Chakra - Provider Details*
+
+` +
+                `👤 *Name:* ${p.name}
+` +
+                `🔧 *Service:* ${services}
+` +
+                `📞 *Mobile:* ${p.mobile}
+` +
+                `${p.whatsapp ? `💬 *WhatsApp:* ${p.whatsapp}
+` : ''}` +
+                `📍 *Location:* ${p.location || 'N/A'}
+` +
+                `💰 *Rate:* ₹${p.rate}/hr
+` +
+                `🗣️ *Language:* ${langs}
+` +
+                `⭐ *Experience:* ${p.experience} years
+` +
+                `${p.verified ? '✅ *Verified Provider*' : '⏳ Verification Pending'}
+` +
+                `${iv.type ? `🪪 *ID:* ${iv.type.toUpperCase()} ${iv.number ? '(#' + iv.number + ')' : ''} — ${(iv.status||'pending').toUpperCase()}` : ''}`;
+
+            if (method === 'whatsapp') {
+                window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+            } else if (method === 'copy') {
+                try {
+                    await navigator.clipboard.writeText(text.replace(/\*/g, ''));
+                    showFirebaseStatus('✅ Details copied to clipboard!', 'success');
+                } catch(e) {
+                    prompt('Copy provider details:', text.replace(/\*/g, ''));
+                }
+            } else if (method === 'native') {
+                if (navigator.share) {
+                    navigator.share({ title: 'Provider: ' + p.name, text: text.replace(/\*/g, '') });
+                } else {
+                    showFirebaseStatus('Native share not supported on this device.', 'info');
+                }
+            }
+        }
+        
+        // Religion icons
+        const religionIcons = {
+            'Hindu': '🕉️',
+            'Muslim': '☪️',
+            'Christian': '✝️',
+            'Sikh': '☬',
+            'Buddhist': '☸️',
+            'Jain': '☸️'
+        };
+        
+        // ==================== TRANSLATIONS ====================
+        const translations = {
+            'home':             { en:'Home',              hi:'होम',              bn:'হোম',              gu:'હોમ',        mr:'होम',           kn:'ಮನೆ',             te:'హోమ్',         ml:'ഹോം',         ta:'முகப்பு',    pa:'ਹੋਮ', or:'ଘର', as:'ঘৰ' },
+            'browse':           { en:'Browse',            hi:'ब्राउज़',            bn:'ব্রাউজ',           gu:'બ્રાઉઝ',      mr:'ब्राउझ',         kn:'ಬ್ರೌಸ್',          te:'బ్రౌజ్',        ml:'ബ്രൗസ്',       ta:'உலாவு',      pa:'ਬ੍ਰਾਊਜ਼', or:'ବ୍ରାଉଜ୍', as:'ব্রাউজ' },
+            'map':              { en:'Map',               hi:'मैप',               bn:'মানচিত্র',          gu:'નકશો',       mr:'नकाशा',          kn:'ನಕ್ಷೆ',           te:'మ్యాప్',       ml:'ഭൂപടം',       ta:'வரைபடம்',    pa:'ਨਕਸ਼ਾ', or:'ମାନଚିତ୍ର', as:'মানচিত্ৰ' },
+            'registerProvider': { en:'Register Provider', hi:'प्रदाता पंजीकरण',  bn:'প্রদানকারী নিবন্ধন', gu:'પ્રдाता नोंधणी', mr:'प्रदाता नोंदणी', kn:'ಪೂರೈಕೆದಾರ ನೋಂದಣಿ', te:'ప్రొవైడర్ నమోదు', ml:'ദാതാവ് രജിസ്ട്രേഷൻ', ta:'வழங்குநர் பதிவு', pa:'ਪ੍ਰਦਾਤਾ ਰਜਿਸਟ੍ਰੇਸ਼ਨ', or:'ପ୍ରଦାୟକ ପଞ୍ଜୀକରଣ', as:'প্ৰদানকৰ্তা পঞ্জীয়ন' },
+            'registerSeeker':   { en:'Register Seeker',  hi:'साधक पंजीकरण',     bn:'অনুসন্ধানকারী নিবন্ধন', gu:'શोधनार नोंधणी', mr:'शोधक नोंदणी',   kn:'ಹುಡುಕುವವರ ನೋಂದಣಿ', te:'సీకర్ నమోదు',  ml:'അന്വേഷകൻ രജിസ്ട്രേഷൻ', ta:'தேடுபவர் பதிவு', pa:'ਖੋਜਕਾਰ ਰਜਿਸਟ੍ਰੇਸ਼ਨ', or:'ସେବକ ପଞ୍ଜୀକରଣ', as:'সেৱক পঞ্জীয়ন' },
+            'admin':            { en:'Admin',             hi:'व्यवस्थापक',         bn:'প্রশাসক',          gu:'व्यवस्थापक',  mr:'प्रशासक',        kn:'ನಿರ್ವಾಹಕ',        te:'అడ్మిన్',      ml:'അഡ്മിൻ',      ta:'நிர்வாகி',   pa:'ਪ੍ਰਸ਼ਾਸਕ', or:'ଆଡ୍ମିନ', as:'এডমিন' },
+            'fullName':         { en:'Full Name *',       hi:'पूरा नाम *',         bn:'সম্পূর্ণ নাম *',   gu:'પૂрुं नाम *',  mr:'संपूर्ण नाव *',  kn:'ಪೂರ್ಣ ಹೆಸರು *',  te:'పూర్తి పేరు *', ml:'പൂർണ്ണ പേര് *', ta:'முழு பெயர் *', pa:'ਪੂਰਾ ਨਾਮ *', or:'', as:'' },
+            'mobile':           { en:'Mobile Number *',  hi:'मोबाइल नंबर *',      bn:'মোবাইল নম্বর *',   gu:'મોবाइल नंबर *', mr:'मोबाईल नंबर *',  kn:'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ *', te:'మొబైల్ నంబర్ *', ml:'മൊബൈൽ നമ്പർ *', ta:'மொபைல் எண் *', pa:'ਮੋਬਾਈਲ ਨੰਬਰ *', or:'', as:'' },
+            'category':         { en:'Category (Optional)', hi:'श्रेणी (वैकल्पिक)', bn:'বিভাগ (ঐচ্ছিক)', gu:'केटेगरी (वैकल्पिक)', mr:'श्रेणी (पर्यायी)', kn:'ವರ್ಗ (ಐಚ್ಛಿಕ)', te:'వర్గం (ఐచ్ఛికం)', ml:'വിഭാഗം (ഐച്ഛികം)', ta:'பிரிவு (விரும்பினால்)', pa:'ਸ਼੍ਰੇਣੀ (ਵਿਕਲਪਿਕ)', or:'ବର୍ଗ', as:'শ্ৰেণী' },
+            'subcategory':      { en:'Subcategory (Optional)', hi:'उपश्रेणी (वैकल्पिक)', bn:'উপবিভাগ (ঐচ্ছিক)', gu:'ઉपकेटेगरी (वैकल्पिक)', mr:'उपश्रेणी (पर्यायी)', kn:'ಉಪವರ್ಗ (ಐಚ್ಛಿಕ)', te:'ఉపవర్గం (ఐచ్ఛికం)', ml:'ഉപവിഭാഗം (ഐച്ഛികം)', ta:'துணை பிரிவு', pa:'ਉਪ-ਸ਼੍ਰੇਣੀ (ਵਿਕਲਪਿਕ)', or:'ଉପ-ବର୍ଗ', as:'উপ-শ্ৰেণী' },
+            'serviceType':      { en:'Service Type (Optional)', hi:'सेवा प्रकार (वैकल्पिक)', bn:'সেবা প্রকার (ঐচ্ছিক)', gu:'સेवा प्रकार (वैकल्पिक)', mr:'सेवा प्रकार (पर्यायी)', kn:'ಸೇವೆ ಪ್ರಕಾರ (ಐಚ್ಛಿಕ)', te:'సేవ రకం (ఐచ్ఛికం)', ml:'സേവന തരം (ഐച്ഛികം)', ta:'சேவை வகை', pa:'ਸੇਵਾ ਕਿਸਮ (ਵਿਕਲਪਿਕ)', or:'', as:'' },
+            'religion':         { en:'Religion *',        hi:'धर्म *',             bn:'ধর্ম *',           gu:'धर्म *',      mr:'धर्म *',         kn:'ಧರ್ಮ *',          te:'మతం *',        ml:'മതം *',        ta:'மதம் *',     pa:'ਧਰਮ *', or:'', as:'' },
+            'selectReligion':   { en:'Select Religion',  hi:'धर्म चुनें',          bn:'ধর্ম নির্বাচন করুন', gu:'ধর্ম पसंद करो', mr:'धर्म निवडा',   kn:'ಧರ್ಮ ಆಯ್ಕೆಮಾಡಿ', te:'మతం ఎంచుకోండి', ml:'മതം തിരഞ്ഞെടുക്കൂ', ta:'மதத்தை தேர்ந்தெடு', pa:'ਧਰਮ ਚੁਣੋ', or:'', as:'' },
+            'experience':       { en:'Experience (years) *', hi:'अनुभव (वर्ष) *', bn:'অভিজ্ঞতা (বছর) *', gu:'अनुभव (वर्ष) *', mr:'अनुभव (वर्षे) *', kn:'ಅನುಭವ (ವರ್ಷಗಳು) *', te:'అనుభవం (సంవత్సరాలు) *', ml:'അനുഭവം (വർഷം) *', ta:'அனுபவம் (ஆண்டுகள்) *', pa:'ਤਜਰਬਾ (ਸਾਲ) *', or:'ଅଭିଜ୍ଞତା', as:'অভিজ্ঞতা' },
+            'rate':             { en:'Rate (₹/hour) *',  hi:'दर (₹/घंटा) *',     bn:'হার (₹/ঘন্টা) *',  gu:'दर (₹/कलाक) *', mr:'दर (₹/तास) *',  kn:'ದರ (₹/ಗಂಟೆ) *',  te:'రేటు (₹/గంట) *', ml:'നിരക്ക് (₹/മണി) *', ta:'கட்டணம் (₹/மணி) *', pa:'ਦਰ (₹/ਘੰਟਾ) *', or:'', as:'' },
+            'location':         { en:'Location/Address *', hi:'स्थान/पता *',      bn:'অবস্থান/ঠিকানা *', gu:'स्थान/सरनामुं *', mr:'स्थान/पत्ता *', kn:'ಸ್ಥಳ/ವಿಳಾಸ *',  te:'స్థానం/చిరునామా *', ml:'സ്ഥലം/വിലാസം *', ta:'இடம்/முகவரி *', pa:'ਸਥਾਨ/ਪਤਾ *', or:'', as:'' },
+            'setLocation':      { en:'Set Your Location on Map', hi:'मानचित्र पर स्थान सेट करें', bn:'মানচিত্রে অবস্থান সেট করুন', gu:'नकशे पर स्थान सेट करो', mr:'नकाशावर स्थान सेट करा', kn:'ನಕ್ಷೆಯಲ್ಲಿ ಸ್ಥಳ ಹೊಂದಿಸಿ', te:'మ్యాప్‌లో స్థానం సెట్ చేయండి', ml:'മാപ്പിൽ സ്ഥലം സജ്ജമാക്കൂ', ta:'வரைபடத்தில் இடம் அமைக்கவும்', pa:'ਨਕਸ਼ੇ ਤੇ ਸਥਾਨ ਸੈੱਟ ਕਰੋ', or:'', as:'' },
+            'useMyLocation':    { en:'Use My Location',  hi:'मेरा स्थान उपयोग करें', bn:'আমার অবস্থান ব্যবহার করুন', gu:'मारुं स्थान वापरो', mr:'माझे स्थान वापरा', kn:'ನನ್ನ ಸ್ಥಳ ಬಳಸಿ', te:'నా స్థానం వాడండి', ml:'എന്റെ സ്ഥലം ഉപയോഗിക്കൂ', ta:'என் இடம் பயன்படுத்து', pa:'ਮੇਰਾ ਸਥਾਨ ਵਰਤੋ', or:'', as:'' },
+            'registerNow':      { en:'Register Now',     hi:'अभी पंजीकरण करें',   bn:'এখনই নিবন্ধন করুন', gu:'अभी नोंधणी करो', mr:'आता नोंदणी करा', kn:'ಈಗ ನೋಂದಣಿ ಮಾಡಿ', te:'ఇప్పుడు నమోదు చేయండి', ml:'ഇപ്പോൾ രജിസ്ട്രേഷൻ ചെയ്യൂ', ta:'இப்போது பதிவு செய்யுங்கள்', pa:'ਹੁਣੇ ਰਜਿਸਟਰ ਕਰੋ', or:'', as:'' },
+            'findProviders':    { en:'Find Verified Service Providers Near You', hi:'अपने पास सत्यापित सेवा प्रदाता खोजें', bn:'কাছে যাচাইকৃত সেবা প্রদানকারী খুঁজুন', gu:'नजीकमां सत्यापित सेवा प्रदाता खोजो', mr:'जवळ सत्यापित सेवा प्रदाते शोधा', kn:'ಸಮೀಪದಲ್ಲಿ ಪರಿಶೀಲಿತ ಸೇವಾ ಪೂರೈಕೆದಾರರು', te:'దగ్గర ధృవీకరించిన సేవా ప్రొవైడర్లు', ml:'അടുത്ത് പരിശോധിത സേവന ദാതാക്കൾ', ta:'அருகில் சரிபார்க்கப்பட்ட வழங்குநர்கள்', pa:'ਨੇੜੇ ਤਸਦੀਕ ਸੇਵਾ ਪ੍ਰਦਾਤੇ', or:'', as:'' },
+            'findServiceProviders': { en:'Find Service Providers Near You', hi:'अपने पास सेवा प्रदाता खोजें', bn:'কাছে সেবা প্রদানকারী খুঁজুন', gu:'नजीकमां सेवा प्रदाता खोजो', mr:'जवळ सेवा प्रदाते शोधा', kn:'ಸಮೀಪ ಸೇವಾ ಪೂರೈಕೆದಾರರನ್ನು ಹುಡುಕಿ', te:'దగ్గర సేవా ప్రొవైడర్లు', ml:'അടുത്ത് സേവന ദാതാക്കൾ', ta:'அருகில் வழங்குநர்கள்', pa:'ਨੇੜੇ ਸੇਵਾ ਪ੍ਰਦਾਤੇ', or:'ସେବା ପ୍ରଦାୟକ ଖୋଜ', as:'সেৱা প্ৰদানকৰ্তা বিচাৰক' },
+            'selectCategory':   { en:'1️⃣ Select Category', hi:'1️⃣ श्रेणी चुनें', bn:'1️⃣ বিভাগ বেছে নিন', gu:'1️⃣ केटेगरी पसंद करो', mr:'1️⃣ श्रेणी निवडा', kn:'1️⃣ ವರ್ಗ ಆಯ್ಕೆಮಾಡಿ', te:'1️⃣ వర్గం ఎంచుకోండి', ml:'1️⃣ വിഭാഗം തിരഞ്ഞെടുക്കൂ', ta:'1️⃣ பிரிவு தேர்ந்தெடு', pa:'1️⃣ ਸ਼੍ਰੇਣੀ ਚੁਣੋ', or:'ବର୍ଗ ବାଛନ୍ତୁ', as:'শ্ৰেণী বাছক' },
+            'selectSubcategory':{ en:'2️⃣ Select Subcategory', hi:'2️⃣ उपश्रेणी चुनें', bn:'2️⃣ উপবিভাগ বেছে নিন', gu:'2️⃣ उपकेटेगरी पसंद करो', mr:'2️⃣ उपश्रेणी निवडा', kn:'2️⃣ ಉಪವರ್ಗ ಆಯ್ಕೆಮಾಡಿ', te:'2️⃣ ఉపవర్గం ఎంచుకోండి', ml:'2️⃣ ഉപവിഭാഗം തിരഞ്ഞെടുക്കൂ', ta:'2️⃣ துணை பிரிவு தேர்ந்தெடு', pa:'2️⃣ ਉਪ-ਸ਼੍ਰੇਣੀ ਚੁਣੋ', or:'ଉପ-ବର୍ଗ ବାଛ', as:'উপ-শ্ৰেণী বাছক' },
+            'selectService':    { en:'3️⃣ Select Service Type', hi:'3️⃣ सेवा प्रकार चुनें', bn:'3️⃣ সেবার ধরন বেছে নিন', gu:'3️⃣ सेवा प्रकार पसंद करो', mr:'3️⃣ सेवा प्रकार निवडा', kn:'3️⃣ ಸೇವೆ ಪ್ರಕಾರ ಆಯ್ಕೆಮಾಡಿ', te:'3️⃣ సేవ రకం ఎంచుకోండి', ml:'3️⃣ സേവന തരം തിരഞ്ഞെടുക്കൂ', ta:'3️⃣ சேவை வகை தேர்ந்தெடு', pa:'3️⃣ ਸੇਵਾ ਕਿਸਮ ਚੁਣੋ', or:'ସେବା ପ୍ରକାର ବାଛ', as:'সেৱাৰ প্ৰকাৰ বাছক' },
+            'providersNearYou': { en:'Providers Near You', hi:'आपके पास प्रदाता', bn:'আপনার কাছে প্রদানকারী', gu:'तमारी नजीकमां प्रदाता', mr:'तुमच्या जवळ प्रदाते', kn:'ನಿಮ್ಮ ಸಮೀಪ ಪೂರೈಕೆದಾರರು', te:'మీ దగ్గర ప్రొవైడర్లు', ml:'നിങ്ങളുടെ അടുത്ത് ദാതാക്കൾ', ta:'உங்கள் அருகில் வழங்குநர்கள்', pa:'ਤੁਹਾਡੇ ਨੇੜੇ ਪ੍ਰਦਾਤੇ', or:'', as:'' },
+            'serviceCategories':{ en:'Service Categories', hi:'सेवा श्रेणियाँ', bn:'সেবা বিভাগ', gu:'सेवा श्रेणीयो', mr:'सेवा श्रेण्या', kn:'ಸೇವಾ ವರ್ಗಗಳು', te:'సేవా వర్గాలు', ml:'സേവന വിഭാഗങ്ങൾ', ta:'சேவை பிரிவுகள்', pa:'ਸੇਵਾ ਸ਼੍ਰੇਣੀਆਂ', or:'ସେବା ବର୍ଗ', as:'সেৱাৰ শ্ৰেণী' },
+            'browseServices':   { en:'Browse Services', hi:'सेवाएं ब्राउज़ करें', bn:'সেবা ব্রাউজ করুন', gu:'सेवाओ ब्राउज करो', mr:'सेवा ब्राउझ करा', kn:'ಸೇವೆಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ', te:'సేవలను బ్రౌజ్ చేయండి', ml:'സേവനങ്ങൾ ബ്രൗസ് ചെയ്യൂ', ta:'சேவைகளை உலாவு', pa:'ਸੇਵਾਵਾਂ ਬ੍ਰਾਊਜ਼ ਕਰੋ', or:'ସେବା ଦେଖନ୍ତୁ', as:'সেৱা চাওক' },
+            'becomeProvider':   { en:'Become a Provider', hi:'प्रदाता बनें', bn:'প্রদানকারী হন', gu:'प्रदाता बनो', mr:'प्रदाता व्हा', kn:'ಪೂರೈಕೆದಾರರಾಗಿ', te:'ప్రొవైడర్ అవ్వండి', ml:'ദാതാവ് ആകൂ', ta:'வழங்குநர் ஆகுங்கள்', pa:'ਪ੍ਰਦਾਤਾ ਬਣੋ', or:'ପ୍ରଦାୟକ ହୁଅନ୍ତୁ', as:'প্ৰদানকৰ্তা হওক' },
+            'call':             { en:'📞 Call',          hi:'📞 कॉल करें',       bn:'📞 কল করুন',      gu:'📞 कोल करो',   mr:'📞 कॉल करा',    kn:'📞 ಕರೆ ಮಾಡಿ',   te:'📞 కాల్ చేయండి', ml:'📞 വിളിക്കൂ',   ta:'📞 அழையுங்கள்', pa:'📞 ਕਾਲ ਕਰੋ', or:'', as:'' },
+            'directions':       { en:'🗺️ Directions',   hi:'🗺️ दिशा-निर्देश',  bn:'🗺️ দিকনির্দেশ',  gu:'🗺️ दिशाओ',    mr:'🗺️ दिशानिर्देश', kn:'🗺️ ನಿರ್ದೇಶನಗಳು', te:'🗺️ దిశలు',     ml:'🗺️ ദിശകൾ',    ta:'🗺️ திசைகள்',   pa:'🗺️ ਦਿਸ਼ਾਵਾਂ', or:'', as:'' },
+            'backToHome':       { en:'← Back to Home',  hi:'← होम पर वापस',    bn:'← হোমে ফিরুন',   gu:'← होम पर पाछा', mr:'← होमवर परत जा', kn:'← ಮನೆಗೆ ಹಿಂತಿರುಗಿ', te:'← హోమ్‌కు వెళ్ళండి', ml:'← ഹോമിലേക്ക്', ta:'← முகப்பிற்கு திரும்பு', pa:'← ਹੋਮ ਤੇ ਵਾਪਸ', or:'', as:'' },
+            'sortBy':           { en:'Sort By',         hi:'क्रमबद्ध करें',     bn:'সাজান',          gu:'क्रम गोठवो',   mr:'क्रमवारी लावा',  kn:'ವಿಂಗಡಿಸಿ',      te:'క్రమీకరించండి', ml:'അടുക്കൂ',      ta:'வரிசைப்படுத்து', pa:'ਕ੍ਰਮਬੱਧ ਕਰੋ', or:'ସଜାଅ', as:'সজাওক' },
+            'filters':          { en:'🔍 Filters',       hi:'🔍 फ़िल्टर',        bn:'🔍 ফিল্টার',      gu:'🔍 फिल्टर',    mr:'🔍 फिल्टर',      kn:'🔍 ಫಿಲ್ಟರ್‌ಗಳು', te:'🔍 ఫిల్టర్లు', ml:'🔍 ഫില്‍ടറുകൾ', ta:'🔍 வடிப்பான்கள்', pa:'🔍 ਫਿਲਟਰ', or:'', as:'' },
+            'rating':           { en:'Rating (High to Low)', hi:'रेटिंग (उच्च से निम्न)', bn:'রেটিং (উচ্চ থেকে নিম্ন)', gu:'रेटिंग (उच्च थी नीचे)', mr:'रेटिंग (उच्च ते कमी)', kn:'ರೇಟಿಂಗ್ (ಹೆಚ್ಚಿನಿಂದ ಕಡಿಮೆ)', te:'రేటింగ్ (ఎక్కువ నుండి తక్కువ)', ml:'റേറ്റിംഗ് (ഉയർന്നതിൽ നിന്ന്)', ta:'மதிப்பீடு (அதிகம் முதல்)', pa:'ਰੇਟਿੰਗ (ਉੱਚ ਤੋਂ ਨੀਵਾਂ)', or:'ରେଟିଂ', as:'ৰেটিং' },
+            'priceLowToHigh':   { en:'Price (Low to High)', hi:'मूल्य (कम से अधिक)', bn:'মূল্য (কম থেকে বেশি)', gu:'किंमत (ओछी थी वधारे)', mr:'किंमत (कमी ते जास्त)', kn:'ಬೆಲೆ (ಕಡಿಮೆ ರಿಂದ ಹೆಚ್ಚು)', te:'ధర (తక్కువ నుండి ఎక్కువ)', ml:'വില (കുറവ് മുതൽ)', ta:'விலை (குறைவு முதல்)', pa:'ਕੀਮਤ (ਘੱਟ ਤੋਂ ਵੱਧ)', or:'ମୂଲ୍ୟ କମ ରୁ', as:'মূল্য কম পৰা' },
+            'distanceNearToFar':{ en:'Distance (Near to Far)', hi:'दूरी (पास से दूर)', bn:'দূরত্ব (কাছ থেকে দূর)', gu:'अंतर (नजीक थी दूर)', mr:'अंतर (जवळून दूर)', kn:'ಅಂತರ (ಸಮೀಪದಿಂದ ದೂರ)', te:'దూరం (దగ్గర నుండి దూరం)', ml:'ദൂരം (അടുത്ത് മുതൽ)', ta:'தூரம் (அருகில் இருந்து)', pa:'ਦੂਰੀ (ਨੇੜੇ ਤੋਂ ਦੂਰ)', or:'ଦୂରତ୍ୱ ନିକଟ', as:'দূৰত্ব কাষৰ' },
+            'experienceHighToLow':{ en:'Experience (High to Low)', hi:'अनुभव (अधिक से कम)', bn:'অভিজ্ঞতা (বেশি থেকে কম)', gu:'अनुभव (वधारे थी ओछो)', mr:'अनुभव (जास्त ते कमी)', kn:'ಅನುಭವ (ಹೆಚ್ಚು ರಿಂದ ಕಡಿಮೆ)', te:'అనుభవం (ఎక్కువ నుండి తక్కువ)', ml:'അനുഭവം (കൂടുതൽ മുതൽ)', ta:'அனுபவம் (அதிகம் முதல்)', pa:'ਤਜਰਬਾ (ਉੱਚ ਤੋਂ ਨੀਵਾਂ)', or:'ଅଭିଜ୍ଞ ବ୍ୟକ୍ତି', as:'অভিজ্ঞতা বেছি' },
+            'applyFilters':     { en:'Apply Filters',  hi:'फ़िल्टर लागू करें', bn:'ফিল্টার প্রয়োগ করুন', gu:'फिल्टर लागु करो', mr:'फिल्टर लागू करा', kn:'ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಅನ್ವಯಿಸಿ', te:'ఫిల్టర్లు వర్తించండి', ml:'ഫില്‍ടറുകൾ പ്രയോഗിക്കൂ', ta:'வடிப்பான்களை பயன்படுத்து', pa:'ਫਿਲਟਰ ਲਾਗੂ ਕਰੋ', or:'', as:'' },
+            'clearFilters':     { en:'Clear All',      hi:'सभी साफ़ करें',     bn:'সব সাফ করুন',    gu:'बधुं साफ करो',  mr:'सर्व साफ करा',   kn:'ಎಲ್ಲವನ್ನೂ ತೆರವುಗೊಳಿಸಿ', te:'అన్నీ క్లియర్ చేయండి', ml:'എല്ലാം മായ്ക്കൂ', ta:'அனைத்தையும் அழி', pa:'ਸਭ ਸਾਫ਼ ਕਰੋ', or:'', as:'' },
+            'languageFilter':   { en:'Language',       hi:'भाषा',              bn:'ভাষা',            gu:'ভাषा',          mr:'भाषा',           kn:'ಭಾಷೆ',           te:'భాష',           ml:'ഭാഷ',          ta:'மொழி',          pa:'ਭਾਸ਼ਾ', or:'', as:'' },
+            'religionFilter':   { en:'Religion',       hi:'धर्म',              bn:'ধর্ম',            gu:'धर्म',          mr:'धर्म',           kn:'ಧರ್ಮ',           te:'మతం',           ml:'മതം',           ta:'மதம்',          pa:'ਧਰਮ', or:'', as:'' },
+            'priceRange':       { en:'Price Range (₹/hr)', hi:'मूल्य सीमा (₹/घंटा)', bn:'মূল্য সীমা (₹/ঘন্টা)', gu:'किंमत श्रेणी (₹/कलाक)', mr:'किंमत श्रेणी (₹/तास)', kn:'ಬೆಲೆ ವ್ಯಾಪ್ತಿ (₹/ಗಂಟೆ)', te:'ధర పరిధి (₹/గంట)', ml:'വില പരിധി (₹/മണിക്കൂർ)', ta:'விலை வரம்பு (₹/மணி)', pa:'ਕੀਮਤ ਸੀਮਾ (₹/ਘੰਟਾ)', or:'', as:'' },
+            'maxDistanceFilter':{ en:'Maximum Distance', hi:'अधिकतम दूरी',    bn:'সর্বোচ্চ দূরত্ব', gu:'मधमतम अंतर',    mr:'कमाल अंतर',      kn:'ಗರಿಷ್ಠ ಅಂತರ',   te:'గరిష్ఠ దూరం',   ml:'പരമാവധി ദൂരം',  ta:'அதிகபட்ச தூரம்', pa:'ਵੱਧ ਤੋਂ ਵੱਧ ਦੂਰੀ', or:'', as:'' },
+            'anyLanguage':      { en:'Any Language',   hi:'कोई भी भाषा',      bn:'যেকোনো ভাষা',    gu:'कोई पण भाषा',   mr:'कोणतीही भाषा',   kn:'ಯಾವುದೇ ಭಾಷೆ',  te:'ఏదైనా భాష',     ml:'ഏതു ഭാഷయും',   ta:'எந்த மொழியும்', pa:'ਕੋਈ ਵੀ ਭਾਸ਼ਾ', or:'', as:'' },
+            'anyReligion':      { en:'Any Religion',   hi:'कोई भी धर्म',      bn:'যেকোনো ধর্ম',    gu:'कोई पण धर्म',   mr:'कोणताही धर्म',   kn:'ಯಾವುದೇ ಧರ್ಮ',  te:'ఏదైనా మతం',     ml:'ഏതു മതവും',    ta:'எந்த மதமும்',   pa:'ਕੋਈ ਵੀ ਧਰਮ', or:'', as:'' },
+            'providerLanguage': { en:'Provider Language *', hi:'प्रदाता भाषा *', bn:'প্রদানকারী ভাষা *', gu:'प्रदाता भाषा *', mr:'प्रदाता भाषा *', kn:'ಪೂರೈಕೆದಾರ ಭಾಷೆ *', te:'ప్రొవైడర్ భాష *', ml:'ദാതാവ് ഭാഷ *', ta:'வழங்குநர் மொழி *', pa:'ਪ੍ਰਦਾਤਾ ਭਾਸ਼ਾ *', or:'', as:'' },
+            'workingHours':     { en:'Working Hours *', hi:'कार्य समय *',      bn:'কাজের সময় *',   gu:'काम के कलाको *', mr:'कामाचे तास *',   kn:'ಕೆಲಸದ ಗಂಟೆಗಳು *', te:'పని గంటలు *',   ml:'ജോലി സമയം *',  ta:'வேலை நேரம் *',  pa:'ਕੰਮ ਦੇ ਘੰਟੇ *', or:'', as:'' },
+            'serviceArea':      { en:'Service Area *', hi:'सेवा क्षेत्र *',   bn:'সেবা এলাকা *',   gu:'सेवा क्षेत्र *',  mr:'सेवा क्षेत्र *',  kn:'ಸೇವಾ ಪ್ರದೇಶ *', te:'సేవా ప్రాంతం *', ml:'സേവന മേഖല *',  ta:'சேவை பகுதி *',  pa:'ਸੇਵਾ ਖੇਤਰ *', or:'', as:'' },
+            'monFri':           { en:'Mon-Fri (9 AM - 6 PM)', hi:'सोम-शुक्र (9-6)', bn:'সোম-শুক্র (9-6)', gu:'सोम-शुक्र (9-6)', mr:'सोम-शुक्र (9-6)', kn:'ಸೋಮ-ಶುಕ್ರ (9-6)', te:'సోమ-శుక్ర (9-6)', ml:'തി-വെ (9-6)',   ta:'திங்-வெள் (9-6)', pa:'ਸੋਮ-ਸ਼ੁੱਕਰ (9-6)', or:'', as:'' },
+            'weekends':         { en:'Weekends Only',  hi:'केवल सप्ताहांत',    bn:'শুধু সপ্তাহান্তে', gu:'मात्र वीकेंड',   mr:'फक्त आठवड्याचा शेवट', kn:'ವಾರಾಂತ್ಯಗಳು ಮಾತ್ರ', te:'వారాంతాలు మాత్రమే', ml:'വാരാന്ത്യങ്ങൾ മാത്രം', ta:'வார இறுதி மட்டும்', pa:'ਵੀਕਐਂਡ ਸਿਰਫ਼', or:'', as:'' },
+            'allDays':          { en:'All Days (7 days/week)', hi:'सभी दिन (7 दिन)', bn:'সব দিন (7 দিন)', gu:'बधा दिवस (7 दिन)', mr:'सर्व दिवस (7 दिवस)', kn:'ಎಲ್ಲಾ ದಿನಗಳು (7 ದಿನ)', te:'అన్ని రోజులు (7 రోజులు)', ml:'എല്ലാ ദിവസവും (7 ദിവസം)', ta:'அனைத்து நாட்களும் (7 நாட்கள்)', pa:'ਸਾਰੇ ਦਿਨ (7 ਦਿਨ)', or:'', as:'' },
+            'available24x7':    { en:'24×7 Available', hi:'24×7 उपलब्ध',     bn:'24×7 উপলব্ধ',   gu:'24×7 उपलब्ध',   mr:'24×7 उपलब्ध',   kn:'24×7 ಲಭ್ಯವಿದೆ', te:'24×7 అందుబాటులో', ml:'24×7 ലഭ്യം',   ta:'24×7 கிடைக்கும்', pa:'24×7 ਉਪਲਬਧ', or:'', as:'' },
+            'within10km':       { en:'Within 10 km',  hi:'10 किमी के भीतर',  bn:'10 কিমির মধ্যে', gu:'10 किमी अंदर',   mr:'10 किमीच्या आत', kn:'10 ಕಿಮೀ ಒಳಗೆ', te:'10 కిమీ లోపల',  ml:'10 കി.മീ. അകലം', ta:'10 கி.மீ. உள்ளே', pa:'10 ਕਿਮੀ ਦੇ ਅੰਦਰ', or:'', as:'' },
+            'withinCity':       { en:'Within City',   hi:'शहर के भीतर',      bn:'শহরের মধ্যে',   gu:'शहेर अंदर',      mr:'शहराच्या आत',    kn:'ನಗರದೊಳಗೆ',     te:'నగరం లోపల',    ml:'നഗരത്തിനുള്ളിൽ', ta:'நகரத்திற்குள்', pa:'ਸ਼ਹਿਰ ਦੇ ਅੰਦਰ', or:'', as:'' },
+            'showingResults':   { en:'Showing {count} providers', hi:'{count} प्रदाता दिखा रहे हैं', bn:'{count} প্রদানকারী দেখাচ্ছে', gu:'{count} प्रदाता बता रह्या छे', mr:'{count} प्रदाते दाखवत आहे', kn:'{count} ಪೂರೈಕೆದಾರರನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ', te:'{count} ప్రొవైడర్లు చూపిస్తున్నాం', ml:'{count} ദാതാക്കൾ കാണിക്കുന്നു', ta:'{count} வழங்குநர்கள் காட்டுகிறோம்', pa:'{count} ਪ੍ਰਦਾਤੇ ਦਿਖਾ ਰਹੇ ਹਾਂ', or:'', as:'' },
+            'voiceSearch':      { en:'🎤 Voice Search', hi:'🎤 ध्वनि खोज',     bn:'🎤 ভয়েস সার্চ', gu:'🎤 वोइस सर्च',   mr:'🎤 व्हॉइस शोध',  kn:'🎤 ಧ್ವನಿ ಹುಡುಕಾಟ', te:'🎤 వాయిస్ సెర్చ్', ml:'🎤 വോയ്സ് സെർച്ച്', ta:'🎤 குரல் தேடல்', pa:'🎤 ਆਵਾਜ਼ ਖੋਜ', or:'ଭଏସ ସର୍ଚ', as:'ভইচ চাৰ্চ' },
+            'listening':        { en:'Listening...',   hi:'सुन रहे हैं...',    bn:'শুনছি...',       gu:'सांभळी रह्या छे...', mr:'ऐकत आहे...', kn:'ಆಲಿಸುತ್ತಿದೆ...', te:'వింటున్నాం...',  ml:'ശ്രദ്ധിക്കുന്നു...', ta:'கேட்கிறோம்...', pa:'ਸੁਣ ਰਹੇ ਹਾਂ...', or:'', as:'' },
+            'speak':            { en:'Speak now',      hi:'अभी बोलें',         bn:'এখন বলুন',      gu:'अभी बोलो',       mr:'आता बोला',       kn:'ಈಗ ಮಾತನಾಡಿ',   te:'ఇప్పుడు మాట్లాడండి', ml:'ഇപ്പോൾ സംസാരിക്കൂ', ta:'இப்போது பேசுங்கள்', pa:'ਹੁਣ ਬੋਲੋ', or:'', as:'' },
+            'voiceSearchFor':   { en:'Say: "Find a plumber" or "Show electricians"', hi:'कहें: "प्लंबर खोजें"', bn:'বলুন: "প্লাম্বার খুঁজুন"', gu:'कहो: "प्लम्बर खोजो"', mr:'म्हणा: "प्लंबर शोधा"', kn:'ಹೇಳಿ: "ಪ್ಲಂಬರ್ ಹುಡುಕಿ"', te:'చెప్పండి: "ప్లంబర్ కనుగొనండి"', ml:'പറയൂ: "പ്ലംബർ കണ്ടെത്തൂ"', ta:'சொல்லுங்கள்: "பம்பர் தேடு"', pa:'ਕਹੋ: "ਪਲੰਬਰ ਲੱਭੋ"', or:'', as:'' },
+            'noSpeechDetected': { en:'No speech detected. Please try again.', hi:'कोई आवाज़ नहीं। पुनः प्रयास करें।', bn:'কোনো কথা শোনা যায়নি।', gu:'कोई आवाज सांभळाई नथी.', mr:'आवाज ऐकू आला नाही.', kn:'ಯಾವುದೇ ಭಾಷಣ ಪತ್ತೆಯಾಗಿಲ್ಲ.', te:'మాట వినిపించలేదు.', ml:'ശബ്ദം കേൾക്കുന്നില്ല.', ta:'பேச்சு கண்டறியவில்லை.', pa:'ਕੋਈ ਆਵਾਜ਼ ਨਹੀਂ ਆਈ।', or:'', as:'' },
+            'searchingFor':     { en:'Searching for {service}...', hi:'{service} खोज रहे हैं...', bn:'{service} খুঁজছি...', gu:'{service} खोजी रह्या छे...', mr:'{service} शोधत आहे...', kn:'{service} ಹುಡುಕುತ್ತಿದೆ...', te:'{service} వెతుకుతున్నాం...', ml:'{service} തിരയുന്നു...', ta:'{service} தேடுகிறோம்...', pa:'{service} ਲੱਭ ਰਹੇ ਹਾਂ...', or:'', as:'' },
+
+            // ─── Provider Card Buttons ───
+            'hireNow':          { en:'⚡ Hire Now', hi:'⚡ किराए पर लें', bn:'⚡ নিয়োগ করুন', gu:'⚡ કામ કરાવો', mr:'⚡ कामावर घ्या', kn:'⚡ ನೇಮಿಸಿ', te:'⚡ నియమించండి', ml:'⚡ നിയോഗിക്കൂ', ta:'⚡ பணியமர்த்து', pa:'⚡ ਕੰਮ ਲਓ', or:'⚡ ନିଯୁକ୍ତ କରନ୍ତୁ', as:'⚡ নিযুক্ত কৰক' },
+            'callBtn':          { en:'📞 Call', hi:'📞 कॉल करें', bn:'📞 কল করুন', gu:'📞 ફોન', mr:'📞 कॉल करा', kn:'📞 ಕರೆ ಮಾಡಿ', te:'📞 కాల్ చేయి', ml:'📞 വിളിക്കൂ', ta:'📞 அழைக்கவும்', pa:'📞 ਕਾਲ ਕਰੋ', or:'📞 ଫୋନ', as:'📞 ফোন কৰক' },
+            'whatsappBtn':      { en:'💬 WhatsApp', hi:'💬 व्हाट्सएप', bn:'💬 WhatsApp', gu:'💬 WhatsApp', mr:'💬 WhatsApp', kn:'💬 WhatsApp', te:'💬 WhatsApp', ml:'💬 WhatsApp', ta:'💬 WhatsApp', pa:'💬 WhatsApp', or:'💬 WhatsApp', as:'💬 WhatsApp' },
+            'reviewBtn':        { en:'⭐ Review', hi:'⭐ समीक्षा', bn:'⭐ রিভিউ', gu:'⭐ સમીક્ષા', mr:'⭐ समीक्षा', kn:'⭐ ಶ್ಲಾಘನೆ', te:'⭐ సమీక్ష', ml:'⭐ അഭിപ്രായം', ta:'⭐ மதிப்பீடு', pa:'⭐ ਸਮੀਖਿਆ', or:'⭐ ସମୀକ୍ଷା', as:'⭐ পৰ্যালোচনা' },
+            'directionsBtn':    { en:'🗺️ Directions', hi:'🗺️ दिशानिर्देश', bn:'🗺️ দিকনির্দেশ', gu:'🗺️ રસ્તો', mr:'🗺️ मार्गदर्शन', kn:'🗺️ ದಾರಿ', te:'🗺️ దిశలు', ml:'🗺️ വഴി', ta:'🗺️ வழிகாட்டு', pa:'🗺️ ਰਸਤਾ', or:'🗺️ ଦିଗ', as:'🗺️ দিশা' },
+
+            // ─── Wallet Page ───
+            'walletBalance':    { en:'🌟 Reward Points Balance', hi:'🌟 इनाम अंक शेष', bn:'🌟 পুরস্কার পয়েন্ট', gu:'🌟 ઇનામ પૉઇન્ટ', mr:'🌟 बक्षीस गुण', kn:'🌟 ಪ್ರತಿಫಲ ಅಂಕಗಳು', te:'🌟 రివార్డ్ పాయింట్లు', ml:'🌟 റിവാർഡ് പോയിൻ്റ്', ta:'🌟 வெகுமதி புள்ளிகள்', pa:'🌟 ਇਨਾਮ ਅੰਕ', or:'🌟 ପୁରସ୍କାର ପଏଣ୍ଟ', as:'🌟 পুৰস্কাৰ পইণ্ট' },
+            'howToEarnTitle':   { en:'🎁 How to Earn Points', hi:'🎁 अंक कैसे कमाएं', bn:'🎁 পয়েন্ট কীভাবে আয় করবেন', gu:'🎁 પૉઇન્ટ કેવી રીતે કમાઓ', mr:'🎁 गुण कसे कमवावे', kn:'🎁 ಅಂಕಗಳು ಹೇಗೆ ಗಳಿಸಬೇಕು', te:'🎁 పాయింట్లు ఎలా సంపాదించాలి', ml:'🎁 പോയിൻ്റ് എങ്ങനെ നേടാം', ta:'🎁 புள்ளிகளை எப்படி சம்பாதிக்கலாம்', pa:'🎁 ਅੰਕ ਕਿਵੇਂ ਕਮਾਓ', or:'🎁 ପଏଣ୍ଟ କିପରି ଅର୍ଜନ କରିବେ', as:'🎁 পইণ্ট কেনেকৈ উপাৰ্জন কৰিব' },
+            'transHistory':     { en:'📋 Transaction History', hi:'📋 लेनदेन इतिहास', bn:'📋 লেনদেনের ইতিহাস', gu:'📋 વ્યવહારોનો ઇતિહાસ', mr:'📋 व्यवहार इतिहास', kn:'📋 ವ್ಯವಹಾರದ ಇತಿಹಾಸ', te:'📋 లావాదేవీల చరిత్ర', ml:'📋 ഇടപാടുചരിത്രം', ta:'📋 பரிவர்த்தனை வரலாறு', pa:'📋 ਲੈਣ-ਦੇਣ ਇਤਿਹਾਸ', or:'📋 ଲେଣଦେଣ ଇତିହାସ', as:'📋 লেনদেনৰ ইতিহাস' },
+
+            // ─── Profile Page ───
+            'profileDetails':   { en:'👤 Details', hi:'👤 विवरण', bn:'👤 বিবরণ', gu:'👤 વિગત', mr:'👤 तपशील', kn:'👤 ವಿವರ', te:'👤 వివరాలు', ml:'👤 വിവരങ്ങൾ', ta:'👤 விவரங்கள்', pa:'👤 ਵੇਰਵਾ', or:'👤 ବିବରଣ', as:'👤 বিৱৰণ' },
+            'profileBookings':  { en:'📅 Bookings', hi:'📅 बुकिंग', bn:'📅 বুকিং', gu:'📅 બુકિંગ', mr:'📅 बुकिंग', kn:'📅 ಬುಕಿಂಗ್', te:'📅 బుకింగ్', ml:'📅 ബുക്കിംഗ്', ta:'📅 முன்பதிவு', pa:'📅 ਬੁਕਿੰਗ', or:'📅 ବୁକିଂ', as:'📅 বুকিং' },
+            'profileSaved':     { en:'❤️ Saved', hi:'❤️ सहेजे गए', bn:'❤️ সংরক্ষিত', gu:'❤️ સેવ', mr:'❤️ जतन केले', kn:'❤️ ಉಳಿಸಲಾಗಿದೆ', te:'❤️ సేవ్', ml:'❤️ സേവ്', ta:'❤️ சேமித்தது', pa:'❤️ ਸੇਵ', or:'❤️ ସଂରକ୍ଷିତ', as:'❤️ ছেভ' },
+            'profileReviews':   { en:'⭐ Reviews', hi:'⭐ समीक्षाएं', bn:'⭐ রিভিউ', gu:'⭐ સમીક્ષા', mr:'⭐ समीक्षा', kn:'⭐ ಶ್ಲಾಘನೆಗಳು', te:'⭐ సమీక్షలు', ml:'⭐ അഭിപ്രായങ്ങൾ', ta:'⭐ மதிப்பீடுகள்', pa:'⭐ ਸਮੀਖਿਆਵਾਂ', or:'⭐ ସମୀକ୍ଷା', as:'⭐ পৰ্যালোচনা' },
+            'profileReports':   { en:'🚨 Reports', hi:'🚨 रिपोर्ट', bn:'🚨 রিপোর্ট', gu:'🚨 ફરિયાદ', mr:'🚨 अहवाल', kn:'🚨 ವರದಿಗಳು', te:'🚨 నివేదికలు', ml:'🚨 റിപ്പോർട്ടുകൾ', ta:'🚨 அறிக்கைகள்', pa:'🚨 ਰਿਪੋਰਟਾਂ', or:'🚨 ରିପୋର୍ଟ', as:'🚨 ৰিপোৰ্ট' },
+
+            // ─── Home Dashboard Stats ───
+            'statProviders':    { en:'Skilled Providers', hi:'कुशल सेवादाता', bn:'দক্ষ সেবাদাতা', gu:'કુশળ સેવાદાતા', mr:'कुशल सेवा देणारे', kn:'ನಿಪುಣ ಸೇವಾ ಪೂರೈಕೆದಾರರು', te:'నిపుణ సేవా అందించేవారు', ml:'വിദഗ്ധ സേവനദാതാക്കൾ', ta:'திறமையான சேவையாளர்கள்', pa:'ਕੁਸ਼ਲ ਸੇਵਾਦਾਤੇ', or:'ଦକ୍ଷ ସେବାଦାତା', as:'দক্ষ সেৱাদাতা' },
+            'statReadyToServe': { en:'Ready to serve you', hi:'आपकी सेवा में', bn:'আপনাকে সেবা করতে প্রস্তুত', gu:'આपनी સેवामां', mr:'आपल्या सेवेत', kn:'ಸೇವೆ ಸಲ್ಲಿಸಲು ಸಿದ್ಧ', te:'మీకు సేవ చేయడానికి సిద్ధం', ml:'സേവനം ചെയ്യാൻ തയ്യാർ', ta:'உங்களுக்கு சேவை செய்ய தயார்', pa:'ਆਪਦੀ ਸੇਵਾ ਲਈ ਤਿਆਰ', or:'ଆପଣଙ୍କ ସେବା ପାଇଁ ପ୍ରସ୍ତୁତ', as:'আপোনাক সেৱা কৰিবলৈ সাজু' },
+            'statServices':     { en:'Services Listed', hi:'सेवाएं सूचीबद्ध', bn:'তালিকাভুক্ত সেবা', gu:'સেવાઓ નોંધાઈ', mr:'सूचीबद्ध सेवा', kn:'ಪಟ್ಟಿ ಮಾಡಿದ ಸೇವೆಗಳು', te:'జాబితా చేసిన సేవలు', ml:'ലിസ്ററ് ചെയ്ത സേവനങ്ങൾ', ta:'பட்டியலிட்ட சேவைகள்', pa:'ਸੂਚੀਬੱਧ ਸੇਵਾਵਾਂ', or:'ତାଲିକାଭୁକ୍ତ ସେବା', as:'তালিকাভুক্ত সেৱা' },
+            'statAcrossAll':    { en:'Across all categories', hi:'सभी श्रेणियों में', bn:'সব বিভাগে', gu:'બધી શ્રેણીઓ', mr:'सर्व श्रेणींमध्ये', kn:'ಎಲ್ಲಾ ವರ್ಗಗಳಲ್ಲಿ', te:'అన్ని వర్గాలలో', ml:'എല്ലാ വിഭാഗങ്ങളിലും', ta:'அனைத்து பிரிவுகளிலும்', pa:'ਸਾਰੀਆਂ ਸ਼੍ਰੇਣੀਆਂ ਵਿੱਚ', or:'ସମସ୍ତ ବର୍ଗ', as:'সকল শ্ৰেণীত' },
+            'statCategories':   { en:'Categories', hi:'श्रेणियां', bn:'বিভাগ', gu:'શ્રેણીઓ', mr:'श्रेणी', kn:'ವರ್ಗಗಳು', te:'వర్గాలు', ml:'വിഭാഗങ്ങൾ', ta:'பிரிவுகள்', pa:'ਸ਼੍ਰੇਣੀਆਂ', or:'ବର୍ଗ', as:'শ্ৰেণী' },
+            'statFindWhat':     { en:'Find what you need', hi:'अपनी जरूरत खोजें', bn:'আপনার প্রয়োজন খুঁজুন', gu:'આपनी जरूरत शोधो', mr:'आपली गरज शोधा', kn:'ನಿಮಗೆ ಬೇಕಾದ್ದನ್ನು ಹುಡುಕಿ', te:'మీకు కావలసింది వెతకండి', ml:'നിങ്ങൾക്ക് ആവശ്യമായത് കണ്ടെത്തൂ', ta:'உங்களுக்கு தேவையானதை கண்டறியுங்கள்', pa:'ਆਪਣੀ ਜ਼ਰੂਰਤ ਲੱਭੋ', or:'ଆବଶ୍ୟକ ଖୋଜ', as:'প্ৰয়োজনীয়তা বিচাৰক' },
+            'statClients':      { en:'Happy Clients', hi:'खुश ग्राहक', bn:'সন্তুষ্ট গ্রাহক', gu:'ખુशी ગ્રাહક', mr:'आनंदी ग्राहक', kn:'ಸಂತುಷ್ಟ ಗ್ರಾಹಕರು', te:'సంతృప్తి కస్టమర్లు', ml:'സന്തുഷ്ടരായ ഉപഭോക്താക്കൾ', ta:'மகிழ்ச்சியான வாடிக்கையாளர்கள்', pa:'ਖੁਸ਼ ਗ੍ਰਾਹਕ', or:'ଖୁସି ଗ୍ରାହକ', as:'সুখী গ্ৰাহক' },
+            'statVerified':     { en:'Verified reviews', hi:'सत्यापित समीक्षाएं', bn:'যাচাইকৃত রিভিউ', gu:'ચકাसेला সमीক्षा', mr:'सत्यापित समीक्षा', kn:'ಪರಿಶೀಲಿತ ಶ್ಲಾಘನೆಗಳು', te:'ధృవీకరించిన సమీక్షలు', ml:'സ്ഥിരീകരിച്ച അഭിപ്രായങ്ങൾ', ta:'சரிபார்க்கப்பட்ட மதிப்பீடுகள்', pa:'ਪ੍ਰਮਾਣਿਤ ਸਮੀਖਿਆਵਾਂ', or:'ଯାଞ୍ଚ ସମୀକ୍ଷା', as:'পৰীক্ষিত মন্তব্য' },
+            'managePlan':       { en:'Manage Membership Plan', hi:'सदस्यता योजना प्रबंधित करें', bn:'সদস্যতা পরিকল্পনা পরিচালনা করুন', gu:'સભ્યપદ યોજના', mr:'सदस्यता योजना व्यवस्थापित करा', kn:'ಸದಸ್ಯತ್ವ ಯೋಜನೆ', te:'సభ్యత్వ ప్రణాళిక', ml:'അംഗത്വ പദ്ധതി', ta:'உறுப்பினர் திட்டம்', pa:'ਮੈਂਬਰਸ਼ਿਪ ਯੋਜਨਾ', or:'ସଦସ୍ୟ ଯୋଜନା', as:'সদস্যতা পৰিকল্পনা' },
+            'aboutNav':         { en:'ℹ️ About', hi:'ℹ️ जानकारी', bn:'ℹ️ সম্পর্কে', gu:'ℹ️ માહિતી', mr:'ℹ️ माहिती', kn:'ℹ️ ಮಾಹಿತಿ', te:'ℹ️ గురించి', ml:'ℹ️ കുറിച്ച്', ta:'ℹ️ பற்றி', pa:'ℹ️ ਜਾਣਕਾਰੀ', or:'ℹ️ ବିଷୟରେ', as:'ℹ️ বিষয়ে' },
+            // ─── Join Banner ───────────────────────────────────────────
+            'joinTitle':     { en:'🔱 Join Sudarshan Chakra Today!',
+                               hi:'🔱 आज ही सुदर्शन चक्र से जुड़ें!',
+                               bn:'🔱 আজই সুদর্শন চক্রে যোগ দিন!',
+                               gu:'🔱 આজ સુદર્શન ચક્ર સાથે જોડાઓ!',
+                               mr:'🔱 आज सुदर्शन चक्रात सामील व्हा!',
+                               kn:'🔱 ಇಂದೇ ಸುದರ್ಶನ ಚಕ್ರಕ್ಕೆ ಸೇರಿ!',
+                               te:'🔱 నేడే సుదర్శన చక్రలో చేరండి!',
+                               ml:'🔱 ഇന്ന് സുദർശൻ ചക്രയിൽ ചേരൂ!',
+                               ta:'🔱 இன்றே சுதர்சன சக்ரத்தில் சேருங்கள்!',
+                               pa:'🔱 ਅੱਜ ਹੀ ਸੁਦਰਸ਼ਨ ਚੱਕਰ ਨਾਲ ਜੁੜੋ!',
+                               or:'🔱 ଆଜି ସୁଦର୍ଶନ ଚକ୍ରକୁ ଯୋଗ ଦିଅ!',
+                               as:'🔱 আজিয়েই সুদৰ্শন চক্ৰত যোগ দিয়ক!' },
+            'joinSubtitle':  { en:"Be part of India's growing skilled workforce — get work, earn money, build reputation",
+                               hi:'भारत के बढ़ते कुशल कार्यबल का हिस्सा बनें — काम पाएं, पैसा कमाएं, प्रतिष्ठा बनाएं',
+                               bn:'ভারতের ক্রমবর্ধমান দক্ষ কর্মী নেটওয়ার্কের অংশ হন',
+                               gu:'ભારતના કુશળ કામદાર નેટવર્કનો ભાગ બનો',
+                               mr:'भारताच्या कुशल कामगार नेटवर्कचा भाग व्हा',
+                               kn:'ಭಾರತದ ಕೌಶಲ್ಯ ಕಾರ್ಮಿಕ ನೆಟ್ವರ್ಕ್ ಭಾಗವಾಗಿ',
+                               te:'భారత నైపుణ్య కార్మిక నెట్‌వర్క్‌లో చేరండి',
+                               ml:'ഭാരതത്തിന്റെ നൈപുണ്യ തൊഴിലാളി ശൃംഖലയുടെ ഭാഗമാകൂ',
+                               ta:'இந்தியாவின் திறமையான தொழிலாளர் நெட்வொர்க்கில் சேருங்கள்',
+                               pa:'ਭਾਰਤ ਦੇ ਕੁਸ਼ਲ ਕਾਮਗਾਰ ਨੈੱਟਵਰਕ ਦਾ ਹਿੱਸਾ ਬਣੋ',
+                               or:'ଭାରତର ଦକ୍ଷ ଶ୍ରମ ନେଟୱାର୍କର ଅଂଶ ହୁଅ',
+                               as:'ভাৰতৰ দক্ষ কৰ্মী নেটৱৰ্কৰ অংশ হওক' },
+            // ─── Provider Registration Form ────────────────────────────────
+            'whatsappLabel': { en:'WhatsApp Number (if different from mobile)',
+                               hi:'व्हाट्सएप नंबर (मोबाइल से अलग होने पर)',
+                               bn:'হোয়াটসঅ্যাপ নম্বর (মোবাইল থেকে আলাদা হলে)',
+                               gu:'WhatsApp નંબર (મોબાઈલથી અલગ હોય તો)',
+                               mr:'WhatsApp नंबर (मोबाइलपेक्षा वेगळा असल्यास)',
+                               kn:'WhatsApp ಸಂಖ್ಯೆ (ಮೊಬೈಲ್‌ನಿಂದ ಭಿನ್ನವಾಗಿದ್ದರೆ)',
+                               te:'WhatsApp నంబర్ (మొబైల్ కంటే వేరుగా ఉంటే)',
+                               ml:'WhatsApp നംബർ (മൊബൈലിൽ നിന്ന് വ്യത്യസ്തമാണെങ്കിൽ)',
+                               ta:'WhatsApp எண் (மொபைலிலிருந்து வேறுபட்டால்)',
+                               pa:'WhatsApp ਨੰਬਰ (ਮੋਬਾਈਲ ਤੋਂ ਵੱਖ ਹੋਣ ਤੇ)',
+                               or:'WhatsApp ନଂ (ମୋବାଇଲ ଠୁ ଅଲଗ ହେଲେ)',
+                               as:'WhatsApp নং (মোবাইলৰ পৰা বেলেগ হলে)' },
+            'langSpoken':    { en:'🗣️ Languages Spoken',
+                               hi:'🗣️ बोली जाने वाली भाषाएं',
+                               bn:'🗣️ কথা বলা ভাষাসমূহ',
+                               gu:'🗣️ બોલાતી ભાષાઓ',
+                               mr:'🗣️ बोलल्या जाणाऱ्या भाषा',
+                               kn:'🗣️ ಮಾತನಾಡುವ ಭಾಷೆಗಳು',
+                               te:'🗣️ మాట్లాడే భాషలు',
+                               ml:'🗣️ സംസാരിക്കുന്ന ഭാഷകൾ',
+                               ta:'🗣️ பேசப்படும் மொழிகள்',
+                               pa:'🗣️ ਬੋਲੀਆਂ ਜਾਣ ਵਾਲੀਆਂ ਭਾਸ਼ਾਵਾਂ',
+                               or:'🗣️ କଥା ହେଉଥିବା ଭାଷା',
+                               as:'🗣️ কোৱা ভাষাসমূহ' },
+            'bioLabel':      { en:'About You / Bio (optional)',
+                               hi:'अपने बारे में / बायो (वैकल्पिक)',
+                               bn:'আপনার সম্পর্কে / বায়ো (ঐচ্ছিক)',
+                               gu:'તમારા વિશે / બાયો (વૈકલ્પિક)',
+                               mr:'स्वतःबद्दल / बायो (पर्यायी)',
+                               kn:'ನಿಮ್ಮ ಬಗ್ಗೆ / ಬಯೋ (ಐಚ್ಛಿಕ)',
+                               te:'మీ గురించి / బయో (ఐచ్ఛికం)',
+                               ml:'നിങ്ങളെക്കുറിച്ച് / ബയോ (ഐഛിക)',
+                               ta:'உங்களைப் பற்றி / பயோ (விருப்பம்)',
+                               pa:'ਆਪਣੇ ਬਾਰੇ / ਬਾਇਓ (ਵਿਕਲਪਿਕ)',
+                               or:'ନିଜ ବିଷୟରେ / ବାୟୋ (ଐଚ୍ଛିକ)',
+                               as:'আপোনাৰ বিষয়ে / বায়ো (ঐচ্ছিক)' },
+            'idVerify':      { en:'🪪 Identity Verification',
+                               hi:'🪪 पहचान सत्यापन',
+                               bn:'🪪 পরিচয় যাচাইকরণ',
+                               gu:'🪪 ઓળખ ચકાસણી',
+                               mr:'🪪 ओळख पडताळणी',
+                               kn:'🪪 ಗುರುತು ಪರಿಶೀಲನೆ',
+                               te:'🪪 గుర్తింపు ధృవీకరణ',
+                               ml:'🪪 ഐഡൻ്റിറ്റി പരിശോധന',
+                               ta:'🪪 அடையாள சரிபார்ப்பு',
+                               pa:'🪪 ਪਛਾਣ ਪੁਸ਼ਟੀ',
+                               or:'🪪 ପରିଚୟ ଯାଞ୍ଚ',
+                               as:'🪪 পৰিচয় যাচাইকৰণ' },
+            'registerProviderBtn': { en:'Register as Provider',
+                               hi:'सेवादाता के रूप में पंजीकरण करें',
+                               bn:'সেবাদাতা হিসেবে নিবন্ধন করুন',
+                               gu:'સેવાદાતા તરીકે નોંધણી કરો',
+                               mr:'सेवा देणारा म्हणून नोंदणी करा',
+                               kn:'ಸೇವಾ ಒದಗಿಸುವವರಾಗಿ ನೋಂದಾಯಿಸಿ',
+                               te:'సేవా అందించేవారిగా నమోదు చేయండి',
+                               ml:'സേവനദാതാവായി രജിസ്ടർ ചെയ്യൂ',
+                               ta:'சேவையாளராக பதிவு செய்யுங்கள்',
+                               pa:'ਸੇਵਾਦਾਤੇ ਵਜੋਂ ਰਜਿਸਟਰ ਕਰੋ',
+                               or:'ସେବାଦାତା ରୂପେ ପଞ୍ଜୀକରଣ କରନ୍ତୁ',
+                               as:'সেৱাদাতা হিচাপে নিবন্ধন কৰক' },
+        };
+        
+        // Translation helper function with variable substitution
+        function t(key, vars = {}) {
+            let text = translations[key] ? (translations[key][currentLanguage] || translations[key].en) : key;
+            // Replace variables like {count}
+            Object.keys(vars).forEach(varKey => {
+                text = text.replace(`{${varKey}}`, vars[varKey]);
+            });
+            return text;
+        }
+        
+        
+        // ==================== CATEGORY VERSION & MERGE SYSTEM ====================
+        // Increment CATEGORY_VERSION each time you add new default categories.
+        // The merge logic will ADD new categories/subcategories/services to saved data
+        // without removing anything the admin has added or customised.
+        const CATEGORY_VERSION = 2; // <-- bump this number when adding new defaults
+
+        // These are the MASTER default categories. They are only ever ADDED, never removed.
+        const DEFAULT_CATEGORIES = [
+            {
+                id: 'cat1',
+                name: {"en": "Home Services", "hi": "घरेलू सेवाएं", "bn": "বাড়ির সেবা", "gu": "ઘरनी सेवाओ", "mr": "घर सेवा", "kn": "ಮನೆ ಸೇವೆಗಳು", "te": "ఇంటి సేవలు", "ml": "വീടിൻ്റെ സേവനങ്ങൾ", "ta": "வீட்டு சேவைகள்", "pa": "ਘਰੇਲੂ ਸੇਵਾਵਾਂ", "or": "ଘରୋଇ ସେବା", "as": "ঘৰুৱা সেৱা"},
+                icon: '🏠',
+                subcategories: [
+                    {
+                        name: {"en": "Plumber", "hi": "प्लंबर", "bn": "প্লাম্বার", "gu": "પ્લmbar", "mr": "प्लंबर", "kn": "ಪ್ಲಂಬರ್", "te": "ప్లంబర్", "ml": "പ്ലംബർ", "ta": "பம்பர்", "pa": "ਪਲੰਬਰ", "or": "ପ୍ଲମ୍ବର", "as": "প্লাম্বাৰ"}, icon: '🔧',
+                        subsubcategories: [
+                            { name: {"en": "Pipe Repair", "hi": "पाइप मरम्मत", "bn": "পাইপ মেরামত", "or": "ପାଇପ ମରାମତ", "as": "পাইপ মেৰামতি"}, icon: '🔧' },
+                            { name: {"en": "Tap/Faucet Repair", "hi": "नल मरम्मत", "bn": "কল মেরামত", "or": "ନଳ ମରାମତ", "as": "নল মেৰামতি"}, icon: '🚰' },
+                            { name: {"en": "Tank Installation", "hi": "टंकी स्थापना", "bn": "ট্যাঙ্ক স্থাপনা", "or": "ଟ୍ୟାଙ୍କ ସ୍ଥାପନ", "as": "টেংক স্থাপন"}, icon: '💧' },
+                            { name: {"en": "Bathroom Fitting", "hi": "बाथरूम फिटिंग", "bn": "বাথরুম ফিটিং", "or": "ବାଥରୁମ ଫିଟିଂ", "as": "বাথৰুম ফিটিং"}, icon: '🚿' },
+                            { name: {"en": "Drainage Cleaning", "hi": "नाला सफाई", "bn": "ড্রেন পরিষ্কার", "or": "ଡ୍ରେନ ସଫେଇ", "as": "নলা পৰিষ্কাৰ"}, icon: '🪣' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Electrician", "hi": "इलेक्ट्रीशियन", "bn": "ইলেকট্রিশিয়ান", "gu": "ઇलेक्ट्रिशियन", "mr": "इलेक्ट्रिशियन", "kn": "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್", "te": "ఎలక్ట్రిషియన్", "ml": "ഇലക്ട്രിഷ്യൻ", "ta": "மின்சாரி", "pa": "ਇਲੈਕਟ੍ਰਿਸ਼ੀਅਨ", "or": "ଇଲେକ୍ଟ୍ରିଶିୟାନ", "as": "বিদ্যুৎ মিস্ত্ৰী"}, icon: '⚡',
+                        subsubcategories: [
+                            { name: {"en": "Wiring & Rewiring", "hi": "वायरिंग", "bn": "ওয়ারিং", "or": "ୱାୟରିଂ", "as": "ৱায়াৰিং"}, icon: '🔌' },
+                            { name: {"en": "Fan Installation", "hi": "पंखा लगाना", "bn": "পাখা লাগানো", "or": "ପ୍ୟାଖ ସ୍ଥାପନ", "as": "পখা লগোৱা"}, icon: '🌀' },
+                            { name: {"en": "Light Installation", "hi": "लाइट लगाना", "bn": "লাইট লাগানো", "or": "ଲାଇଟ ସ୍ଥାପନ", "as": "লাইট লগোৱা"}, icon: '💡' },
+                            { name: {"en": "Switchboard Repair", "hi": "स्विचबोर्ड मरम्मत", "bn": "সুইচবোর্ড মেরামত", "or": "ସ୍ୱିଚ ବୋର୍ଡ ମରାମତ", "as": "চুইচব'ৰ্ড মেৰামতি"}, icon: '🔲' },
+                            { name: {"en": "Appliance Repair", "hi": "उपकरण मरम्मत", "bn": "যন্ত্র মেরামত", "or": "ଉପକରଣ ମରାମତ", "as": "সঁজুলি মেৰামতি"}, icon: '🔧' }
+                        ]
+                    },
+                    {
+                        name: {"en": "AC Repair & Servicing", "hi": "एसी मरम्मत", "bn": "এসি মেরামত", "gu": "AC রিপেर", "mr": "एसी दुरुस्ती", "kn": "ಎಸಿ ರಿಪೇರಿ", "te": "ఎసి రిపేర్", "ml": "എസി റിപ്പേർ", "ta": "ஏசி பழுதுபார்ப்பு", "pa": "ਏਸੀ ਮੁਰੰਮਤ", "or": "ଏସି ମରାମତ", "as": "এচি মেৰামতি"}, icon: '❄️',
+                        subsubcategories: [
+                            { name: {"en": "AC Servicing", "hi": "एसी सर्विसिंग", "bn": "এসি সার্ভিসিং", "or": "ଏସି ସର୍ଭିସ", "as": "এচি চাৰ্ভিচিং"}, icon: '❄️' },
+                            { name: {"en": "AC Installation", "hi": "एसी इंस्टॉलेशन", "bn": "এসি ইনস্টলেশন", "or": "ଏସି ସ୍ଥାପନ", "as": "এচি স্থাপন"}, icon: '🔩' },
+                            { name: {"en": "AC Gas Refill", "hi": "एसी गैस भरना", "bn": "এসি গ্যাস", "or": "ଏସି ଗ୍ୟାସ", "as": "এচি গেছ"}, icon: '💨' },
+                            { name: {"en": "AC Uninstallation", "hi": "एसी हटाना", "bn": "এসি সরানো", "or": "ଏସି ଖୋଲ", "as": "এচি খোলা"}, icon: '🔧' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Carpenter", "hi": "बढ़ई", "bn": "কাঠমিস্ত্রী", "gu": "સुथार", "mr": "सुतार", "kn": "ಬಡಗಿ", "te": "వడ్రంగి", "ml": "ആശാരി", "ta": "தச்சர்", "pa": "ਤਰਖਾਣ", "or": "ଛୁତାର", "as": "ছুতাৰ"}, icon: '🪵',
+                        subsubcategories: [
+                            { name: {"en": "Furniture Repair", "hi": "फर्नीचर मरम्मत", "bn": "আসবাব মেরামত", "or": "ଫର୍ନିଚର ମରାମତ", "as": "আচবাব মেৰামতি"}, icon: '🪑' },
+                            { name: {"en": "Door/Window Repair", "hi": "दरवाजा मरम्मत", "bn": "দরজা মেরামত", "or": "ଦ୍ୱାର ମରାମତ", "as": "দুৱাৰ মেৰামতি"}, icon: '🚪' },
+                            { name: {"en": "Wood Polishing", "hi": "लकड़ी पॉलिशिंग", "bn": "কাঠ পালিশ", "or": "କାଠ ପଲିଶ", "as": "কাঠ পলিচ"}, icon: '✨' },
+                            { name: {"en": "Custom Furniture", "hi": "कस्टम फर्नीचर", "bn": "কাস্টম আসবাব", "or": "କଷ୍ଟମ ଫର୍ନିଚର", "as": "কাষ্টম আচবাব"}, icon: '🛋️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "RO Repair & Installation", "hi": "आरओ मरम्मत", "bn": "আরও মেরামত", "gu": "RO", "mr": "आरओ दुरुस्ती", "kn": "ಆರ್ಒ ರಿಪೇರಿ", "te": "ఆర్ఓ రిపేర్", "ml": "ആർഒ റിപ്പേർ", "ta": "ஆர்ஓ பழுது", "pa": "ਆਰਓ ਮੁਰੰਮਤ", "or": "ଆରଓ ମରାମତ", "as": "আৰঅ মেৰামতি"}, icon: '💧',
+                        subsubcategories: [
+                            { name: {"en": "RO Installation", "hi": "आरओ इंस्टालेशन", "bn": "আরও ইনস্টলেশন", "or": "ଆରଓ ସ୍ଥାପନ", "as": "আৰঅ স্থাপন"}, icon: '💧' },
+                            { name: {"en": "RO Service & Filter Change", "hi": "आरओ सर्विस", "bn": "আরও সার্ভিস", "or": "ଆରଓ ସର୍ଭିସ", "as": "আৰঅ চাৰ্ভিচ"}, icon: '🔧' },
+                            { name: {"en": "RO Repair", "hi": "आरओ मरम्मत", "bn": "আরও মেরামত", "or": "ଆରଓ ମରାମତ", "as": "আৰঅ মেৰামতি"}, icon: '🛠️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Geyser Repair", "hi": "गीजर मरम्मत", "bn": "গিজার মেরামত", "gu": "ગীઝर", "mr": "गीझर दुरुस्ती", "kn": "ಗೀಸರ್ ರಿಪೇರಿ", "te": "గీజర్ రిపేర్", "ml": "ഗീസർ റിപ്പേർ", "ta": "கீசர் பழுது", "pa": "ਗੀਜ਼ਰ ਮੁਰੰਮਤ", "or": "ଗିଜର ମରାମତ", "as": "গিজাৰ মেৰামতি"}, icon: '🚿',
+                        subsubcategories: [
+                            { name: {"en": "Geyser Repair", "hi": "गीजर मरम्मत", "bn": "গিজার মেরামত", "gu": "ગীઝर", "mr": "गीझर दुरुस्ती", "kn": "ಗೀಸರ್ ರಿಪೇರಿ", "te": "గీజర్ రిపేర్", "ml": "ഗീസർ റിപ്പേർ", "ta": "கீசர் பழுது", "pa": "ਗੀਜ਼ਰ ਮੁਰੰਮਤ", "or": "ଗିଜର ମରାମତ", "as": "গিজাৰ মেৰামতি"}, icon: '🔧' },
+                            { name: {"en": "Geyser Installation", "hi": "गीजर इंस्टॉलेशन", "bn": "গিজার ইনস্টলেশন", "or": "ଗିଜର ସ୍ଥାପନ", "as": "গিজাৰ স্থাপন"}, icon: '🚿' },
+                            { name: {"en": "Element Replacement", "hi": "एलिमेंट बदलना", "bn": "উপাদান পরিবর্তন", "or": "ଏଲିମେଣ୍ଟ ବଦଳ", "as": "উপাদান সলনি"}, icon: '⚡' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Inverter/Battery Service", "hi": "इन्वर्टर सेवा", "bn": "ইনভার্টার সেবা", "gu": "ઇन्वर्टर", "mr": "इन्व्हर्टर सेवा", "kn": "ಇನ್ವರ್ಟರ್", "te": "ఇన్వర్టర్", "ml": "ഇൻവർട്ടർ", "ta": "இன்வெர்டர்", "pa": "ਇਨਵਰਟਰ", "or": "ଇନ୍ଭର୍ଟର ସେବା", "as": "ইনভাৰ্টাৰ সেৱা"}, icon: '🔋',
+                        subsubcategories: [
+                            { name: {"en": "Inverter Repair", "hi": "इन्वर्टर मरम्मत", "bn": "ইনভার্টার মেরামত", "or": "ଇନ୍ଭର୍ଟର ମରାମତ", "as": "ইনভাৰ্টাৰ মেৰামতি"}, icon: '🔋' },
+                            { name: {"en": "Battery Replacement", "hi": "बैटरी बदलना", "bn": "ব্যাটারি পরিবর্তন", "or": "ବ୍ୟାଟେରୀ ବଦଳ", "as": "বেটাৰী সলনি"}, icon: '🔌' },
+                            { name: {"en": "Solar Panel Service", "hi": "सोलर पैनल सर्विस", "bn": "সোলার প্যানেল", "or": "ସୋଲାର ପ୍ୟାନେଲ", "as": "চৌৰ পেনেল"}, icon: '☀️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "CCTV Installation", "hi": "सीसीटीवी स्थापना", "bn": "সিসিটিভি স্থাপনা", "gu": "CCTV", "mr": "सीसीटीव्ही बसवणे", "kn": "ಸಿಸಿಟಿವಿ ಅಳವಡಿಕೆ", "te": "సీసీటీవీ ఇన్స్టాలేషన్", "ml": "സിസിടിവി ഇൻസ്റ്റലേഷൻ", "ta": "சிசிடிவி நிறுவல்", "pa": "ਸੀਸੀਟੀਵੀ ਸਥਾਪਨਾ", "or": "ସିସିଟିଭି ସ୍ଥାପନ", "as": "চিচিটিভি স্থাপন"}, icon: '📷',
+                        subsubcategories: [
+                            { name: {"en": "CCTV Installation", "hi": "सीसीटीवी स्थापना", "bn": "সিসিটিভি স্থাপনা", "gu": "CCTV", "mr": "सीसीटीव्ही बसवणे", "kn": "ಸಿಸಿಟಿವಿ ಅಳವಡಿಕೆ", "te": "సీసీటీవీ ఇన్స్టాలేషన్", "ml": "സിസിടിവി ഇൻസ്റ്റലേഷൻ", "ta": "சிசிடிவி நிறுவல்", "pa": "ਸੀਸੀਟੀਵੀ ਸਥਾਪਨਾ", "or": "ସିସିଟିଭି ସ୍ଥାପନ", "as": "চিচিটিভি স্থাপন"}, icon: '📷' },
+                            { name: {"en": "CCTV Repair", "hi": "सीसीटीवी मरम्मत", "bn": "সিসিটিভি মেরামত", "or": "ସିସିଟିଭି ମରାମତ", "as": "চিচিটিভি মেৰামতি"}, icon: '🔧' },
+                            { name: {"en": "DVR/NVR Setup", "hi": "डीवीआर/एनवीआर सेटअप", "bn": "DVR/NVR সেটআপ", "or": "DVR/NVR ସেଟଅପ", "as": "DVR/NVR ছেটআপ"}, icon: '🖥️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Water Tank Cleaning", "hi": "पानी टंकी सफाई", "bn": "ট্যাঙ্ক পরিষ্কার", "gu": "ટांकी", "mr": "टाकी साफसफाई", "kn": "ಟ್ಯಾಂಕ್ ಶುಚಿಗೊಳಿಸುವಿಕೆ", "te": "ట్యాంక్ క్లీనింగ్", "ml": "ടാങ്ക് ക്ലീനിങ്", "ta": "தொட்டி சுத்தம்", "pa": "ਟੈਂਕ ਸਫ਼ਾਈ", "or": "ଜଳ ଟ୍ୟାଙ୍କ ସଫେଇ", "as": "পানীৰ টেংক পৰিষ্কাৰ"}, icon: '🛢️',
+                        subsubcategories: [
+                            { name: {"en": "Overhead Tank Cleaning", "hi": "ओवरहेड टंकी सफाई", "bn": "ওভারহেড ট্যাঙ্ক", "or": "ଓଭରହେଡ ଟ୍ୟାଙ୍କ ସଫେଇ", "as": "অভাৰহেড টেংক পৰিষ্কাৰ"}, icon: '🛢️' },
+                            { name: {"en": "Underground Tank Cleaning", "hi": "भूमिगत टंकी सफाई", "bn": "ভূগর্ভস্থ ট্যাঙ্ক", "or": "ଭୂମିଗତ ଟ୍ୟାଙ୍କ ସଫେଇ", "as": "ভূগৰ্ভস্থ টেংক পৰিষ্কাৰ"}, icon: '⬇️' },
+                            { name: {"en": "Sump Cleaning", "hi": "सम्प सफाई", "bn": "সাম্প পরিষ্কার", "or": "ସମ୍ପ ସଫେଇ", "as": "চাম্প পৰিষ্কাৰ"}, icon: '🪣' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Pest Control", "hi": "कीट नियंत्रण", "bn": "কীটপতঙ্গ নিয়ন্ত্রণ", "gu": "જीवात", "mr": "कीड नियंत्रण", "kn": "ಕೀಟ ನಿಯಂತ್ರಣ", "te": "చీడ నియంత్రణ", "ml": "കീടനിയന്ത്രണം", "ta": "பூச்சி கட்டுப்பாடு", "pa": "ਕੀਟ ਨਿਯੰਤਰਣ", "or": "ପୋକ ନିୟନ୍ତ୍ରଣ", "as": "পোক নিয়ন্ত্ৰণ"}, icon: '🐜',
+                        subsubcategories: [
+                            { name: {"en": "Cockroach Treatment", "hi": "तिलचट्टा उपचार", "bn": "আরশোলা চিকিৎসা", "or": "ଝୁଣ୍ଟୁ ଚିକିତ୍ସା", "as": "পেৰেলা চিকিৎসা"}, icon: '🪲' },
+                            { name: {"en": "Termite Treatment", "hi": "दीमक उपचार", "bn": "উইপোকা চিকিৎসা", "or": "ଉଇ ଚିକିତ୍ସା", "as": "পিঁপৰা চিকিৎসা"}, icon: '🐛' },
+                            { name: {"en": "Mosquito Treatment", "hi": "मच्छर उपचार", "bn": "মশা চিকিৎসা", "or": "ମଶା ଚିକିତ୍ସା", "as": "মহ চিকিৎসা"}, icon: '🦟' },
+                            { name: {"en": "Rodent Control", "hi": "चूहा नियंत्रण", "bn": "ইঁদুর নিয়ন্ত্রণ", "or": "ମୁଷା ନିୟନ୍ତ୍ରଣ", "as": "নিগনি নিয়ন্ত্ৰণ"}, icon: '🐀' },
+                            { name: {"en": "Bed Bug Treatment", "hi": "खटमल उपचार", "bn": "ছারপোকা চিকিৎসা", "or": "ଖଟ ପୋକ ଚିକିତ୍ସା", "as": "বেড বাগ চিকিৎসা"}, icon: '🛏️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Painter", "hi": "पेंटर", "bn": "পেইন্টার", "gu": "পেন्टर", "mr": "पेंटर", "kn": "ಪೇಂಟರ್", "te": "పెయింటర్", "ml": "പെയിന്റർ", "ta": "வண்ணப்பூச்சாளர்", "pa": "ਪੇਂਟਰ", "or": "ପେଣ୍ଟର", "as": "ৰং কৰোঁতা"}, icon: '🎨',
+                        subsubcategories: [
+                            { name: {"en": "Wall Painting", "hi": "दीवार पेंटिंग", "bn": "দেয়াল রং", "or": "କାନ୍ଥ ରଙ୍ଗ", "as": "বেৰ ৰং"}, icon: '🖌️' },
+                            { name: {"en": "Waterproofing", "hi": "वाटरप्रूफिंग", "bn": "ওয়াটারপ্রুফিং", "or": "ୱାଟରପ୍ରୁଫ", "as": "ৱাটাৰপ্ৰুফ"}, icon: '💦' },
+                            { name: {"en": "Texture Painting", "hi": "टेक्सचर पेंटिंग", "bn": "টেক্সচার রং", "or": "ଟେକ୍ସଚର ରଙ୍ଗ", "as": "টেক্সচাৰ ৰং"}, icon: '🎨' },
+                            { name: {"en": "Exterior Painting", "hi": "बाहरी पेंटिंग", "bn": "বাইরের রং", "or": "ବାହ୍ୟ ରଙ୍ଗ", "as": "বাহিৰৰ ৰং"}, icon: '🏠' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Interior Designer", "hi": "इंटीरियर डिजाइनर", "bn": "ইন্টেরিয়র ডিজাইনার", "gu": "ઇन्टिरिअर", "mr": "इंटेरिअर डिझायनर", "kn": "ಇಂಟೀರಿಯರ್ ಡಿಸೈನರ್", "te": "ఇంటీరియర్ డిజైనర్", "ml": "ഇന്റീരിയർ ഡിസൈനർ", "ta": "உட்புற வடிவமைப்பாளர்", "pa": "ਇੰਟੀਰੀਅਰ ਡਿਜ਼ਾਈਨਰ", "or": "ଇଣ୍ଟେରିଅର ଡିଜାଇନର", "as": "ইণ্টেৰিয়ৰ ডিজাইনাৰ"}, icon: '🛋️',
+                        subsubcategories: [
+                            { name: {"en": "Home Interior Design", "hi": "होम इंटीरियर", "bn": "হোম ইন্টেরিয়র", "or": "ଘର ଇଣ୍ଟେରିଅର", "as": "ঘৰ ইণ্টেৰিয়ৰ"}, icon: '🏡' },
+                            { name: {"en": "3D Design Consultation", "hi": "3डी डिजाइन", "bn": "3ডি ডিজাইন", "or": "3D ଡିଜାଇନ", "as": "3D ডিজাইন"}, icon: '🖥️' },
+                            { name: {"en": "Office Interior", "hi": "ऑफिस इंटीरियर", "bn": "অফিস ইন্টেরিয়র", "or": "ଅଫିସ ଇଣ୍ଟେରିଅର", "as": "অফিচ ইণ୍টেৰিয়ৰ"}, icon: '🏢' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Modular Kitchen", "hi": "मॉड्यूलर किचन", "bn": "মডুলার রান্নাঘর", "gu": "मॉड्युलर", "mr": "मॉड्युलर किचन", "kn": "ಮಾಡ್ಯುಲರ್ ಅಡುಗೆಮನೆ", "te": "మాడ్యులర్ వంటగది", "ml": "മോഡുലർ അടുക്കള", "ta": "மாடுலர் சமையலறை", "pa": "ਮਾਡੂਲਰ ਕਿਚਨ", "or": "ମଡ୍ୟୁଲାର ରୋଷେଇ", "as": "মডুলাৰ পাকঘৰ"}, icon: '🍳',
+                        subsubcategories: [
+                            { name: {"en": "Modular Kitchen Design", "hi": "मॉड्यूलर किचन डिजाइन", "bn": "মডুলার কিচেন ডিজাইন", "or": "ମଡ୍ୟୁଲାର ରୋଷେଇ ଡିଜାଇନ", "as": "মডুলাৰ পাকঘৰ ডিজাইন"}, icon: '🍳' },
+                            { name: {"en": "Kitchen Installation", "hi": "किचन इंस्टॉलेशन", "bn": "কিচেন ইনস্টলেশন", "or": "ରୋଷେଇ ସ୍ଥାପନ", "as": "পাকঘৰ স্থাপন"}, icon: '🔩' },
+                            { name: {"en": "Kitchen Repair", "hi": "किचन मरम्मत", "bn": "কিচেন মেরামত", "or": "ରୋଷେଇ ମରାମତ", "as": "পাকঘৰ মেৰামতি"}, icon: '🔧' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat2',
+                name: {"en": "Beauty & Wellness", "hi": "सौंदर्य और स्वास्थ्य", "bn": "সৌন্দর্য ও স্বাস্থ্য", "gu": "સૌंदर्य", "mr": "सौंदर्य आणि आरोग्य", "kn": "ಸೌಂದರ್ಯ ಮತ್ತು ಆರೋಗ್ಯ", "te": "అందం మరియు ఆరోగ్యం", "ml": "സൗന്ദര്യവും ആരോഗ്യവും", "ta": "அழகு மற்றும் ஆரோக்கியம்", "pa": "ਸੁੰਦਰਤਾ ਅਤੇ ਸਿਹਤ", "or": "ସୌନ୍ଦର୍ୟ ଓ ସ୍ୱାସ୍ଥ୍ୟ", "as": "সৌন্দৰ্য আৰু স্বাস্থ্য"},
+                icon: '💄',
+                subcategories: [
+                    {
+                        name: {"en": "Bridal Makeup", "hi": "दुल्हन मेकअप", "bn": "বিয়ের মেকআপ", "or": "ବ୍ୟୁଟି ମେକଅପ", "as": "কইনাৰ মেকআপ"}, icon: '👰',
+                        subsubcategories: [
+                            { name: {"en": "Bridal Makeup", "hi": "दुल्हन मेकअप", "bn": "বিয়ের মেকআপ", "or": "ବ୍ୟୁଟି ମେକଅପ", "as": "কইনাৰ মেকআপ"}, icon: '💄' },
+                            { name: {"en": "Engagement Makeup", "hi": "सगाई मेकअप", "bn": "এনগেজমেন্ট মেকআপ", "or": "ଏଙ୍ଗେଜମେଣ୍ଟ ମେକଅପ", "as": "এনগেজমেন্ট মেকআপ"}, icon: '💍' },
+                            { name: {"en": "Party Makeup", "hi": "पार्टी मेकअप", "bn": "পার্টি মেকআপ", "or": "ପାର୍ଟି ମେକଅପ", "as": "পাৰ্টি মেকআপ"}, icon: '✨' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Mehendi Artist", "hi": "मेहंदी कलाकार", "bn": "মেহেন্দি শিল্পী", "gu": "মेहेन्दी", "mr": "मेहंदी कलाकार", "kn": "ಮೆಹೆಂದಿ ಕಲಾವಿದ", "te": "మెహందీ కళాకారుడు", "ml": "മൈലാഞ്ചി കലാകാരൻ", "ta": "மருதாணி கலைஞர்", "pa": "ਮਹਿੰਦੀ ਕਲਾਕਾਰ", "or": "ମେହୁନ୍ଦି କଳାକାର", "as": "মেহেন্দি শিল্পী"}, icon: '🌿',
+                        subsubcategories: [
+                            { name: {"en": "Bridal Mehendi", "hi": "दुल्हन मेहंदी", "bn": "বিয়ের মেহেন্দি", "or": "ବ୍ରାଇଡ଼ାଲ ମେହୁନ୍ଦି", "as": "কইনাৰ মেহেন্দি"}, icon: '👰' },
+                            { name: {"en": "Party Mehendi", "hi": "पार्टी मेहंदी", "bn": "পার্টি মেহেন্দি", "or": "ପାର୍ଟି ମେହୁନ୍ଦି", "as": "পাৰ্টি মেহেন্দি"}, icon: '🎉' },
+                            { name: {"en": "Arabic Mehendi", "hi": "अरबिक मेहंदी", "bn": "আরবিক মেহেন্দি", "or": "ଆରବ ମେହୁନ୍ଦି", "as": "আৰবিক মেহেন্দি"}, icon: '🌿' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Home Salon Services", "hi": "होम सैलून सेवाएं", "bn": "হোম সেলুন সেবা", "or": "ଘରୋଇ ସ୍ୟାଲୁନ", "as": "ঘৰুৱা চেলুন সেৱা"}, icon: '💅',
+                        subsubcategories: [
+                            { name: {"en": "Facial", "hi": "फेशियल", "bn": "ফেসিয়াল", "or": "ଫେସିଆଲ", "as": "ফেচিয়েল"}, icon: '🧖' },
+                            { name: {"en": "Waxing", "hi": "वैक्सिंग", "bn": "ওয়াক্সিং", "or": "ୱ୍ୟାକ୍ସିଂ", "as": "ৱেক্সিং"}, icon: '✨' },
+                            { name: {"en": "Threading", "hi": "थ्रेडिंग", "bn": "থ্রেডিং", "or": "ଥ୍ରେଡ଼ିଂ", "as": "থ্ৰেডিং"}, icon: '🧵' },
+                            { name: {"en": "Pedicure & Manicure", "hi": "पेडीक्योर और मैनीक्योर", "bn": "পেডিকিওর ও ম্যানিকিউর", "or": "ପେଡ଼ିକ୍ୟୁଅର", "as": "পেডিকিউৰ আৰু মেনিকিউৰ"}, icon: '💅' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Hair Stylist at Home", "hi": "घर पर हेयर स्टाइलिस्ट", "bn": "বাড়িতে হেয়ার স্টাইলিস্ট", "or": "ଘରୋଇ ହେୟାର ଷ୍ଟାଇଲ", "as": "ঘৰত হেয়াৰ ষ্টাইলিষ্ট"}, icon: '💇',
+                        subsubcategories: [
+                            { name: {"en": "Haircut", "hi": "बाल कटाई", "bn": "চুল কাটা", "or": "ଚୁଲି କଟା", "as": "চুলি কটা"}, icon: '✂️' },
+                            { name: {"en": "Hair Colour", "hi": "बाल रंगाई", "bn": "চুলে রং", "or": "ଚୁଲି ରଙ୍ଗ", "as": "চুলিত ৰং"}, icon: '🎨' },
+                            { name: {"en": "Hair Treatment", "hi": "बाल उपचार", "bn": "চুলের চিকিৎসা", "or": "ଚୁଲି ଚିକିତ୍ସା", "as": "চুলিৰ চিকিৎসা"}, icon: '✨' },
+                            { name: {"en": "Blow Dry & Setting", "hi": "ब्लो ड्राई और सेटिंग", "bn": "ব্লো ড্রাই ও সেটিং", "or": "ବ୍ଲୋ ଡ୍ରାୟ", "as": "ব্লো ড্ৰাই"}, icon: '💨' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Nail Artist", "hi": "नेल कलाकार", "bn": "নেইল শিল্পী", "or": "ନ୍ୟାଇଲ ଆର୍ଟିଷ୍ଟ", "as": "নেইল শিল্পী"}, icon: '💅',
+                        subsubcategories: [
+                            { name: {"en": "Nail Extensions", "hi": "नेल एक्सटेंशन", "bn": "নেইল এক্সটেনশন", "or": "ନ୍ୟାଇଲ ଏକ୍ସଟେନ୍ସନ", "as": "নেইল এক্সটেনচন"}, icon: '💅' },
+                            { name: {"en": "Nail Art", "hi": "नेल आर्ट", "bn": "নেইল আর্ট", "or": "ନ୍ୟାଇଲ ଆର୍ଟ", "as": "নেইল আৰ্ট"}, icon: '🎨' },
+                            { name: {"en": "Gel Nails", "hi": "जेल नेल्स", "bn": "জেল নেইলস", "or": "ଜେଲ ନ୍ୟାଇଲ", "as": "জেল নেইলছ"}, icon: '✨' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Men Grooming", "hi": "पुरुषों की देखभाल", "bn": "পুরুষদের সাজসজ্জা", "or": "ପୁରୁଷ ଗ୍ରୁମିଂ", "as": "পুৰুষৰ গ্ৰুমিং"}, icon: '💈',
+                        subsubcategories: [
+                            { name: {"en": "Haircut at Home", "hi": "घर पर बाल कटाई", "bn": "বাড়িতে চুল কাটা", "or": "ଘରୋଇ ଚୁଲି କଟା", "as": "ঘৰত চুলি কটা"}, icon: '✂️' },
+                            { name: {"en": "Beard Styling", "hi": "दाढ़ी स्टाइलिंग", "bn": "দাড়ি স্টাইলিং", "or": "ଦାଢ଼ି ଷ୍ଟାଇଲ", "as": "দাড়ি ষ্টাইলিং"}, icon: '🧔' },
+                            { name: {"en": "Facial for Men", "hi": "पुरुषों के लिए फेशियल", "bn": "পুরুষদের জন্য ফেসিয়াল", "or": "ପୁରୁଷ ଫେସିଆଲ", "as": "পুৰুষৰ ফেচিয়েল"}, icon: '🧖' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Spa at Home", "hi": "घर पर स्पा", "bn": "বাড়িতে স্পা", "or": "ଘରୋଇ ସ୍ପା", "as": "ঘৰত স্পা"}, icon: '🧘',
+                        subsubcategories: [
+                            { name: {"en": "Full Body Massage", "hi": "फुल बॉडी मसाज", "bn": "পুরো শরীরের ম্যাসাজ", "or": "ଫୁଲ ବଡ଼ି ମସାଜ", "as": "সম্পূৰ্ণ শৰীৰৰ মালিচ"}, icon: '💆' },
+                            { name: {"en": "Head Massage", "hi": "सिर मसाज", "bn": "মাথার ম্যাসাজ", "or": "ମୁଣ୍ଡ ମସାଜ", "as": "মূৰৰ মালিচ"}, icon: '🧠' },
+                            { name: {"en": "Foot Massage", "hi": "पैर मसाज", "bn": "পায়ের ম্যাসাজ", "or": "ପାଦ ମସାଜ", "as": "ভৰিৰ মালিচ"}, icon: '🦶' },
+                            { name: {"en": "Aromatherapy", "hi": "अरोमाथेरेपी", "bn": "অ্যারোমাথেরাপি", "or": "ଆରୋମାଥେରାପି", "as": "এৰোমাথেৰাপি"}, icon: '🌸' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Fitness Trainer", "hi": "फिटनेस ट्रेनर", "bn": "ফিটনেস ট্রেনার", "or": "ଫିଟ୍ନେସ ଟ୍ରେନର", "as": "ফিটনেছ ট্ৰেইনাৰ"}, icon: '🏋️',
+                        subsubcategories: [
+                            { name: {"en": "Personal Training at Home", "hi": "घर पर पर्सनल ट्रेनिंग", "bn": "বাড়িতে ব্যক্তিগত প্রশিক্ষণ", "or": "ଘରୋଇ ଟ୍ରେନିଂ", "as": "ঘৰত ব্যক্তিগত প্ৰশিক্ষণ"}, icon: '🏋️' },
+                            { name: {"en": "Weight Loss Program", "hi": "वजन घटाने का कार्यक्रम", "bn": "ওজন কমানোর প্রোগ্রাম", "or": "ଓଜନ ହ୍ରାସ ପ୍ରୋଗ୍ରାମ", "as": "ওজন কমোৱা কাৰ্যসূচী"}, icon: '⚖️' },
+                            { name: {"en": "Strength Training", "hi": "शक्ति प्रशिक्षण", "bn": "শক্তি প্রশিক্ষণ", "or": "ଶକ୍ତି ଟ୍ରେନିଂ", "as": "শক্তি প্ৰশিক্ষণ"}, icon: '💪' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Yoga Instructor", "hi": "योग प्रशिक्षक", "bn": "যোগ প্রশিক্ষক", "or": "ଯୋଗ ପ୍ରଶିକ୍ଷକ", "as": "যোগ প্ৰশিক্ষক"}, icon: '🧘',
+                        subsubcategories: [
+                            { name: {"en": "Morning Yoga", "hi": "सुबह योग", "bn": "সকালের যোগ", "or": "ସକାଳ ଯୋଗ", "as": "ৰাৱিলীয়া যোগ"}, icon: '🌅' },
+                            { name: {"en": "Meditation Sessions", "hi": "ध्यान सत्र", "bn": "ধ্যান সেশন", "or": "ଧ୍ୟାନ ସତ୍ର", "as": "ধ্যান অধিৱেশন"}, icon: '🧘' },
+                            { name: {"en": "Prenatal Yoga", "hi": "प्रसवपूर्व योग", "bn": "প্রসূতি যোগ", "or": "ପ୍ରସବ ଯୋଗ", "as": "প্ৰসৱপূৰ্ব যোগ"}, icon: '🤰' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Dietician", "hi": "आहार विशेषज्ञ", "bn": "পুষ্টিবিদ", "or": "ଆହାର ବିଶେଷଜ୍ଞ", "as": "পুষ্টিবিদ"}, icon: '🥗',
+                        subsubcategories: [
+                            { name: {"en": "Diet Consultation", "hi": "डाइट परामर्श", "bn": "ডায়েট পরামর্শ", "or": "ଡ଼ାଏଟ ସଲାହ", "as": "ডায়েট পৰামৰ্শ"}, icon: '🥗' },
+                            { name: {"en": "Weight Management Plan", "hi": "वजन प्रबंधन योजना", "bn": "ওজন ব্যবস্থাপনা পরিকল্পনা", "or": "ଓଜନ ପ୍ରବନ୍ଧ ଯୋଜନା", "as": "ওজন ব্যৱস্থাপনা পৰিকল্পনা"}, icon: '⚖️' },
+                            { name: {"en": "Disease-specific Diet", "hi": "रोग-विशिष्ट आहार", "bn": "রোগ-নির্দিষ্ট আহার", "or": "ରୋଗ ଆଧାରିତ ଡ଼ାଏଟ", "as": "ৰোগ-নিৰ্দিষ্ট আহাৰ"}, icon: '🏥' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Physiotherapist", "hi": "फिजियोथेरेपिस्ट", "bn": "ফিজিওথেরাপিস্ট", "or": "ଫିଜିଓଥେରାପିଷ୍ଟ", "as": "ফিজিঅথেৰাপিষ୍ট"}, icon: '🦴',
+                        subsubcategories: [
+                            { name: {"en": "Home Physiotherapy", "hi": "घर पर फिजियोथेरेपी", "bn": "বাড়িতে ফিজিওথেরাপি", "or": "ଘରୋଇ ଫିଜିଓ", "as": "ঘৰত ফিজিঅথেৰাপি"}, icon: '🦴' },
+                            { name: {"en": "Sports Injury Rehab", "hi": "खेल चोट पुनर्वास", "bn": "ক্রীড়া আঘাত পুনর্বাসন", "or": "ଖେଳ ଆଘାତ ଚିକିତ୍ସା", "as": "ক্ৰীড়া আঘাত পুনৰ্বাসন"}, icon: '⚽' },
+                            { name: {"en": "Post-surgery Rehab", "hi": "सर्जरी के बाद पुनर्वास", "bn": "অস্ত্রোপচার পরবর্তী পুনর্বাসন", "or": "ଅପରେଶନ ପରେ ଚିକିତ୍ସା", "as": "অস্ত্ৰোপচাৰৰ পিছৰ পুনৰ্বাসন"}, icon: '🏥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat3',
+                name: {"en": "Cleaning Services", "hi": "सफाई सेवाएं", "bn": "পরিষ্কার সেবা", "or": "ସଫାଇ ସେବା", "as": "পৰিষ্কাৰ সেৱা"},
+                icon: '🧹',
+                subcategories: [
+                    {
+                        name: {"en": "Deep Home Cleaning", "hi": "डीप होम क्लीनिंग", "bn": "ডিপ হোম ক্লিনিং", "or": "ଡ଼ିପ ଘର ସଫେଇ", "as": "গভীৰ ঘৰ পৰিষ্কাৰ"}, icon: '🏠',
+                        subsubcategories: [
+                            { name: {"en": "Full Home Deep Clean", "hi": "पूरे घर की डीप क्लीन", "bn": "পুরো বাড়ির গভীর পরিষ্কার", "or": "ଫୁଲ ଘର ସଫେଇ", "as": "সম্পূৰ্ণ ঘৰ পৰিষ্কাৰ"}, icon: '🧹' },
+                            { name: {"en": "Bathroom Deep Clean", "hi": "बाथरूम डीप क्लीन", "bn": "বাথরুম গভীর পরিষ্কার", "or": "ବାଥରୁମ ସଫେଇ", "as": "বাথৰুম পৰিষ্কাৰ"}, icon: '🚿' },
+                            { name: {"en": "Post-renovation Cleaning", "hi": "नवीनीकरण के बाद सफाई", "bn": "সংস্কারের পরে পরিষ্কার", "or": "ନବୀକରଣ ପରେ ସଫେଇ", "as": "নৱীকৰণৰ পিছৰ পৰিষ্কাৰ"}, icon: '🔨' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Sofa Cleaning", "hi": "सोफा सफाई", "bn": "সোফা পরিষ্কার", "or": "ସୋଫା ସଫେଇ", "as": "চোফা পৰিষ্কাৰ"}, icon: '🛋️',
+                        subsubcategories: [
+                            { name: {"en": "Fabric Sofa Cleaning", "hi": "फैब्रिक सोफा सफाई", "bn": "ফ্যাব্রিক সোফা পরিষ্কার", "or": "ଫ୍ୟାବ୍ରିକ ସୋଫା ସଫେଇ", "as": "ফেব্ৰিক চোফা পৰিষ্কাৰ"}, icon: '🛋️' },
+                            { name: {"en": "Leather Sofa Cleaning", "hi": "लेदर सोफा सफाई", "bn": "লেদার সোফা পরিষ্কার", "or": "ଲେଦର ସୋଫା ସଫେଇ", "as": "চামৰা চোফা পৰিষ্কাৰ"}, icon: '✨' },
+                            { name: {"en": "Sofa Shampooing", "hi": "सोफा शैम्पूइंग", "bn": "সোফা শ্যাম্পু করা", "or": "ସୋଫା ଶ୍ୟାମ୍ପୁ", "as": "চোফা শ্যাম্পু কৰা"}, icon: '🧴' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Mattress Cleaning", "hi": "गद्दा सफाई", "bn": "গদি পরিষ্কার", "or": "ଗଦ୍ଦା ସଫେଇ", "as": "গদ্দা পৰিষ্কাৰ"}, icon: '🛏️',
+                        subsubcategories: [
+                            { name: {"en": "Mattress Deep Clean", "hi": "गद्दा डीप क्लीन", "bn": "গদি গভীর পরিষ্কার", "or": "ଗଦ୍ଦା ଡ଼ିପ ସଫେଇ", "as": "গদ্দা গভীৰ পৰিষ্কাৰ"}, icon: '🛏️' },
+                            { name: {"en": "Mattress Sanitization", "hi": "गद्दा सेनीटाइजेशन", "bn": "গদি স্যানিটাইজেশন", "or": "ଗଦ୍ଦା ସ୍ୟାନିଟାଇଜ", "as": "গদ্দা স্যানিটাইজেচন"}, icon: '🧼' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Kitchen Deep Cleaning", "hi": "किचन डीप क्लीनिंग", "bn": "রান্নাঘর গভীর পরিষ্কার", "or": "ରୋଷେଇ ଡ଼ିପ ସଫେଇ", "as": "পাকঘৰ গভীৰ পৰিষ্কাৰ"}, icon: '🍳',
+                        subsubcategories: [
+                            { name: {"en": "Chimney Cleaning", "hi": "चिमनी सफाई", "bn": "চিমনি পরিষ্কার", "or": "ଚିମ୍ନି ସଫେଇ", "as": "চিমনি পৰিষ্কাৰ"}, icon: '🌫️' },
+                            { name: {"en": "Stove & Burner Cleaning", "hi": "स्टोव और बर्नर सफाई", "bn": "স্টোভ ও বার্নার পরিষ্কার", "or": "ଷ୍ଟୋଭ ଓ ବର୍ନର ସଫେଇ", "as": "ষ্ট'ভ আৰু বাৰ্নাৰ পৰিষ্কাৰ"}, icon: '🔥' },
+                            { name: {"en": "Full Kitchen Deep Clean", "hi": "पूरे किचन की डीप क्लीन", "bn": "পুরো রান্নাঘর পরিষ্কার", "or": "ଫୁଲ ରୋଷେଇ ସଫେଇ", "as": "সম্পূৰ্ণ পাকঘৰ পৰিষ্কাৰ"}, icon: '🧹' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Marble Polishing", "hi": "मार्बल पॉलिशिंग", "bn": "মার্বেল পালিশ", "or": "ମାର୍ବଲ ପଲିଶ", "as": "মাৰ্বেল পলিচ"}, icon: '✨',
+                        subsubcategories: [
+                            { name: {"en": "Floor Polishing", "hi": "फर्श पॉलिशिंग", "bn": "মেঝে পালিশ", "or": "ଫ୍ଲୋର ପଲିଶ", "as": "মজিয়া পলিচ"}, icon: '✨' },
+                            { name: {"en": "Granite Polishing", "hi": "ग्रेनाइट पॉलिशिंग", "bn": "গ্রানাইট পালিশ", "or": "ଗ୍ରାନାଇଟ ପଲିଶ", "as": "গ্ৰেনাইট পলিচ"}, icon: '🪨' },
+                            { name: {"en": "Anti-skid Treatment", "hi": "एंटी-स्किड ट्रीटमेंट", "bn": "এন্টি-স্কিড ট্রিটমেন্ট", "or": "ଆଣ୍ଟି-ସ୍କିଡ", "as": "এন্টি-স্কিড"}, icon: '⚠️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Move-in/Move-out Cleaning", "hi": "मूव-इन/आउट सफाई", "bn": "মুভ-ইন/আউট পরিষ্কার", "or": "ମୁଭ ସଫେଇ", "as": "মুভ ইন/আউট পৰিষ্কাৰ"}, icon: '📦',
+                        subsubcategories: [
+                            { name: {"en": "Move-in Cleaning", "hi": "मूव-इन सफाई", "bn": "মুভ-ইন পরিষ্কার", "or": "ମୁଭ-ଇନ ସଫେଇ", "as": "মুভ-ইন পৰিষ্কাৰ"}, icon: '🏠' },
+                            { name: {"en": "Move-out Cleaning", "hi": "मूव-आउट सफाई", "bn": "মুভ-আউট পরিষ্কার", "or": "ମୁଭ-ଆଉଟ ସଫେଇ", "as": "মুভ-আউট পৰিষ্কাৰ"}, icon: '📦' },
+                            { name: {"en": "Vacant Flat Cleaning", "hi": "खाली फ्लैट सफाई", "bn": "খালি ফ্ল্যাট পরিষ্কার", "or": "ଖାଲି ଫ୍ଲ୍ୟାଟ ସଫେଇ", "as": "খালি ফ্লেট পৰিষ্কাৰ"}, icon: '🏢' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat4',
+                name: {"en": "Event Services", "hi": "इवेंट सेवाएं", "bn": "ইভেন্ট সেবা", "or": "ଇଭେଣ୍ଟ ସେବା", "as": "ইভেন্ট সেৱা"},
+                icon: '🎉',
+                subcategories: [
+                    {
+                        name: {"en": "Wedding Photographer", "hi": "शादी फोटोग्राफर", "bn": "বিবাহের ফটোগ্রাফার", "or": "ବିବାହ ଫଟୋଗ୍ରାଫର", "as": "বিবাহৰ ফটোগ্ৰাফাৰ"}, icon: '📸',
+                        subsubcategories: [
+                            { name: {"en": "Wedding Photography", "hi": "शादी फोटोग्राफी", "bn": "বিবাহের ফটোগ্রাফি", "or": "ବିବାହ ଫଟୋଗ୍ରାଫି", "as": "বিবাহৰ ফটোগ্ৰাফী"}, icon: '📸' },
+                            { name: {"en": "Pre-wedding Shoot", "hi": "प्री-वेडिंग शूट", "bn": "প্রি-ওয়েডিং শুট", "or": "ପ୍ରି-ୱେଡ଼ିଂ ଶୁଟ", "as": "প্ৰি-ৱেডিং শ্বুট"}, icon: '💕' },
+                            { name: {"en": "Candid Photography", "hi": "कैंडिड फोटोग्राफी", "bn": "ক্যান্ডিড ফটোগ্রাফি", "or": "କ୍ୟାଣ୍ଡିଡ ଫଟୋ", "as": "কেন্ডিড ফটোগ্ৰাফী"}, icon: '🎞️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Videographer", "hi": "वीडियोग्राफर", "bn": "ভিডিওগ্রাফার", "or": "ଭିଡ଼ିଓଗ୍ରାଫର", "as": "ভিডিঅগ্ৰাফাৰ"}, icon: '🎥',
+                        subsubcategories: [
+                            { name: {"en": "Wedding Videography", "hi": "शादी वीडियोग्राफी", "bn": "বিবাহের ভিডিওগ্রাফি", "or": "ବିବାହ ଭିଡ଼ିଓ", "as": "বিবাহৰ ভিডিঅগ্ৰাফী"}, icon: '🎥' },
+                            { name: {"en": "Cinematic Film", "hi": "सिनेमेटिक फिल्म", "bn": "সিনেমাটিক ফিল্ম", "or": "ସିନେମାଟିକ ଫିଲ୍ମ", "as": "চিনেমাটিক ফিল্ম"}, icon: '🎬' },
+                            { name: {"en": "Drone Videography", "hi": "ड्रोन वीडियोग्राफी", "bn": "ড্রোন ভিডিওগ্রাফি", "or": "ଡ୍ରୋନ ଭିଡ଼ିଓ", "as": "ড্ৰোন ভিডিঅগ্ৰাফী"}, icon: '🚁' }
+                        ]
+                    },
+                    {
+                        name: {"en": "DJ Services", "hi": "डीजे सेवाएं", "bn": "ডিজে সেবা", "or": "ଡ଼ିଜେ ସେବା", "as": "ডিজে সেৱা"}, icon: '🎧',
+                        subsubcategories: [
+                            { name: {"en": "Wedding DJ", "hi": "शादी डीजे", "bn": "বিবাহের ডিজে", "or": "ବିବାହ ଡ଼ିଜେ", "as": "বিবাহৰ ডিজে"}, icon: '🎧' },
+                            { name: {"en": "Party DJ", "hi": "पार्टी डीजे", "bn": "পার্টি ডিজে", "or": "ପାର୍ଟି ଡ଼ିଜେ", "as": "পাৰ্টি ডিজে"}, icon: '🎉' },
+                            { name: {"en": "Sound System Rental", "hi": "साउंड सिस्टम किराया", "bn": "সাউন্ড সিস্টেম ভাড়া", "or": "ସାଉଣ୍ଡ ସିଷ୍ଟମ ଭଡ଼ା", "as": "ছাউণ্ড চিষ্টেম ভাড়া"}, icon: '🔊' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Caterers", "hi": "केटरर्स", "bn": "ক্যাটারার্স", "or": "କ୍ୟାଟରର", "as": "কেটাৰাৰ্চ"}, icon: '🍽️',
+                        subsubcategories: [
+                            { name: {"en": "Wedding Catering", "hi": "शादी कैटरिंग", "bn": "বিবাহের ক্যাটারিং", "or": "ବିବାହ କ୍ୟାଟରିଂ", "as": "বিবাহৰ কেটাৰিং"}, icon: '🍽️' },
+                            { name: {"en": "Birthday Catering", "hi": "बर्थडे कैटरिंग", "bn": "জন্মদিন ক্যাটারিং", "or": "ଜନ୍ମଦିନ କ୍ୟାଟରିଂ", "as": "জন্মদিন কেটাৰিং"}, icon: '🎂' },
+                            { name: {"en": "Corporate Catering", "hi": "कॉर्पोरेट कैटरिंग", "bn": "কর্পোরেট ক্যাটারিং", "or": "କର୍ପୋରେଟ କ୍ୟାଟରିଂ", "as": "কৰ্পোৰেট কেটাৰিং"}, icon: '🏢' },
+                            { name: {"en": "Tiffin Service", "hi": "टिफिन सेवा", "bn": "টিফিন সেবা", "gu": "ટifin", "mr": "टिफिन सेवा", "kn": "ಟಿಫಿನ್ ಸೇವೆ", "te": "టిఫిన్ సర్వీస్", "ml": "ടിഫിൻ സർവ്വീസ്", "ta": "டிபன் சேவை", "pa": "ਟਿਫਿਨ ਸੇਵਾ", "or": "ଟିଫିନ ସେବା", "as": "টিফিন সেৱা"}, icon: '🥡' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Tent & Decoration", "hi": "टेंट और सजावट", "bn": "তাঁবু ও সাজসজ্জা", "or": "ଟେଣ୍ଟ ଓ ସଜାବ", "as": "তাঁবু আৰু সজাই"}, icon: '🎪',
+                        subsubcategories: [
+                            { name: {"en": "Wedding Decoration", "hi": "शादी की सजावट", "bn": "বিবাহের সাজসজ্জা", "or": "ବିବାହ ସଜାବ", "as": "বিবাহৰ সজাই"}, icon: '💐' },
+                            { name: {"en": "Tent & Shamiana", "hi": "टेंट और शामियाना", "bn": "তাঁবু ও শামিয়ানা", "or": "ଟେଣ୍ଟ ଓ ଶାମିଆନ", "as": "তাঁবু আৰু শামিয়ানা"}, icon: '🎪' },
+                            { name: {"en": "Stage Decoration", "hi": "स्टेज सजावट", "bn": "মঞ্চ সাজসজ্জা", "or": "ଷ୍ଟେଜ ସଜାବ", "as": "মঞ্চ সজাই"}, icon: '🎭' },
+                            { name: {"en": "Flower Decoration", "hi": "फूल सजावट", "bn": "ফুলের সাজসজ্জা", "or": "ଫୁଲ ସଜାବ", "as": "ফুলৰ সজাই"}, icon: '🌸' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Birthday Party Planner", "hi": "बर्थडे पार्टी प्लानर", "bn": "জন্মদিন পার্টি প্ল্যানার", "or": "ଜନ୍ମଦିନ ପ୍ଲାନର", "as": "জন্মদিন প্লেনাৰ"}, icon: '🎂',
+                        subsubcategories: [
+                            { name: {"en": "Kids Birthday Planning", "hi": "बच्चों का बर्थडे", "bn": "শিশুর জন্মদিন পরিকল্পনা", "or": "ପିଲାଙ୍କ ଜନ୍ମଦିନ", "as": "শিশুৰ জন্মদিন পৰিকল্পনা"}, icon: '🎈' },
+                            { name: {"en": "Theme Party Setup", "hi": "थीम पार्टी सेटअप", "bn": "থিম পার্টি সেটআপ", "or": "ଥିମ ପାର୍ଟି ସେଟଅପ", "as": "থিম পাৰ্টি ছেটআপ"}, icon: '🎠' },
+                            { name: {"en": "Balloon Decoration", "hi": "बैलून सजावट", "bn": "বেলুন সাজসজ্জা", "or": "ବେଲୁନ ସଜାବ", "as": "বেলুন সজাই"}, icon: '🎈' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Anchor / Emcee", "hi": "एंकर / एमसी", "bn": "উপস্থাপক", "or": "ଆଙ୍କର", "as": "এংকৰ"}, icon: '🎤',
+                        subsubcategories: [
+                            { name: {"en": "Wedding Anchor", "hi": "शादी एंकर", "bn": "বিবাহের উপস্থাপক", "or": "ବିବାହ ଆଙ୍କର", "as": "বিবাহৰ এংকৰ"}, icon: '💍' },
+                            { name: {"en": "Corporate Emcee", "hi": "कॉर्पोरेट एंकर", "bn": "কর্পোরেট উপস্থাপক", "or": "କର୍ପୋରେଟ ଆଙ୍କର", "as": "কৰ্পোৰেট এমচি"}, icon: '🏢' },
+                            { name: {"en": "Bilingual Anchor", "hi": "द्विभाषी एंकर", "bn": "দ্বিভাষী উপস্থাপক", "or": "ଦ୍ୱିଭାଷୀ ଆଙ୍କର", "as": "দ্বিভাষিক এংকৰ"}, icon: '🌐' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Band / Dhol", "hi": "बैंड / ढोल", "bn": "ব্যান্ড / ঢোল", "or": "ବ୍ୟାଣ୍ଡ", "as": "বেণ্ড"}, icon: '🥁',
+                        subsubcategories: [
+                            { name: {"en": "Baraat Band", "hi": "बारात बैंड", "bn": "বরযাত্রা ব্যান্ড", "or": "ବାରାତ ବ୍ୟାଣ୍ଡ", "as": "বাৰাত বেণ্ড"}, icon: '🎺' },
+                            { name: {"en": "Dhol Players", "hi": "ढोल वादक", "bn": "ঢোল বাদক", "or": "ଢୋଲ ବାଦକ", "as": "ঢোল বাদক"}, icon: '🥁' },
+                            { name: {"en": "Brass Band", "hi": "ब्रास बैंड", "bn": "ব্রাস ব্যান্ড", "or": "ବ୍ରାସ ବ୍ୟାଣ୍ଡ", "as": "ব্ৰাছ বেণ্ড"}, icon: '🎷' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Folk Artists Booking", "hi": "लोक कलाकार बुकिंग", "bn": "লোক শিল্পী বুকিং", "or": "ଲୋକ କଳାକାର ବୁକିଂ", "as": "লোক শিল্পী বুকিং"}, icon: '🎭',
+                        subsubcategories: [
+                            { name: {"en": "Kalbelia Dancers", "hi": "कालबेलिया नर्तक", "bn": "কালবেলিয়া নৃত্যশিল্পী", "or": "କାଲ୍ବେଲିଆ ନର୍ତ୍ତକ", "as": "কালবেলিয়া নৃত্যশিল্পী"}, icon: '💃' },
+                            { name: {"en": "Kalbeliya Performers", "hi": "कालबेलिया कलाकार", "bn": "কালবেলিয়া শিল্পী", "or": "କାଲ୍ବେଲିଆ କଳାକାର", "as": "কালবেলিয়া শিল্পী"}, icon: '🎭' },
+                            { name: {"en": "Folk Music Group", "hi": "लोक संगीत समूह", "bn": "লোকসংগীত দল", "or": "ଲୋକ ସଂଗୀତ ଦଳ", "as": "লোক সংগীত দল"}, icon: '🎶' },
+                            { name: {"en": "Fire Show Artist", "hi": "फायर शो कलाकार", "bn": "ফায়ার শো শিল্পী", "or": "ଫାୟର ଶୋ କଳାକାର", "as": "জুই শ্বো শিল্পী"}, icon: '🔥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat5',
+                name: {"en": "Travel & Transport", "hi": "यात्रा और परिवहन", "bn": "ভ্রমণ ও পরিবহন", "gu": "પ્રвास", "mr": "प्रवास आणि वाहतूक", "kn": "ಪ್ರಯಾಣ ಮತ್ತು ಸಾರಿಗೆ", "te": "ప్రయాణం మరియు రవాణా", "ml": "യാത്രയും ഗതാഗതവും", "ta": "பயணம் மற்றும் போக்குவரத்து", "pa": "ਯਾਤਰਾ ਅਤੇ ਆਵਾਜਾਈ", "or": "ଯାତ୍ରା ଓ ପରିବହନ", "as": "ভ্ৰমণ আৰু পৰিবহন"},
+                icon: '🚗',
+                subcategories: [
+                    {
+                        name: {"en": "Taxi Booking", "hi": "टैक्सी बुकिंग", "bn": "ট্যাক্সি বুকিং", "or": "ଟ୍ୟାକ୍ସି ବୁକିଂ", "as": "টেক্সি বুকিং"}, icon: '🚕',
+                        subsubcategories: [
+                            { name: {"en": "Local Taxi", "hi": "लोकल टैक्सी", "bn": "লোকাল ট্যাক্সি", "or": "ସ୍ଥାନୀୟ ଟ୍ୟାକ୍ସି", "as": "স্থানীয় টেক্সি"}, icon: '🚕' },
+                            { name: {"en": "Outstation Taxi", "hi": "आउटस्टेशन टैक्सी", "bn": "আউটস্টেশন ট্যাক্সি", "or": "ଆଉଟଷ୍ଟେସନ ଟ୍ୟାକ୍ସି", "as": "আউটষ্টেচন টেক্সি"}, icon: '🛣️' },
+                            { name: {"en": "Airport Transfer", "hi": "एयरपोर्ट ट्रांसफर", "bn": "বিমানবন্দর স্থানান্তর", "or": "ଏୟାରପୋର୍ଟ ଟ୍ରାନ୍ସଫର", "as": "বিমানবন্দৰ ট্ৰান্সফাৰ"}, icon: '✈️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Tempo Traveller Rental", "hi": "टेम्पो ट्रैवलर किराया", "bn": "টেম্পো ট্রাভেলার", "gu": "ટेम्पो", "mr": "टेम्पो ट्रॅव्हलर", "kn": "ಟೆಂಪೋ ಟ್ರ್ಯಾವೆಲರ್", "te": "టెంపో ట్రావెలర్", "ml": "ടെംപോ ട്രാവലർ", "ta": "டெம்போ டிராவலர்", "pa": "ਟੈਂਪੋ ਟਰੈਵਲਰ", "or": "ଟେମ୍ପୋ ଟ୍ରାଭେଲର", "as": "টেম্পো ট্ৰেভেলাৰ"}, icon: '🚐',
+                        subsubcategories: [
+                            { name: {"en": "9-Seater Tempo", "hi": "9 सीटर टेम्पो", "bn": "9 আসনের টেম্পো", "or": "9 ସିଟ ଟେମ୍ପୋ", "as": "9 আসনৰ টেম্পো"}, icon: '🚐' },
+                            { name: {"en": "12-Seater Tempo", "hi": "12 सीटर टेम्पो", "bn": "12 আসনের টেম্পো", "or": "12 ସିଟ ଟେମ୍ପୋ", "as": "12 আসনৰ টেম্পো"}, icon: '🚌' },
+                            { name: {"en": "17-Seater Tempo", "hi": "17 सीटर टेम्पो", "bn": "17 আসনের টেম্পো", "or": "17 ସିଟ ଟେମ୍ପୋ", "as": "17 আসনৰ টেম্পো"}, icon: '🚌' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Car Rental with Driver", "hi": "ड्राइवर के साथ कार", "bn": "ড্রাইভারসহ কার ভাড়া", "or": "ଡ୍ରାଇଭର ସହ କାର", "as": "ড্ৰাইভাৰসহ কাৰ"}, icon: '🚗',
+                        subsubcategories: [
+                            { name: {"en": "Sedan Rental", "hi": "सेडान किराया", "bn": "সেডান ভাড়া", "or": "ସେଡ଼ାନ ଭଡ଼ା", "as": "ছেডান ভাড়া"}, icon: '🚗' },
+                            { name: {"en": "SUV Rental", "hi": "एसयूवी किराया", "bn": "এসইউভি ভাড়া", "or": "SUV ଭଡ଼ା", "as": "SUV ভাড়া"}, icon: '🚙' },
+                            { name: {"en": "Luxury Car Rental", "hi": "लक्जरी कार किराया", "bn": "লাক্সারি কার ভাড়া", "or": "ଲକ୍ସୁରୀ କାର ଭଡ଼ା", "as": "লাক্সাৰী কাৰ ভাড়া"}, icon: '🏎️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Bike Rental", "hi": "बाइक किराया", "bn": "বাইক ভাড়া", "or": "ବାଇକ ଭଡ଼ା", "as": "বাইক ভাড়া"}, icon: '🏍️',
+                        subsubcategories: [
+                            { name: {"en": "Scooter Rental", "hi": "स्कूटर किराया", "bn": "স্কুটার ভাড়া", "or": "ସ୍କୁଟର ଭଡ଼ା", "as": "স্কুটাৰ ভাড়া"}, icon: '🛵' },
+                            { name: {"en": "Motorcycle Rental", "hi": "मोटरसाइकिल किराया", "bn": "মোটরসাইকেল ভাড়া", "or": "ମୋଟରସାଇକଲ ଭଡ଼ା", "as": "মটৰচাইকেল ভাড়া"}, icon: '🏍️' },
+                            { name: {"en": "Royal Enfield Rental", "hi": "रॉयल एनफील्ड किराया", "bn": "রয়্যাল এনফিল্ড ভাড়া", "or": "ରୟାଲ ଏନଫିଲ୍ଡ ଭଡ଼ା", "as": "ৰয়েল এনফিল্ড ভাড়া"}, icon: '🏍️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Local Tour Guide", "hi": "लोकल टूर गाइड", "bn": "লোকাল ট্যুর গাইড", "or": "ସ୍ଥାନୀୟ ଟୁର ଗାଇଡ", "as": "স্থানীয় টুৰ গাইড"}, icon: '🗺️',
+                        subsubcategories: [
+                            { name: {"en": "City Tour Guide", "hi": "सिटी टूर गाइड", "bn": "শহর ট্যুর গাইড", "or": "ସିଟି ଟୁର ଗାଇଡ", "as": "চহৰ টুৰ গাইড"}, icon: '🏙️' },
+                            { name: {"en": "Heritage Walk Guide", "hi": "हेरिटेज वॉक गाइड", "bn": "হেরিটেজ ওয়াক গাইড", "or": "ହେରିଟେଜ ୱାକ ଗାଇଡ", "as": "হেৰিটেজ ৱাক গাইড"}, icon: '🏛️' },
+                            { name: {"en": "Multilingual Guide", "hi": "बहुभाषी गाइड", "bn": "বহুভাষী গাইড", "or": "ବହୁଭାଷୀ ଗାଇଡ", "as": "বহুভাষিক গাইড"}, icon: '🌐' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Desert Safari Booking", "hi": "डेजर्ट सफारी बुकिंग", "bn": "মরু সাফারি বুকিং", "or": "ମରୁ ସଫାରି ବୁକିଂ", "as": "মৰু ছাফাৰী বুকিং"}, icon: '🐪',
+                        subsubcategories: [
+                            { name: {"en": "Camel Safari", "hi": "ऊंट सफारी", "bn": "উট সাফারি", "or": "ଊଠ ସଫାରି", "as": "উট ছাফাৰী"}, icon: '🐪' },
+                            { name: {"en": "Jeep Safari", "hi": "जीप सफारी", "bn": "জিপ সাফারি", "or": "ଜିପ ସଫାରି", "as": "জীপ ছাফাৰী"}, icon: '🚙' },
+                            { name: {"en": "Overnight Desert Camp", "hi": "ओवरनाइट डेजर्ट कैंप", "bn": "রাতের মরু শিবির", "or": "ରାତ ମରୁ ଶିବିର", "as": "ৰাতিৰ মৰু শিবিৰ"}, icon: '⛺' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Driver on Demand", "hi": "मांग पर ड्राइवर", "bn": "চাহিদামতো ড্রাইভার", "or": "ଆବଶ୍ୟକ ଡ୍ରାଇଭର", "as": "চাহিদামতে ড্ৰাইভাৰ"}, icon: '🧑‍✈️',
+                        subsubcategories: [
+                            { name: {"en": "Personal Driver", "hi": "पर्सनल ड्राइवर", "bn": "ব্যক্তিগত ড্রাইভার", "or": "ବ୍ୟକ୍ତିଗତ ଡ୍ରାଇଭର", "as": "ব্যক্তিগত ড্ৰাইভাৰ"}, icon: '🧑‍✈️' },
+                            { name: {"en": "Corporate Driver", "hi": "कॉर्पोरेट ड्राइवर", "bn": "কর্পোরেট ড্রাইভার", "or": "କର୍ପୋରେଟ ଡ୍ରାଇଭର", "as": "কৰ্পোৰেট ড্ৰাইভাৰ"}, icon: '💼' },
+                            { name: {"en": "Night Driver", "hi": "नाइट ड्राइवर", "bn": "রাতের ড্রাইভার", "or": "ରାତ ଡ୍ରାଇଭର", "as": "ৰাতিৰ ড্ৰাইভাৰ"}, icon: '🌙' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat6',
+                name: {"en": "Real Estate & Property", "hi": "रियल एस्टेट और संपत्ति", "bn": "রিয়েল এস্টেট ও সম্পত্তি", "or": "ରିଏଲ ଏଷ୍ଟେଟ", "as": "ৰিয়েল এষ্টেট"},
+                icon: '🏢',
+                subcategories: [
+                    {
+                        name: {"en": "Property Dealer", "hi": "संपत्ति डीलर", "bn": "সম্পত্তি ডিলার", "gu": "મિલકત ડીલર", "mr": "मालमत्ता डीलर", "kn": "ಆಸ್ತಿ ಡೀಲರ್", "te": "ఆస్తి డీలర్", "ml": "ആസ്തി ഡീലർ", "ta": "சொத்து டீலர்", "pa": "ਜਾਇਦਾਦ ਡੀਲਰ", "or": "ସଂପତ୍ତି ଡ଼ିଲର", "as": "সম্পত্তি ডিলাৰ"}, icon: '🏠',
+                        subsubcategories: [
+                            { name: {"en": "Residential Property", "hi": "आवासीय संपत्ति", "bn": "আবাসিক সম্পত্তি", "or": "ଆବାସିକ ସଂପତ୍ତି", "as": "আবাসিক সম্পত্তি"}, icon: '🏡' },
+                            { name: {"en": "Commercial Property", "hi": "व्यावसायिक संपत्ति", "bn": "বাণিজ্যিক সম্পত্তি", "or": "ବ୍ୟବସାୟିକ ସଂପତ୍ତି", "as": "বাণিজ্যিক সম্পত্তি"}, icon: '🏢' },
+                            { name: {"en": "Land/Plot Dealing", "hi": "जमीन डीलिंग", "bn": "জমি/প্লট ডিলিং", "or": "ଜମି ଡ଼ିଲିଂ", "as": "মাটি/প্লট ডিলিং"}, icon: '🌾' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Rental Listings", "hi": "किराया लिस्टिंग", "bn": "ভাড়া তালिकা", "gu": "ભાડે", "mr": "भाडे यादी", "kn": "ಬಾಡಿಗೆ ಪಟ್ಟಿ", "te": "అద్దె జాబితాలు", "ml": "വാടക ലിസ്റ്റിങ്", "ta": "வாடகை பட்டியல்", "pa": "ਕਿਰਾਏ ਦੀ ਸੂਚੀ", "or": "ଭଡ଼ା ତାଲିକା", "as": "ভাড়া তালিকা"}, icon: '🔑',
+                        subsubcategories: [
+                            { name: {"en": "Flat/Apartment Rental", "hi": "फ्लैट किराया", "bn": "ফ্ল্যাট ভাড়া", "or": "ଫ୍ଲ୍ୟାଟ ଭଡ଼ା", "as": "ফ্লেট ভাড়া"}, icon: '🏢' },
+                            { name: {"en": "PG Accommodation", "hi": "पीजी आवास", "bn": "পিজি আবাস", "or": "PG ଆବାସ", "as": "PG আবাস"}, icon: '🛏️' },
+                            { name: {"en": "Shop/Office Rental", "hi": "दुकान/ऑफिस किराया", "bn": "দোকান/অফিস ভাড়া", "or": "ଦୋକାନ ଭଡ଼ା", "as": "দোকান/অফিচ ভাড়া"}, icon: '🏪' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Packers & Movers", "hi": "पैकर्स और मूवर्स", "bn": "প্যাকার্স ও মুভার্স", "gu": "Packers", "mr": "पॅकर्स आणि मूवर्स", "kn": "ಪ್ಯಾಕರ್ಸ್ ಮತ್ತು ಮೂವರ್ಸ್", "te": "ప్యాకర్స్ అండ్ మూవర్స్", "ml": "പ്യാക്കേഴ്സ് ആൻഡ് മൂവേഴ്സ്", "ta": "பேக்கர்ஸ் மற்றும் மூவர்ஸ்", "pa": "ਪੈਕਰਜ਼ ਅਤੇ ਮੂਵਰਜ਼", "or": "ପ୍ୟାକର୍ସ ଓ ମୁଭର୍ସ", "as": "পেকাৰ্চ আৰু মুভাৰ্চ"}, icon: '📦',
+                        subsubcategories: [
+                            { name: {"en": "Home Shifting", "hi": "घर स्थानांतरण", "bn": "বাড়ি স্থানান্তর", "or": "ଘର ସ୍ଥାନାନ୍ତର", "as": "ঘৰ স্থানান্তৰ"}, icon: '🏠' },
+                            { name: {"en": "Office Relocation", "hi": "ऑफिस रिलोकेशन", "bn": "অফিস স্থানান্তর", "or": "ଅଫିସ ସ୍ଥାନାନ୍ତର", "as": "অফিচ স্থানান্তৰ"}, icon: '🏢' },
+                            { name: {"en": "Vehicle Transportation", "hi": "वाहन परिवहन", "bn": "যানবাহন পরিবহন", "or": "ଯାନ ପରିବହନ", "as": "যান পৰিবহন"}, icon: '🚗' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Marble/Stone Contractor", "hi": "मार्बल ठेकेदार", "bn": "মার্বেল ঠিকাদার", "or": "ମାର୍ବଲ ଠିକାଦାର", "as": "মাৰ্বেল ঠিকাদাৰ"}, icon: '🪨',
+                        subsubcategories: [
+                            { name: {"en": "Marble Flooring", "hi": "मार्बल फ्लोरिंग", "bn": "মার্বেল ফ্লোরিং", "or": "ମାର୍ବଲ ଫ୍ଲୋରିଂ", "as": "মাৰ্বেল ফ্লোৰিং"}, icon: '🪨' },
+                            { name: {"en": "Granite Work", "hi": "ग्रेनाइट काम", "bn": "গ্রানাইট কাজ", "or": "ଗ୍ରାନାଇଟ କାମ", "as": "গ্ৰেনাইট কাম"}, icon: '🏗️' },
+                            { name: {"en": "Stone Cladding", "hi": "पत्थर क्लैडिंग", "bn": "পাথরের ক্লাডিং", "or": "ପଥର ଆବରଣ", "as": "শিল ক্লেডিং"}, icon: '🧱' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat7',
+                name: {"en": "Education & Skill Services", "hi": "शिक्षा और कौशल सेवाएं", "bn": "শিক্ষা ও দক্ষতা সেবা", "or": "ଶିକ୍ଷା ଓ କୌଶଲ", "as": "শিক্ষা আৰু দক্ষতা"},
+                icon: '📚',
+                subcategories: [
+                    {
+                        name: {"en": "Home Tutor", "hi": "होम ट्यूटर", "bn": "গৃহ শিক্ষক", "gu": "Tutor", "mr": "घरगुती शिक्षक", "kn": "ಮನೆ ಶಿಕ್ಷಕ", "te": "హోమ్ ట్యూటర్", "ml": "ഹോം ട്യൂടർ", "ta": "வீட்டு ஆசிரியர்", "pa": "ਘਰੇਲੂ ਅਧਿਆਪਕ", "or": "ଘରୋଇ ଶିକ୍ଷକ", "as": "ঘৰুৱা গৃহশিক্ষক"}, icon: '📖',
+                        subsubcategories: [
+                            { name: {"en": "Primary School Tutor", "hi": "प्राथमिक ट्यूटर", "bn": "প্রাথমিক বিদ্যালয় শিক্ষক", "or": "ପ୍ରାଥମିକ ଶିକ୍ଷକ", "as": "প্ৰাথমিক শিক্ষক"}, icon: '✏️' },
+                            { name: {"en": "Secondary School Tutor", "hi": "माध्यमिक ट्यूटर", "bn": "মাধ্যমিক বিদ্যালয় শিক্ষক", "or": "ମାଧ୍ୟମିକ ଶିକ୍ଷକ", "as": "মাধ্যমিক শিক্ষক"}, icon: '📐' },
+                            { name: {"en": "Science & Math Tutor", "hi": "विज्ञान और गणित ट्यूटर", "bn": "বিজ্ঞান ও গণিত শিক্ষক", "or": "ବିଜ୍ଞାନ ଗଣିତ ଶିକ୍ଷକ", "as": "বিজ্ঞান আৰু গণিত শিক্ষক"}, icon: '🔬' },
+                            { name: {"en": "Commerce Tutor", "hi": "वाणिज्य ट्यूटर", "bn": "বাণিজ্য শিক্ষক", "or": "ବାଣିଜ୍ୟ ଶିକ୍ଷକ", "as": "বাণিজ্য শিক্ষক"}, icon: '💹' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Spoken English Trainer", "hi": "अंग्रेजी प्रशिक्षक", "bn": "ইংরেজি প্রশিক্ষক", "gu": "English", "mr": "इंग्रजी प्रशिक्षक", "kn": "ಇಂಗ್ಲೀಷ್ ತರಬೇತಿದಾರ", "te": "ఇంగ్లీష్ ట్రైనర్", "ml": "ഇംഗ്ലീഷ് ട്രൈനർ", "ta": "ஆங்கில பயிற்சியாளர்", "pa": "ਅੰਗਰੇਜ਼ੀ ਟ੍ਰੇਨਰ", "or": "ଇଂରାଜୀ ପ୍ରଶିକ୍ଷଣ", "as": "ইংৰাজী প্ৰশিক্ষক"}, icon: '🗣️',
+                        subsubcategories: [
+                            { name: {"en": "Basic Spoken English", "hi": "बुनियादी अंग्रेजी", "bn": "মৌলিক ইংরেজি", "or": "ମୌଳିକ ଇଂଗ୍ରାଜୀ", "as": "মৌলিক ইংৰাজী"}, icon: '🗣️' },
+                            { name: {"en": "Business English", "hi": "बिजनेस अंग्रेजी", "bn": "ব্যবসায়িক ইংরেজি", "or": "ବ୍ୟବସାୟ ଇଂଗ୍ରାଜୀ", "as": "ব্যৱসায়িক ইংৰাজী"}, icon: '💼' },
+                            { name: {"en": "IELTS / TOEFL Coaching", "hi": "आईईएलटीएस कोचिंग", "bn": "আইইএলটিএস কোচিং", "or": "IELTS / TOEFL", "as": "IELTS / TOEFL কোচিং"}, icon: '📝' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Competitive Exam Tutor", "hi": "प्रतियोगिता परीक्षा ट्यूटर", "bn": "প্রতিযোগিতামূলক পরীক্ষার শিক্ষক", "or": "ପ୍ରତିଯୋଗିତା ପରୀକ୍ଷା", "as": "প্ৰতিযোগিতামূলক পৰীক্ষা শিক্ষক"}, icon: '🏆',
+                        subsubcategories: [
+                            { name: {"en": "UPSC Coaching", "hi": "यूपीएससी कोचिंग", "bn": "ইউপিএসসি কোচিং", "or": "UPSC কୋଚିଂ", "as": "UPSC কোচিং"}, icon: '🏛️' },
+                            { name: {"en": "REET / RPSC Coaching", "hi": "आरईईटी कोचिंग", "bn": "আরইইটি কোচিং", "or": "REET / RPSC", "as": "REET / RPSC কোচিং"}, icon: '📋' },
+                            { name: {"en": "SSC / Railway Coaching", "hi": "एसएससी / रेलवे कोचिंग", "bn": "এসএসসি কোচিং", "or": "SSC ରେଲୱେ", "as": "SSC / ৰেলৱে কোচিং"}, icon: '🚂' },
+                            { name: {"en": "JEE / NEET Coaching", "hi": "जेईई / नीट कोचिंग", "bn": "জেইই / নিট কোচিং", "or": "JEE / NEET", "as": "JEE / NEET কোচিং"}, icon: '🔬' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Dance Teacher", "hi": "नृत्य शिक्षक", "bn": "নৃত্য শিক্ষক", "or": "ନୃତ୍ୟ ଶିକ୍ଷକ", "as": "নৃত্য শিক্ষক"}, icon: '💃',
+                        subsubcategories: [
+                            { name: {"en": "Classical Dance", "hi": "शास्त्रीय नृत्य", "bn": "শাস্ত্রীয় নৃত্য", "or": "ଶାସ୍ତ୍ରୀୟ ନୃତ୍ୟ", "as": "শাস্ত্ৰীয় নৃত্য"}, icon: '💃' },
+                            { name: {"en": "Bollywood Dance", "hi": "बॉलीवुड डांस", "bn": "বলিউড ডান্স", "or": "ବଲିୱୁଡ ଡ଼ାନ୍ସ", "as": "বলিউড নৃত্য"}, icon: '🎬' },
+                            { name: {"en": "Western Dance", "hi": "वेस्टर्न डांस", "bn": "পশ্চিমা নৃত্য", "or": "ୱେଷ୍ଟର୍ନ ଡ଼ାନ୍ସ", "as": "পশ্চিমীয়া নৃত্য"}, icon: '🕺' },
+                            { name: {"en": "Folk Dance", "hi": "लोक नृत्य", "bn": "লোকনৃত্য", "or": "ଲୋକ ନୃତ୍ୟ", "as": "লোক নৃত্য"}, icon: '🎭' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Music Teacher", "hi": "संगीत शिक्षक", "bn": "সংগীত শিক্ষক", "or": "ସଂଗୀତ ଶିକ୍ଷକ", "as": "সংগীত শিক্ষক"}, icon: '🎵',
+                        subsubcategories: [
+                            { name: {"en": "Guitar Classes", "hi": "गिटार कक्षाएं", "bn": "গিটার ক্লাস", "or": "ଗିଟାର ଶ୍ରେଣୀ", "as": "গিটাৰ ক্লাছ"}, icon: '🎸' },
+                            { name: {"en": "Keyboard / Piano", "hi": "कीबोर्ड / पियानो", "bn": "কীবোর্ড / পিয়ানো", "or": "କୀବୋର୍ଡ / ପିୟାନୋ", "as": "কীব'ৰ্ড / পিয়ানো"}, icon: '🎹' },
+                            { name: {"en": "Vocals / Singing", "hi": "गायन / संगीत", "bn": "কণ্ঠসংগীত / গান", "or": "ଗାୟନ / ସଂଗୀତ", "as": "কণ্ঠসংগীত / গান"}, icon: '🎤' },
+                            { name: {"en": "Tabla / Harmonium", "hi": "तबला / हारमोनियम", "bn": "তবলা / হারমোনিয়াম", "or": "ତବଲା / ହାର୍ମୋନିୟମ", "as": "তবলা / হাৰমনিয়াম"}, icon: '🥁' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat8',
+                name: {"en": "Business & Professional Services", "hi": "व्यापार और पेशेवर सेवाएं", "bn": "ব্যবসায়িক সেবা", "or": "ବ୍ୟବସାୟ ସେବା", "as": "ব্যৱসায়িক সেৱা"},
+                icon: '💼',
+                subcategories: [
+                    {
+                        name: {"en": "CA / Tax Filing", "hi": "सीए / टैक्स फाइलिंग", "bn": "সিএ / ট্যাক্স ফাইলিং", "or": "CA / ଟ୍ୟାକ୍ସ ଫାଇଲ", "as": "CA / কৰ দাখিল"}, icon: '📊',
+                        subsubcategories: [
+                            { name: {"en": "ITR Filing", "hi": "आईटीआर फाइलिंग", "bn": "আইটিআর ফাইলিং", "or": "ITR ଫାଇଲ", "as": "ITR দাখিল"}, icon: '📋' },
+                            { name: {"en": "GST Registration & Filing", "hi": "जीएसटी पंजीकरण", "bn": "জিএসটি নিবন্ধন", "or": "GST ପଞ୍ଜୀକରଣ", "as": "GST পঞ্জীয়ন"}, icon: '🧾' },
+                            { name: {"en": "Business Accounting", "hi": "व्यापार लेखा", "bn": "ব্যবসায়িক হিসাব", "or": "ବ୍ୟବସାୟ ଆକାଉଣ୍ଟ", "as": "ব্যৱসায়িক হিচাপ"}, icon: '📊' },
+                            { name: {"en": "Audit Services", "hi": "ऑडिट सेवाएं", "bn": "অডিট সেবা", "or": "ଅଡ଼ିଟ ସେବା", "as": "অডিট সেৱা"}, icon: '🔍' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Legal Advisor", "hi": "कानूनी सलाहकार", "bn": "আইনি উপদেষ্টা", "or": "ଆଇନ ସଲାହ", "as": "আইনি পৰামৰ্শদাতা"}, icon: '⚖️',
+                        subsubcategories: [
+                            { name: {"en": "Property Legal Help", "hi": "संपत्ति कानूनी सहायता", "bn": "সম্পত্তি আইনি সাহায্য", "or": "ସଂପତ୍ତି ଆଇନ ସହାୟ", "as": "সম্পত্তি আইনি সহায়তা"}, icon: '🏠' },
+                            { name: {"en": "Family Law / Divorce", "hi": "पारिवारिक कानून / तलाक", "bn": "পারিবারিক আইন", "or": "ପারିବାରିକ ଆଇନ", "as": "পৰিয়াল আইন"}, icon: '👨‍👩‍👧' },
+                            { name: {"en": "Business Legal Services", "hi": "व्यापार कानूनी सेवाएं", "bn": "ব্যবসায়িক আইনি সেবা", "or": "ବ୍ୟବସାୟ ଆଇନ ସେବା", "as": "ব্যৱসায়িক আইনি সেৱা"}, icon: '💼' },
+                            { name: {"en": "Documentation Help", "hi": "दस्तावेज सहायता", "bn": "ডকুমেন্টেশন সাহায্য", "or": "ଦଲିଲ ସହାୟ", "as": "নথিপত্ৰ সহায়তা"}, icon: '📄' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Website Developer", "hi": "वेबसाइट डेवलपर", "bn": "ওয়েবসাইট ডেভেলপার", "or": "ୱେବ ଡ଼େଭେଲପର", "as": "ৱেবছাইট ডেভেলপাৰ"}, icon: '💻',
+                        subsubcategories: [
+                            { name: {"en": "Business Website", "hi": "बिजनेस वेबसाइट", "bn": "ব্যবসায়িক ওয়েবসাইট", "or": "ବ୍ୟବସାୟ ୱେବ", "as": "ব্যৱসায়িক ৱেবছাইট"}, icon: '🌐' },
+                            { name: {"en": "E-commerce Website", "hi": "ई-कॉमर्स वेबसाइट", "bn": "ই-কমার্স ওয়েবসাইট", "or": "ଇ-କମର୍ସ ୱେବ", "as": "ই-কমাৰ্ছ ৱেবছাইট"}, icon: '🛒' },
+                            { name: {"en": "App Development", "hi": "ऐप डेवलपमेंट", "bn": "অ্যাপ ডেভেলপমেন্ট", "or": "ଆପ ଡ଼େଭେଲପ", "as": "এপ ডেভেলপমেন্ট"}, icon: '📱' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Graphic Designer", "hi": "ग्राफिक डिजाइनर", "bn": "গ্রাফিক ডিজাইনার", "or": "ଗ୍ରାଫିକ ଡିଜାଇନ", "as": "গ্ৰাফিক ডিজাইনাৰ"}, icon: '🎨',
+                        subsubcategories: [
+                            { name: {"en": "Logo Design", "hi": "लोगो डिजाइन", "bn": "লোগো ডিজাইন", "or": "ଲୋଗୋ ଡିଜାଇନ", "as": "ল'গো ডিজাইন"}, icon: '🎯' },
+                            { name: {"en": "Brochure / Flyer Design", "hi": "ब्रोशर डिजाइन", "bn": "ব্রোশার ডিজাইন", "or": "ବ୍ରୋଶର ଡିଜାଇନ", "as": "ব্ৰচাৰ ডিজাইন"}, icon: '📰' },
+                            { name: {"en": "Banner & Poster Design", "hi": "बैनर और पोस्टर डिजाइन", "bn": "ব্যানার ডিজাইন", "or": "ବ୍ୟାନର ଡିଜାଇନ", "as": "বেনাৰ ডিজাইন"}, icon: '🖼️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Social Media Manager", "hi": "सोशल मीडिया मैनेजर", "bn": "সোশ্যাল মিডিয়া ম্যানেজার", "or": "ସୋଶ୍ୟାଲ ମିଡ଼ିଆ", "as": "চ'চিয়েল মিডিয়া মেনেজাৰ"}, icon: '📱',
+                        subsubcategories: [
+                            { name: {"en": "Instagram Management", "hi": "इंस्टाग्राम मैनेजमेंट", "bn": "ইনস্টাগ্রাম ম্যানেজমেন্ট", "or": "ଇନ୍ସ୍ଟାଗ୍ରାମ", "as": "ইনষ্টাগ্ৰাম মেনেজমেন্ট"}, icon: '📸' },
+                            { name: {"en": "Facebook Marketing", "hi": "फेसबुक मार्केटिंग", "bn": "ফেসবুক মার্কেটিং", "or": "ଫେସବୁକ ମାର୍କେଟ", "as": "ফেচবুক মাৰ্কেটিং"}, icon: '👍' },
+                            { name: {"en": "Content Creation", "hi": "कंटेंट क्रिएशन", "bn": "কন্টেন্ট তৈরি", "or": "କଣ୍ଟେଣ୍ଟ ତିଆରି", "as": "কন্টেন্ট সৃষ্টি"}, icon: '✍️' },
+                            { name: {"en": "Paid Ads Management", "hi": "पेड ऐड्स मैनेजमेंट", "bn": "পেইড অ্যাডস ম্যানেজমেন্ট", "or": "ପେଡ ଆଡ ମ୍ୟାନେଜ", "as": "পেইড বিজ্ঞাপন মেনেজমেন্ট"}, icon: '💰' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Wedding Invitation Designer", "hi": "शादी निमंत्रण डिजाइनर", "bn": "বিবাহ আমন্ত্রণ ডিজাইনার", "or": "ବିବାହ ନିମନ୍ତ୍ରଣ ଡିଜାଇନ", "as": "বিবাহৰ নিমন্ত্ৰণ ডিজাইনাৰ"}, icon: '💌',
+                        subsubcategories: [
+                            { name: {"en": "Digital Invitations", "hi": "डिजिटल निमंत्रण", "bn": "ডিজিটাল আমন্ত্রণ", "or": "ଡ଼ିଜିଟାଲ ନିମନ୍ତ୍ରଣ", "as": "ডিজিটেল নিমন্ত্ৰণ"}, icon: '📱' },
+                            { name: {"en": "Printed Card Design", "hi": "प्रिंटेड कार्ड डिजाइन", "bn": "প্রিন্টেড কার্ড ডিজাইন", "or": "ପ୍ରିଣ୍ଟ କାର୍ଡ ଡିଜାଇନ", "as": "প্ৰিণ্টেড কাৰ্ড ডিজাইন"}, icon: '🖨️' },
+                            { name: {"en": "Video Invitations", "hi": "वीडियो निमंत्रण", "bn": "ভিডিও আমন্ত্রণ", "or": "ଭିଡ଼ିଓ ନିମନ୍ତ୍ରଣ", "as": "ভিডিঅ নিমন্ত্ৰণ"}, icon: '🎥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat9',
+                name: {"en": "Pet Services", "hi": "पालतू जानवर सेवाएं", "bn": "পোষা প্রাণীর সেবা", "or": "ପୋଷା ପ୍ରାଣୀ ସେବା", "as": "পোহনীয়া জন্তুৰ সেৱা"},
+                icon: '🐾',
+                subcategories: [
+                    {
+                        name: {"en": "Pet Grooming", "hi": "पालतू की देखभाल", "bn": "পোষা প্রাণীর সাজসজ্জা", "or": "ପୋଷା ପ୍ରାଣୀ ଗ୍ରୁମିଂ", "as": "পোহনীয়া জন্তুৰ গ্ৰুমিং"}, icon: '🐶',
+                        subsubcategories: [
+                            { name: {"en": "Dog Grooming at Home", "hi": "घर पर कुत्ते की देखभाल", "bn": "বাড়িতে কুকুরের সাজসজ্জা", "or": "ଘରୋଇ କୁକୁର ଗ୍ରୁମିଂ", "as": "ঘৰত কুকুৰৰ গ্ৰুমিং"}, icon: '🐕' },
+                            { name: {"en": "Cat Grooming", "hi": "बिल्ली की देखभाल", "bn": "বিড়ালের সাজসজ্জা", "or": "ବିଲେଇ ଗ୍ରୁମିଂ", "as": "মেকুৰীৰ গ্ৰুমিং"}, icon: '🐱' },
+                            { name: {"en": "Bath & Blow Dry", "hi": "स्नान और ब्लो ड्राई", "bn": "স্নান ও ব্লো ড্রাই", "or": "ସ୍ନାନ ଓ ବ୍ଲୋ ଡ୍ରାୟ", "as": "গা ধোৱা আৰু ব্লো ড্ৰাই"}, icon: '🚿' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Pet Boarding", "hi": "पालतू बोर्डिंग", "bn": "পোষা প্রাণীর বোর্ডিং", "or": "ପୋଷା ପ୍ରାଣୀ ବୋର୍ଡ଼ିଂ", "as": "পোহনীয়া জন্তুৰ বোৰ্ডিং"}, icon: '🏠',
+                        subsubcategories: [
+                            { name: {"en": "Dog Boarding", "hi": "कुत्ता बोर्डिंग", "bn": "কুকুর বোর্ডিং", "or": "କୁକୁର ବୋର୍ଡ଼ିଂ", "as": "কুকুৰ বোৰ্ডিং"}, icon: '🐕' },
+                            { name: {"en": "Cat Boarding", "hi": "बिल्ली बोर्डिंग", "bn": "বিড়াল বোর্ডিং", "or": "ବିଲେଇ ବୋର୍ଡ଼ିଂ", "as": "মেকুৰী বোৰ্ডিং"}, icon: '🐱' },
+                            { name: {"en": "Home-based Pet Sitting", "hi": "घर पर पालतू की देखभाल", "bn": "বাড়িতে পোষা প্রাণীর যত্ন", "or": "ଘରୋଇ ପୋଷା ଯତ୍ନ", "as": "ঘৰত পোহনীয়া জন্তুৰ যত্ন"}, icon: '🏡' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Dog Training", "hi": "कुत्ता प्रशिक्षण", "bn": "কুকুর প্রশিক্ষণ", "or": "କୁକୁର ଟ୍ରେନିଂ", "as": "কুকুৰ প্ৰশিক্ষণ"}, icon: '🦮',
+                        subsubcategories: [
+                            { name: {"en": "Basic Obedience Training", "hi": "बुनियादी आज्ञाकारिता प्रशिक्षण", "bn": "মৌলিক আনুগত্য প্রশিক্ষণ", "or": "ବ୍ୟାସିକ ଟ୍ରେନିଂ", "as": "মৌলিক প্ৰশিক্ষণ"}, icon: '🦮' },
+                            { name: {"en": "Advanced Training", "hi": "उन्नत प्रशिक्षण", "bn": "উন্নত প্রশিক্ষণ", "or": "ଉନ୍ନତ ପ୍ରଶିକ୍ଷଣ", "as": "উন্নত প্ৰশিক্ষণ"}, icon: '🏆' },
+                            { name: {"en": "Puppy Training", "hi": "पिल्ला प्रशिक्षण", "bn": "কুকুরছানা প্রশিক্ষণ", "or": "ପପି ଟ୍ରେନିଂ", "as": "পোৱালি কুকুৰৰ প্ৰশিক্ষণ"}, icon: '🐶' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Vet on Call", "hi": "कॉल पर पशु चिकित्सक", "bn": "কলে পশু চিকিৎসক", "or": "ଭେଟ ଅନ କଲ", "as": "কলত পশু চিকিৎসক"}, icon: '🏥',
+                        subsubcategories: [
+                            { name: {"en": "Home Visit Vet", "hi": "घर पर पशु चिकित्सक", "bn": "বাড়িতে পশু চিকিৎসক", "or": "ଘରୋଇ ଭେଟ", "as": "ঘৰত পশু চিকিৎসক"}, icon: '🏥' },
+                            { name: {"en": "Vaccination at Home", "hi": "घर पर टीकाकरण", "bn": "বাড়িতে টিকাদান", "or": "ଘରୋଇ ଟୀକାକରଣ", "as": "ঘৰত টিকাদান"}, icon: '💉' },
+                            { name: {"en": "Online Vet Consultation", "hi": "ऑनलाइन पशु परामर्श", "bn": "অনলাইন পশু পরামর্শ", "or": "ଅନଲାଇନ ଭେଟ", "as": "অনলাইন পশু পৰামৰ্শ"}, icon: '💻' }
+                        ]
+                    }
+                ]
+            }
+        ]; // end DEFAULT_CATEGORIES
+
+        // ==================== CATEGORY MERGE FUNCTION ====================
+        // Merges DEFAULT_CATEGORIES into saved categories:
+        //   - New top-level categories are APPENDED (never removed)
+        //   - New subcategories inside existing categories are APPENDED
+        //   - New service types inside existing subcategories are APPENDED
+        //   - Anything the admin added/edited/deleted is PRESERVED
+        function mergeCategories(saved, defaults) {
+            const merged = [...saved]; // start from what's saved
+
+            defaults.forEach(defCat => {
+                // Match by id first, then by English name as fallback
+                const existingCat = merged.find(c =>
+                    (c.id && defCat.id && c.id === defCat.id) ||
+                    ((c.name?.en || c.name) === (defCat.name?.en || defCat.name))
+                );
+
+                if (!existingCat) {
+                    // Brand-new category — append it whole
+                    merged.push(defCat);
+                } else {
+                    // Category exists — merge subcategories
+                    if (!existingCat.subcategories) existingCat.subcategories = [];
+                    const existingSubs = existingCat.subcategories;
+
+                    (defCat.subcategories || []).forEach(defSub => {
+                        const existingSub = existingSubs.find(s =>
+                            (s.name?.en || s.name) === (defSub.name?.en || defSub.name)
+                        );
+
+                        if (!existingSub) {
+                            // New subcategory — append it whole
+                            existingSubs.push(defSub);
+                        } else {
+                            // Subcategory exists — merge service types
+                            if (!existingSub.subsubcategories) existingSub.subsubcategories = [];
+                            const existingServices = existingSub.subsubcategories;
+
+                            (defSub.subsubcategories || []).forEach(defService => {
+                                const alreadyExists = existingServices.some(sv =>
+                                    (sv.name?.en || sv.name) === (defService.name?.en || defService.name)
+                                );
+                                if (!alreadyExists) {
+                                    // New service type — append it
+                                    existingServices.push(defService);
+                                }
+                                // If it exists: leave it exactly as the admin has it
+                            });
+                        }
+                    });
+                }
+            });
+
+            return merged;
+        }
+
+        // ==================== LOAD & AUTO-MERGE CATEGORIES ====================
+        (function initCategories() {
+            const savedVersion   = parseInt(localStorage.getItem('categoryVersion') || '0');
+            const savedRaw       = localStorage.getItem('categories');
+
+            if (!savedRaw) {
+                // First ever load — just use defaults as-is
+                localStorage.setItem('categories', JSON.stringify(DEFAULT_CATEGORIES));
+                localStorage.setItem('categoryVersion', String(CATEGORY_VERSION));
+                console.log('✅ Categories: first load, defaults applied.');
+            } else if (savedVersion < CATEGORY_VERSION) {
+                // New version detected — merge new defaults into saved data
+                const saved  = JSON.parse(savedRaw);
+                const merged = mergeCategories(saved, DEFAULT_CATEGORIES);
+                localStorage.setItem('categories', JSON.stringify(merged));
+                localStorage.setItem('categoryVersion', String(CATEGORY_VERSION));
+                console.log(`✅ Categories: merged from v${savedVersion} → v${CATEGORY_VERSION}. Total categories: ${merged.length}`);
+            } else {
+                console.log(`✅ Categories: already at v${CATEGORY_VERSION}, no merge needed.`);
+            }
+        })();
+
+        // Live working array — loaded from Firebase on init
+        let categories = [];
+
+        // ITI courses master data — seeded to Firebase on first run
+        const ITI_CATEGORIES = [{"id": "cat_engineering", "name": {"en": "Engineering & Mechanical", "hi": "इंजीनियरिंग और मशीनरी", "bn": "ইঞ্জিনিয়ারিং", "gu": "ઇinjineering", "mr": "अभियांत्रिकी", "kn": "ಎಂಜಿನಿಯರಿಂಗ್", "te": "ఇంజనీరింగ్", "ml": "എഞ്ചിനീയറിങ്", "ta": "பொறியியல்", "pa": "ਇੰਜੀਨੀਅਰਿੰਗ", "or": "ଇଞ୍ଜିନିୟରିଂ", "as": "ইঞ্জিনিয়াৰিং"}, "icon": "🔧", "subcategories": [{"name": {"en": "Machining & Fabrication", "hi": "मशीनिंग", "bn": "মেশিনিং", "or": "ମେସିନିଂ", "as": "মেচিনিং"}, "icon": "⚙️", "subsubcategories": [{"name": {"en": "Fitter", "hi": "फिटर", "or": "ଫିଟର", "as": "ফিটাৰ"}, "icon": "🔧"}, {"name": {"en": "Machinist", "hi": "मशीनिस्ट", "or": "ମ୍ୟାକିନିଷ୍ଟ", "as": "মেচিনিষ্ট"}, "icon": "⚙️"}, {"name": {"en": "Machinist Grinder", "hi": "मशीनिस्ट ग्राइंडर", "or": "ମ୍ୟାକିନିଷ୍ଟ ଗ୍ରାଇଣ୍ଡର", "as": "মেচিনিষ্ট গ্ৰাইণ্ডাৰ"}, "icon": "⚙️"}, {"name": {"en": "Turner", "hi": "टर्नर", "or": "ଟର୍ନର", "as": "টাৰ্নাৰ"}, "icon": "🔩"}, {"name": {"en": "CNC Machining Technician", "hi": "सीएनसी तकनीशियन", "or": "ସିଏନସି ଟେକ୍ନିଶିୟାନ", "as": "চিএনচি কৌশলী"}, "icon": "🖥️"}, {"name": {"en": "Operator Advanced Machine Tool", "hi": "मशीन टूल ऑपरेटर", "or": "ମ୍ୟାକିନ ଟୁଲ ଅପରେଟର", "as": "মেচিন টুল অপাৰেটৰ"}, "icon": "🏭"}, {"name": {"en": "Tool & Die Maker (Dies & Moulds)", "hi": "टूल और डाई मेकर", "or": "ଟୁଲ ଡାଇ ମେକର", "as": "টুল ডাই মেকাৰ"}, "icon": "🔨"}, {"name": {"en": "Tool & Die Maker (Press Tools, Jigs & Fixtures)", "hi": "प्रेस टूल मेकर", "or": "ପ୍ରେସ ଟୁଲ ମେକର", "as": "প্ৰেছ টুল মেকাৰ"}, "icon": "🔨"}, {"name": {"en": "Sheet Metal Worker", "hi": "शीट मेटल वर्कर", "or": "ସିଟ ମେଟାଲ ୱର୍କର", "as": "শ্বীট মেটেল কৰ্মী"}, "icon": "🪛"}, {"name": {"en": "Foundryman", "hi": "फाउंड्रीमैन", "or": "ଫାଉଣ୍ଡ୍ରୀ ମ୍ୟାନ", "as": "ফাউণ্ড্ৰী মেন"}, "icon": "🏭"}, {"name": {"en": "Mechanic Machine Tool Maintenance", "hi": "मशीन टूल मैकेनिक", "or": "ମ୍ୟାକିନ ଟୁଲ ମ୍ୟାକାନିକ", "as": "মেচিন টুল মেকানিক"}, "icon": "🔧"}]}, {"name": {"en": "Welding", "hi": "वेल्डिंग", "bn": "ওয়েল্ডিং", "or": "ୱେଲ୍ଡିଂ", "as": "ৱেল্ডিং"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Welder", "hi": "वेल्डर", "or": "ୱେଲ୍ଡର", "as": "ৱেল্ডাৰ"}, "icon": "🔥"}, {"name": {"en": "Welder (Fabrication & Fitting)", "hi": "वेल्डर (फेब्रिकेशन)", "or": "ୱେଲ୍ଡର ଫ୍ୟାବ୍ରିକେସନ", "as": "ৱেল্ডাৰ ফেব্ৰিকেচন"}, "icon": "🔥"}, {"name": {"en": "Welder (GMAW & GTAW)", "hi": "वेल्डर जीएमएडब्लू", "or": "ୱେଲ୍ଡର ଜିଏମଏ", "as": "ৱেল্ডাৰ জিএমএ"}, "icon": "🔥"}, {"name": {"en": "Welder (Pipe)", "hi": "पाइप वेल्डर", "or": "ପାଇପ ୱେଲ୍ଡର", "as": "পাইপ ৱেল্ডাৰ"}, "icon": "🔥"}, {"name": {"en": "Welder (Structural)", "hi": "स्ट्रक्चरल वेल्डर", "or": "ଷ୍ଟ୍ରକଚରାଲ ୱେଲ୍ଡର", "as": "গাঁথনি ৱেল্ডাৰ"}, "icon": "🔥"}, {"name": {"en": "Welder (Welding & Inspection)", "hi": "वेल्डिंग निरीक्षक", "or": "ୱେଲ୍ଡିଂ ଇନ୍ସ୍ପେକ୍ଟର", "as": "ৱেল্ডিং পৰীক্ষক"}, "icon": "🔥"}]}, {"name": {"en": "Industrial & Manufacturing", "hi": "औद्योगिक निर्माण", "bn": "শিল্প", "or": "ଶିଳ୍ପ", "as": "উদ্যোগ"}, "icon": "🏭", "subsubcategories": [{"name": {"en": "Industrial Robotics & Digital Manufacturing Technician", "hi": "औद्योगिक रोबोटिक्स", "or": "ଶିଳ୍ପ ରୋବଟିକ୍ସ", "as": "উদ্যোগিক ৰোবোটিক্স"}, "icon": "🤖"}, {"name": {"en": "Manufacturing Process Control and Automation Technician", "hi": "मैन्युफैक्चरिंग ऑटोमेशन", "or": "ଉତ୍ପାଦନ ସ୍ୱଚଳ", "as": "উৎপাদন স্বয়ংক্ৰিয়"}, "icon": "🏭"}, {"name": {"en": "Technician Mechatronics", "hi": "मेकाट्रॉनिक्स तकनीशियन", "or": "ମେକାଟ୍ରୋନିକ୍ସ", "as": "মেকাট্ৰনিক্স"}, "icon": "⚙️"}, {"name": {"en": "Plastic Processing Operator", "hi": "प्लास्टिक प्रोसेसिंग", "or": "ପ୍ଲାଷ୍ଟିକ ପ୍ରୋସେସିଂ", "as": "প্লাষ্টিক প্ৰচেছিং"}, "icon": "🏭"}, {"name": {"en": "Rubber Technician", "hi": "रबड़ तकनीशियन", "or": "ରବର ଟେକ୍ନିଶିୟାନ", "as": "ৰবৰ কৌশলী"}, "icon": "🏭"}, {"name": {"en": "Refractory Technician", "hi": "रिफ्रैक्टरी तकनीशियन", "or": "ରিଫ୍ରାକ୍ଟରୀ ଟେକ୍ନିଶିୟାନ", "as": "ৰিফ্ৰেক্টৰী কৌশলী"}, "icon": "🏭"}, {"name": {"en": "Engineering Design Technician", "hi": "इंजीनियरिंग डिजाइन", "or": "ଇଞ୍ଜିନିୟରିଂ ଡିଜାଇନ", "as": "ইঞ্জিনিয়াৰিং ডিজাইন"}, "icon": "📐"}, {"name": {"en": "Additive Manufacturing Technician (3D Printing)", "hi": "3डी प्रिंटिंग", "or": "3D ପ୍ରିଣ୍ଟିଂ", "as": "3ডি প্ৰিণ্টিং"}, "icon": "🖨️"}, {"name": {"en": "Virtual Analysis and Designer", "hi": "वर्चुअल डिजाइनर", "or": "ଭର୍ଚୁଆଲ ଡିଜାଇନର", "as": "ভাৰ্চুৱেল ডিজাইনাৰ"}, "icon": "💻"}]}, {"name": {"en": "Draughting & Surveying", "hi": "ड्राफ्टिंग", "bn": "ড্রাফটিং", "or": "ଡ୍ରାଫ୍ଟିଂ", "as": "ড্ৰাফটিং"}, "icon": "📐", "subsubcategories": [{"name": {"en": "Draughtsman (Civil)", "hi": "ड्राफ्ट्समैन सिविल", "or": "ଡ୍ରଫ୍ଟ୍ସମ୍ୟାନ ସିଭିଲ", "as": "ড্ৰাফটচমেন চিভিল"}, "icon": "📐"}, {"name": {"en": "Draughtsman Mechanical", "hi": "ड्राफ्ट्समैन मैकेनिकल", "or": "ଡ୍ରଫ୍ଟ୍ସମ୍ୟାନ ମ୍ୟାକାନିକ", "as": "ড্ৰাফটচমেন মেকানিকেল"}, "icon": "📐"}, {"name": {"en": "Architectural Draughtsman", "hi": "आर्किटेक्चरल ड्राफ्ट्समैन", "or": "ସ୍ଥାପତ୍ୟ ଡ୍ରଫ୍ଟ୍ସମ୍ୟାନ", "as": "স্থাপত্য ড্ৰাফটচমেন"}, "icon": "🏛️"}, {"name": {"en": "Surveyor", "hi": "सर्वेयर", "or": "ସର୍ଭେୟର", "as": "চৰ্ভেয়াৰ"}, "icon": "🗺️"}, {"name": {"en": "GEO - Informatics Assistant", "hi": "जियो इंफॉर्मेटिक्स", "or": "ଜିଓ ଇନ୍ଫର୍ମାଟିକ୍ସ", "as": "জিঅ ইনফৰ্মেটিক্স"}, "icon": "🗺️"}, {"name": {"en": "Civil Engineering Assistant", "hi": "सिविल इंजीनियरिंग", "or": "ସିଭିଲ ଇଞ୍ଜିନିୟରିଂ", "as": "চিভিল ইঞ্জিনিয়াৰিং"}, "icon": "🏗️"}]}]}, {"id": "cat_electrical", "name": {"en": "Electrical & Electronics", "hi": "विद्युत और इलेक्ट्रॉनिक्स", "bn": "বৈদ্যুতিক", "gu": "ઇलेक्ट्रिकल", "mr": "विद्युत", "kn": "ವಿದ್ಯುತ್", "te": "విద్యుత్", "ml": "ഇലക്ട്രിക്കൽ", "ta": "மின்சாரம்", "pa": "ਬਿਜਲੀ", "or": "ଇଲେକ୍ଟ୍ରିକ", "as": "বিদ্যুৎ"}, "icon": "⚡", "subcategories": [{"name": {"en": "Electrical", "hi": "विद्युत", "bn": "বৈদ্যুতিক", "or": "ବିଦ୍ୟୁତ", "as": "বিদ্যুৎ"}, "icon": "⚡", "subsubcategories": [{"name": {"en": "Electrician", "hi": "इलेक्ट्रीशियन", "or": "ଇଲେକ୍ଟ୍ରିଶିୟାନ", "as": "বিদ্যুৎ মিস্ত্ৰী"}, "icon": "⚡"}, {"name": {"en": "Electrician - Power Distribution", "hi": "पावर डिस्ट्रीब्यूशन", "or": "ପାୱାର ଡିଷ୍ଟ୍ରିବ୍ୟୁଶନ", "as": "শক্তি বিতৰণ"}, "icon": "🔌"}, {"name": {"en": "Wireman", "hi": "वायरमैन", "or": "ୱାୟରମ୍ୟାନ", "as": "তাঁৰ মিস্ত্ৰী"}, "icon": "🔌"}, {"name": {"en": "Technician Power Electronics Systems", "hi": "पावर इलेक्ट्रॉनिक्स", "or": "ପାୱାର ଇଲେକ୍ଟ୍ରୋନିକ୍ସ", "as": "পাৱাৰ ইলেকট্ৰনিক্স"}, "icon": "⚡"}, {"name": {"en": "Lift and Escalator Mechanic", "hi": "लिफ्ट मैकेनिक", "or": "ଲିଫ୍ଟ ମ୍ୟାକାନିକ", "as": "লিফট মেকানিক"}, "icon": "🛗"}, {"name": {"en": "Pump Operator Cum Mechanic", "hi": "पंप ऑपरेटर", "or": "ପମ୍ପ ଅପରେଟର", "as": "পাম্প অপাৰেটৰ"}, "icon": "💧"}]}, {"name": {"en": "Electronics & Instruments", "hi": "इलेक्ट्रॉनिक्स", "bn": "ইলেকট্রনিক্স", "or": "ଇଲେକ୍ଟ୍ରୋନିକ୍ସ", "as": "ইলেকট্ৰনিক্স"}, "icon": "📻", "subsubcategories": [{"name": {"en": "Electronics Mechanic", "hi": "इलेक्ट्रॉनिक्स मैकेनिक", "or": "ଇଲେକ୍ଟ୍ରୋନିକ୍ସ ମ୍ୟାକାନିକ", "as": "ইলেকট্ৰনিক্স মেকানিক"}, "icon": "📻"}, {"name": {"en": "Instrument Mechanic", "hi": "इंस्ट्रूमेंट मैकेनिक", "or": "ଇନ୍ସ୍ଟ୍ରୁମେଣ୍ଟ ମ୍ୟାକାନିକ", "as": "যন্ত্ৰ মেকানিক"}, "icon": "🎛️"}, {"name": {"en": "Instrument Mechanic (Chemical Plant)", "hi": "केमिकल प्लांट इंस्ट्रूमेंट", "or": "ଇନ୍ସ୍ଟ୍ରୁମେଣ୍ଟ କେମିକଲ", "as": "ৰাসায়নিক যন্ত্ৰ মেকানিক"}, "icon": "🎛️"}, {"name": {"en": "Technician Electronics System Design and Repair", "hi": "इलेक्ट्रॉनिक्स सिस्टम", "or": "ଇଲେକ୍ଟ୍ରୋନିକ୍ସ ସିଷ୍ଟମ", "as": "ইলেকট্ৰনিক্স চিষ্টেম"}, "icon": "🔧"}, {"name": {"en": "Technician Medical Electronics", "hi": "मेडिकल इलेक्ट्रॉनिक्स", "or": "ମେଡ଼ିକାଲ ଇଲେକ୍ଟ୍ରୋନିକ୍ସ", "as": "চিকিৎসা ইলেকট্ৰনিক্স"}, "icon": "🏥"}, {"name": {"en": "Mechanic Consumer Electronic Appliances", "hi": "उपभोक्ता इलेक्ट्रॉनिक्स", "or": "ଉପଭୋକ୍ତା ଇଲେକ୍ଟ୍ରୋନିକ୍ସ", "as": "গ্ৰাহক ইলেকট্ৰনিক্স"}, "icon": "📺"}, {"name": {"en": "Semiconductor Technician", "hi": "सेमीकंडक्टर तकनीशियन", "or": "ସେମିକଣ୍ଡକ୍ଟର ଟେକ୍ନିଶିୟାନ", "as": "চেমিকণ্ডাক্টৰ কৌশলী"}, "icon": "💡"}]}, {"name": {"en": "Renewable & Green Energy", "hi": "हरित ऊर्जा", "bn": "নবায়নযোগ্য শক্তি", "or": "ସ୍ୱଚ୍ଛ ଶକ୍ତି", "as": "নবীকৰণযোগ্য শক্তি"}, "icon": "🌞", "subsubcategories": [{"name": {"en": "Solar Technician (Electrical)", "hi": "सोलर तकनीशियन", "or": "ସୋଲାର ଟେକ୍ନିଶିୟାନ", "as": "চৌৰ কৌশলী"}, "icon": "☀️"}, {"name": {"en": "Wind Plant Technician", "hi": "वायु ऊर्जा तकनीशियन", "or": "ୱିଣ୍ଡ ପ୍ଲାଣ୍ଟ ଟେକ୍ନିଶିୟାନ", "as": "বায়ু শক্তি কৌশলী"}, "icon": "💨"}, {"name": {"en": "Small Hydro Power Plant Technician", "hi": "जलविद्युत तकनीशियन", "or": "ଜଳ ବିଦ୍ୟୁତ ଟେକ୍ନିଶିୟାନ", "as": "জলবিদ্যুৎ কৌশলী"}, "icon": "💧"}, {"name": {"en": "Green Hydrogen Production Technician", "hi": "ग्रीन हाइड्रोजन", "or": "ଗ୍ରୀନ ହାଇଡ୍ରୋଜେନ", "as": "সেউজীয়া হাইড্ৰজেন"}, "icon": "🌿"}]}, {"name": {"en": "Telecom & Networking", "hi": "दूरसंचार", "bn": "টেলিকম", "or": "ଟେଲିକମ", "as": "টেলিকম"}, "icon": "📡", "subsubcategories": [{"name": {"en": "5G Network Technician", "hi": "5जी नेटवर्क", "or": "5G ନେଟୱର୍କ", "as": "5G নেটৱৰ্ক"}, "icon": "📶"}, {"name": {"en": "Fiber To Home Technician", "hi": "फाइबर तकनीशियन", "or": "ଫାଇବର ଟୁ ହୋମ", "as": "ফাইবাৰ টু হোম"}, "icon": "🌐"}, {"name": {"en": "Information & Communication Technology System Maintenance (ICTSM)", "hi": "आईसीटी सिस्टम", "or": "ଆଇସିଟି ସିଷ୍ଟମ", "as": "আইচিটি চিষ্টেম"}, "icon": "📡"}, {"name": {"en": "Computer Hardware & Network Maintenance", "hi": "कंप्यूटर हार्डवेयर", "or": "କମ୍ପ୍ୟୁଟର ହାର୍ଡୱେୟାର", "as": "কম্পিউটাৰ হাৰ্ডৱেৰ"}, "icon": "🖥️"}]}]}, {"id": "cat_it", "name": {"en": "IT & Computers", "hi": "आईटी और कंप्यूटर", "bn": "আইটি ও কম্পিউটার", "gu": "IT અને કમ્પ્યુટર", "mr": "आयटी", "kn": "ಐಟಿ", "te": "ఐటీ", "ml": "ഐടി", "ta": "தகவல் தொழில்நுட்பம்", "pa": "ਆਈਟੀ", "or": "ଆଇଟି", "as": "আইটি"}, "icon": "💻", "subcategories": [{"name": {"en": "Programming & Software", "hi": "प्रोग्रामिंग", "bn": "প্রোগ্রামিং", "or": "ପ୍ରୋଗ୍ରାମିଂ", "as": "প্ৰগ্ৰামিং"}, "icon": "👨‍💻", "subsubcategories": [{"name": {"en": "Computer Operator and Programming Assistant (COPA)", "hi": "कोपा", "or": "କୋପା", "as": "কোপা"}, "icon": "💻"}, {"name": {"en": "Information Technology", "hi": "सूचना प्रौद्योगिकी", "or": "ସୂଚନା ପ୍ରଯୁକ୍ତି", "as": "তথ্য প্ৰযুক্তি"}, "icon": "🖥️"}, {"name": {"en": "Software Testing Assistant", "hi": "सॉफ्टवेयर टेस्टिंग", "or": "ସଫ୍ଟୱେୟାର ଟେଷ୍ଟିଂ", "as": "চফটৱেৰ পৰীক্ষণ"}, "icon": "🧪"}, {"name": {"en": "Artificial Intelligence Programming Assistant", "hi": "AI प्रोग्रामिंग", "or": "AI ପ୍ରୋଗ୍ରାମିଂ", "as": "AI প্ৰগ্ৰামিং"}, "icon": "🤖"}, {"name": {"en": "Database System Assistant", "hi": "डेटाबेस असिस्टेंट", "or": "ଡ଼ାଟାବେସ ଆସିଷ୍ଟ", "as": "ডেটাবেছ সহায়ক"}, "icon": "🗄️"}, {"name": {"en": "Data Entry Operator", "hi": "डेटा एंट्री ऑपरेटर", "or": "ଡ଼ାଟା ଏଣ୍ଟ୍ରି ଅପରେଟର", "as": "ডেটা এন্ট্ৰি অপাৰেটৰ"}, "icon": "⌨️"}, {"name": {"en": "Data Annotation Assistant", "hi": "डेटा एनोटेशन", "or": "ଡ଼ାଟା ଆନୋଟେଶନ", "as": "ডেটা এনোটেচন"}, "icon": "🏷️"}, {"name": {"en": "Computer Aided Manufacturing (CAM) Programmer", "hi": "कैम प्रोग्रामर", "or": "CAM ପ୍ରୋଗ୍ରାମର", "as": "CAM প্ৰগ্ৰামাৰ"}, "icon": "🖥️"}]}, {"name": {"en": "Cyber & Security", "hi": "साइबर सुरक्षा", "bn": "সাইবার নিরাপত্তা", "or": "ସାଇବର", "as": "চাইবাৰ"}, "icon": "🔐", "subsubcategories": [{"name": {"en": "Cyber Security Assistant", "hi": "साइबर सुरक्षा", "or": "ସାଇବର ସୁରକ୍ଷା", "as": "চাইবাৰ সুৰক্ষা"}, "icon": "🔐"}, {"name": {"en": "Smartphone Technician Cum App Tester", "hi": "स्मार्टफोन तकनीशियन", "or": "ଷ୍ମାର୍ଟଫୋନ ଟେକ୍ନିଶିୟାନ", "as": "স্মাৰ্টফোন কৌশলী"}, "icon": "📱"}]}, {"name": {"en": "Design & Media", "hi": "डिजाइन और मीडिया", "bn": "ডিজাইন", "or": "ଡିଜାଇନ", "as": "ডিজাইন"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Desktop Publishing Operator", "hi": "डेस्कटॉप पब्लिशिंग", "or": "ଡ଼େସ୍କଟପ ପ୍ରକାଶନ", "as": "ডেস্কটপ প্ৰকাশন"}, "icon": "🖨️"}, {"name": {"en": "Multimedia, Animation & Special Effects", "hi": "मल्टीमीडिया", "or": "ମଲ୍ଟିମିଡ଼ିଆ", "as": "মাল্টিমিডিয়া"}, "icon": "🎬"}, {"name": {"en": "Digital Photographer", "hi": "डिजिटल फोटोग्राफर", "or": "ଡ଼ିଜିଟାଲ ଫୋଟୋଗ୍ରାଫର", "as": "ডিজিটেল ফটোগ্ৰাফাৰ"}, "icon": "📷"}, {"name": {"en": "Photographer", "hi": "फोटोग्राफर", "or": "ଫୋଟୋଗ୍ରାଫର", "as": "ফটোগ্ৰাফাৰ"}, "icon": "📸"}, {"name": {"en": "Video Cameraman", "hi": "वीडियो कैमरामैन", "or": "ଭିଡ଼ିଓ କ୍ୟାମେରା", "as": "ভিডিঅ কেমেৰামেন"}, "icon": "🎥"}]}, {"name": {"en": "IoT & Smart Tech", "hi": "IoT तकनीक", "bn": "আইওটি", "or": "IoT", "as": "আইঅটি"}, "icon": "🌐", "subsubcategories": [{"name": {"en": "Industrial IoT Technician", "hi": "इंडस्ट्रियल IoT", "or": "ଶିଳ୍ପ IoT", "as": "উদ্যোগিক IoT"}, "icon": "🏭"}, {"name": {"en": "IoT Technician (Smart Agriculture)", "hi": "स्मार्ट कृषि IoT", "or": "ଷ୍ମାର୍ଟ କୃଷି IoT", "as": "স্মাৰ্ট কৃষি IoT"}, "icon": "🌾"}, {"name": {"en": "IoT Technician (Smart City)", "hi": "स्मार्ट सिटी IoT", "or": "ଷ୍ମାର୍ଟ ସିଟି IoT", "as": "স্মাৰ্ট চহৰ IoT"}, "icon": "🏙️"}, {"name": {"en": "IoT Technician (Smart Healthcare)", "hi": "स्मार्ट हेल्थकेयर IoT", "or": "ଷ୍ମାର୍ଟ ସ୍ୱାସ୍ଥ୍ୟ IoT", "as": "স্মাৰ্ট স্বাস্থ্য IoT"}, "icon": "🏥"}]}, {"name": {"en": "Drones & Aviation", "hi": "ड्रोन और विमानन", "bn": "ড্রোন", "or": "ଡ୍ରୋନ", "as": "ড্ৰোন"}, "icon": "🚁", "subsubcategories": [{"name": {"en": "Drone Pilot (Junior)", "hi": "ड्रोन पायलट", "or": "ଡ୍ରୋନ ପାଇଲଟ", "as": "ড্ৰোন পাইলট"}, "icon": "🚁"}, {"name": {"en": "Drone Technician", "hi": "ड्रोन तकनीशियन", "or": "ଡ୍ରୋନ ଟେକ୍ନିଶିୟାନ", "as": "ড্ৰোন কৌশলী"}, "icon": "🔧"}, {"name": {"en": "Aeronautical Structure and Equipment Fitter", "hi": "एरोनॉटिकल फिटर", "or": "ଏରୋନଟିକ ଫିଟର", "as": "এৰোনটিক্যেল ফিটাৰ"}, "icon": "✈️"}]}]}, {"id": "cat_automotive", "name": {"en": "Automotive & Transport", "hi": "वाहन और परिवहन", "bn": "যানবাহন", "gu": "વाहन", "mr": "वाहन", "kn": "ಆಟೋಮೊಟಿವ್", "te": "వాహనాలు", "ml": "ഓട്ടോമോട്ടിവ്", "ta": "வாகனங்கள்", "pa": "ਵਾਹਨ", "or": "ଯାନ", "as": "যান"}, "icon": "🚗", "subcategories": [{"name": {"en": "Vehicle Mechanics", "hi": "वाहन मैकेनिक", "bn": "যান মেকানিক", "or": "ଯାନ ମ୍ୟାକାନିକ", "as": "যান মেকানিক"}, "icon": "🔧", "subsubcategories": [{"name": {"en": "Mechanic Motor Vehicle (MMV)", "hi": "मोटर वाहन मैकेनिक", "or": "ମୋଟର ଯାନ ମ୍ୟାକାନିକ", "as": "মটৰ যান মেকানিক"}, "icon": "🚗"}, {"name": {"en": "Mechanic Two and Three Wheeler", "hi": "दो-तीन पहिया मैकेनिक", "or": "ଦ୍ୱି-ତ୍ରି ଚକ ମ୍ୟାକାନିକ", "as": "দুই-তিনি চকীয়া মেকানিক"}, "icon": "🏍️"}, {"name": {"en": "Mechanic Diesel", "hi": "डीजल मैकेनिक", "or": "ଡ଼ିଜେଲ ମ୍ୟାକାନିକ", "as": "ডিজেল মেকানিক"}, "icon": "⛽"}, {"name": {"en": "Mechanic Tractor", "hi": "ट्रैक्टर मैकेनिक", "or": "ଟ୍ରାକ୍ଟର ମ୍ୟାକାନିକ", "as": "ট্ৰেক্টৰ মেকানিক"}, "icon": "🚜"}, {"name": {"en": "Mechanic Electric Vehicle", "hi": "इलेक्ट्रिक वाहन मैकेनिक", "or": "ଇ-ଯାନ ମ୍ୟାକାନିକ", "as": "ই-যান মেকানিক"}, "icon": "🔋"}, {"name": {"en": "Driver cum Mechanic (LMV)", "hi": "ड्राइवर और मैकेनिक", "or": "ଡ୍ରାଇଭର ମ୍ୟାକାନିକ", "as": "ড্ৰাইভাৰ মেকানিক"}, "icon": "🚘"}, {"name": {"en": "Mechanic Agricultural Machinery", "hi": "कृषि मशीनरी मैकेनिक", "or": "କୃଷି ଯନ୍ତ୍ର ମ୍ୟାକାନିକ", "as": "কৃষি যন্ত্ৰ মেকানিক"}, "icon": "🚜"}]}, {"name": {"en": "Auto Body & Paint", "hi": "ऑटो बॉडी", "bn": "অটো বডি", "or": "ଅଟୋ ବଡ଼ି", "as": "অটো বডি"}, "icon": "🎨", "subsubcategories": [{"name": {"en": "Mechanic Auto Body Painting", "hi": "ऑटो बॉडी पेंटिंग", "or": "ଅଟୋ ବଡ଼ି ପେଣ୍ଟ", "as": "অটো বডি পেইণ্ট"}, "icon": "🎨"}, {"name": {"en": "Mechanic Auto Body Repair", "hi": "ऑटो बॉडी रिपेयर", "or": "ଅଟୋ ବଡ଼ି ମରାମତ", "as": "অটো বডি মেৰামতি"}, "icon": "🔨"}, {"name": {"en": "Mechanic Auto Electrical and Electronics", "hi": "ऑटो इलेक्ट्रिकल", "or": "ଅଟୋ ଇଲେକ୍ଟ୍ରିକ", "as": "অটো বিদ্যুৎ"}, "icon": "⚡"}]}, {"name": {"en": "Marine & Logistics", "hi": "समुद्री", "bn": "নৌ", "or": "ସାମୁଦ୍ରିକ", "as": "সামুদ্ৰিক"}, "icon": "⚓", "subsubcategories": [{"name": {"en": "Marine Engine Fitter", "hi": "मरीन इंजन फिटर", "or": "ମ୍ୟାରିନ ଇଞ୍ଜିନ ଫିଟର", "as": "সামুদ্ৰিক ইঞ্জিন ফিটাৰ"}, "icon": "⚓"}, {"name": {"en": "Marine Fitter", "hi": "मरीन फिटर", "or": "ମ୍ୟାରିନ ଫିଟର", "as": "সামুদ্ৰিক ফিটাৰ"}, "icon": "⚓"}, {"name": {"en": "Vessel Navigator", "hi": "जहाज नेविगेटर", "or": "ଜାହାଜ ନ୍ୟାଭିଗେଟର", "as": "জাহাজ নেভিগেটৰ"}, "icon": "🚢"}, {"name": {"en": "In Plant Logistics Assistant", "hi": "लॉजिस्टिक्स असिस्टेंट", "or": "ଲଜିଷ୍ଟିକ୍ସ ଆସିଷ୍ଟ", "as": "লজিষ্টিক্স সহায়ক"}, "icon": "📦"}, {"name": {"en": "Warehouse Technician", "hi": "वेयरहाउस तकनीशियन", "or": "ଗୋଦାମ ଟେକ୍ନିଶିୟାନ", "as": "গুদামঘৰ কৌশলী"}, "icon": "🏭"}]}]}, {"id": "cat_construction", "name": {"en": "Construction & Home Services", "hi": "निर्माण और घरेलू सेवाएं", "bn": "নির্মাণ", "gu": "બાંધકામ", "mr": "बांधकाम", "kn": "ನಿರ್ಮಾಣ", "te": "నిర్మాణం", "ml": "നിർമ്മാണം", "ta": "கட்டுமானம்", "pa": "ਉਸਾਰੀ", "or": "ନିର୍ମାଣ", "as": "নিৰ্মাণ"}, "icon": "🏠", "subcategories": [{"name": {"en": "Plumbing & Sanitation", "hi": "प्लंबिंग", "bn": "প্লাম্বিং", "or": "ପ୍ଲମ୍ବିଂ", "as": "প্লাম্বিং"}, "icon": "🪠", "subsubcategories": [{"name": {"en": "Plumber", "hi": "प्लंबर", "or": "ପ୍ଲମ୍ବର", "as": "প্লাম্বাৰ"}, "icon": "🪠"}, {"name": {"en": "Health Sanitary Inspector", "hi": "सैनिटरी इंस्पेक्टर", "or": "ସ୍ୱାସ୍ଥ୍ୟ ଇନ୍ସ୍ପେକ୍ଟର", "as": "স্বাস্থ্য পৰিদৰ্শক"}, "icon": "🏥"}]}, {"name": {"en": "Painting & Finishing", "hi": "पेंटिंग", "bn": "রঙ করা", "or": "ରଙ୍ଗ", "as": "ৰং"}, "icon": "🖌️", "subsubcategories": [{"name": {"en": "Painter (General)", "hi": "पेंटर", "or": "ପେଣ୍ଟର", "as": "ৰং কৰোঁতা"}, "icon": "🖌️"}, {"name": {"en": "Domestic Painter", "hi": "घरेलू पेंटर", "or": "ଘରୋଇ ପେଣ୍ଟର", "as": "ঘৰুৱা ৰং কৰোঁতা"}, "icon": "🖌️"}, {"name": {"en": "Industrial Painter", "hi": "औद्योगिक पेंटर", "or": "ଶିଳ୍ପ ପେଣ୍ଟର", "as": "উদ্যোগিক ৰং কৰোঁতা"}, "icon": "🏭"}, {"name": {"en": "Electroplater", "hi": "इलेक्ट्रोप्लेटर", "or": "ଇଲେକ୍ଟ୍ରୋ ପ୍ଲେଟର", "as": "ইলেক্ট্ৰপ্লেটাৰ"}, "icon": "✨"}]}, {"name": {"en": "Masonry & Civil", "hi": "राजमिस्त्री", "bn": "রাজমিস্ত্রি", "or": "ମିସ୍ତ୍ରୀ", "as": "ৰাজমিস্ত্ৰী"}, "icon": "🧱", "subsubcategories": [{"name": {"en": "Mason (Building Constructor)", "hi": "राजमिस्त्री", "or": "ମିସ୍ତ୍ରୀ", "as": "ৰাজমিস্ত্ৰী"}, "icon": "🧱"}, {"name": {"en": "Interior Design & Decoration", "hi": "इंटीरियर डिजाइन", "or": "ଇଣ୍ଟେରିଅର ଡିଜାଇନ", "as": "ইণ্টেৰিয়ৰ ডিজাইন"}, "icon": "🛋️"}, {"name": {"en": "Floriculture & Landscaping", "hi": "बागवानी", "or": "ଫୁଲ ଚାଷ", "as": "ফুলৰ খেতি"}, "icon": "🌸"}]}, {"name": {"en": "Refrigeration & AC", "hi": "रेफ्रिजरेशन", "bn": "রেফ্রিজারেশন", "or": "ରେଫ୍ରିଜରେଶନ", "as": "ৰেফ্ৰিজাৰেচন"}, "icon": "❄️", "subsubcategories": [{"name": {"en": "Refrigeration and Air Conditioning Technician", "hi": "रेफ्रिजरेशन तकनीशियन", "or": "ରେଫ୍ରିଜରେଶନ ଟେକ୍ନିଶିୟାନ", "as": "ৰেফ্ৰিজাৰেচন কৌশলী"}, "icon": "❄️"}, {"name": {"en": "Central Air Condition Plant Mechanic", "hi": "सेंट्रल एसी मैकेनिक", "or": "ସେଣ୍ଟ୍ରାଲ ଏସି ମ୍ୟାକାନିକ", "as": "কেন্দ্ৰীয় এচি মেকানিক"}, "icon": "🌬️"}]}, {"name": {"en": "Fire & Safety", "hi": "अग्नि सुरक्षा", "bn": "অগ্নি নিরাপত্তা", "or": "ଅଗ୍ନି ସୁରକ୍ଷା", "as": "অগ্নি সুৰক্ষা"}, "icon": "🔥", "subsubcategories": [{"name": {"en": "Fire Technology and Industrial Safety Management", "hi": "अग्नि प्रौद्योगिकी", "or": "ଅଗ୍ନି ଟେକ୍ନୋଲୋଜି", "as": "অগ্নি প্ৰযুক্তি"}, "icon": "🚒"}, {"name": {"en": "Fireman", "hi": "अग्निशामक", "or": "ଅଗ୍ନି ଶ୍ରମିକ", "as": "অগ্নিশামক"}, "icon": "👨‍🚒"}, {"name": {"en": "Health, Safety and Environment", "hi": "स्वास्थ्य सुरक्षा", "or": "ସ୍ୱାସ୍ଥ୍ୟ ସୁରକ୍ଷା", "as": "স্বাস্থ্য সুৰক্ষা"}, "icon": "🦺"}]}]}, {"id": "cat_fashion", "name": {"en": "Fashion & Textiles", "hi": "फैशन और वस्त्र", "bn": "ফ্যাশন", "gu": "ફેશન", "mr": "फॅशन", "kn": "ಫ್ಯಾಷನ್", "te": "ఫాషన్", "ml": "ഫാഷൻ", "ta": "நாகரீகம்", "pa": "ਫੈਸ਼ਨ", "or": "ଫ୍ୟାଶନ", "as": "ফেশ্বন"}, "icon": "👗", "subcategories": [{"name": {"en": "Garment Making", "hi": "वस्त्र निर्माण", "bn": "পোশাক তৈরি", "or": "ବସ୍ତ୍ର ନିର୍ମାଣ", "as": "কাপোৰ তৈয়াৰ"}, "icon": "✂️", "subsubcategories": [{"name": {"en": "Sewing Technology", "hi": "सिलाई", "or": "ସିଲେଇ", "as": "চিলাই"}, "icon": "🧵"}, {"name": {"en": "Dress Making (DM)", "hi": "ड्रेस मेकिंग", "or": "ଡ୍ରେସ ତିଆରି", "as": "পোছাক তৈয়াৰ"}, "icon": "👗"}, {"name": {"en": "Fashion Design and Technology (FD&T)", "hi": "फैशन डिजाइन", "or": "ଫ୍ୟାଶନ ଡିଜାଇନ", "as": "ফেশ্বন ডিজাইন"}, "icon": "👠"}, {"name": {"en": "Cutting & Sewing (VI & OD)", "hi": "कटिंग और सिलाई", "or": "କଟିଂ ଓ ସିଲେଇ", "as": "কটিং আৰু চিলাই"}, "icon": "✂️"}, {"name": {"en": "Computer Aided Embroidery & Designing", "hi": "कम्प्यूटर कढ़ाई", "or": "କମ୍ପ୍ୟୁଟର କଢ଼ାଇ", "as": "কম্পিউটাৰ সূচীকৰ্ম"}, "icon": "💻"}]}, {"name": {"en": "Weaving & Textiles", "hi": "बुनाई", "bn": "বুনন", "or": "ବୁଣା", "as": "বোৱা"}, "icon": "🧶", "subsubcategories": [{"name": {"en": "Weaving Technician", "hi": "बुनाई तकनीशियन", "or": "ବୁଣା ଟେକ୍ନିଶିୟାନ", "as": "বোৱা কৌশলী"}, "icon": "🧶"}, {"name": {"en": "Weaving Technician for Silk & Woolen Fabrics", "hi": "रेशम बुनाई", "or": "ରେଶମ ବୁଣା", "as": "ৰেচম বোৱা"}, "icon": "🧶"}, {"name": {"en": "Spinning Technician", "hi": "कताई तकनीशियन", "or": "କଟା ଟେକ୍ନିଶିୟାନ", "as": "কটনা কৌশলী"}, "icon": "🌀"}, {"name": {"en": "Textile Mechatronics", "hi": "टेक्सटाइल मेकाट्रॉनिक्स", "or": "ଟେକ୍ସଟାଇଲ ମେକାଟ୍ରୋନିକ୍ସ", "as": "বস্ত্ৰ মেকাট্ৰনিক্স"}, "icon": "⚙️"}, {"name": {"en": "Textile Wet Processing Technician", "hi": "टेक्सटाइल प्रोसेसिंग", "or": "ଟେକ୍ସଟାଇଲ ପ୍ରୋସେସ", "as": "বস্ত্ৰ প্ৰচেছিং"}, "icon": "💧"}, {"name": {"en": "Carpet Weaving Artisan - Handloom", "hi": "कालीन बुनाई", "or": "ଗାଲିଚା ବୁଣା", "as": "কাৰ্পেট বোৱা"}, "icon": "🪢"}]}, {"name": {"en": "Embroidery & Artisan", "hi": "कढ़ाई", "bn": "সূচিকর্ম", "or": "କଢ଼ାଇ", "as": "সূচীকৰ্ম"}, "icon": "🪡", "subsubcategories": [{"name": {"en": "Hand Embroidery Artisan", "hi": "हाथ कढ़ाई", "or": "ହାତ କଢ଼ାଇ", "as": "হাত সূচীকৰ্ম"}, "icon": "🪡"}, {"name": {"en": "Surface Ornamentation Techniques (Embroidery)", "hi": "कढ़ाई सजावट", "or": "ସୁଜି ଅଳଙ୍କାର", "as": "সূচীকৰ্ম অলংকৰণ"}, "icon": "🌸"}, {"name": {"en": "Traditional Phulkari Artisan", "hi": "फुलकारी", "or": "ଫୁଲ୍କାରୀ", "as": "ফুলকাৰি"}, "icon": "🌺"}, {"name": {"en": "Shawl Weaving Artisan", "hi": "शॉल बुनाई", "or": "ସ୍ଵ ବୁଣା", "as": "শ্বল বোৱা"}, "icon": "🧣"}]}, {"name": {"en": "Leather & Footwear", "hi": "चमड़ा", "bn": "চামড়া", "or": "ଚମ୍ଡ଼ା", "as": "চামৰা"}, "icon": "👞", "subsubcategories": [{"name": {"en": "Footwear Maker", "hi": "जूता निर्माता", "or": "ଜୋତା ତିଆରି", "as": "জোতা নিৰ্মাতা"}, "icon": "👟"}, {"name": {"en": "Leather Goods Maker", "hi": "चमड़े का सामान", "or": "ଚମ୍ଡ଼ା ସାମଗ୍ରୀ", "as": "চামৰা সামগ্ৰী"}, "icon": "👜"}]}]}, {"id": "cat_hospitality", "name": {"en": "Hospitality & Food", "hi": "आतिथ्य और खाना", "bn": "আতিথেয়তা", "gu": "આતિથ્ય", "mr": "आतिथ्य", "kn": "ಆತಿಥ್ಯ", "te": "ఆతిథ్యం", "ml": "ഹോസ്പിറ്റാലിറ്റി", "ta": "விருந்தோம்பல்", "pa": "ਪ੍ਰਾਹੁਣਚਾਰੀ", "or": "ଆତିଥ୍ୟ", "as": "অতিথিপৰায়ণতা"}, "icon": "🍽️", "subcategories": [{"name": {"en": "Food Production", "hi": "खाद्य उत्पादन", "bn": "খাদ্য উৎপাদন", "or": "ଖାଦ୍ୟ ଉତ୍ପାଦନ", "as": "খাদ্য উৎপাদন"}, "icon": "👨‍🍳", "subsubcategories": [{"name": {"en": "Baker & Confectioner", "hi": "बेकर", "or": "ବେକର", "as": "বেকাৰ"}, "icon": "🥐"}, {"name": {"en": "Food Production (General)", "hi": "खाद्य उत्पादन", "or": "ଖାଦ୍ୟ ଉତ୍ପାଦନ", "as": "খাদ্য উৎপাদন"}, "icon": "🍱"}, {"name": {"en": "Food and Beverage Service Assistant", "hi": "फूड सर्विस", "or": "ଫୁଡ ସର୍ଭିସ", "as": "খাদ্য সেৱা"}, "icon": "🍽️"}, {"name": {"en": "Food Beverage", "hi": "खाद्य पेय", "or": "ଖାଦ୍ୟ ପାନୀୟ", "as": "খাদ্য পানীয়"}, "icon": "🥤"}, {"name": {"en": "Catering & Hospitality Assistant", "hi": "कैटरिंग", "or": "କ୍ୟାଟରିଂ", "as": "কেটাৰিং"}, "icon": "🍴"}, {"name": {"en": "Fruits and Vegetables Processing", "hi": "फल और सब्जी प्रसंस्करण", "or": "ଫଳ ଶାଗ ପ୍ରୋସେସ", "as": "ফল পাচলি প্ৰচেছিং"}, "icon": "🥦"}]}, {"name": {"en": "Hotel & Front Office", "hi": "होटल", "bn": "হোটেল", "or": "ହୋଟେଲ", "as": "হোটেল"}, "icon": "🏨", "subsubcategories": [{"name": {"en": "Front Office Assistant", "hi": "फ्रंट ऑफिस", "or": "ଫ୍ରଣ୍ଟ ଅଫିସ", "as": "ফ্ৰন্ট অফিচ"}, "icon": "🏨"}, {"name": {"en": "Housekeeper", "hi": "हाउसकीपर", "or": "ହାଉସ କିପର", "as": "গৃহপালক"}, "icon": "🧹"}, {"name": {"en": "Hospital Housekeeping", "hi": "अस्पताल हाउसकीपिंग", "or": "ହସ୍ପିଟାଲ ସଫେଇ", "as": "চিকিৎসালয় গৃহপালন"}, "icon": "🏥"}]}, {"name": {"en": "Tourism & Travel", "hi": "पर्यटन", "bn": "পর্যটন", "or": "ପର୍ୟଟନ", "as": "পৰ্যটন"}, "icon": "✈️", "subsubcategories": [{"name": {"en": "Tourist Guide", "hi": "पर्यटक गाइड", "or": "ପର୍ୟଟକ ଗାଇଡ", "as": "পৰ্যটক গাইড"}, "icon": "🗺️"}, {"name": {"en": "Travel & Tour Assistant", "hi": "ट्रैवल असिस्टेंट", "or": "ଟ୍ରାଭେଲ ଆସିଷ୍ଟ", "as": "ভ্ৰমণ সহায়ক"}, "icon": "✈️"}]}, {"name": {"en": "Beauty & Wellness", "hi": "सौंदर्य", "bn": "সৌন্দর্য", "or": "ସୌନ୍ଦର୍ୟ", "as": "সৌন্দৰ্য"}, "icon": "💅", "subsubcategories": [{"name": {"en": "Cosmetology", "hi": "कॉस्मेटोलॉजी", "or": "କଜ୍ମେଟୋଲୋଜି", "as": "কচমেটোলজি"}, "icon": "💄"}, {"name": {"en": "Hair & Skin Care (VI)", "hi": "बाल और त्वचा देखभाल", "or": "ଚୁଲି ଓ ଚର୍ମ", "as": "চুলি আৰু ছাল"}, "icon": "💇"}, {"name": {"en": "Spa Therapy", "hi": "स्पा थेरेपी", "or": "ସ୍ପା ଥେରାପି", "as": "স্পা থেৰাপি"}, "icon": "💆"}]}]}, {"id": "cat_agriculture", "name": {"en": "Agriculture & Environment", "hi": "कृषि और पर्यावरण", "bn": "কৃষি", "gu": "ખेती", "mr": "शेती", "kn": "ಕೃಷಿ", "te": "వ్యవసాయం", "ml": "കൃഷി", "ta": "விவசாயம்", "pa": "ਖੇਤੀ", "or": "କୃଷି", "as": "কৃষি"}, "icon": "🌾", "subcategories": [{"name": {"en": "Farming & Horticulture", "hi": "बागवानी", "bn": "বাগান", "or": "ବଗିଚା", "as": "বাগিচা"}, "icon": "🌱", "subsubcategories": [{"name": {"en": "Horticulture", "hi": "बागवानी", "or": "ଉଦ୍ୟାନ", "as": "উদ্যান"}, "icon": "🌸"}, {"name": {"en": "Nursery & Orchard Technician", "hi": "नर्सरी", "or": "ନର୍ସରି", "as": "নাৰ্চাৰী"}, "icon": "🌳"}, {"name": {"en": "Floriculture & Landscaping", "hi": "बागवानी", "or": "ଫୁଲ ଚାଷ", "as": "ফুলৰ খেতি"}, "icon": "🌺"}, {"name": {"en": "Agro Processing", "hi": "कृषि प्रसंस्करण", "or": "କୃଷି ପ୍ରୋସେସ", "as": "কৃষি প্ৰচেছিং"}, "icon": "🌾"}, {"name": {"en": "Soil Testing and Crop Technician", "hi": "मिट्टी परीक्षण", "or": "ମାଟି ପରୀକ୍ଷା", "as": "মাটি পৰীক্ষণ"}, "icon": "🧪"}]}, {"name": {"en": "Dairy & Food Tech", "hi": "डेयरी", "bn": "দুগ্ধ", "or": "ଡେୟାରୀ", "as": "দুগ্ধ"}, "icon": "🥛", "subsubcategories": [{"name": {"en": "Dairying", "hi": "डेयरी", "or": "ଦୁଗ୍ଧ ଉଦ୍ୟୋଗ", "as": "গোয়ালপালন"}, "icon": "🐄"}, {"name": {"en": "Milk and Milk Product Technician", "hi": "दुग्ध उत्पाद", "or": "ଦୁଧ ଉତ୍ପାଦ", "as": "গাখীৰ উৎপাদ"}, "icon": "🥛"}, {"name": {"en": "Honey Processing Technician", "hi": "शहद प्रसंस्करण", "or": "ମହୁ ପ୍ରୋସେସ", "as": "মৌ প্ৰচেছিং"}, "icon": "🍯"}]}, {"name": {"en": "Mining & Stone", "hi": "खनन", "bn": "খনন", "or": "ଖଣି", "as": "খনন"}, "icon": "⛏️", "subsubcategories": [{"name": {"en": "Stone Mining Machine Operator", "hi": "पत्थर खनन", "or": "ପଥର ଖଣି", "as": "শিল খনন"}, "icon": "⛏️"}, {"name": {"en": "Stone Processing Machine Operator", "hi": "पत्थर प्रसंस्करण", "or": "ପଥର ପ୍ରୋସେସ", "as": "শিল প্ৰচেছিং"}, "icon": "🪨"}, {"name": {"en": "Mechanic Mining Machinery", "hi": "खनन मशीनरी", "or": "ଖଣି ଯନ୍ତ୍ର", "as": "খনন যন্ত্ৰ"}, "icon": "🏗️"}]}]}, {"id": "cat_health", "name": {"en": "Health & Medical", "hi": "स्वास्थ्य और चिकित्सा", "bn": "স্বাস্থ্য", "gu": "સ્વાસ્થ્ય", "mr": "आरोग्य", "kn": "ಆರೋಗ್ಯ", "te": "ఆరోగ్యం", "ml": "ആരോഗ്യം", "ta": "சுகாதாரம்", "pa": "ਸਿਹਤ", "or": "ସ୍ୱାସ୍ଥ୍ୟ", "as": "স্বাস্থ্য"}, "icon": "🏥", "subcategories": [{"name": {"en": "Medical Technicians", "hi": "चिकित्सा तकनीशियन", "bn": "মেডিকেল টেকনিশিয়ান", "or": "ଡ଼ାକ୍ତରୀ ଟେକ୍ନିଶିୟାନ", "as": "চিকিৎসা কৌশলী"}, "icon": "🩺", "subsubcategories": [{"name": {"en": "Physiotherapy Technician", "hi": "फिजियोथेरेपी", "or": "ଫିଜିଓଥେରାପି", "as": "ফিজিঅথেৰাপি"}, "icon": "🦽"}, {"name": {"en": "Radiology Technician", "hi": "रेडियोलॉजी", "or": "ରେଡ଼ିଓଲୋଜି", "as": "ৰেডিঅলজি"}, "icon": "🩻"}, {"name": {"en": "Dental Laboratory Equipment Technician", "hi": "डेंटल लैब", "or": "ଡ଼େଣ୍ଟାଲ ଲ୍ୟାବ", "as": "দন্ত পৰীক্ষাগাৰ"}, "icon": "🦷"}, {"name": {"en": "Technician Medical Electronics", "hi": "मेडिकल इलेक्ट्रॉनिक्स", "or": "ମେଡ଼ିକାଲ ଇଲେକ୍ଟ୍ରୋନିକ୍ସ", "as": "চিকিৎসা ইলেকট্ৰনিক্স"}, "icon": "💉"}]}, {"name": {"en": "Care & Support", "hi": "देखभाल", "bn": "যত্ন", "or": "ଯତ୍ନ", "as": "যত্ন"}, "icon": "🤝", "subsubcategories": [{"name": {"en": "Geriatric (Old Age) Care", "hi": "वृद्ध देखभाल", "or": "ବୃଦ୍ଧ ଯତ୍ନ", "as": "বৃদ্ধ যত্ন"}, "icon": "👴"}, {"name": {"en": "Early Childhood Educator", "hi": "बाल शिक्षक", "or": "ଶିଶୁ ଶିକ୍ଷକ", "as": "শিশু শিক্ষক"}, "icon": "👶"}]}, {"name": {"en": "Chemical & Lab", "hi": "रासायनिक", "bn": "রাসায়নিক", "or": "ରାସାୟନିକ", "as": "ৰাসায়নিক"}, "icon": "🧪", "subsubcategories": [{"name": {"en": "Laboratory Assistant (Chemical Plant)", "hi": "लैब असिस्टेंट", "or": "ଲ୍ୟାବ ଆସିଷ୍ଟ", "as": "পৰীক্ষাগাৰ সহায়ক"}, "icon": "🧪"}, {"name": {"en": "Attendant Operator (Chemical Plant)", "hi": "केमिकल प्लांट", "or": "କେମିକଲ ପ୍ଲାଣ୍ଟ", "as": "ৰাসায়নিক উদ্ভিদ"}, "icon": "🏭"}, {"name": {"en": "Maintenance Mechanic (Chemical Plant)", "hi": "मेंटेनेंस मैकेनिक", "or": "ରକ୍ଷଣ ମ୍ୟାକାନିକ", "as": "ৰক্ষণাবেক্ষণ মেকানিক"}, "icon": "🔧"}]}]}, {"id": "cat_arts", "name": {"en": "Arts, Crafts & Media", "hi": "कला, शिल्प और मीडिया", "bn": "শিল্পকলা", "gu": "કlaa", "mr": "कला", "kn": "ಕಲೆ", "te": "కళలు", "ml": "കല", "ta": "கலை", "pa": "ਕਲਾ", "or": "କଳା", "as": "কলা"}, "icon": "🎨", "subcategories": [{"name": {"en": "Visual Arts & Crafts", "hi": "दृश्य कला", "bn": "চিত্রকলা", "or": "ଚିତ୍ରକଳା", "as": "চিত্ৰকলা"}, "icon": "🖼️", "subsubcategories": [{"name": {"en": "Basohli Painting Artist", "hi": "बसोहली चित्रकार", "or": "ବସୋହ୍ଲି ଚିତ୍ରକ", "as": "বাচোহলি চিত্ৰকৰ"}, "icon": "🖼️"}, {"name": {"en": "Papier Mache Artisan", "hi": "पेपर माशे", "or": "ପେପର ମାଶେ", "as": "পেপাৰ মেচে"}, "icon": "🎭"}, {"name": {"en": "Wood Carving Artisan", "hi": "लकड़ी नक्काशी", "or": "କାଠ କଟା", "as": "কাঠ খোদাই"}, "icon": "🪵"}, {"name": {"en": "Bamboo Works", "hi": "बांस का काम", "or": "ବାଉଁଶ କାମ", "as": "বাঁহৰ কাম"}, "icon": "🎋"}]}, {"name": {"en": "Wood & Furniture", "hi": "लकड़ी", "bn": "কাঠ", "or": "କାଠ", "as": "কাঠ"}, "icon": "🪵", "subsubcategories": [{"name": {"en": "Wood Work Technician", "hi": "लकड़ी का काम", "or": "କାଠ କାମ", "as": "কাঠৰ কাম"}, "icon": "🪵"}, {"name": {"en": "Mechanic Lens/Prism Grinding", "hi": "लेंस ग्राइंडिंग", "or": "ଲେନ୍ସ ଗ୍ରାଇଣ୍ଡିଂ", "as": "লেন্স গ্ৰাইণ্ডিং"}, "icon": "🔬"}]}, {"name": {"en": "Media & Photography", "hi": "मीडिया", "bn": "মিডিয়া", "or": "ମିଡ଼ିଆ", "as": "মিডিয়া"}, "icon": "📸", "subsubcategories": [{"name": {"en": "Photographer", "hi": "फोटोग्राफर", "or": "ଫୋଟୋଗ୍ରାଫର", "as": "ফটোগ্ৰাফাৰ"}, "icon": "📸"}, {"name": {"en": "Digital Photographer", "hi": "डिजिटल फोटोग्राफर", "or": "ଡ଼ିଜିଟାଲ ଫୋଟୋଗ୍ରାଫର", "as": "ডিজিটেল ফটোগ্ৰাফাৰ"}, "icon": "📷"}, {"name": {"en": "Video Cameraman", "hi": "वीडियो कैमरामैन", "or": "ଭିଡ଼ିଓ କ୍ୟାମେରା", "as": "ভিডিঅ কেমেৰামেন"}, "icon": "🎥"}, {"name": {"en": "Multimedia, Animation & Special Effects", "hi": "मल्टीमीडिया", "or": "ମଲ୍ଟିମିଡ଼ିଆ", "as": "মাল্টিমিডিয়া"}, "icon": "🎬"}]}]}, {"id": "cat_business", "name": {"en": "Business & Office", "hi": "व्यापार और कार्यालय", "bn": "ব্যবসা", "gu": "વ્યવસાય", "mr": "व्यवसाय", "kn": "ವ್ಯಾಪಾರ", "te": "వ్యాపారం", "ml": "ബിസിനസ്", "ta": "வணிகம்", "pa": "ਵਪਾਰ", "or": "ବ୍ୟବସାୟ", "as": "ব্যৱসায়"}, "icon": "💼", "subcategories": [{"name": {"en": "Office Administration", "hi": "कार्यालय प्रशासन", "bn": "অফিস প্রশাসন", "or": "ଦଫ୍ତର", "as": "কাৰ্যালয়"}, "icon": "🗂️", "subsubcategories": [{"name": {"en": "Secretarial Practice (English)", "hi": "सचिवीय अभ्यास", "or": "ସଚିବ ଅଭ୍ୟାସ", "as": "সচিবীয় অনুশীলন"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (English)", "hi": "स्टेनोग्राफर", "or": "ଷ୍ଟେନୋଗ୍ରାଫର", "as": "ষ্টেনোগ্ৰাফাৰ"}, "icon": "📝"}, {"name": {"en": "Stenographer Secretarial Assistant (Hindi)", "hi": "हिंदी स्टेनोग्राफर", "or": "ହିନ୍ଦୀ ଷ୍ଟେନୋ", "as": "হিন্দী ষ্টেনো"}, "icon": "📝"}, {"name": {"en": "Desktop Publishing Operator", "hi": "डेस्कटॉप पब्लिशिंग", "or": "ଡ଼େସ୍କଟପ ପ୍ରକାଶନ", "as": "ডেস্কটপ প্ৰকাশন"}, "icon": "🖨️"}, {"name": {"en": "Data Entry Operator", "hi": "डेटा एंट्री ऑपरेटर", "or": "ଡ଼ାଟା ଏଣ୍ଟ୍ରି ଅପରେଟର", "as": "ডেটা এন্ট্ৰি অপাৰেটৰ"}, "icon": "⌨️"}]}, {"name": {"en": "Finance & HR", "hi": "वित्त", "bn": "ফিনান্স", "or": "ଅର୍ଥ", "as": "বিত্ত"}, "icon": "💰", "subsubcategories": [{"name": {"en": "Finance Executive", "hi": "वित्त अधिकारी", "or": "ଅର୍ଥ ଅଧିକାରୀ", "as": "বিত্ত কাৰ্যবাহী"}, "icon": "💰"}, {"name": {"en": "Human Resource Executive", "hi": "एचआर अधिकारी", "or": "HR ଅଧିକାରୀ", "as": "মানৱ সম্পদ কাৰ্যবাহী"}, "icon": "👥"}, {"name": {"en": "Marketing Executive", "hi": "मार्केटिंग अधिकारी", "or": "ମାର୍କେଟିଂ ଅଧିକାରୀ", "as": "বিপণন কাৰ্যবাহী"}, "icon": "📊"}]}]}];
+
+        // Check if a category name object has multilingual data
+        function isMultilingual(nameObj) {
+            if (!nameObj || typeof nameObj !== 'object') return false;
+            return !!(nameObj.hi || nameObj.bn || nameObj.or || nameObj.as);
+        }
+
+        // Find a multilingual name object from local category tree by English name
+        function findLocalName(enName, localCat) {
+            if (!enName) return null;
+            for (const sub of (localCat.subcategories || [])) {
+                const subEn = sub.name && (sub.name.en || sub.name);
+                if (subEn === enName && isMultilingual(sub.name)) return sub.name;
+                for (const svc of (sub.subsubcategories || [])) {
+                    const svcEn = svc.name && (svc.name.en || svc.name);
+                    if (svcEn === enName && isMultilingual(svc.name)) return svc.name;
+                }
+            }
+            return null;
+        }
+
+        // Merge multilingual names into existing Firebase categories
+        // Works for ALL categories: original (cat1-cat9) AND ITI (cat_engineering etc.)
+        function mergeMultilingualNames(existing, localCats) {
+            return existing.map(cat => {
+                const catEnName = cat.name && (cat.name.en || cat.name);
+                // Match by id, then by English name
+                const localCat = localCats.find(c => c.id === cat.id) ||
+                                 localCats.find(c => c.name && c.name.en === catEnName);
+                if (!localCat) return cat;
+
+                // Upgrade category name
+                if (!isMultilingual(cat.name)) cat.name = localCat.name;
+
+                // Upgrade subcategory and service names
+                (cat.subcategories || []).forEach(sub => {
+                    const subEn = sub.name && (sub.name.en || sub.name);
+                    if (!isMultilingual(sub.name)) {
+                        const upgraded = findLocalName(subEn, localCat);
+                        if (upgraded) sub.name = upgraded;
+                    }
+                    (sub.subsubcategories || []).forEach(svc => {
+                        const svcEn = svc.name && (svc.name.en || svc.name);
+                        if (!isMultilingual(svc.name)) {
+                            // Search within matched subcategory first, then whole cat
+                            let upgraded = findLocalName(svcEn, localCat);
+                            if (upgraded) svc.name = upgraded;
+                        }
+                    });
+                });
+                return cat;
+            });
+        }
+
+        // Load categories from Firebase (visible to ALL users)
+        async function loadCategoriesFromFirebase() {
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'categories'));
+                const existing = snap.exists() ? snap.val() : null;
+                // Force reseed if empty or old format
+                if (!existing || !Array.isArray(existing) || existing.length < 5) {
+                    categories = ITI_CATEGORIES;
+                    await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
+                    console.log('✅ ITI categories seeded to Firebase:', categories.length);
+                } else {
+                    // Merge multilingual names into existing categories
+                    // Pass all local category definitions so ALL cats get upgraded
+                    const allLocalCats = [...(DEFAULT_CATEGORIES || []), ...ITI_CATEGORIES];
+                    categories = mergeMultilingualNames(existing, allLocalCats);
+                    // Check if any ITI cat is missing — add it
+                    let added = 0;
+                    ITI_CATEGORIES.forEach(itiCat => {
+                        if (!categories.find(c => c.id === itiCat.id)) {
+                            categories.push(itiCat);
+                            added++;
+                        }
+                    });
+                    // Save upgraded data back to Firebase silently
+                    _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories)
+                        .then(() => console.log('✅ Multilingual names saved to Firebase'))
+                        .catch(e => console.warn('Save error:', e));
+                    console.log('✅ Categories loaded & upgraded:', categories.length, '| ITI added:', added);
+                }
+                // Refresh all UI that depends on categories
+                updateProviderCategorySelects();
+                updateHomeStats();
+                // Refresh home and browse categories after async load
+                loadHomeCategories();
+                if (typeof loadBrowseCategories === 'function') {
+                    const browsePage = document.getElementById('page-browse');
+                    if (browsePage && !browsePage.classList.contains('hidden')) loadBrowseCategories();
+                }
+            } catch(e) { console.warn('Categories load error:', e); }
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
+        function getTranslated(obj, defaultText = '') {
+            if (!obj) return defaultText;
+
+            // Validates that a translation value is actually in the expected script
+            // Rejects ASCII/English values for Indic script languages (catches data errors)
+            function isValidForLang(val, lang) {
+                if (!val) return false;
+                const needsIndic = ['gu','mr','kn','te','ml','ta','pa','hi','bn','or','as'];
+                if (!needsIndic.includes(lang)) return true;
+                return val.split("").some(function(ch){return ch.charCodeAt(0) > 127;}); // Must have at least 1 non-ASCII char
+            }
+
+            if (typeof obj === 'string') {
+                if (CATEGORY_TRANSLATIONS[obj]) {
+                    const v = CATEGORY_TRANSLATIONS[obj][currentLanguage];
+                    if (v && isValidForLang(v, currentLanguage)) return v;
+                    const hi = CATEGORY_TRANSLATIONS[obj]['hi'];
+                    if (['gu','mr','kn','te','ml','ta','pa'].includes(currentLanguage) && hi) return hi;
+                    return CATEGORY_TRANSLATIONS[obj]['en'] || obj;
+                }
+                return obj;
+            }
+            // Object {en:'...', hi:'...', gu:'...', ...}
+            // 1. Try current language with script validation
+            const raw = obj[currentLanguage];
+            if (raw && isValidForLang(raw, currentLanguage)) return raw;
+            // 2. Try CATEGORY_TRANSLATIONS by English key
+            if (obj.en && CATEGORY_TRANSLATIONS[obj.en]) {
+                const ct = CATEGORY_TRANSLATIONS[obj.en][currentLanguage];
+                if (ct && isValidForLang(ct, currentLanguage)) return ct;
+            }
+            // 3. Indian Indic scripts: fall back to Hindi (familiar to most Indian users)
+            if (['gu','mr','kn','te','ml','ta','pa'].includes(currentLanguage) && obj.hi) return obj.hi;
+            // 4. English fallback
+            return obj.en || obj.hi || defaultText;
+        }
+        
+        // Haversine formula for distance calculation
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; // Distance in km
+        }
+        
+        function generateStars(rating) {
+            const fullStars = Math.floor(rating);
+            const halfStar = rating % 1 >= 0.5 ? 1 : 0;
+            const emptyStars = 5 - fullStars - halfStar;
+            
+            let stars = '⭐'.repeat(fullStars);
+            if (halfStar) stars += '⭐';
+            stars += '☆'.repeat(emptyStars);
+            return stars;
+        }
+        
+        // ==================== LANGUAGE ====================
+        function selectLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            document.getElementById('languageModal').classList.add('hidden');
+            
+            // Update language button
+            const langNames = {
+                'en': 'EN', 'hi': 'हिं', 'bn': 'বাং', 'gu': 'ગુજ',
+                'mr': 'मरा', 'kn': 'ಕನ್ನ', 'te': 'తెలు', 'ml': 'മലയ',
+                'ta': 'தமிழ்', 'pa': 'ਪੰਜ', 'or': 'ଓଡ଼ି', 'as': 'অসম'
+            };
+            document.getElementById('currentLang').textContent = langNames[lang] || 'EN';
+            
+            // Update ALL UI text
+            updateAllUIText();
+            
+            // Reload content in new language (categories)
+            loadHomeCategories();
+            loadBrowseCategories();
+            updateProviderCategorySelects();
+
+            // FIX A: Re-render subcategory and service grids if a category is already selected
+            if (selectedCategoryId) {
+                const category = categories.find(c => c.id === selectedCategoryId);
+                if (category) {
+                    const subGrid = document.getElementById('browseSubcategoriesGrid');
+                    subGrid.innerHTML = category.subcategories.map((sub, idx) => `
+                        <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === selectedSubcategoryIdx ? 'selected' : ''}" onclick="selectSubcategory(${idx}, this)">
+                            <div class="flex justify-center mb-3">${renderIcon(sub.icon, 'text-4xl', 'w-10 h-10 mx-auto')}</div>
+                            <div class="font-bold text-gray-800">${getTranslated(sub.name)}</div>
+                        </div>
+                    `).join('');
+                    document.getElementById('subcategorySection').classList.remove('hidden');
+                }
+                if (selectedSubcategoryIdx !== null) {
+                    const category2 = categories.find(c => c.id === selectedCategoryId);
+                    const sub = category2?.subcategories[selectedSubcategoryIdx];
+                    if (sub?.subsubcategories) {
+                        const svcGrid = document.getElementById('browseServicesGrid');
+                        svcGrid.innerHTML = sub.subsubcategories.map((service, idx) => `
+                            <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === selectedServiceIdx ? 'selected' : ''}" onclick="selectService(${idx}, this)">
+                                <div class="flex justify-center mb-3">${renderIcon(service.icon, 'text-4xl', 'w-10 h-10 mx-auto')}</div>
+                                <div class="font-bold text-gray-800">${getTranslated(service.name)}</div>
+                            </div>
+                        `).join('');
+                        document.getElementById('serviceSection').classList.remove('hidden');
+                    }
+                }
+            }
+            
+            console.log('Language changed to:', lang);
+        }
+        
+        function initializeTranslations() {
+            // Add data-i18n attributes to elements that need translation
+            // This runs once on page load to mark translatable elements
+            
+            // Already done in HTML: Navigation buttons
+            
+            // Mark headings
+            document.querySelectorAll('h1, h2, h3').forEach(heading => {
+                const text = heading.textContent.trim();
+                if (text.includes('Find') && text.includes('Perfect')) heading.setAttribute('data-i18n', 'findProviders');
+                if (text === 'Service Categories') heading.setAttribute('data-i18n', 'serviceCategories');
+                if (text.includes('Register as Service Provider')) heading.setAttribute('data-i18n', 'registerAsProvider');
+                if (text.includes('Register as Service Seeker')) heading.setAttribute('data-i18n', 'registerAsSeeker');
+                if (text === '1️⃣ Select Category') heading.setAttribute('data-i18n', 'selectCategory');
+                if (text === '2️⃣ Select Subcategory') heading.setAttribute('data-i18n', 'selectSubcategory');
+                if (text === '3️⃣ Select Service Type') heading.setAttribute('data-i18n', 'selectService');
+                if (text === 'Providers Near You') heading.setAttribute('data-i18n', 'providersNearYou');
+                if (text.includes('Find Service Providers Near You')) heading.setAttribute('data-i18n', 'findServiceProviders');
+            });
+            
+            // Mark form labels
+            document.querySelectorAll('label').forEach(label => {
+                const text = label.textContent.trim();
+                if (text === 'Full Name *') label.setAttribute('data-i18n', 'fullName');
+                if (text === 'Mobile Number *') label.setAttribute('data-i18n', 'mobile');
+                if (text === 'Category (Optional)') label.setAttribute('data-i18n', 'category');
+                if (text === 'Subcategory (Optional)') label.setAttribute('data-i18n', 'subcategory');
+                if (text === 'Service Type (Optional)') label.setAttribute('data-i18n', 'serviceType');
+                if (text === 'Religion *') label.setAttribute('data-i18n', 'religion');
+                if (text === 'Experience (years) *') label.setAttribute('data-i18n', 'experience');
+                if (text.includes('Rate') && text.includes('*')) label.setAttribute('data-i18n', 'rate');
+                if (text === 'Location/Address *') label.setAttribute('data-i18n', 'location');
+                if (text === 'Set Your Location on Map') label.setAttribute('data-i18n', 'setLocation');
+                // Additional registration form labels
+                if (text.includes('WhatsApp Number')) label.setAttribute('data-i18n', 'whatsappLabel');
+                if (text.includes('Languages Spoken')) label.setAttribute('data-i18n', 'langSpoken');
+                if (text.includes('About You') || text.includes('Bio')) label.setAttribute('data-i18n', 'bioLabel');
+            });
+            
+            // Mark buttons
+            document.querySelectorAll('button').forEach(btn => {
+                const text = btn.textContent.trim();
+                if (text.includes('Use My Location')) btn.setAttribute('data-i18n', 'useMyLocation');
+                if (text === 'Register Now') btn.setAttribute('data-i18n', 'registerNow');
+                if (text === 'Browse Services') btn.setAttribute('data-i18n', 'browseServices');
+                if (text === 'Become a Provider') btn.setAttribute('data-i18n', 'becomeProvider');
+                if (text.includes('Back to Home')) btn.setAttribute('data-i18n', 'backToHome');
+            });
+            
+            console.log('Translation attributes initialized');
+        }
+        
+        function updateAllUIText() {
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                element.textContent = t(key);
+            });
+            
+            // Update Select Religion dropdown
+            const religionSelects = document.querySelectorAll('#providerReligion, #seekerReligion');
+            religionSelects.forEach(select => {
+                if (select && select.options[0]) {
+                    select.options[0].text = t('selectReligion');
+                }
+            });
+            
+            console.log('UI text updated to language:', currentLanguage);
+        }
+        
+        function changeLang() {
+            document.getElementById('languageModal').classList.remove('hidden');
+        }
+        
+        // ==================== NAVIGATION ====================
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(page => page.classList.add('hidden'));
+            document.getElementById('page-' + pageName).classList.remove('hidden');
+            
+            if (pageName === 'home') {
+                loadHomeCategories();
+            } else if (pageName === 'browse') {
+                loadBrowseCategories();
+            } else if (pageName === 'map') {
+                setTimeout(initMainMap, 100);
+            } else if (pageName === 'register') {
+                setTimeout(initRegisterMap, 100);
+            } else if (pageName === 'seeker') {
+                setTimeout(initSeekerMap, 100);
+            } else if (pageName === 'myProfile') {
+                renderProfilePage();
+            }
+        }
+        
+        // ==================== BROWSE PAGE WITH GRID VIEW ====================
+        function loadBrowseCategories() {
+            const grid = document.getElementById('browseCategoriesGrid');
+            grid.innerHTML = categories.map(cat => `
+                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectCategory('${cat.id}', this)">
+                    <div class="flex justify-center mb-3">${renderIcon(cat.icon, 'text-5xl', 'w-12 h-12 mx-auto')}</div>
+                    <div class="font-bold text-gray-800">${getTranslated(cat.name)}</div>
+                </div>
+            `).join('');
+            
+            // Reset selection — always restore categories grid too
+            const stepCat = document.getElementById('step-category');
+            if (stepCat) stepCat.classList.remove('hidden');
+            document.getElementById('subcategorySection').classList.add('hidden');
+            document.getElementById('serviceSection').classList.add('hidden');
+            document.getElementById('providersSection').classList.add('hidden');
+            // Reset breadcrumb
+            const crumb = document.getElementById('browseCrumb');
+            if (crumb) crumb.innerHTML = '<span class="text-gray-400 cursor-pointer hover:text-orange-600" onclick="loadBrowseCategories()">🏠 Categories</span>';
+            // Reset selected highlights
+            document.querySelectorAll('#browseCategoriesGrid .category-card').forEach(c => c.classList.remove('selected'));
+            // Reset page title
+            const browseTitle = document.getElementById('browsePageTitle');
+            if (browseTitle) browseTitle.textContent = 'Find Service Providers Near You';
+        }
+        
+        function selectCategory(catId, el) {
+            selectedCategoryId = catId;
+            selectedSubcategoryIdx = null;
+            selectedServiceIdx = null;
+            const category = categories.find(c => c.id === catId);
+            if (!category || !category.subcategories) return;
+            document.querySelectorAll('#browseCategoriesGrid .category-card').forEach(c => c.classList.remove('selected'));
+            if (el) el.classList.add('selected');
+            const grid = document.getElementById('browseSubcategoriesGrid');
+            grid.innerHTML = category.subcategories.map((sub, idx) => `
+                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectSubcategory(${idx}, this)">
+                    <div class="flex justify-center mb-3">${renderIcon(sub.icon, 'text-4xl', 'w-10 h-10 mx-auto')}</div>
+                    <div class="font-bold text-gray-800">${getTranslated(sub.name)}</div>
+                </div>
+            `).join('');
+            // HIDE category step, SHOW only subcategory
+            const stepCat = document.getElementById('step-category');
+            if (stepCat) stepCat.classList.add('hidden');
+            document.getElementById('subcategorySection').classList.remove('hidden');
+            document.getElementById('serviceSection').classList.add('hidden');
+            document.getElementById('providersSection').classList.add('hidden');
+            // Breadcrumb
+            _updateBC('cat', getTranslated(category.name));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function selectSubcategory(subIdx, el) {
+            selectedSubcategoryIdx = subIdx;
+            selectedServiceIdx = null;
+            const category = categories.find(c => c.id === selectedCategoryId);
+            const subcategory = category.subcategories[subIdx];
+            if (!subcategory.subsubcategories) return;
+            document.querySelectorAll('#browseSubcategoriesGrid .category-card').forEach(c => c.classList.remove('selected'));
+            if (el) el.classList.add('selected');
+            const grid = document.getElementById('browseServicesGrid');
+            grid.innerHTML = subcategory.subsubcategories.map((service, idx) => `
+                <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectService(${idx}, this)">
+                    <div class="flex justify-center mb-3">${renderIcon(service.icon, 'text-4xl', 'w-10 h-10 mx-auto')}</div>
+                    <div class="font-bold text-gray-800">${getTranslated(service.name)}</div>
+                </div>
+            `).join('');
+            // HIDE subcategory, SHOW service types
+            document.getElementById('subcategorySection').classList.add('hidden');
+            document.getElementById('serviceSection').classList.remove('hidden');
+            document.getElementById('providersSection').classList.add('hidden');
+            _updateBC('sub', getTranslated(subcategory.name));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function selectService(serviceIdx, el) {
+            selectedServiceIdx = serviceIdx;
+            document.querySelectorAll('#browseServicesGrid .category-card').forEach(c => c.classList.remove('selected'));
+            if (el) el.classList.add('selected');
+            // HIDE service, SHOW providers
+            document.getElementById('serviceSection').classList.add('hidden');
+            document.getElementById('providersSection').classList.remove('hidden');
+            // Breadcrumb
+            const cat2 = categories.find(c => c.id === selectedCategoryId);
+            const sub2 = cat2?.subcategories[selectedSubcategoryIdx];
+            const svc2 = sub2?.subsubcategories[serviceIdx];
+            if (svc2) _updateBC('svc', getTranslated(svc2.name));
+            applySortAndFilter();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ── BREADCRUMB ──
+        function _updateBC(level, label) {
+            const trail = document.getElementById('breadcrumb-trail');
+            if (!trail) return;
+            trail.classList.remove('hidden');
+            if (level === 'cat') {
+                const el = document.getElementById('bc-cat');
+                if (el) { el.textContent = label; el.classList.remove('hidden'); }
+                document.getElementById('bc-sep1').classList.remove('hidden');
+                ['bc-sub','bc-sep2','bc-svc','bc-sep3'].forEach(id => { const e=document.getElementById(id); if(e) e.classList.add('hidden'); });
+            } else if (level === 'sub') {
+                const el = document.getElementById('bc-sub');
+                if (el) { el.textContent = label; el.classList.remove('hidden'); }
+                document.getElementById('bc-sep2').classList.remove('hidden');
+                ['bc-svc','bc-sep3'].forEach(id => { const e=document.getElementById(id); if(e) e.classList.add('hidden'); });
+            } else if (level === 'svc') {
+                const el = document.getElementById('bc-svc');
+                if (el) { el.textContent = label; el.classList.remove('hidden'); }
+                document.getElementById('bc-sep3').classList.remove('hidden');
+            }
+        }
+        function browseGoTo(step) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const show = id => { const e=document.getElementById(id); if(e) e.classList.remove('hidden'); };
+            const hide = id => { const e=document.getElementById(id); if(e) e.classList.add('hidden'); };
+            if (step === 'category') {
+                show('step-category'); hide('subcategorySection'); hide('serviceSection'); hide('providersSection'); hide('breadcrumb-trail');
+                selectedCategoryId = null; selectedSubcategoryIdx = null; selectedServiceIdx = null;
+            } else if (step === 'subcategory') {
+                hide('step-category'); show('subcategorySection'); hide('serviceSection'); hide('providersSection');
+                ['bc-sub','bc-sep2','bc-svc','bc-sep3'].forEach(hide);
+                selectedSubcategoryIdx = null; selectedServiceIdx = null;
+            } else if (step === 'service') {
+                hide('step-category'); hide('subcategorySection'); show('serviceSection'); hide('providersSection');
+                ['bc-svc','bc-sep3'].forEach(hide);
+                selectedServiceIdx = null;
+            }
+        }
+        
+
+        // ── BILINGUAL WHATSAPP MESSAGE ──
+        function buildWAMsg(providerName, serviceName) {
+            const lang = currentLanguage || 'en';
+            const msgs = {
+                hi: `नमस्ते ${providerName} जी 🙏\nमैंने आपको *सुदर्शन चक्र* पर देखा।\nमुझे आपकी *${serviceName}* सेवा चाहिए।\nक्या हम बात कर सकते हैं?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                bn: `নমস্কার ${providerName} 🙏\nআমি *সুদর্শন চক্র*-এ আপনাকে খুঁজে পেয়েছি।\nআমার *${serviceName}* সেবা দরকার।\nআলোচনা করতে পারি?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                gu: `નમસ્તે ${providerName} 🙏\nમેં *સુદર્શન ચક્ર* પર તમને શોધ્યા।\nમને *${serviceName}* સેવા જોઈએ છે।\nવાત કરી શકીએ?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                mr: `नमस्ते ${providerName} 🙏\nमला *सुदर्शन चक्र* वर तुम्ही दिसलात।\nमला *${serviceName}* सेवा हवी आहे।\nआपण बोलू शकतो का?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                ta: `வணக்கம் ${providerName} 🙏\n*சுதர்ஷன் சக்ர*-ல் உங்களை கண்டேன்।\n*${serviceName}* சேவை தேவை।\nபேசலாமா?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                te: `నమస్కారం ${providerName} 🙏\n*సుదర్శన చక్ర*లో మీరు కనిపించారు।\n*${serviceName}* సేవ కావాలి।\nమాట్లాడగలమా?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                kn: `ನಮಸ್ಕಾರ ${providerName} 🙏\n*ಸುದರ್ಶನ ಚಕ್ರ*ದಲ್ಲಿ ನಿಮ್ಮನ್ನು ಕಂಡೆ।\n*${serviceName}* ಸೇವೆ ಬೇಕಾಗಿದೆ।\nಮಾತನಾಡಬಹುದೇ?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                ml: `നമസ്കാരം ${providerName} 🙏\n*സുദർശന ചക്ര*-ൽ നിങ്ങളെ കണ്ടു।\n*${serviceName}* സേവനം വേണം।\nസംസാരിക്കാമോ?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                pa: `ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ${providerName} 🙏\n*ਸੁਦਰਸ਼ਨ ਚੱਕਰ* ਤੇ ਤੁਹਾਨੂੰ ਲੱਭਿਆ।\n*${serviceName}* ਸੇਵਾ ਚਾਹੀਦੀ ਹੈ।\nਗੱਲ ਕਰ ਸਕਦੇ ਹਾਂ?\n\nHi ${providerName}, I found you on *Sudarshan Chakra*. I need your *${serviceName}* service. Can we discuss?`,
+                en: `Hi ${providerName} 🙏\nI found you on *Sudarshan Chakra*.\nI need your *${serviceName}* service.\nCan we discuss?`,
+            };
+            return msgs[lang] || msgs['en'];
+        }
+
+        // ==================== PHASE B: SORT & FILTER FUNCTIONS ====================
+        function toggleFilters() {
+            const panel = document.getElementById('filterPanel');
+            panel.classList.toggle('hidden');
+        }
+        
+        function clearFilters() {
+            document.getElementById('filterLanguage').value = '';
+            document.getElementById('filterReligion').value = '';
+            document.getElementById('filterPriceMin').value = '0';
+            document.getElementById('filterPriceMax').value = '2000';
+            document.getElementById('filterDistance').value = '999';
+            document.getElementById('sortSelect').value = 'rating';
+            applySortAndFilter();
+        }
+        
+        function applySortAndFilter() {
+            // Get current filtered providers (by service)
+            const category = categories.find(c => c.id === selectedCategoryId);
+            if (!category) {
+                console.log('❌ Category not found:', selectedCategoryId);
+                return;
+            }
+            
+            const subcategory = category.subcategories[selectedSubcategoryIdx];
+            if (!subcategory) {
+                console.log('❌ Subcategory not found at index:', selectedSubcategoryIdx);
+                return;
+            }
+            
+            const service = subcategory.subsubcategories[selectedServiceIdx];
+            if (!service) {
+                console.log('❌ Service not found at index:', selectedServiceIdx);
+                return;
+            }
+            
+            const serviceNameEnglish = service.name.en || service.name;
+            console.log('🔍 Looking for providers with service:', serviceNameEnglish);
+            console.log('📋 Target indices - Category:', selectedCategoryId, 'Sub:', selectedSubcategoryIdx, 'Service:', selectedServiceIdx);
+            console.log('📋 Total providers in system:', providers.length);
+            
+            // Start with service filter - BACKWARD COMPATIBLE
+            let filteredProviders = providers.filter(p => {
+                // Match primary service name
+                const exactMatch = p.service === serviceNameEnglish;
+
+                // Match any of provider's multiple services (new multi-service field)
+                const multiServiceMatch = Array.isArray(p.services) && p.services.includes(serviceNameEnglish);
+
+                // BACKWARD COMPATIBLE: index-based matching for old providers
+                const hasValidService = p.service && p.service !== 'undefined' && p.service !== 'General Service Provider';
+                const indexMatchesSub = p.categoryId === selectedCategoryId && p.subcategoryIdx == selectedSubcategoryIdx;
+                const indexMatchesService = p.subsubcategoryIdx == selectedServiceIdx ||
+                    (Array.isArray(p.subsubcategoryIndices) && p.subsubcategoryIndices.includes(String(selectedServiceIdx)));
+                const backwardCompatible = !hasValidService && indexMatchesSub && indexMatchesService;
+
+                const matchesService = exactMatch || multiServiceMatch || backwardCompatible;
+                const isActive = (!p.status || p.status === 'active');
+                
+                console.log('  Provider:', p.name);
+                console.log('    Service:', p.service, '| CategoryId:', p.categoryId, '| SubIdx:', p.subcategoryIdx, '| ServiceIdx:', p.subsubcategoryIdx);
+                console.log('    ExactMatch:', exactMatch, '| BackwardMatch:', backwardCompatible, '| FinalMatch:', matchesService, '| Active:', isActive);
+                
+                return matchesService && isActive;
+            });
+            
+            console.log('✅ Providers matching service:', filteredProviders.length);
+            
+            // Apply Phase B filters
+            const filterLang = document.getElementById('filterLanguage').value;
+            const filterRel = document.getElementById('filterReligion').value;
+            const filterPriceMin = parseInt(document.getElementById('filterPriceMin').value) || 0;
+            const filterPriceMax = parseInt(document.getElementById('filterPriceMax').value) || 99999;
+            const filterDist = parseFloat(document.getElementById('filterDistance').value) || 999;
+            
+            filteredProviders = filteredProviders.filter(p => {
+                // Language filter
+                if (filterLang && p.language) {
+                    const langs = Array.isArray(p.language) ? p.language : [p.language];
+                    if (!langs.includes(filterLang)) return false;
+                }
+                
+                // Religion filter
+                if (filterRel && p.religion !== filterRel) return false;
+                
+                // Price filter
+                if (p.rate < filterPriceMin || p.rate > filterPriceMax) return false;
+                
+                // Distance filter (calculate if needed)
+                if (currentUser && currentUser.lat && currentUser.lng && p.lat && p.lng) {
+                    const dist = calculateDistance(currentUser.lat, currentUser.lng, p.lat, p.lng);
+                    p.distance = dist;
+                    if (dist > filterDist) return false;
+                } else {
+                    p.distance = 9999;
+                }
+                
+                return true;
+            });
+            
+            // Apply sorting
+            const sortBy = document.getElementById('sortSelect').value;
+            
+            filteredProviders.sort((a, b) => {
+                switch(sortBy) {
+                    case 'rating':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'price':
+                        return (a.rate || 0) - (b.rate || 0);
+                    case 'distance':
+                        return (a.distance || 9999) - (b.distance || 9999);
+                    case 'experience':
+                        return (b.experience || 0) - (a.experience || 0);
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Update results count
+            document.getElementById('resultsCount').textContent = t('showingResults', { count: filteredProviders.length });
+            const rc2 = document.getElementById('browseResultsCount');
+            if (rc2 && rc2.textContent.startsWith('🔍')) rc2.textContent = '';
+            
+            // Render providers
+            renderProviders(filteredProviders);
+        }
+        
+        // ==================== PHASE E: PROVIDER CARD RENDERER ====================
+        function getProviderAvatar(p) {
+            if (p.photo) return `<img src="${p.photo}" alt="${p.name}" class="w-full h-full object-cover">`;
+            const initials = p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+            const colors = ['#ea580c','#2563eb','#16a34a','#9333ea','#dc2626','#0891b2'];
+            const color = colors[p.name.charCodeAt(0) % colors.length];
+            return `<div class="w-full h-full flex items-center justify-center text-white text-xl font-bold" style="background:${color}">${initials}</div>`;
+        }
+
+        function getVerifiedBadge(p) {
+            if (p.verified) return '<span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">✅ ID Verified</span>';
+            if (p.idVerification && p.idVerification.status === 'pending') return '<span class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-0.5 rounded-full">⏳ Verification Pending</span>';
+            return '<span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs font-semibold px-2 py-0.5 rounded-full">⚠️ Unverified</span>';
+        }
+
+        function getAvgRating(p) {
+            const reviews = p.reviews ? Object.values(p.reviews) : [];
+            if (reviews.length === 0) return { avg: p.rating || 4.0, count: 0 };
+            const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+            return { avg: Math.round(avg * 10) / 10, count: reviews.length };
+        }
+
+        function renderProviders(filteredProviders) {
+            if (filteredProviders.length === 0) {
+                document.getElementById('providersGridNew').innerHTML = `
+                    <div class="text-center py-12 bg-white rounded-xl shadow">
+                        <p class="text-xl text-gray-500">No providers found matching your filters</p>
+                        <p class="text-gray-400 mt-2">Try adjusting your filters</p>
+                    </div>
+                `;
+                document.getElementById('providersSection').classList.remove('hidden');
+                return;
+            }
+
+            const hrLabel = {'hi':'घंटा','bn':'ঘন্টা','gu':'કलाक','mr':'तास','kn':'ಗಂಟೆ'}[currentLanguage] || 'hr';
+            const yrsLabel = {'hi':'वर्ष','bn':'বছর','gu':'વર્ષ','mr':'वर्षे','kn':'ವರ್ಷಗಳು'}[currentLanguage] || 'yrs';
+
+            const grid = document.getElementById('providersGridNew');
+            grid.innerHTML = filteredProviders.map(p => {
+                const { avg, count } = getAvgRating(p);
+                const waNum = p.whatsapp || p.mobile;
+                const waMsg = encodeURIComponent(buildWAMsg(p.name, p.service));
+                const distText = (p.distance !== undefined && p.distance < 100) ? p.distance.toFixed(1) + ' km away' : p.location;
+                const stars = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
+
+                return `
+                <div class="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+                    <div class="flex items-start gap-4 p-5 pb-3">
+                        <div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 shadow-md border-2 border-orange-200 cursor-pointer" onclick="openProviderProfile('${p.id}')">
+                            ${getProviderAvatar(p)}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="text-lg font-bold text-gray-800 cursor-pointer hover:text-orange-600 transition" onclick="openProviderProfile('${p.id}')">${p.name}</h3>
+                                ${getVerifiedBadge(p)}
+                                ${getMembershipBadge(p)}
+                            </div>
+                            <div class="text-orange-600 font-medium text-sm">${getTranslated(p.service)||p.service}</div>
+                            ${p.language ? `<div class="text-xs text-gray-500 mt-0.5">🗣️ ${Array.isArray(p.language) ? p.language.join(', ') : p.language}${p.workingHours ? ' &nbsp;|&nbsp; ' + getWorkingHoursLabel(p.workingHours) : ''}</div>` : ''}
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <div class="text-yellow-400 text-base leading-none">${stars}</div>
+                            <div class="text-sm font-bold text-gray-700">${avg.toFixed(1)}</div>
+                            <div class="text-xs text-gray-400">${count} review${count !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+                    ${p.bio ? `<div class="px-5 pb-2 text-sm text-gray-500 italic line-clamp-2">"${p.bio}"</div>` : ''}
+                    <div class="px-5 pb-3 grid grid-cols-3 gap-2 text-xs text-gray-600 border-t border-gray-50 pt-3">
+                        <div class="flex items-center gap-1"><span>📍</span><span class="truncate">${distText}</span></div>
+                        <div class="flex items-center gap-1"><span>🕐</span><span>${p.experience} ${yrsLabel}</span></div>
+                        <div class="flex items-center gap-1"><span>💰</span><span class="font-semibold text-gray-800">₹${p.rate}/${hrLabel}</span></div>
+                    </div>
+                    <div class="px-4 pb-4 grid grid-cols-2 gap-2">
+                        <a href="tel:+91${p.mobile.replace(/^\+91/,'')}"  class="bg-green-600 text-white text-center py-2.5 rounded-xl hover:bg-green-700 font-medium text-sm transition" style="text-decoration:none;">${t('callBtn')}</a>
+                        <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-2.5 rounded-xl hover:bg-green-600 font-medium text-sm transition" style="text-decoration:none;">${t('whatsappBtn')}</a>
+                        ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-2.5 rounded-xl hover:bg-blue-700 font-medium text-sm transition" style="text-decoration:none;">${t('directionsBtn')}</a>` : '<div></div>'}
+                        <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">${t('reviewBtn')}</button>
+                        <button onclick="toggleFavourite('${p.id}')" id="fav-${p.id}" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-500 border-gray-200 hover:bg-red-50 hover:text-red-500">🤍</button>
+                        <button onclick="openReportModal('${p.id}','provider','${p.name}')" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-400 border-gray-200 hover:bg-red-50 hover:text-red-500" title="Report">🚨</button>
+                        <button onclick="openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}')" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2.5 rounded-xl font-bold text-sm transition hover:from-purple-700 hover:to-indigo-700 shadow-md">${t('hireNow')} &nbsp;<span class="text-xs font-normal opacity-80">(₹10 fee)</span></button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('providersSection').classList.remove('hidden');
+        }
+
+                function getWorkingHoursLabel(hours) {
+            const labels = {
+                'mon-fri': '📅 Mon-Fri',
+                'weekends': '📅 Weekends',
+                'all-days': '📅 All Days',
+                '24x7': '⏰ 24×7'
+            };
+            return labels[hours] || hours;
+        }
+        
+        // ==================== PHASE C: VOICE SEARCH ====================
+        // ==================== CHIP TOGGLE ====================
+        function toggleChip(label) {
+            const checkbox = label.querySelector('input[type="checkbox"]');
+            if (!checkbox) return;
+            checkbox.checked = !checkbox.checked;
+            label.classList.toggle('checked', checkbox.checked);
+        }
+
+        // ==================== VOICE TOAST (non-blocking) ====================
+        function showVoiceToast(msg) {
+            let toast = document.getElementById('voiceToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'voiceToast';
+                toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:12px 20px;border-radius:12px;z-index:9999;font-size:14px;max-width:90vw;text-align:center;pointer-events:none;';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            toast.style.opacity = '1';
+            clearTimeout(toast._hideTimer);
+            toast._hideTimer = setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.style.display='none',300); }, 3000);
+        }
+
+        let recognition = null;
+        let recognitionTimeout = null;
+        
+        function startVoiceSearch() {
+            // Check browser support
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Voice search is not supported in your browser. Please use Chrome, Edge, or Safari.');
+                return;
+            }
+            
+            // Initialize speech recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            // Configure recognition based on current language
+            const langCodes = {
+                'en': 'en-IN', 'hi': 'hi-IN', 'bn': 'bn-IN',
+                'gu': 'gu-IN', 'mr': 'mr-IN', 'kn': 'kn-IN',
+                'te': 'te-IN', 'ml': 'ml-IN', 'ta': 'ta-IN', 'pa': 'pa-IN',
+                'or': 'or-IN', 'as': 'as-IN'
+            };
+            recognition.lang = langCodes[currentLanguage] || 'en-IN';
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 3;
+            
+            // Show listening indicator
+            document.getElementById('voiceStatus').classList.remove('hidden');
+            document.getElementById('voiceStatusText').textContent = t('speak');
+            
+            // Set timeout to auto-stop after 10 seconds
+            recognitionTimeout = setTimeout(() => {
+                if (recognition) {
+                    recognition.stop();
+                    document.getElementById('voiceStatus').classList.add('hidden');
+                }
+            }, 10000);
+            
+            recognition.onstart = function() {
+                console.log('Speech recognition started');
+                document.getElementById('voiceStatusText').textContent = t('listening');
+            };
+            
+            recognition.onspeechstart = function() {
+                console.log('Speech detected');
+                document.getElementById('voiceStatusText').textContent = t('listening');
+            };
+            
+            recognition.onspeechend = function() {
+                console.log('Speech ended');
+            };
+            
+            recognition.onresult = function(event) {
+                if (recognitionTimeout) clearTimeout(recognitionTimeout);
+
+                // Collect best transcript — try all alternatives from all results
+                let transcript = '';
+                let highestConf = -1;
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const result = event.results[i];
+                    for (let a = 0; a < result.length; a++) {
+                        const alt = result[a];
+                        if (alt.confidence >= highestConf || result.isFinal) {
+                            highestConf = alt.confidence;
+                            transcript = alt.transcript;
+                        }
+                    }
+                }
+
+                // Fallback to last interim if nothing found
+                if (!transcript && event.results.length > 0) {
+                    transcript = event.results[event.results.length - 1][0].transcript;
+                }
+
+                console.log('Voice input:', transcript, '(conf:', highestConf + ')');
+
+                if (transcript.trim()) {
+                    document.getElementById('voiceStatusText').textContent = t('searchingFor', { service: transcript });
+                    setTimeout(() => { processVoiceCommand(transcript.toLowerCase()); }, 300);
+                    setTimeout(() => { document.getElementById('voiceStatus').classList.add('hidden'); }, 2000);
+                } else {
+                    document.getElementById('voiceStatus').classList.add('hidden');
+                    showVoiceToast(t('noSpeechDetected'));
+                }
+            };
+            
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                if (recognitionTimeout) clearTimeout(recognitionTimeout);
+                document.getElementById('voiceStatus').classList.add('hidden');
+
+                if (event.error === 'no-speech') {
+                    showVoiceToast(t('noSpeechDetected'));
+                } else if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                    showVoiceToast('Microphone access denied. Please allow microphone access in browser settings.');
+                } else if (event.error === 'network') {
+                    showVoiceToast('Network error. Please check your connection and try again.');
+                } else if (event.error === 'aborted') {
+                    console.log('Recognition aborted by user');
+                } else if (event.error === 'audio-capture') {
+                    showVoiceToast('No microphone found. Please connect a microphone and try again.');
+                } else {
+                    showVoiceToast('Voice error: ' + event.error + '. Please try again.');
+                }
+            };
+            
+            recognition.onend = function() {
+                console.log('Speech recognition ended');
+                if (recognitionTimeout) {
+                    clearTimeout(recognitionTimeout);
+                }
+            };
+            
+            // Start listening
+            try {
+                recognition.start();
+                console.log('Recognition started successfully');
+            } catch (e) {
+                console.error('Error starting recognition:', e);
+                document.getElementById('voiceStatus').classList.add('hidden');
+                alert('Could not start voice recognition. Please try again.');
+            }
+        }
+        
+        function processVoiceCommand(transcript) {
+            console.log('Processing command:', transcript);
+            
+            // Remove filler words in all supported languages
+            const fillerWords = [
+                // English
+                'find','show','get','need','want','search','looking for','i need','get me','show me','a','an','the',
+                // Hindi
+                'खोजें','दिखाएं','मुझे चाहिए','ढूंढो',
+                // Telugu
+                'కనుగొనండి','చూపించు',
+                // Malayalam
+                'കണ്ടെത്തൂ','കാണിക്കൂ',
+                // Tamil
+                'தேடு','காட்டு',
+                // Punjabi
+                'ਲੱਭੋ','ਦਿਖਾਓ'
+            ];
+            let cleanedTranscript = transcript.toLowerCase().trim();
+            fillerWords.forEach(f => { cleanedTranscript = cleanedTranscript.replace(new RegExp(f, 'gi'), '').trim(); });
+
+            // Service keywords — English + all 9 Indian languages
+            const serviceKeywords = {
+                // ── PLUMBING ──
+                'plumber':'Pipe Repair', 'plumbing':'Pipe Repair', 'pipe':'Pipe Repair',
+                'tap':'Tap/Faucet Repair', 'faucet':'Tap/Faucet Repair',
+                'tank':'Tank Installation', 'drainage':'Drainage Cleaning', 'drain':'Drainage Cleaning',
+                // Hindi
+                'प्लंबर':'Pipe Repair', 'नल':'Tap/Faucet Repair', 'पाइप':'Pipe Repair', 'नाली':'Drainage Cleaning',
+                // Gujarati
+                'પ્લmba':'Pipe Repair', 'નળ':'Tap/Faucet Repair',
+                // Marathi
+                'नळकामगार':'Pipe Repair', 'नळ':'Tap/Faucet Repair',
+                // Bengali
+                'প্লাম্বার':'Pipe Repair', 'নল':'Tap/Faucet Repair',
+                // Telugu
+                'ప్లంబర్':'Pipe Repair', 'పైపు':'Pipe Repair', 'కుళాయి':'Tap/Faucet Repair',
+                // Malayalam
+                'പ്ലംബർ':'Pipe Repair', 'പൈപ്പ്':'Pipe Repair', 'ടാപ്പ്':'Tap/Faucet Repair',
+                // Tamil
+                'பம்பர்':'Pipe Repair', 'குழாய்':'Pipe Repair',
+                // Kannada
+                'ಪ್ಲಂಬರ್':'Pipe Repair', 'ಪೈಪ್':'Pipe Repair',
+                // Punjabi
+                'ਪਲੰਬਰ':'Pipe Repair', 'ਪਾਈਪ':'Pipe Repair',
+
+                // ── ELECTRICAL ──
+                'electrician':'Wiring & Rewiring', 'electrical':'Wiring & Rewiring', 'wiring':'Wiring & Rewiring',
+                'electricity':'Wiring & Rewiring', 'wire':'Wiring & Rewiring',
+                'light':'Light Installation', 'lights':'Light Installation',
+                'fan':'Fan Installation', 'switchboard':'Switchboard Repair',
+                'appliance repair':'Appliance Repair',
+                // Hindi
+                'इलेक्ट्रीशियन':'Wiring & Rewiring', 'बिजली':'Wiring & Rewiring', 'वायरिंग':'Wiring & Rewiring',
+                'पंखा':'Fan Installation', 'लाइट':'Light Installation',
+                // Telugu
+                'ఎలక్ట్రిషియన్':'Wiring & Rewiring', 'విద్యుత్':'Wiring & Rewiring', 'వైరింగ్':'Wiring & Rewiring',
+                'ఫ్యాన్':'Fan Installation', 'లైట్':'Light Installation',
+                // Malayalam
+                'ഇലക്ട്രിഷ്യൻ':'Wiring & Rewiring', 'വൈദ്യുതി':'Wiring & Rewiring', 'ഫാൻ':'Fan Installation',
+                // Tamil
+                'மின்சாரி':'Wiring & Rewiring', 'மின்சாரம்':'Wiring & Rewiring', 'விசிறி':'Fan Installation',
+                // Kannada
+                'ಎಲೆಕ್ಟ್ರಿಷಿಯನ್':'Wiring & Rewiring', 'ವಿದ್ಯುತ್':'Wiring & Rewiring',
+                // Punjabi
+                'ਇਲੈਕਟ੍ਰਿਸ਼ੀਅਨ':'Wiring & Rewiring', 'ਬਿਜਲੀ':'Wiring & Rewiring',
+
+                // ── AC ──
+                'ac':'AC Servicing', 'air condition':'AC Servicing', 'air conditioning':'AC Servicing',
+                'ac repair':'AC Servicing', 'ac service':'AC Servicing',
+                // Hindi
+                'एसी':'AC Servicing', 'एयर कंडीशनर':'AC Servicing',
+                // Telugu
+                'ఎయిర్ కండీషనర్':'AC Servicing', 'ఎసి':'AC Servicing',
+                // Malayalam
+                'എയർ കണ്ടീഷണർ':'AC Servicing',
+                // Tamil
+                'குளிர்சாதனம்':'AC Servicing',
+                // Punjabi
+                'ਏਅਰ ਕੰਡੀਸ਼ਨਰ':'AC Servicing',
+
+                // ── CARPENTER ──
+                'carpenter':'Furniture Repair', 'carpentry':'Furniture Repair',
+                'furniture':'Furniture Repair', 'wood':'Wood Polishing', 'door':'Door/Window Repair',
+                // Hindi
+                'बढ़ई':'Furniture Repair', 'फर्नीचर':'Furniture Repair', 'लकड़ी':'Wood Polishing',
+                // Telugu
+                'వడ్రంగి':'Furniture Repair', 'ఫర్నీచర్':'Furniture Repair',
+                // Malayalam
+                'ആശാരി':'Furniture Repair', 'ഫർണിച്ചർ':'Furniture Repair',
+                // Tamil
+                'தச்சர்':'Furniture Repair', 'மரவேலை':'Furniture Repair',
+                // Kannada
+                'ಬಡಗಿ':'Furniture Repair', 'ಮರಗೆಲಸ':'Furniture Repair',
+                // Punjabi
+                'ਤਰਖਾਣ':'Furniture Repair',
+
+                // ── CLEANING ──
+                'cleaner':'House Cleaning', 'cleaning':'House Cleaning', 'clean':'House Cleaning',
+                'maid':'House Cleaning', 'housekeeping':'House Cleaning',
+                // Hindi
+                'सफाई':'House Cleaning', 'झाड़ू':'House Cleaning', 'साफ':'House Cleaning',
+                // Telugu
+                'శుభ్రం':'House Cleaning', 'క్లీనర్':'House Cleaning',
+                // Malayalam
+                'വൃത്തിയാക്കൽ':'House Cleaning', 'ക്ലീനർ':'House Cleaning',
+                // Tamil
+                'சுத்தம்':'House Cleaning', 'க்ளீனர்':'House Cleaning',
+                // Kannada
+                'ಸ್ವಚ್ಛಗೊಳಿಸುವಿಕೆ':'House Cleaning',
+                // Punjabi
+                'ਸਫ਼ਾਈ':'House Cleaning',
+
+                // ── PAINTER ──
+                'painter':'Wall Painting', 'painting':'Wall Painting', 'paint':'Wall Painting',
+                // Hindi
+                'पेंटर':'Wall Painting', 'रंग':'Wall Painting',
+                // Telugu
+                'పెయింటర్':'Wall Painting', 'రంగు':'Wall Painting',
+                // Malayalam
+                'ചായം':'Wall Painting', 'പെയിന്റർ':'Wall Painting',
+                // Tamil
+                'வண்ணம்':'Wall Painting', 'சாயம்':'Wall Painting',
+                // Punjabi
+                'ਰੰਗ ਕਰਨ ਵਾਲਾ':'Wall Painting',
+
+                // ── COOK ──
+                'cook':'Tiffin Service', 'chef':'Tiffin Service', 'cooking':'Tiffin Service',
+                'tiffin':'Tiffin Service', 'food':'Tiffin Service', 'catering':'Catering Service',
+                // Hindi
+                'रसोइया':'Tiffin Service', 'खाना':'Tiffin Service', 'कैटरिंग':'Catering Service',
+                // Telugu
+                'వంటవాడు':'Tiffin Service', 'వంట':'Tiffin Service', 'కేటరింగ్':'Catering Service',
+                // Malayalam
+                'പാചകക്കാരൻ':'Tiffin Service', 'ഭക്ഷണം':'Tiffin Service',
+                // Tamil
+                'சமையல்காரர்':'Tiffin Service', 'சமையல்':'Tiffin Service',
+                // Punjabi
+                'ਰਸੋਈਆ':'Tiffin Service',
+
+                // ── DOCTOR / NURSE ──
+                'doctor':'Home Visit', 'nurse':'Home Nursing Care', 'medical':'Home Visit',
+                'health':'Home Visit',
+                // Hindi
+                'डॉक्टर':'Home Visit', 'नर्स':'Home Nursing Care', 'चिकित्सक':'Home Visit',
+                // Telugu
+                'డాక్టర్':'Home Visit', 'నర్స్':'Home Nursing Care',
+                // Malayalam
+                'ഡോക്ടർ':'Home Visit', 'നഴ്സ്':'Home Nursing Care',
+                // Tamil
+                'டாக்டர்':'Home Visit', 'செவிலியர்':'Home Nursing Care',
+                // Punjabi
+                'ਡਾਕਟਰ':'Home Visit', 'ਨਰਸ':'Home Nursing Care',
+
+                // ── TAXI ──
+                'taxi':'City Ride', 'driver':'City Ride', 'cab':'City Ride', 'auto':'City Ride',
+                // Hindi
+                'टैक्सी':'City Ride', 'ड्राइवर':'City Ride',
+                // Telugu
+                'టాక్సీ':'City Ride', 'డ్రైవర్':'City Ride',
+                // Malayalam
+                'ടാക്സി':'City Ride', 'ഡ്രൈവർ':'City Ride',
+                // Tamil
+                'டாக்ஸி':'City Ride', 'ஓட்டுனர்':'City Ride',
+                // Punjabi
+                'ਟੈਕਸੀ':'City Ride',
+
+                // ── TUTOR ──
+                'tutor':'Home Tutoring', 'teacher':'Home Tutoring', 'tutoring':'Home Tutoring',
+                'teaching':'Home Tutoring', 'coaching':'Home Tutoring',
+                // Hindi
+                'ट्यूटर':'Home Tutoring', 'शिक्षक':'Home Tutoring',
+                // Telugu
+                'ట్యూటర్':'Home Tutoring', 'ఉపాధ్యాయుడు':'Home Tutoring',
+                // Malayalam
+                'ട്യൂട്ടർ':'Home Tutoring', 'അധ്യാപകൻ':'Home Tutoring',
+                // Tamil
+                'ஆசிரியர்':'Home Tutoring', 'டியூட்டர்':'Home Tutoring',
+                // Punjabi
+                'ਅਧਿਆਪਕ':'Home Tutoring',
+
+                // ── BEAUTICIAN ──
+                'beautician':'Hair Cut', 'beauty':'Hair Cut', 'salon':'Hair Cut',
+                'makeup':'Makeup Artist', 'hair':'Hair Cut',
+                // Hindi
+                'ब्यूटीशियन':'Hair Cut', 'सैलून':'Hair Cut', 'मेकअप':'Makeup Artist',
+                // Telugu
+                'బ్యూటీషియన్':'Hair Cut', 'సెలూన్':'Hair Cut',
+                // Malayalam
+                'ബ്യൂട്ടീഷ്യൻ':'Hair Cut', 'സലൂൺ':'Hair Cut',
+                // Tamil
+                'அழகுக்கலைஞர்':'Hair Cut', 'சலூன்':'Hair Cut',
+                // Punjabi
+                'ਬਿਊਟੀਸ਼ੀਅਨ':'Hair Cut'
+            };
+
+            let matchedService = null, matchedCategory = null, matchedSubcategory = null;
+            const transcriptsToTry = [cleanedTranscript, transcript.toLowerCase()];
+
+            for (const testTrans of transcriptsToTry) {
+                for (const keyword in serviceKeywords) {
+                    if (testTrans === keyword || testTrans.includes(keyword)) {
+                        const targetServiceName = serviceKeywords[keyword];
+                        outerLoop: for (const cat of categories) {
+                            for (let subIdx = 0; subIdx < cat.subcategories.length; subIdx++) {
+                                const sub = cat.subcategories[subIdx];
+                                for (let svcIdx = 0; svcIdx < sub.subsubcategories.length; svcIdx++) {
+                                    const svc = sub.subsubcategories[svcIdx];
+                                    const svcName = svc.name.en || svc.name;
+                                    if (svcName === targetServiceName || svcName.includes(targetServiceName) || targetServiceName.includes(svcName)) {
+                                        matchedCategory = cat.id;
+                                        matchedSubcategory = subIdx;
+                                        matchedService = svcIdx;
+                                        break outerLoop;
+                                    }
+                                }
+                            }
+                        }
+                        if (matchedService !== null) break;
+                    }
+                }
+                if (matchedService !== null) break;
+            }
+
+            if (matchedService !== null) {
+                navigateToService(matchedCategory, matchedSubcategory, matchedService);
+            } else {
+                console.log('No service matched for:', transcript);
+                showVoiceToast(`Could not find "${transcript}". Try: "plumber", "electrician", "cleaner", "painter"`);
+                showPage('browse');
+            }
+        }
+        
+        // ==================== PROGRAMMATIC NAVIGATION FOR VOICE ====================
+        function navigateToService(catId, subIdx, serviceIdx) {
+            // Set the selected values
+            selectedCategoryId = catId;
+            selectedSubcategoryIdx = subIdx;
+            selectedServiceIdx = serviceIdx;
+            
+            // Navigate to browse page
+            showPage('browse');
+            
+            // Wait for page to load, then populate everything
+            setTimeout(() => {
+                // Load browse categories first
+                loadBrowseCategories();
+                
+                // Find and display the category
+                const category = categories.find(c => c.id === catId);
+                if (!category) {
+                    console.error('Category not found:', catId);
+                    return;
+                }
+                
+                // Show subcategories
+                const subcatGrid = document.getElementById('browseSubcategoriesGrid');
+                subcatGrid.innerHTML = category.subcategories.map((sub, idx) => `
+                    <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === subIdx ? 'ring-4 ring-orange-500' : ''}" onclick="selectSubcategory(${idx}, this)">
+                        <div class="text-4xl mb-3">${sub.icon}</div>
+                        <div class="font-bold text-gray-800">${getTranslated(sub.name)}</div>
+                    </div>
+                `).join('');
+                document.getElementById('subcategorySection').classList.remove('hidden');
+                
+                // Show services
+                const subcategory = category.subcategories[subIdx];
+                const serviceGrid = document.getElementById('browseServicesGrid');
+                serviceGrid.innerHTML = subcategory.subsubcategories.map((service, idx) => `
+                    <div class="category-card bg-white p-6 rounded-xl shadow-md text-center ${idx === serviceIdx ? 'ring-4 ring-orange-500' : ''}" onclick="selectService(${idx}, this)">
+                        <div class="text-4xl mb-3">${service.icon}</div>
+                        <div class="font-bold text-gray-800">${getTranslated(service.name)}</div>
+                    </div>
+                `).join('');
+                document.getElementById('serviceSection').classList.remove('hidden');
+                
+                // Load providers immediately
+                setTimeout(() => {
+                    console.log('Voice navigation: Loading providers for service');
+                    applySortAndFilter();
+                    
+                    // Scroll to providers section
+                    setTimeout(() => {
+                        const providersSection = document.getElementById('providersSection');
+                        if (providersSection && !providersSection.classList.contains('hidden')) {
+                            providersSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 300);
+                }, 200);
+            }, 300);
+        }
+        
+        function getDirections(lat, lng) {
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+        }
+        
+        // ==================== HOME PAGE ====================
+        function loadHomeCategories() {
+            const grid = document.getElementById('categoriesGridHome');
+            grid.innerHTML = categories.map(cat => `
+                <div class="bg-white p-6 rounded-xl shadow-md text-center hover:shadow-lg transition cursor-pointer" onclick="goToBrowse('${cat.id}')">
+                    <div class="flex justify-center mb-2">${renderIcon(cat.icon, 'text-4xl', 'w-10 h-10 mx-auto')}</div>
+                    <div class="font-semibold">${getTranslated(cat.name)}</div>
+                </div>
+            `).join('');
+        }
+        
+        function goToBrowse(catId) {
+            showPage('browse');
+            setTimeout(() => selectCategory(catId), 100);
+        }
+        
+        // ==================== MAPS ====================
+        function initRegisterMap() {
+            if (maps.register) return;
+            
+            maps.register = L.map('registerMap').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(maps.register);
+            
+            const marker = L.marker([20.5937, 78.9629], { draggable: true }).addTo(maps.register);
+            
+            marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('providerLat').value = pos.lat;
+                document.getElementById('providerLng').value = pos.lng;
+            });
+            
+            maps.register.on('click', function(e) {
+                marker.setLatLng(e.latlng);
+                document.getElementById('providerLat').value = e.latlng.lat;
+                document.getElementById('providerLng').value = e.latlng.lng;
+            });
+            
+            document.getElementById('providerLat').value = 20.5937;
+            document.getElementById('providerLng').value = 78.9629;
+        }
+        
+        function initSeekerMap() {
+            if (maps.seeker) return;
+            
+            maps.seeker = L.map('seekerMap').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(maps.seeker);
+            
+            const marker = L.marker([20.5937, 78.9629], { draggable: true }).addTo(maps.seeker);
+            
+            marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('seekerLat').value = pos.lat;
+                document.getElementById('seekerLng').value = pos.lng;
+            });
+            
+            maps.seeker.on('click', function(e) {
+                marker.setLatLng(e.latlng);
+                document.getElementById('seekerLat').value = e.latlng.lat;
+                document.getElementById('seekerLng').value = e.latlng.lng;
+            });
+            
+            document.getElementById('seekerLat').value = 20.5937;
+            document.getElementById('seekerLng').value = 78.9629;
+        }
+        
+        function initMainMap() {
+            if (maps.main) maps.main.remove();
+            
+            maps.main = L.map('mainMap').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(maps.main);
+            
+            providers.forEach(p => {
+                if (p.lat && p.lng) {
+                    const icon = L.divIcon({ html: '<div style="font-size: 30px;">🔧</div>', className: '', iconSize: [30, 30] });
+                    const marker = L.marker([p.lat, p.lng], { icon }).addTo(maps.main);
+                    marker.bindPopup(`<strong>${p.name}</strong><br>${p.service}<br>₹${p.rate}/hr`);
+                }
+            });
+        }
+        
+        // ==================== CATEGORY SELECTS ====================
+        function updateProviderCategorySelects() {
+            const select = document.getElementById('providerCategory');
+            if (select) {
+                select.innerHTML = '<option value="">Select Category</option>' + 
+                    categories.map(cat => `<option value="${cat.id}">${getTranslated(cat.name)}</option>`).join('');
+            }
+        }
+        
+        function updateProviderSubcategories() {
+            const catId = document.getElementById('providerCategory').value;
+            const subSelect = document.getElementById('providerSubcategory');
+            const category = categories.find(c => c.id === catId);
+            
+            if (category && category.subcategories) {
+                subSelect.innerHTML = '<option value="">Select Subcategory</option>' + 
+                    category.subcategories.map((sub, idx) => `<option value="${idx}">${getTranslated(sub.name)}</option>`).join('');
+            } else {
+                subSelect.innerHTML = '<option value="">Select Subcategory</option>';
+            }
+            const chips = document.getElementById('providerServiceChips');
+            if (chips) chips.innerHTML = '';
+            const svc = document.getElementById('serviceTypeSection');
+            if (svc) svc.style.display = 'none';
+        }
+        
+        function updateProviderSubSubcategories() {
+            const catId = document.getElementById('providerCategory').value;
+            const subIdx = document.getElementById('providerSubcategory').value;
+            const chipsContainer = document.getElementById('providerServiceChips');
+            const section = document.getElementById('serviceTypeSection');
+
+            const category = categories.find(c => c.id === catId);
+            const subcat = category && category.subcategories && category.subcategories[subIdx];
+
+            if (subcat && subcat.subsubcategories && subcat.subsubcategories.length > 0) {
+                chipsContainer.innerHTML = subcat.subsubcategories.map((subsub, idx) => {
+                    if (subsub.paused) return ''; // Hide paused services
+                    const name = getTranslated(subsub.name);
+                    const icon = subsub.icon ? (subsub.icon.startsWith('<') ? '' : subsub.icon + ' ') : '';
+                    return `<label class="service-chip" onclick="toggleChip(this)">
+                        <input type="checkbox" name="providerService" value="${idx}" data-name="${name}">
+                        <span>${icon}${name}</span>
+                    </label>`;
+                }).join('');
+                section.style.display = '';
+            } else {
+                chipsContainer.innerHTML = '';
+                section.style.display = 'none';
+            }
+        }
+        
+        // ==================== FORM SUBMISSIONS ====================
+        document.getElementById('providerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const catId = document.getElementById('providerCategory').value;
+            const subIdx = document.getElementById('providerSubcategory').value;
+
+            // Collect multiple selected service chips
+            const selectedServiceChips = Array.from(document.querySelectorAll('input[name="providerService"]:checked'));
+            const selectedServiceIndices = selectedServiceChips.map(cb => cb.value);
+            const selectedServiceNames = selectedServiceChips.map(cb => cb.dataset.name);
+
+            // Build primary service name (first selected or generic)
+            let serviceName = 'General Service Provider';
+            if (selectedServiceNames.length > 0) {
+                serviceName = selectedServiceNames[0]; // primary service for display
+            } else if (catId && subIdx) {
+                const category = categories.find(c => c.id === catId);
+                const subcategory = category?.subcategories[subIdx];
+                if (subcategory) serviceName = getTranslated(subcategory.name);
+            }
+            
+            // Validate at least one language selected
+            const providerLangs = Array.from(document.querySelectorAll('input[name="providerLang"]:checked')).map(cb => cb.value);
+            if (providerLangs.length === 0) {
+                const err = document.getElementById('langError');
+                if (err) { err.classList.remove('hidden'); setTimeout(() => err.classList.add('hidden'), 3000); }
+                document.getElementById('providerLanguageChips').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            // PHASE E: get photo as base64
+            const photoDataUrl = document.getElementById('photoPreview')?.src || null;
+            const photoToSave = (photoDataUrl && !document.getElementById('photoPreview').classList.contains('hidden')) ? photoDataUrl : null;
+
+            // PHASE G: get ID proof data
+            const idDocPreview = document.getElementById('idDocPreview');
+            const idDocData = (idDocPreview && !idDocPreview.classList.contains('hidden')) ? idDocPreview.src : null;
+            const idType = document.getElementById('providerIdType').value;
+            const idNumber = document.getElementById('providerIdNumber').value.trim();
+
+            const provider = {
+                id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+                name: document.getElementById('providerName').value,
+                mobile: document.getElementById('providerMobile').value,
+                whatsapp: document.getElementById('providerWhatsapp').value || null, // PHASE E
+                bio: document.getElementById('providerBio').value.trim() || null,    // PHASE E
+                photo: photoToSave,                                                   // PHASE E
+                verified: false,                                                      // PHASE E (admin sets this)
+                idVerification: (idDocData || idType) ? {
+                    type: idType || null,
+                    number: idNumber || null,
+                    document: idDocData || null,
+                    status: 'pending',
+                    submittedAt: new Date().toISOString()
+                } : null,
+                categoryId: catId || null,
+                subcategoryIdx: subIdx || null,
+                subsubcategoryIdx: selectedServiceIndices[0] || null,
+                subsubcategoryIndices: selectedServiceIndices.length > 0 ? selectedServiceIndices : null,
+                services: selectedServiceNames.length > 0 ? selectedServiceNames : null,
+                service: serviceName,
+                religion: document.getElementById('providerReligion').value,
+                language: providerLangs,
+                experience: parseInt(document.getElementById('providerExperience').value),
+                rate: parseInt(document.getElementById('providerRate').value),
+                workingHours: document.querySelector('input[name="workingHours"]:checked')?.value || 'mon-fri',
+                serviceArea: document.querySelector('input[name="serviceArea"]:checked')?.value || '10km',
+                location: document.getElementById('providerLocation').value,
+                lat: parseFloat(document.getElementById('providerLat').value),
+                lng: parseFloat(document.getElementById('providerLng').value),
+                rating: 4.0 + Math.random() * 0.5,
+                reviews: {},
+                ownerUid: firebaseUser?.uid || null,
+                status: 'active',
+                registered: new Date().toISOString()
+            };
+            
+            // Show loading state
+            const submitBtn = document.getElementById('providerForm').querySelector('button[type="submit"]');
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Saving...'; }
+            
+            saveProviderToFirebase(provider).then(success => {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = t('registerNow') || 'Register Now'; }
+                
+                if (success) {
+                    document.getElementById('providerSuccess').classList.remove('hidden');
+                    document.getElementById('providerForm').reset();
+                    // Reset chip selections
+                    document.querySelectorAll('.lang-chip, .service-chip').forEach(c => c.classList.remove('checked'));
+                    const svcSection = document.getElementById('serviceTypeSection');
+                    if (svcSection) svcSection.style.display = 'none';
+                    // Reset photo preview
+                    document.getElementById('photoPreview').classList.add('hidden');
+                    document.getElementById('photoPlaceholder').classList.remove('hidden');
+                    showFirebaseStatus('✅ Provider registered successfully!', 'success');
+                    
+                    setTimeout(() => {
+                        document.getElementById('providerSuccess').classList.add('hidden');
+                        showPage('browse');
+                    }, 2000);
+                } else {
+                    alert('❌ Could not save to database. Please check your internet connection and try again.');
+                }
+            });
+        });
+        
+        document.getElementById('seekerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Validate at least one language selected
+            const seekerLangs = Array.from(document.querySelectorAll('input[name="seekerLang"]:checked')).map(cb => cb.value);
+            if (seekerLangs.length === 0) {
+                const err = document.getElementById('seekerLangError');
+                if (err) { err.classList.remove('hidden'); setTimeout(() => err.classList.add('hidden'), 3000); }
+                return;
+            }
+
+            const seeker = {
+                id: 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+                name: document.getElementById('seekerName').value,
+                mobile: document.getElementById('seekerMobile').value,
+                religion: document.getElementById('seekerReligion').value,
+                language: seekerLangs,
+                location: document.getElementById('seekerLocation').value,
+                lat: parseFloat(document.getElementById('seekerLat').value),
+                lng: parseFloat(document.getElementById('seekerLng').value),
+                status: 'active', // active, paused, restricted
+                registered: new Date().toISOString()
+            };
+            
+            const submitBtnS = document.getElementById('seekerForm').querySelector('button[type="submit"]');
+            if (submitBtnS) { submitBtnS.disabled = true; submitBtnS.textContent = '⏳ Saving...'; }
+            
+            saveSeekerToFirebase(seeker).then(success => {
+                if (submitBtnS) { submitBtnS.disabled = false; submitBtnS.textContent = t('registerNow') || 'Register Now'; }
+                
+                if (success) {
+                    currentUser = seeker;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    document.getElementById('seekerSuccess').classList.remove('hidden');
+                    document.getElementById('seekerForm').reset();
+                    showFirebaseStatus('✅ Seeker registered successfully!', 'success');
+                    
+                    setTimeout(() => {
+                        document.getElementById('seekerSuccess').classList.add('hidden');
+                        showPage('browse');
+                    }, 2000);
+                } else {
+                    alert('❌ Could not save to database. Please check your internet connection and try again.');
+                }
+            });
+        });
+        
+        // ==================== ADMIN ====================
+        let currentEditCategoryIdx = null;
+        let currentEditSubcategoryIdx = null;
+        let currentEditServiceIdx = null;
+        let modalMode = 'add';
+        
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('adminLogin').classList.add('hidden');
+                document.getElementById('adminDashboard').classList.remove('hidden');
+                updateAdminStats();
+                showAdminTab('categories'); // Default tab
+            } else {
+                alert('Incorrect password!');
+            }
+        }
+        
+        function adminLogout() {
+            document.getElementById('adminLogin').classList.remove('hidden');
+            document.getElementById('adminDashboard').classList.add('hidden');
+            document.getElementById('adminPassword').value = '';
+        }
+        
+        function showAdminTab(tabName) {
+            ['users','reports','reviews','categories','idverify','subscriptions','settings'].forEach(t => {
+                document.getElementById('adminTab-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).classList.remove('border-orange-600','text-orange-600');
+            });
+            document.getElementById('adminTab-' + tabName).classList.remove('hidden');
+            document.getElementById('tab-' + tabName).classList.add('border-orange-600','text-orange-600');
+            if (tabName === 'users') { loadProvidersList(); loadSeekersList(); }
+            else if (tabName === 'categories') { loadAdminCategories(); }
+            else if (tabName === 'reviews') { loadAdminReviews(); }
+            else if (tabName === 'reports') { loadAdminReports(); }
+            else if (tabName === 'idverify') { loadIdVerifications(); }
+            else if (tabName === 'subscriptions') { loadAdminSubscriptions(); }
+        }
+        
+        function updateAdminStats() {
+            // Providers
+            const activeProvs = providers.filter(p => !p.status || p.status === 'active').length;
+            const pausedProvs = providers.filter(p => p.status === 'paused').length;
+            const restrictedProvs = providers.filter(p => p.status === 'restricted').length;
+
+            // Seekers
+            const activeSeeks = seekers.filter(s => !s.status || s.status === 'active').length;
+            const pausedSeeks = seekers.filter(s => s.status === 'paused').length;
+            const restrictedSeeks = seekers.filter(s => s.status === 'restricted').length;
+
+            // Categories / subcategories / services
+            let totalSubs = 0, totalSvcs = 0, pausedSvcs = 0;
+            categories.forEach(cat => {
+                totalSubs += (cat.subcategories || []).length;
+                (cat.subcategories || []).forEach(sub => {
+                    (sub.subsubcategories || []).forEach(svc => {
+                        totalSvcs++;
+                        if (svc.paused) pausedSvcs++;
+                    });
+                });
+            });
+
+            // Reviews
+            let totalRevCount = 0, ratingSum = 0;
+            providers.forEach(p => {
+                if (p.reviews) {
+                    Object.values(p.reviews).forEach(r => {
+                        totalRevCount++;
+                        ratingSum += (r.rating || 0);
+                    });
+                }
+            });
+            const avgRating = totalRevCount > 0 ? (ratingSum / totalRevCount).toFixed(1) : '0';
+
+            // Reports
+            const totalRpts = providers.filter(p => p.reports && Object.keys(p.reports).length > 0).length +
+                              seekers.filter(s => s.reports && Object.keys(s.reports).length > 0).length;
+
+            // Set all values
+            const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+            set('totalProviders', providers.length);
+            set('activeProviders', activeProvs);
+            set('pausedProviders', pausedProvs);
+            set('totalSeekers', seekers.length);
+            set('activeSeekers', activeSeeks);
+            set('pausedSeekers', pausedSeeks);
+            set('totalCategories', categories.length);
+            set('totalSubcategories', totalSubs);
+            set('totalServices', totalSvcs);
+            set('pausedServices', pausedSvcs);
+            set('totalReviews', totalRevCount);
+            set('avgRating', avgRating);
+            set('totalRestricted', restrictedProvs + restrictedSeeks);
+            set('totalReports', totalRpts);
+
+            // Payments from Firebase
+            if (_firebase && _firebase.db) {
+                _firebase.get(_firebase.ref(_firebase.db, 'payments')).then(snap => {
+                    if (snap.exists()) {
+                        const payments = Object.values(snap.val() || {});
+                        set('totalPayments', payments.length);
+                        const revenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                        set('totalRevenue', revenue.toLocaleString('en-IN'));
+                    }
+                }).catch(() => {});
+            }
+        }
+        
+        // ==================== PROVIDER MANAGEMENT ====================
+        function loadProvidersList() {
+            const list = document.getElementById('providersListAdmin');
+            if (!list) return;
+            
+            if (providers.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 text-gray-500">No providers registered yet</div>';
+                return;
+            }
+            
+            renderProvidersList(providers);
+        }
+        
+        function renderProvidersList(providersList) {
+            const list = document.getElementById('providersListAdmin');
+            
+            list.innerHTML = providersList.map(p => {
+                const statusColor = {
+                    'active': 'bg-green-100 text-green-800',
+                    'paused': 'bg-yellow-100 text-yellow-800',
+                    'restricted': 'bg-red-100 text-red-800'
+                };
+                const status = p.status || 'active';
+                
+                return `
+                    <div class="border rounded-lg p-4 ${status === 'restricted' ? 'bg-red-50 border-red-200' : status === 'paused' ? 'bg-yellow-50 border-yellow-200' : 'bg-white'}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="font-bold text-lg">${p.name}</h3>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${statusColor[status]}">${status.toUpperCase()}</span>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
+                                    <div>📞 ${p.mobile}</div>
+                                    <div>🔧 ${p.service}</div>
+                                    <div>📍 ${p.location}</div>
+                                    <div>⭐ ${(p.rating || 4.0).toFixed(1)} | 🕐 ${p.experience} yrs | 💰 ₹${p.rate}/hr</div>
+                                    <div>${religionIcons[p.religion] || '🙏'} ${p.religion}</div>
+                                    <div>📅 ${new Date(p.registered).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 ml-4">
+                                ${status === 'active' ? `
+                                    <button onclick="pauseProvider('${p.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm" title="Pause">⏸️ Pause</button>
+                                    <button onclick="restrictProvider('${p.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm" title="Restrict">🚫 Restrict</button>
+                                ` : ''}
+                                ${status === 'paused' ? `
+                                    <button onclick="activateProvider('${p.id}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" title="Activate">▶️ Activate</button>
+                                    <button onclick="restrictProvider('${p.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm" title="Restrict">🚫 Restrict</button>
+                                ` : ''}
+                                ${status === 'restricted' ? `
+                                    <button onclick="activateProvider('${p.id}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" title="Activate">✅ Activate</button>
+                                ` : ''}
+                                <button onclick="toggleVerified('${p.id}', ${!!p.verified})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm" title="Toggle Verified">${p.verified ? '✅ Verified' : '☑️ Verify'}</button>
+                                <button onclick="deleteProvider('${p.id}')" class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800 text-sm" title="Delete">🗑️ Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function filterProvidersList() {
+            const search = document.getElementById('searchProviders').value.toLowerCase();
+            const filtered = providers.filter(p => 
+                p.name.toLowerCase().includes(search) ||
+                p.mobile.includes(search) ||
+                p.service.toLowerCase().includes(search) ||
+                p.location.toLowerCase().includes(search)
+            );
+            renderProvidersList(filtered);
+        }
+        
+        function pauseProvider(providerId) {
+            if (confirm('⏸️ Pause this provider? They will not appear in search results until reactivated.')) {
+                updateProviderInFirebase(providerId, { status: 'paused' }).then(success => {
+                    if (success) showFirebaseStatus('Provider paused', 'success');
+                });
+            }
+        }
+        
+        function restrictProvider(providerId) {
+            if (confirm('🚫 Restrict this provider? They will be blocked from the platform.')) {
+                updateProviderInFirebase(providerId, { status: 'restricted' }).then(success => {
+                    if (success) showFirebaseStatus('Provider restricted', 'success');
+                });
+            }
+        }
+        
+        function activateProvider(providerId) {
+            updateProviderInFirebase(providerId, { status: 'active' }).then(success => {
+                if (success) showFirebaseStatus('Provider activated', 'success');
+            });
+        }
+        
+        function deleteProvider(providerId) {
+            if (confirm('🗑️ PERMANENTLY DELETE this provider? This action cannot be undone!')) {
+                deleteProviderFromFirebase(providerId).then(success => {
+                    if (success) showFirebaseStatus('Provider deleted', 'success');
+                });
+            }
+        }
+        
+        // ==================== SEEKER MANAGEMENT ====================
+        function loadSeekersList() {
+            const list = document.getElementById('seekersListAdmin');
+            if (!list) return;
+            
+            if (seekers.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 text-gray-500">No seekers registered yet</div>';
+                return;
+            }
+            
+            renderSeekersList(seekers);
+        }
+        
+        function renderSeekersList(seekersList) {
+            const list = document.getElementById('seekersListAdmin');
+            
+            list.innerHTML = seekersList.map(s => {
+                const statusColor = {
+                    'active': 'bg-green-100 text-green-800',
+                    'paused': 'bg-yellow-100 text-yellow-800',
+                    'restricted': 'bg-red-100 text-red-800'
+                };
+                const status = s.status || 'active';
+                
+                return `
+                    <div class="border rounded-lg p-4 ${status === 'restricted' ? 'bg-red-50 border-red-200' : status === 'paused' ? 'bg-yellow-50 border-yellow-200' : 'bg-white'}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="font-bold text-lg">${s.name}</h3>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${statusColor[status]}">${status.toUpperCase()}</span>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
+                                    <div>📞 ${s.mobile}</div>
+                                    <div>📍 ${s.location}</div>
+                                    <div>${religionIcons[s.religion] || '🙏'} ${s.religion}</div>
+                                    <div>📅 ${new Date(s.registered).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 ml-4">
+                                ${status === 'active' ? `
+                                    <button onclick="pauseSeeker('${s.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm" title="Pause">⏸️ Pause</button>
+                                    <button onclick="restrictSeeker('${s.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm" title="Restrict">🚫 Restrict</button>
+                                ` : ''}
+                                ${status === 'paused' ? `
+                                    <button onclick="activateSeeker('${s.id}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" title="Activate">▶️ Activate</button>
+                                    <button onclick="restrictSeeker('${s.id}')" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm" title="Restrict">🚫 Restrict</button>
+                                ` : ''}
+                                ${status === 'restricted' ? `
+                                    <button onclick="activateSeeker('${s.id}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm" title="Activate">✅ Activate</button>
+                                ` : ''}
+                                <button onclick="deleteSeeker('${s.id}')" class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800 text-sm" title="Delete">🗑️ Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function filterSeekersList() {
+            const search = document.getElementById('searchSeekers').value.toLowerCase();
+            const filtered = seekers.filter(s => 
+                s.name.toLowerCase().includes(search) ||
+                s.mobile.includes(search) ||
+                s.location.toLowerCase().includes(search)
+            );
+            renderSeekersList(filtered);
+        }
+        
+        function pauseSeeker(seekerId) {
+            if (confirm('⏸️ Pause this seeker? They will not be able to use the platform until reactivated.')) {
+                updateSeekerInFirebase(seekerId, { status: 'paused' }).then(success => {
+                    if (success) showFirebaseStatus('Seeker paused', 'success');
+                });
+            }
+        }
+        
+        function restrictSeeker(seekerId) {
+            if (confirm('🚫 Restrict this seeker? They will be blocked from the platform.')) {
+                updateSeekerInFirebase(seekerId, { status: 'restricted' }).then(success => {
+                    if (success) showFirebaseStatus('Seeker restricted', 'success');
+                });
+            }
+        }
+        
+        function activateSeeker(seekerId) {
+            updateSeekerInFirebase(seekerId, { status: 'active' }).then(success => {
+                if (success) showFirebaseStatus('Seeker activated', 'success');
+            });
+        }
+        
+        function deleteSeeker(seekerId) {
+            if (confirm('🗑️ PERMANENTLY DELETE this seeker? This action cannot be undone!')) {
+                deleteSeekerFromFirebase(seekerId).then(success => {
+                    if (success) showFirebaseStatus('Seeker deleted', 'success');
+                });
+            }
+        }
+        
+        // Helper: render emoji or image icon
+        function renderIcon(icon, size='text-4xl', imgSize='w-10 h-10') {
+            if (!icon) return '<span class="' + size + '">📋</span>';
+            if (icon.startsWith('data:') || icon.startsWith('http')) {
+                return '<img src="' + icon + '" class="' + imgSize + ' object-cover rounded-lg">';
+            }
+            return '<span class="' + size + '">' + icon + '</span>';
+        }
+
+        function loadAdminCategories() {
+            const list = document.getElementById('categoriesListAdmin');
+            if (!list) return;
+            
+            if (categories.length === 0) {
+                list.innerHTML = '<div class="text-center py-12 text-gray-500"><p class="text-lg">No categories yet. Click "Add New Category" to get started!</p></div>';
+                return;
+            }
+            
+            list.innerHTML = categories.map((cat, catIdx) => `
+                <div class="border-2 border-gray-200 rounded-xl p-4 hover:border-orange-300 transition">
+                    <div class="flex items-center justify-between bg-orange-50 p-4 rounded-lg mb-3">
+                        <div class="flex items-center gap-3">
+                            ${renderIcon(cat.icon, 'text-4xl', 'w-12 h-12')}
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-800">${cat.name.en || cat.name}</h3>
+                                <p class="text-sm text-gray-500">${(cat.subcategories || []).length} subcategories</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editCategory(${catIdx})" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 font-medium">✏️ Edit</button>
+                            <button onclick="showAddSubcategoryModal(${catIdx})" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 font-medium">➕ Add Subcategory</button>
+                            <button onclick="deleteCategory(${catIdx})" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 font-medium">🗑️ Delete</button>
+                        </div>
+                    </div>
+                    
+                    <div class="ml-8 space-y-3">
+                        ${(cat.subcategories || []).map((sub, subIdx) => `
+                            <div class="border-l-4 border-blue-400 bg-blue-50 p-3 rounded-r-lg">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        ${renderIcon(sub.icon, 'text-2xl', 'w-8 h-8')}
+                                        <div>
+                                            <h4 class="font-bold text-gray-800">${sub.name.en || sub.name}</h4>
+                                            <p class="text-xs text-gray-500">${(sub.subsubcategories || []).length} services · ${(sub.subsubcategories || []).filter(s=>s.paused).length > 0 ? '<span class="text-yellow-600">'+((sub.subsubcategories||[]).filter(s=>s.paused).length)+' paused</span>' : 'all active'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="editSubcategory(${catIdx}, ${subIdx})" class="bg-blue-400 text-white px-3 py-1 rounded hover:bg-blue-500 text-sm">✏️ Edit</button>
+                                        <button onclick="showAddServiceModal(${catIdx}, ${subIdx})" class="bg-green-400 text-white px-3 py-1 rounded hover:bg-green-500 text-sm">➕ Add Service</button>
+                                        <button onclick="deleteSubcategory(${catIdx}, ${subIdx})" class="bg-red-400 text-white px-3 py-1 rounded hover:bg-red-500 text-sm">🗑️</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="ml-6 space-y-1">
+                                    ${(sub.subsubcategories || []).map((service, serviceIdx) => `
+                                        <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 ${service.paused ? 'bg-yellow-50 opacity-60' : 'bg-white'}">
+                                            <div class="flex items-center gap-2">
+                                                ${renderIcon(service.icon, 'text-lg', 'w-6 h-6')}
+                                                <span class="text-sm ${service.paused ? 'text-gray-400 line-through' : 'text-gray-700'}">${service.name.en || service.name}</span>
+                                            </div>
+                                            <div class="flex gap-1 items-center">
+                                                ${service.paused ? '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">⏸ Paused</span>' : ''}
+                                                <button onclick="togglePauseService(${catIdx}, ${subIdx}, ${serviceIdx})" class="px-2 py-1 rounded text-xs font-semibold ${service.paused ? 'bg-green-400 hover:bg-green-500 text-white' : 'bg-yellow-400 hover:bg-yellow-500 text-white'}">${service.paused ? '▶️ Resume' : '⏸️ Pause'}</button>
+                                                <button onclick="editService(${catIdx}, ${subIdx}, ${serviceIdx})" class="bg-blue-300 text-white px-2 py-1 rounded hover:bg-blue-400 text-xs">✏️</button>
+                                                <button onclick="deleteService(${catIdx}, ${subIdx}, ${serviceIdx})" class="bg-red-300 text-white px-2 py-1 rounded hover:bg-red-400 text-xs">🗑️</button>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Update live stats on home page
+        function updateHomeStats() {
+            const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+            // Count active providers
+            const activeProviders = providers.filter(p => !p.status || p.status === 'active').length;
+            set('homeStatProviders', activeProviders || '0');
+            // Count total services across all categories
+            let totalSvcs = 0;
+            categories.forEach(cat => (cat.subcategories||[]).forEach(sub => totalSvcs += (sub.subsubcategories||[]).filter(s=>!s.paused).length));
+            set('homeStatServices', totalSvcs || '0');
+            // Categories
+            set('homeStatCategories', categories.length || '0');
+            // Reviews
+            let totalRevs = 0;
+            providers.forEach(p => { if(p.reviews) totalRevs += Object.keys(p.reviews).length; });
+            set('homeStatReviews', totalRevs || '0');
+        }
+
+        // Save categories to Firebase so ALL users see changes
+        async function saveCategoriesToFirebase() {
+            try {
+                await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
+            } catch(e) { console.warn('Categories save error:', e); alert('❌ Could not save. Check internet connection.'); }
+        }
+
+        function resetToDefaults() {
+            if (confirm('⚠️ This will delete all categories and restore defaults. Continue?')) {
+                categories = [
+                    {
+                        id: 'cat1',
+                        name: {"en": "Home Services", "hi": "घरेलू सेवाएं", "bn": "বাড়ির সেবা", "gu": "ઘरनी सेवाओ", "mr": "घर सेवा", "kn": "ಮನೆ ಸೇವೆಗಳು", "te": "ఇంటి సేవలు", "ml": "വീടിൻ്റെ സേവനങ്ങൾ", "ta": "வீட்டு சேவைகள்", "pa": "ਘਰੇਲੂ ਸੇਵਾਵਾਂ", "or": "ଘରୋଇ ସେବା", "as": "ঘৰুৱা সেৱা"},
+                        icon: '🏠',
+                        subcategories: [
+                            {
+                                name: {"en": "Plumbing", "hi": "प्लंबिंग", "bn": "প্লাম্বিং", "or": "ପ୍ଲମ୍ବିଂ", "as": "প্লাম্বিং"},
+                                icon: '🔧',
+                                subsubcategories: [
+                                    { name: {"en": "Pipe Repair", "hi": "पाइप मरम्मत", "bn": "পাইপ মেরামত", "or": "ପାଇପ ମରାମତ", "as": "পাইপ মেৰামতি"}, icon: '🔧' },
+                                    { name: {"en": "Tank Installation", "hi": "टंकी स्थापना", "bn": "ট্যাঙ্ক স্থাপনা", "or": "ଟ୍ୟାଙ୍କ ସ୍ଥାପନ", "as": "টেংক স্থাপন"}, icon: '💧' },
+                                    { name: {"en": "Bathroom Fitting", "hi": "बाथरूम फिटिंग", "bn": "বাথরুম ফিটিং", "or": "ବାଥରୁମ ଫିଟିଂ", "as": "বাথৰুম ফিটিং"}, icon: '🚿' }
+                                ]
+                            },
+                            {
+                                name: {"en": "Electrical", "hi": "विद्युत", "bn": "বৈদ্যুতিক", "or": "ବିଦ୍ୟୁତ", "as": "বিদ্যুৎ"},
+                                icon: '⚡',
+                                subsubcategories: [
+                                    { name: {"en": "Wiring", "hi": "वायरिंग", "bn": "ওয়ারিং", "or": "ୱାୟରିଂ", "as": "ৱায়াৰিং"}, icon: '🔌' },
+                                    { name: {"en": "Appliance Repair", "hi": "उपकरण मरम्मत", "bn": "যন্ত্র মেরামত", "or": "ଉପକରଣ ମରାମତ", "as": "সঁজুলি মেৰামতি"}, icon: '🔧' }
+                                ]
+                            }
+                        ]
+                    }
+                ];
+                saveCategoriesToFirebase();
+                loadAdminCategories();
+                updateAdminStats();
+                updateProviderCategorySelects();
+                alert('✅ Categories reset to defaults!');
+            }
+        }
+        
+        // Category Modal Functions
+        function showAddCategoryModal() {
+            modalMode = 'add';
+            currentEditCategoryIdx = null;
+            document.getElementById('categoryModalTitle').textContent = 'Add New Category';
+            document.getElementById('modalCategoryName').value = '';
+            document.getElementById('modalCategoryIcon').value = '';
+            document.getElementById('modalCategoryImageData').value = '';
+            document.getElementById('catImgPreviewBox').innerHTML = '<span class="text-gray-400 text-xs">No image</span>';
+            document.querySelector('input[name="catIconType"][value="emoji"]').checked = true;
+            toggleCatIconType('emoji');
+            document.getElementById('categoryModal').classList.remove('hidden');
+        }
+        
+        function editCategory(catIdx) {
+            modalMode = 'edit';
+            currentEditCategoryIdx = catIdx;
+            const cat = categories[catIdx];
+            document.getElementById('categoryModalTitle').textContent = 'Edit Category';
+            document.getElementById('modalCategoryName').value = cat.name.en || cat.name;
+            document.getElementById('modalCategoryIcon').value = cat.icon;
+            document.getElementById('categoryModal').classList.remove('hidden');
+        }
+        
+        function saveCategoryModal() {
+            const name = document.getElementById('modalCategoryName').value.trim();
+            const iconType = document.querySelector('input[name="catIconType"]:checked')?.value || 'emoji';
+            let icon;
+            if (iconType === 'image') {
+                icon = document.getElementById('modalCategoryImageData').value;
+                if (!icon) { alert('Please upload an image or switch to Emoji'); return; }
+            } else {
+                icon = document.getElementById('modalCategoryIcon').value.trim();
+                if (!icon) { alert('Please enter an emoji icon'); return; }
+            }
+            if (!name) { alert('Please enter a category name'); return; }
+            
+            if (modalMode === 'add') {
+                categories.push({
+                    id: 'cat' + Date.now(),
+                    name: { en: name },
+                    icon: icon,
+                    subcategories: []
+                });
+            } else {
+                if (typeof categories[currentEditCategoryIdx].name === 'string') {
+                    categories[currentEditCategoryIdx].name = { en: name };
+                } else {
+                    categories[currentEditCategoryIdx].name.en = name;
+                }
+                categories[currentEditCategoryIdx].icon = icon;
+            }
+            
+            saveCategoriesToFirebase();
+            loadAdminCategories();
+            updateAdminStats();
+            updateProviderCategorySelects();
+            closeCategoryModal();
+        }
+        
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.add('hidden');
+        }
+        
+        function deleteCategory(catIdx) {
+            if (confirm('⚠️ Delete this entire category including all subcategories and services?')) {
+                categories.splice(catIdx, 1);
+                saveCategoriesToFirebase();
+                loadAdminCategories();
+                updateAdminStats();
+                updateProviderCategorySelects();
+            }
+        }
+        
+        // Subcategory Modal Functions
+        function showAddSubcategoryModal(catIdx) {
+            modalMode = 'add';
+            currentEditCategoryIdx = catIdx;
+            currentEditSubcategoryIdx = null;
+            document.getElementById('subcategoryModalTitle').textContent = 'Add New Subcategory';
+            document.getElementById('modalSubcategoryName').value = '';
+            document.getElementById('modalSubcategoryIcon').value = '';
+            document.getElementById('subcategoryModal').classList.remove('hidden');
+        }
+        
+        function editSubcategory(catIdx, subIdx) {
+            modalMode = 'edit';
+            currentEditCategoryIdx = catIdx;
+            currentEditSubcategoryIdx = subIdx;
+            const sub = categories[catIdx].subcategories[subIdx];
+            document.getElementById('subcategoryModalTitle').textContent = 'Edit Subcategory';
+            document.getElementById('modalSubcategoryName').value = sub.name.en || sub.name;
+            document.getElementById('modalSubcategoryIcon').value = sub.icon;
+            document.getElementById('subcategoryModal').classList.remove('hidden');
+        }
+        
+        function saveSubcategoryModal() {
+            const name = document.getElementById('modalSubcategoryName').value.trim();
+            const iconType = document.querySelector('input[name="subIconType"]:checked')?.value || 'emoji';
+            let icon;
+            if (iconType === 'image') {
+                icon = document.getElementById('modalSubcategoryImageData').value;
+                if (!icon) { alert('Please upload an image or switch to Emoji'); return; }
+            } else {
+                icon = document.getElementById('modalSubcategoryIcon').value.trim();
+                if (!icon) { alert('Please enter an emoji icon'); return; }
+            }
+            if (!name) { alert('Please enter a subcategory name'); return; }
+            
+            if (modalMode === 'add') {
+                if (!categories[currentEditCategoryIdx].subcategories) {
+                    categories[currentEditCategoryIdx].subcategories = [];
+                }
+                categories[currentEditCategoryIdx].subcategories.push({
+                    name: { en: name },
+                    icon: icon,
+                    subsubcategories: []
+                });
+            } else {
+                const sub = categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx];
+                if (typeof sub.name === 'string') {
+                    sub.name = { en: name };
+                } else {
+                    sub.name.en = name;
+                }
+                sub.icon = icon;
+            }
+            
+            saveCategoriesToFirebase();
+            loadAdminCategories();
+            updateProviderCategorySelects();
+            closeSubcategoryModal();
+        }
+        
+        function closeSubcategoryModal() {
+            document.getElementById('subcategoryModal').classList.add('hidden');
+        }
+        
+        function deleteSubcategory(catIdx, subIdx) {
+            if (confirm('⚠️ Delete this subcategory including all its services?')) {
+                categories[catIdx].subcategories.splice(subIdx, 1);
+                saveCategoriesToFirebase();
+                loadAdminCategories();
+                updateProviderCategorySelects();
+            }
+        }
+        
+        // Service Modal Functions
+        function showAddServiceModal(catIdx, subIdx) {
+            modalMode = 'add';
+            currentEditCategoryIdx = catIdx;
+            currentEditSubcategoryIdx = subIdx;
+            currentEditServiceIdx = null;
+            document.getElementById('serviceModalTitle').textContent = 'Add New Service Type';
+            document.getElementById('modalServiceName').value = '';
+            document.getElementById('modalServiceIcon').value = '';
+            document.getElementById('serviceModal').classList.remove('hidden');
+        }
+        
+        function editService(catIdx, subIdx, serviceIdx) {
+            modalMode = 'edit';
+            currentEditCategoryIdx = catIdx;
+            currentEditSubcategoryIdx = subIdx;
+            currentEditServiceIdx = serviceIdx;
+            const service = categories[catIdx].subcategories[subIdx].subsubcategories[serviceIdx];
+            document.getElementById('serviceModalTitle').textContent = 'Edit Service Type';
+            document.getElementById('modalServiceName').value = service.name.en || service.name;
+            document.getElementById('modalServiceIcon').value = service.icon;
+            document.getElementById('serviceModal').classList.remove('hidden');
+        }
+        
+        function saveServiceModal() {
+            const name = document.getElementById('modalServiceName').value.trim();
+            const icon = document.getElementById('modalServiceIcon').value.trim();
+            
+            if (!name || !icon) {
+                alert('Please fill in both fields');
+                return;
+            }
+            
+            if (modalMode === 'add') {
+                if (!categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx].subsubcategories) {
+                    categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx].subsubcategories = [];
+                }
+                categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx].subsubcategories.push({
+                    name: { en: name },
+                    icon: icon
+                });
+            } else {
+                const service = categories[currentEditCategoryIdx].subcategories[currentEditSubcategoryIdx].subsubcategories[currentEditServiceIdx];
+                if (typeof service.name === 'string') {
+                    service.name = { en: name };
+                } else {
+                    service.name.en = name;
+                }
+                service.icon = icon;
+            }
+            
+            saveCategoriesToFirebase();
+            loadAdminCategories();
+            updateProviderCategorySelects();
+            closeServiceModal();
+        }
+        
+        function closeServiceModal() {
+            document.getElementById('serviceModal').classList.add('hidden');
+        }
+
+        function loadAdminReviews() {
+            const list = document.getElementById('adminReviewsList');
+            if (!list) return;
+
+            // Collect all reviews from all providers
+            let allReviews = [];
+            providers.forEach(p => {
+                if (p.reviews) {
+                    Object.values(p.reviews).forEach(r => {
+                        allReviews.push({
+                            ...r,
+                            providerName: p.name,
+                            providerService: p.service,
+                            providerId: p.id
+                        });
+                    });
+                }
+            });
+
+            // Filter by rating
+            const ratingFilter = document.getElementById('reviewFilterRating')?.value;
+            if (ratingFilter) allReviews = allReviews.filter(r => r.rating == ratingFilter);
+
+            // Sort
+            const sortBy = document.getElementById('reviewFilterSort')?.value || 'newest';
+            if (sortBy === 'newest') allReviews.sort((a,b) => new Date(b.date) - new Date(a.date));
+            else if (sortBy === 'oldest') allReviews.sort((a,b) => new Date(a.date) - new Date(b.date));
+            else if (sortBy === 'highest') allReviews.sort((a,b) => b.rating - a.rating);
+            else if (sortBy === 'lowest') allReviews.sort((a,b) => a.rating - b.rating);
+
+            // Update summary
+            const total = allReviews.length;
+            const avg = total > 0 ? (allReviews.reduce((s,r) => s + r.rating, 0) / total).toFixed(1) : '0.0';
+            const flagged = allReviews.filter(r => r.flagged).length;
+            const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+            set('adminRevTotal', total);
+            set('adminRevAvg', avg);
+            set('adminRevFlagged', flagged);
+
+            if (total === 0) {
+                list.innerHTML = '<div class="text-center py-12 text-gray-400"><div class="text-5xl mb-3">⭐</div><p>No reviews yet</p></div>';
+                return;
+            }
+
+            list.innerHTML = allReviews.map(r => {
+                const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+                const date = r.date ? new Date(r.date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '';
+                const flagClass = r.flagged ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white';
+                return `
+                <div class="border-2 ${flagClass} rounded-xl p-4 hover:shadow-md transition">
+                    <div class="flex flex-wrap justify-between items-start gap-2 mb-2">
+                        <div>
+                            <span class="font-bold text-gray-800">${r.reviewerName || 'Anonymous'}</span>
+                            <span class="text-gray-400 text-sm ml-2">${date}</span>
+                            ${r.flagged ? '<span class="ml-2 bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-semibold">🚩 Flagged</span>' : ''}
+                        </div>
+                        <div class="text-yellow-500 font-bold text-lg">${stars} <span class="text-gray-600 text-sm">(${r.rating}/5)</span></div>
+                    </div>
+                    <div class="text-gray-700 mb-2">${r.text || ''}</div>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                            Provider: <strong>${r.providerName}</strong> · ${r.providerService}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="flagReview('${r.providerId}','${r.id}',${!r.flagged})" 
+                                class="text-xs px-3 py-1 rounded-lg font-semibold ${r.flagged ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'}">
+                                ${r.flagged ? '✅ Unflag' : '🚩 Flag'}
+                            </button>
+                            <button onclick="deleteReview('${r.providerId}','${r.id}')" 
+                                class="text-xs px-3 py-1 rounded-lg font-semibold bg-red-100 text-red-700 hover:bg-red-200">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function flagReview(providerId, reviewId, flag) {
+            try {
+                await _firebase.set(_firebase.ref(_firebase.db, `providers/${providerId}/reviews/${reviewId}/flagged`), flag);
+                // Update local data
+                const p = providers.find(pr => pr.id === providerId);
+                if (p && p.reviews && p.reviews[reviewId]) p.reviews[reviewId].flagged = flag;
+                loadAdminReviews();
+                updateAdminStats();
+                showFirebaseStatus(flag ? '🚩 Review flagged' : '✅ Review unflagged', flag ? 'warning' : 'success');
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function deleteReview(providerId, reviewId) {
+            if (!confirm('🗑️ Permanently delete this review? This cannot be undone.')) return;
+            try {
+                await _firebase.remove(_firebase.ref(_firebase.db, `providers/${providerId}/reviews/${reviewId}`));
+                // Update local data
+                const p = providers.find(pr => pr.id === providerId);
+                if (p && p.reviews) delete p.reviews[reviewId];
+                loadAdminReviews();
+                updateAdminStats();
+                showFirebaseStatus('🗑️ Review deleted', 'success');
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        function togglePauseService(catIdx, subIdx, serviceIdx) {
+            const service = categories[catIdx].subcategories[subIdx].subsubcategories[serviceIdx];
+            const wasPaused = service.paused || false;
+            service.paused = !wasPaused;
+            const action = service.paused ? 'paused' : 'resumed';
+            saveCategoriesToFirebase();
+            loadAdminCategories();
+            updateAdminStats();
+            showFirebaseStatus(`Service "${service.name.en || service.name}" ${action}`, service.paused ? 'warning' : 'success');
+        }
+        
+        function deleteService(catIdx, subIdx, serviceIdx) {
+            if (confirm('⚠️ Delete this service type?')) {
+                categories[catIdx].subcategories[subIdx].subsubcategories.splice(serviceIdx, 1);
+                saveCategoriesToFirebase();
+                loadAdminCategories();
+                updateProviderCategorySelects();
+            }
+        }
+        
+        // ==================== AUTO-LOCATION ====================
+        function useMyLocation(type) {
+            if (!navigator.geolocation) {
+                alert('❌ Geolocation not supported by your browser.\n\nPlease click on the map to set your location manually.');
+                return;
+            }
+            
+            const button = event.target;
+            button.innerHTML = '⏳ Detecting...';
+            button.disabled = true;
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    console.log('Location detected:', lat, lng);
+                    
+                    if (type === 'provider') {
+                        document.getElementById('providerLat').value = lat;
+                        document.getElementById('providerLng').value = lng;
+                        
+                        if (maps.register) {
+                            maps.register.setView([lat, lng], 13);
+                            maps.register.eachLayer(layer => {
+                                if (layer instanceof L.Marker) {
+                                    layer.setLatLng([lat, lng]);
+                                }
+                            });
+                        }
+                    } else if (type === 'seeker') {
+                        document.getElementById('seekerLat').value = lat;
+                        document.getElementById('seekerLng').value = lng;
+                        
+                        if (maps.seeker) {
+                            maps.seeker.setView([lat, lng], 13);
+                            maps.seeker.eachLayer(layer => {
+                                if (layer instanceof L.Marker) {
+                                    layer.setLatLng([lat, lng]);
+                                }
+                            });
+                        }
+                    }
+                    
+                    button.innerHTML = '✓ Location Detected!';
+                    setTimeout(() => {
+                        button.innerHTML = '📍 Use My Location';
+                        button.disabled = false;
+                    }, 2000);
+                    
+                    alert('✓ Your location has been detected and set on the map!');
+                },
+                function(error) {
+                    console.error('Geolocation error:', error);
+                    
+                    let errorMsg = '❌ Could not detect location.\n\n';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg += 'Please allow location access in your browser settings.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg += 'Location information unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg += 'Location request timed out.';
+                            break;
+                        default:
+                            errorMsg += 'An unknown error occurred.';
+                    }
+                    errorMsg += '\n\nPlease click on the map to set location manually.';
+                    
+                    alert(errorMsg);
+                    
+                    button.innerHTML = '📍 Use My Location';
+                    button.disabled = false;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+        
+        // ==================== INITIALIZATION ====================
+        function initializeApp() {
+            if (!localStorage.getItem('categories')) {
+                saveCategoriesToFirebase();
+            }
+            
+            initializeTranslations(); // Mark translatable elements
+            updateProviderCategorySelects();
+            updateAllUIText(); // Apply translations on init
+
+            // Handle PWA shortcut URLs e.g. ?page=browse or ?page=register
+            const urlParams = new URLSearchParams(window.location.search);
+            const startPage = urlParams.get('page');
+            // Load categories from Firebase for all users
+            loadCategoriesFromFirebase();
+
+            if (startPage && ['home','browse','map','register','seeker','admin','myProfile'].includes(startPage)) {
+                showPage(startPage);
+            } else {
+                showPage('home');
+            }
+        }
+        
+        window.onload = function() {
+            const langNames = {
+                'en': 'EN', 'hi': 'हिं', 'bn': 'বাং', 'gu': 'ગુજ',
+                'mr': 'मरा', 'kn': 'ಕನ್ನ', 'te': 'తెలు', 'ml': 'മലയ',
+                'ta': 'தமிழ்', 'pa': 'ਪੰਜ'
+            };
+            
+            if (!localStorage.getItem('language')) {
+                // First time - show language selector
+                document.getElementById('languageModal').classList.remove('hidden');
+            } else {
+                // Language already selected - load it
+                currentLanguage = localStorage.getItem('language');
+                document.getElementById('currentLang').textContent = langNames[currentLanguage] || 'EN';
+                initializeApp();
+            }
+        };
+        // ==================== PHASE F: ADMIN REPORTS ====================
+        async function loadAdminReports() {
+            const list = document.getElementById('adminReportsList');
+            list.innerHTML = '<p class="text-center text-gray-400 py-4">Loading reports...</p>';
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'reports'));
+                if (!snap.exists()) {
+                    list.innerHTML = '<div class="text-center py-12 text-gray-400"><div class="text-5xl mb-3">✅</div><p class="font-medium">No reports yet!</p></div>';
+                    return;
+                }
+                const reports = Object.values(snap.val()).sort((a,b) => new Date(b.date) - new Date(a.date));
+                list.innerHTML = reports.map(r => {
+                    const statusColors = { pending:'bg-yellow-100 text-yellow-700', reviewing:'bg-blue-100 text-blue-700', resolved:'bg-green-100 text-green-700', dismissed:'bg-gray-100 text-gray-500' };
+                    return `
+                    <div class="border-2 ${r.status === 'pending' ? 'border-red-200' : 'border-gray-200'} rounded-xl p-4">
+                        <div class="flex justify-between items-start flex-wrap gap-2">
+                            <div>
+                                <div class="font-bold text-gray-800">🚨 Against: ${r.targetName} <span class="text-xs text-gray-400">(${r.targetType})</span></div>
+                                <div class="text-red-600 text-xs font-medium mt-0.5">${r.type.replace(/_/g,' ').toUpperCase()}</div>
+                            </div>
+                            <span class="text-xs px-3 py-1 rounded-full font-medium ${statusColors[r.status] || statusColors.pending}">${r.status || 'pending'}</span>
+                        </div>
+                        <div class="mt-2 text-gray-700 text-sm bg-gray-50 rounded-lg p-3">${r.description}</div>
+                        <div class="mt-2 text-xs text-gray-500 flex flex-wrap gap-3">
+                            <span>👤 Reporter: ${r.reporterName || 'Anonymous'}</span>
+                            <span>📱 ${r.reporterPhone || ''}</span>
+                            <span>📅 ${new Date(r.date).toLocaleDateString()}</span>
+                        </div>
+                        <div class="mt-3 flex gap-2 flex-wrap">
+                            <button onclick="updateReportStatus('${r.id}','reviewing')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-700">🔍 Mark Reviewing</button>
+                            <button onclick="updateReportStatus('${r.id}','resolved')" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-green-700">✅ Mark Resolved</button>
+                            <button onclick="updateReportStatus('${r.id}','dismissed')" class="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-gray-600">❌ Dismiss</button>
+                            ${r.targetType === 'provider' ? `<button onclick="restrictProvider('${r.targetId}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-orange-700">⚠️ Restrict Provider</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                list.innerHTML = '<p class="text-red-400 text-center">Could not load reports.</p>';
+            }
+        }
+
+        async function updateReportStatus(reportId, status) {
+            await _firebase.update(_firebase.ref(_firebase.db, `reports/${reportId}`), { status });
+            showFirebaseStatus(`Report marked as ${status}`, 'success');
+            loadAdminReports();
+        }
+
+        // ==================== PHASE F: AUTH STATE ====================
+        let _confirmationResult = null;
+        let _recaptchaVerifier   = null;
+        let firebaseUser         = null; // logged-in Firebase user
+        let userProfile          = null; // our app profile from /users/{uid}
+        let _authInitialized     = false; // true after first onAuthStateChanged fires
+
+        // Listen for auth state changes
+        window.addEventListener('authStateChanged', async (e) => {
+            firebaseUser = e.detail;
+            window.firebaseUser = firebaseUser; // bridge for cross-script access
+            if (firebaseUser) {
+                // Wait for Firebase to be ready
+                if (!window._firebase) {
+                    await new Promise(resolve => window.addEventListener('firebaseReady', resolve, { once: true }));
+                }
+                await loadUserProfile(firebaseUser.uid);
+                updateNavForLoggedIn();
+                // Persist session hint in localStorage so UI restores gracefully
+                try {
+                    localStorage.setItem('sc_auth_uid', firebaseUser.uid);
+                    localStorage.setItem('sc_auth_name', userProfile?.name || firebaseUser.phoneNumber || '');
+                    localStorage.setItem('sc_auth_phone', firebaseUser.phoneNumber || '');
+                    // Track OTP verification date — reduces confusion about "logging in again"
+                    localStorage.setItem('sc_otp_date', new Date().toLocaleDateString('en-IN'));
+                } catch(e) {}
+                // Check and award daily login bonus (2 pts per day)
+                await checkDailyLoginBonus(firebaseUser.uid);
+                // Start notification listener
+                listenForNotifications && listenForNotifications();
+            } else {
+                firebaseUser = null;
+                userProfile  = null;
+                // Only clear localStorage hint on explicit logout (not on null during init)
+                // We check: if Firebase just initialized and user is null, keep the hint
+                if (_authInitialized) {
+                    try { localStorage.removeItem('sc_auth_uid'); localStorage.removeItem('sc_auth_name'); } catch(e) {}
+                }
+                updateNavForLoggedOut();
+            }
+            // Mark auth as initialized (suppresses logout on initial null state)
+            _authInitialized = true;
+            // Refresh profile page if currently open
+            const profilePage = document.getElementById('page-myProfile');
+            if (profilePage && !profilePage.classList.contains('hidden')) {
+                renderProfilePage();
+            }
+        });
+
+        async function loadUserProfile(uid) {
+            try {
+                if (!_firebase || !_firebase.db) return;
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'users/' + uid));
+                userProfile = snap.exists() ? snap.val() : null;
+            } catch(e) { console.warn('Profile load error:', e); }
+        }
+
+        // ── Daily Login Bonus: 2 pts per day ──
+        async function checkDailyLoginBonus(uid) {
+            try {
+                const today = new Date().toISOString().split('T')[0]; // "2026-03-07"
+                const bonusRef = _firebase.ref(_firebase.db, `users/${uid}/lastLoginBonus`);
+                const snap = await _firebase.get(bonusRef);
+                const lastDate = snap.exists() ? snap.val() : null;
+
+                if (lastDate === today) return; // already got bonus today
+
+                // Award 2 pts
+                const credRef = _firebase.ref(_firebase.db, `users/${uid}/walletCredits`);
+                const credSnap = await _firebase.get(credRef);
+                const current = credSnap.exists() ? (credSnap.val() || 0) : 0;
+                await _firebase.set(credRef, current + 2);
+
+                // Save today's date as last bonus date
+                await _firebase.set(bonusRef, today);
+
+                // Log transaction
+                const txnRef = _firebase.ref(_firebase.db, `users/${uid}/transactions/${Date.now()}`);
+                await _firebase.set(txnRef, {
+                    type: 'daily_login',
+                    amount: 0,
+                    points: 2,
+                    fee: 0,
+                    timestamp: Date.now(),
+                    date: new Date().toLocaleDateString('en-IN'),
+                    reason: 'Daily login bonus'
+                });
+
+                // Show toast (only if profile page not loading to avoid flash)
+                setTimeout(() => {
+                    showFirebaseStatus('🌟 +2 pts daily login bonus! Keep coming back 🙏', 'success');
+                }, 1500);
+
+            } catch(e) { console.warn('Daily bonus error:', e); }
+        }
+
+        function updateNavForLoggedIn() {
+            const name = userProfile?.name || firebaseUser?.phoneNumber || 'User';
+            const initials = name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('navAuthBtn').innerHTML = `
+                <div class="flex items-center gap-2 cursor-pointer" onclick="showPage('myProfile')">
+                    <div class="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center text-sm font-bold">${initials}</div>
+                    <span class="text-sm font-medium text-gray-700 hidden md:inline">${name.split(' ')[0]}</span>
+                </div>`;
+            // Show wallet, hide register/admin buttons
+            const wb = document.getElementById('walletNavBtn');
+            if (wb) wb.classList.remove('hidden');
+            const gb = document.getElementById('navGuestButtons');
+            if (gb) gb.classList.add('hidden');
+        }
+
+        function updateNavForLoggedOut() {
+            // Check localStorage for a session hint — if found, show "Restoring..." briefly
+            const savedName = (() => { try { return localStorage.getItem('sc_auth_name'); } catch(e) { return null; } })();
+            if (savedName && !_authInitialized) {
+                // Session may still be restoring — show a temporary avatar
+                const initials = savedName.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() || '?';
+                document.getElementById('navAuthBtn').innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-bold animate-pulse">${initials}</div>
+                        <span class="text-xs text-gray-400 hidden md:inline">Restoring…</span>
+                    </div>`;
+                return;
+            }
+            document.getElementById('navAuthBtn').innerHTML = `
+                <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>`;
+            // Hide wallet, show register/admin buttons
+            const wb = document.getElementById('walletNavBtn');
+            if (wb) wb.classList.add('hidden');
+            const gb = document.getElementById('navGuestButtons');
+            if (gb) gb.classList.remove('hidden');
+        }
+
+        // ==================== PHASE F: LOGIN MODAL ====================
+        function openLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginStep1').classList.remove('hidden');
+            document.getElementById('loginStep2').classList.add('hidden');
+            document.getElementById('loginStep3').classList.add('hidden');
+            document.getElementById('otpInput') && (document.getElementById('otpInput').value = '');
+            // Pre-fill phone if user verified today
+            try {
+                const savedPhone = localStorage.getItem('sc_auth_phone') || '';
+                const savedDate  = localStorage.getItem('sc_otp_date') || '';
+                const today      = new Date().toLocaleDateString('en-IN');
+                const phoneInput = document.getElementById('loginPhone');
+                if (savedPhone && phoneInput) {
+                    // Strip +91 prefix for the input field (expects 10 digits)
+                    phoneInput.value = savedPhone.replace(/^\+91/, '');
+                }
+                // Show "already verified today" hint
+                const hintEl = document.getElementById('otpDateHint');
+                if (hintEl) {
+                    if (savedPhone && savedDate === today) {
+                        hintEl.textContent = '✅ You verified today — just send OTP again to resume.';
+                        hintEl.className   = 'text-xs text-green-600 mt-1 text-center';
+                    } else {
+                        hintEl.textContent = '';
+                    }
+                }
+            } catch(e) {}
+            // Don't setup reCAPTCHA here - do it when user clicks Send OTP
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+            if (_recaptchaVerifier) {
+                try { _recaptchaVerifier.clear(); } catch(e) {}
+                _recaptchaVerifier = null;
+            }
+        }
+
+        function setupRecaptcha() {
+            try {
+                if (_recaptchaVerifier) {
+                    try { _recaptchaVerifier.clear(); } catch(e) {}
+                    _recaptchaVerifier = null;
+                }
+                const container = document.getElementById('recaptcha-container');
+                if (!container || !window._auth) return;
+                // Clear inner HTML to allow fresh render — fixes "already rendered" error
+                container.innerHTML = '';
+                _recaptchaVerifier = new _auth.RecaptchaVerifier(_auth.auth, 'recaptcha-container', {
+                    size: 'invisible',
+                    callback: () => {}
+                });
+            } catch(e) { console.warn('reCAPTCHA setup:', e); }
+        }
+
+        async function sendOTP() {
+            const phone = document.getElementById('loginPhone').value.trim();
+            if (phone.length !== 10) { alert('Please enter a valid 10-digit mobile number'); return; }
+
+            const btn = document.getElementById('sendOtpBtn');
+            btn.disabled = true; btn.textContent = '⏳ Sending...';
+
+            try {
+                if (!_recaptchaVerifier) setupRecaptcha();
+                const fullPhone = '+91' + phone;
+                _confirmationResult = await _auth.signInWithPhoneNumber(_auth.auth, fullPhone, _recaptchaVerifier);
+                document.getElementById('loginPhoneDisplay').textContent = '+91 ' + phone;
+                document.getElementById('loginStep1').classList.add('hidden');
+                document.getElementById('loginStep2').classList.remove('hidden');
+                showFirebaseStatus('📲 OTP sent to +91 ' + phone, 'success');
+                startResendCountdown();
+            } catch(err) {
+                console.error('OTP error:', err);
+                let msg = 'Failed to send OTP. ';
+                if (err.code === 'auth/too-many-requests') msg += 'Too many attempts. Please try again later.';
+                else if (err.code === 'auth/invalid-phone-number') msg += 'Invalid phone number.';
+                else msg += err.message;
+                alert(msg);
+                btn.disabled = false; btn.textContent = 'Send OTP';
+                setupRecaptcha();
+            }
+        }
+
+        let _resendInterval = null;
+        function startResendCountdown() {
+            let secs = 30;
+            const countdown = document.getElementById('resendCountdown');
+            const btn = document.getElementById('resendOtpBtn');
+            const timerEl = document.getElementById('resendTimer');
+            if (!countdown) return;
+            countdown.classList.remove('hidden');
+            btn.classList.add('hidden');
+            if (timerEl) timerEl.textContent = secs;
+            if (_resendInterval) clearInterval(_resendInterval);
+            _resendInterval = setInterval(() => {
+                secs--;
+                if (timerEl) timerEl.textContent = secs;
+                if (secs <= 0) {
+                    clearInterval(_resendInterval);
+                    countdown.classList.add('hidden');
+                    btn.classList.remove('hidden');
+                }
+            }, 1000);
+        }
+        async function resendOTP() {
+            const phone = document.getElementById('loginPhone').value.trim();
+            if (!phone) return;
+            const btn = document.getElementById('resendOtpBtn');
+            btn.textContent = '⏳ Sending...';
+            btn.disabled = true;
+            try {
+                // Fresh reCAPTCHA — clears old render
+                setupRecaptcha();
+                await new Promise(r => setTimeout(r, 300)); // small delay
+                _confirmationResult = await _auth.signInWithPhoneNumber(_auth.auth, '+91' + phone, _recaptchaVerifier);
+                showFirebaseStatus('📲 OTP resent to +91 ' + phone, 'success');
+                startResendCountdown();
+            } catch(err) {
+                console.error('Resend error:', err);
+                alert('Failed to resend OTP: ' + err.message);
+                btn.textContent = '🔄 Resend OTP';
+                btn.disabled = false;
+            }
+        }
+
+        async function verifyOTP() {
+            const otp = document.getElementById('otpInput').value.trim();
+            if (otp.length !== 6) { alert('Please enter the 6-digit OTP'); return; }
+
+            const btn = document.getElementById('verifyOtpBtn');
+            btn.disabled = true; btn.textContent = '⏳ Verifying...';
+
+            try {
+                const result = await _confirmationResult.confirm(otp);
+                firebaseUser = result.user;
+                // Check if user profile exists
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}`));
+                if (!snap.exists()) {
+                    // New user — show setup step
+                    document.getElementById('loginStep2').classList.add('hidden');
+                    document.getElementById('loginStep3').classList.remove('hidden');
+                } else {
+                    userProfile = snap.val();
+                    closeLoginModal();
+                    showFirebaseStatus('✅ Welcome back, ' + (userProfile.name || 'User') + '!', 'success');
+                    updateNavForLoggedIn();
+                }
+            } catch(err) {
+                console.error('OTP verify error:', err);
+                alert('Invalid OTP. Please check and try again.');
+                btn.disabled = false; btn.textContent = 'Verify & Login';
+            }
+        }
+
+        async function completeNewUserSetup() {
+            const name = document.getElementById('newUserName').value.trim();
+            const role = document.querySelector('input[name="userRole"]:checked')?.value;
+            if (!name) { alert('Please enter your name'); return; }
+            if (!role)  { alert('Please select your role'); return; }
+
+            const profile = {
+                uid:   firebaseUser.uid,
+                phone: firebaseUser.phoneNumber,
+                name,
+                role,
+                favourites: {},
+                joined: new Date().toISOString()
+            };
+
+            await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}`), profile);
+            userProfile = profile;
+            closeLoginModal();
+            showFirebaseStatus('🎉 Welcome to Sudarshan Chakra, ' + name + '!', 'success');
+            updateNavForLoggedIn();
+            showPage('myProfile');
+        }
+
+        async function logoutUser() {
+            if (!confirm('⚠️ Logout will end your session.\n\nYou will need to verify your mobile number with OTP again to log back in.\n\nAre you sure?')) return;
+            await _auth.signOut(_auth.auth);
+            firebaseUser = null; userProfile = null;
+            if (notifUnsubscribe) { notifUnsubscribe(); notifUnsubscribe = null; }
+            updateNavForLoggedOut();
+            showPage('home');
+            showFirebaseStatus('👋 Logged out. See you tomorrow for your daily bonus! 🌟', 'info');
+        }
+
+        // ==================== PHASE F: PROFILE PAGE ====================
+        function renderProfilePage() {
+            // Safety check - elements might not exist yet
+            const notLoggedIn = document.getElementById('profileNotLoggedIn');
+            const loggedIn    = document.getElementById('profileLoggedIn');
+            if (!notLoggedIn || !loggedIn) return;
+
+            if (!firebaseUser || !userProfile) {
+                notLoggedIn.classList.remove('hidden');
+                loggedIn.classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('profileNotLoggedIn').classList.add('hidden');
+            document.getElementById('profileLoggedIn').classList.remove('hidden');
+
+            // Header
+            const initials = userProfile.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('myProfileAvatar').innerHTML = `<div class="w-full h-full flex items-center justify-center text-2xl font-bold text-white bg-orange-400">${initials}</div>`;
+            document.getElementById('myProfileName').textContent  = userProfile.name;
+            document.getElementById('myProfilePhone').textContent = firebaseUser.phoneNumber;
+            document.getElementById('myProfileRole').textContent  = userProfile.role === 'provider' ? '🛠️ Service Provider' : '🔍 Service Seeker';
+
+            showProfileTab('myDetails');
+        }
+
+        function showProfileTab(tab) {
+            ['myDetails','bookings','wallet','favourites','myReviews','myReports'].forEach(t => {
+                const tabContent = document.getElementById('profileTab-' + t);
+                const tabBtn     = document.getElementById('ptab-' + t);
+                if (tabContent) tabContent.classList.add('hidden');
+                if (tabBtn) {
+                    tabBtn.classList.remove('text-orange-600','border-orange-600');
+                    tabBtn.classList.add('text-gray-500','border-transparent');
+                }
+            });
+            const activeContent = document.getElementById('profileTab-' + tab);
+            const activeBtn     = document.getElementById('ptab-' + tab);
+            if (activeContent) activeContent.classList.remove('hidden');
+            if (activeBtn) {
+                activeBtn.classList.add('text-orange-600','border-orange-600');
+                activeBtn.classList.remove('text-gray-500','border-transparent');
+            }
+
+            if (tab === 'myDetails')   loadMyDetails();
+            if (tab === 'wallet')      loadWallet();
+            if (tab === 'favourites')  loadFavourites();
+            if (tab === 'myReviews')   loadMyReviews();
+            if (tab === 'myReports')   loadMyReports();
+            if (tab === 'bookings')    loadMyBookings();
+        }
+
+        function loadMyDetails() {
+            if (!userProfile) return;
+            // Provider card
+            const myProvider = providers.find(p => p.ownerUid === firebaseUser?.uid);
+            if (myProvider) {
+                document.getElementById('myProviderCard').classList.remove('hidden');
+                const avail = myProvider.available !== false;
+                const toggle = document.getElementById('availabilityToggle');
+                toggle.classList.toggle('bg-green-500', avail);
+                toggle.classList.toggle('bg-gray-300', !avail);
+                toggle.querySelector('div').style.transform = avail ? 'translateX(24px)' : 'translateX(0)';
+                document.getElementById('myProviderInfo').innerHTML = `
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><span class="font-medium">Service:</span> ${myProvider.service}</div>
+                        <div><span class="font-medium">Rate:</span> ₹${myProvider.rate}/hr</div>
+                        <div><span class="font-medium">Experience:</span> ${myProvider.experience} yrs</div>
+                        <div><span class="font-medium">Location:</span> ${myProvider.location}</div>
+                    </div>`;
+            }
+            // Seeker card
+            const mySeeker = seekers.find(s => s.ownerUid === firebaseUser?.uid);
+            if (mySeeker) {
+                document.getElementById('mySeekerCard').classList.remove('hidden');
+                document.getElementById('mySeekerInfo').innerHTML = `
+                    <div><span class="font-medium">Name:</span> ${mySeeker.name}</div>
+                    <div><span class="font-medium">Location:</span> ${mySeeker.location}</div>`;
+            }
+            // Recommendations
+            loadRecommendations();
+        }
+
+        async function loadWallet() {
+            if (!firebaseUser || !window._firebase) return;
+            try {
+                // Update daily bonus card status
+                const today = new Date().toISOString().split('T')[0];
+                const bonusSnap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/lastLoginBonus`));
+                const claimedToday = bonusSnap.exists() && bonusSnap.val() === today;
+                const bonusStatus = document.getElementById('dailyBonusStatus');
+                if (bonusStatus) {
+                    if (claimedToday) {
+                        bonusStatus.textContent = '✅ Claimed today';
+                        bonusStatus.className = 'text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700';
+                    } else {
+                        bonusStatus.textContent = '⏳ Not yet — login again!';
+                        bonusStatus.className = 'text-xs font-bold px-2 py-1 rounded-full bg-yellow-100 text-yellow-700';
+                    }
+                }
+
+                // Load balance
+                const balSnap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`));
+                const balance = balSnap.exists() ? (balSnap.val() || 0) : 0;
+                const balEl = document.getElementById('walletBalance');
+                if (balEl) balEl.textContent = balance;
+                const rupEl = document.getElementById('walletRupees');
+                if (rupEl) rupEl.textContent = (balance / 10).toFixed(1);
+
+                // Load transactions
+                const txnSnap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions`));
+                const histEl = document.getElementById('walletHistory');
+                if (!histEl) return;
+
+                if (!txnSnap.exists()) {
+                    histEl.innerHTML = '<div class="text-center text-gray-400 py-6 text-sm">No transactions yet. Start sharing to earn! 🙏</div>';
+                    return;
+                }
+
+                const txns = txnSnap.val();
+                const typeIcons = { portal: '🔱', tip: '🙏', charity: '🌱', daily_login: '🌟', write_review: '⭐', share_referral: '📤', refer_provider: '🤝', booking: '📅' };
+                const typeLabels = { portal: 'Portal Fee', tip: 'Tip to Provider', charity: 'Charity Donation', daily_login: 'Daily Login Bonus', write_review: 'Review Written', share_referral: 'App Share Bonus', refer_provider: 'Provider Referral', booking: 'Service Booked' };
+
+                const rows = Object.entries(txns)
+                    .sort(([a],[b]) => b - a) // newest first
+                    .map(([ts, t]) => `
+                        <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">${typeIcons[t.type] || '💳'}</span>
+                                <div>
+                                    <div class="font-semibold text-sm text-gray-800">${typeLabels[t.type] || 'Payment'}</div>
+                                    <div class="text-xs text-gray-400">${t.date || ''}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-gray-800">₹${t.amount} paid</div>
+                                <div class="text-xs ${(t.points > 0) ? 'text-green-600' : 'text-gray-400'} font-semibold">${t.points > 0 ? '+' + t.points + ' pts earned' : t.type === 'charity' ? '🌱 Charity' : ''}</div>
+                            </div>
+                        </div>`).join('');
+
+                histEl.innerHTML = rows || '<div class="text-center text-gray-400 py-6 text-sm">No transactions yet 🙏</div>';
+            } catch(e) {
+                console.warn('Wallet load error:', e);
+                const histEl = document.getElementById('walletHistory');
+                if (histEl) histEl.innerHTML = '<div class="text-center text-gray-400 py-6 text-sm">Could not load wallet data.</div>';
+            }
+        }
+
+        function loadRecommendations() {
+            // Suggest based on user's past favourites or random top-rated
+            const favIds = Object.keys(userProfile?.favourites || {});
+            let recommended = providers
+                .filter(p => p.status === 'active' && !favIds.includes(p.id))
+                .sort((a,b) => (b.rating||0) - (a.rating||0))
+                .slice(0, 3);
+
+            const list = document.getElementById('recommendationsList');
+            if (recommended.length === 0) {
+                list.innerHTML = '<p class="text-gray-400 text-sm">No recommendations yet. Browse more providers!</p>';
+                return;
+            }
+            list.innerHTML = recommended.map(p => `
+                <div class="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
+                    <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">${getProviderAvatar(p)}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-gray-800 truncate">${p.name}</div>
+                        <div class="text-orange-600 text-xs">${p.service}</div>
+                        <div class="text-gray-500 text-xs">⭐ ${(p.rating||4).toFixed(1)} · ₹${p.rate}/hr</div>
+                    </div>
+                    <button onclick="openProviderProfile('${p.id}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium">View</button>
+                </div>`).join('');
+        }
+
+        function loadFavourites() {
+            const favIds = Object.keys(userProfile?.favourites || {});
+            const favProviders = providers.filter(p => favIds.includes(p.id));
+            const list = document.getElementById('favouritesList');
+            if (favProviders.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="text-4xl mb-2">❤️</div><p>No saved providers yet.<br>Tap ❤️ on any provider to save them here!</p></div>';
+                return;
+            }
+            list.innerHTML = favProviders.map(p => `
+                <div class="flex items-center gap-3 p-3 border rounded-xl hover:bg-gray-50">
+                    <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">${getProviderAvatar(p)}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-gray-800">${p.name}</div>
+                        <div class="text-orange-600 text-xs">${p.service} · ₹${p.rate}/hr</div>
+                    </div>
+                    <button onclick="removeFavourite('${p.id}')" class="text-red-400 hover:text-red-600 text-xl">💔</button>
+                    <button onclick="openProviderProfile('${p.id}')" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs">View</button>
+                </div>`).join('');
+        }
+
+        async function toggleFavourite(providerId) {
+            if (!firebaseUser) { openLoginModal(); return; }
+            if (!userProfile) { openLoginModal(); return; }
+            const isFav = userProfile.favourites && userProfile.favourites[providerId];
+            const path  = 'users/' + firebaseUser.uid + '/favourites/' + providerId;
+            const btn   = document.getElementById('fav-' + providerId);
+            if (isFav) {
+                await _firebase.remove(_firebase.ref(_firebase.db, path));
+                if (userProfile.favourites) delete userProfile.favourites[providerId];
+                if (btn) btn.textContent = '🤍';
+                showFirebaseStatus('💔 Removed from favourites', 'info');
+            } else {
+                await _firebase.set(_firebase.ref(_firebase.db, path), true);
+                if (!userProfile.favourites) userProfile.favourites = {};
+                userProfile.favourites[providerId] = true;
+                if (btn) btn.textContent = '❤️';
+                showFirebaseStatus('❤️ Saved to favourites!', 'success');
+            }
+        }
+
+        async function removeFavourite(providerId) {
+            await _firebase.remove(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/favourites/${providerId}`));
+            delete userProfile.favourites[providerId];
+            loadFavourites();
+        }
+
+        function loadMyReviews() {
+            const myReviews = [];
+            providers.forEach(p => {
+                if (p.reviews) {
+                    Object.values(p.reviews).forEach(r => {
+                        if (r.reviewerName === userProfile?.name) {
+                            myReviews.push({ ...r, providerName: p.name, providerId: p.id });
+                        }
+                    });
+                }
+            });
+            const list = document.getElementById('myReviewsList');
+            if (myReviews.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="text-4xl mb-2">⭐</div><p>You have not written any reviews yet.<br>Browse providers and share your experience!</p></div>';
+                return;
+            }
+            list.innerHTML = myReviews.map(r => `
+                <div class="border rounded-xl p-4">
+                    <div class="flex justify-between">
+                        <div class="font-semibold text-gray-800">${r.providerName}</div>
+                        <div class="text-yellow-400">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+                    </div>
+                    <div class="text-gray-600 text-sm mt-1">${r.text}</div>
+                    <div class="text-xs text-gray-400 mt-1">${new Date(r.date).toLocaleDateString()}</div>
+                </div>`).join('');
+        }
+
+        async function loadMyReports() {
+            const list = document.getElementById('myReportsList');
+            list.innerHTML = '<p class="text-gray-400 text-sm">Loading...</p>';
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'reports'));
+                const reports = snap.exists() ? Object.values(snap.val()) : [];
+                const mine = reports.filter(r => r.reporterUid === firebaseUser?.uid);
+                if (mine.length === 0) {
+                    list.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="text-4xl mb-2">🚨</div><p>No complaints filed yet.</p></div>';
+                    return;
+                }
+                list.innerHTML = mine.map(r => `
+                    <div class="border rounded-xl p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-semibold text-gray-800">Against: ${r.targetName}</div>
+                                <div class="text-red-600 text-xs mt-0.5">${r.type.replace('_',' ').toUpperCase()}</div>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full ${r.status === 'resolved' ? 'bg-green-100 text-green-700' : r.status === 'reviewing' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}">${r.status || 'Pending'}</span>
+                        </div>
+                        <div class="text-gray-600 text-sm mt-2">${r.description}</div>
+                        <div class="text-xs text-gray-400 mt-1">${new Date(r.date).toLocaleDateString()}</div>
+                    </div>`).join('');
+            } catch(e) { list.innerHTML = '<p class="text-red-400 text-sm">Could not load reports.</p>'; }
+        }
+
+        // ==================== PHASE F: AVAILABILITY TOGGLE ====================
+        async function toggleAvailability() {
+            if (!firebaseUser) return;
+            const myProvider = providers.find(p => p.ownerUid === firebaseUser.uid);
+            if (!myProvider) return;
+            const newState = myProvider.available === false ? true : false;
+            await updateProviderInFirebase(myProvider.id, { available: newState });
+            showFirebaseStatus(newState ? '🟢 You are now Available' : '🔴 You are now Unavailable', 'info');
+        }
+
+        // ==================== PHASE F: EDIT PROVIDER PROFILE ====================
+        function openEditProviderModal() {
+            const myProvider = providers.find(p => p.ownerUid === firebaseUser?.uid);
+            if (!myProvider) return;
+            document.getElementById('editBio').value         = myProvider.bio || '';
+            document.getElementById('editRate').value        = myProvider.rate || '';
+            document.getElementById('editWhatsapp').value    = myProvider.whatsapp || '';
+            document.getElementById('editWorkingHours').value = myProvider.workingHours || 'mon-fri';
+            const preview = document.getElementById('editPhotoPreview');
+            preview.src = myProvider.photo || '';
+            document.getElementById('editProviderModal').classList.remove('hidden');
+        }
+
+        function previewEditPhoto(input) {
+            const file = input.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const max = 300; let w = img.width, h = img.height;
+                    if (w > h) { if (w > max) { h = h*max/w; w = max; } } else { if (h > max) { w = w*max/h; h = max; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    document.getElementById('editPhotoPreview').src = canvas.toDataURL('image/jpeg', 0.75);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveProviderEdits() {
+            const myProvider = providers.find(p => p.ownerUid === firebaseUser?.uid);
+            if (!myProvider) return;
+            const updates = {
+                bio:          document.getElementById('editBio').value.trim() || null,
+                rate:         parseInt(document.getElementById('editRate').value) || myProvider.rate,
+                whatsapp:     document.getElementById('editWhatsapp').value || null,
+                workingHours: document.getElementById('editWorkingHours').value,
+                photo:        document.getElementById('editPhotoPreview').src || myProvider.photo
+            };
+            await updateProviderInFirebase(myProvider.id, updates);
+            document.getElementById('editProviderModal').classList.add('hidden');
+            showFirebaseStatus('✅ Profile updated successfully!', 'success');
+            loadMyDetails();
+        }
+
+        // ==================== PHASE F: REPORT SYSTEM ====================
+        let reportTargetId   = null;
+        let reportTargetType = null;
+
+        function openReportModal(targetId, targetType, targetName) {
+            if (!firebaseUser) { openLoginModal(); return; }
+            reportTargetId   = targetId;
+            reportTargetType = targetType;
+            document.getElementById('reportTargetName').textContent = 'Reporting: ' + targetName;
+            document.getElementById('reportType').value = '';
+            document.getElementById('reportDescription').value = '';
+            document.getElementById('reporterNameInput').value = userProfile?.name || '';
+            document.getElementById('reportModal').classList.remove('hidden');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.add('hidden');
+            reportTargetId = null; reportTargetType = null;
+        }
+
+        // Use event delegation for reportDescription
+        document.addEventListener('input', function(e) {
+            if (e.target.id === 'reportDescription') {
+                const counter = document.getElementById('reportCharCount');
+                if (counter) counter.textContent = e.target.value.length;
+            }
+        });
+
+        async function submitReport() {
+            const type = document.getElementById('reportType').value;
+            const desc = document.getElementById('reportDescription').value.trim();
+            const name = document.getElementById('reporterNameInput').value.trim();
+            if (!type) { alert('Please select the type of issue'); return; }
+            if (!desc || desc.length < 20) { alert('Please describe the issue in at least 20 characters'); return; }
+
+            const targetName = document.getElementById('reportTargetName').textContent.replace('Reporting: ', '');
+            const report = {
+                id:          'rep_' + Date.now(),
+                targetId:    reportTargetId,
+                targetType:  reportTargetType,
+                targetName,
+                type,
+                description: desc,
+                reporterName: name,
+                reporterUid: firebaseUser.uid,
+                reporterPhone: firebaseUser.phoneNumber,
+                status: 'pending',
+                date:   new Date().toISOString()
+            };
+
+            try {
+                await _firebase.set(_firebase.ref(_firebase.db, `reports/${report.id}`), report);
+
+                const now       = Date.now();
+                const dateStr   = new Date().toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+                const isProvider = reportTargetType === 'provider';
+
+                // ── NOTIFICATION TO REPORTER (Regret message) ──
+                const regretMsg = isProvider
+                    ? `🙏 Dear ${name || 'User'}, we sincerely regret the inconvenience caused. Your report against provider "${targetName}" has been received by Sudarshan Chakra Portal. We have taken cognizance and have immediately initiated communication with the concerned party to resolve this issue at the earliest — with full consent and satisfaction of both parties. We assure you of a fair and transparent resolution. Thank you for trusting us. 🔱`
+                    : `🙏 Dear ${name || 'User'}, we sincerely regret the inconvenience caused. Your report against seeker "${targetName}" has been received by Sudarshan Chakra Portal. We have taken cognizance and have immediately initiated communication with the concerned party to resolve this issue at the earliest — with full consent and satisfaction of both parties. We assure you of a fair and transparent resolution. Thank you for trusting us. 🔱`;
+
+                await _firebase.set(
+                    _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/notifications/${now}_regret`),
+                    {
+                        type: 'portal_regret',
+                        title: '🔱 Sudarshan Chakra Portal',
+                        message: regretMsg,
+                        timestamp: now,
+                        date: dateStr,
+                        read: false,
+                        reportId: report.id
+                    }
+                );
+
+                // ── NOTIFICATION TO REPORTED PARTY (Information message) ──
+                const reportedUid = isProvider
+                    ? (providers.find(p => p.id === reportTargetId)?.ownerUid || reportTargetId)
+                    : reportTargetId;
+
+                const infoMsg = isProvider
+                    ? `ℹ️ Dear Provider, a concern has been raised by a customer regarding your service on Sudarshan Chakra Portal on ${dateStr}. Please be assured that our team has taken cognizance of this matter and is initiating a fair communication process. We will reach out to you to understand your perspective and work toward a mutually satisfactory resolution with the full consent of both parties. We appreciate your cooperation. 🔱`
+                    : `ℹ️ Dear User, a concern has been raised by a service provider regarding an interaction on Sudarshan Chakra Portal on ${dateStr}. Our team has taken note of this matter and is initiating a fair communication process with both parties. We will work toward a resolution that is agreeable to everyone involved. We appreciate your understanding. 🔱`;
+
+                if (reportedUid && reportedUid !== firebaseUser.uid) {
+                    await _firebase.set(
+                        _firebase.ref(_firebase.db, `users/${reportedUid}/notifications/${now}_info`),
+                        {
+                            type: 'portal_info',
+                            title: '🔱 Sudarshan Chakra Portal — Notice',
+                            message: infoMsg,
+                            timestamp: now,
+                            date: dateStr,
+                            read: false,
+                            reportId: report.id
+                        }
+                    );
+                }
+
+                closeReportModal();
+                showFirebaseStatus('✅ Report submitted. We have taken cognizance and will contact both parties to resolve this asap.', 'success');
+            } catch(e) {
+                console.error('Report submit error:', e);
+                alert('Could not submit report. Please try again.');
+            }
+        }
+
+        // ==================== PHASE E: PHOTO PREVIEW ====================
+        function previewProviderPhoto(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Max 1MB check
+            if (file.size > 8 * 1024 * 1024) {
+                alert('Photo too large! Please choose an image under 8MB.');
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Compress to max 300x300 for Firebase storage efficiency
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 500; // Higher res for better quality
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+                    else { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.75);
+
+                    document.getElementById('photoPreview').src = compressed;
+                    document.getElementById('photoPreview').classList.remove('hidden');
+                    document.getElementById('photoPlaceholder').classList.add('hidden');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ==================== PHASE E: REVIEW SYSTEM ====================
+        let currentReviewProviderId = null;
+        let currentReviewRating = 0;
+
+        async function loadProviderReviews(providerId) {
+            // Load reviews from top-level reviews/ node into the providers array in memory
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `reviews/${providerId}`));
+                const provider = providers.find(p => p.id === providerId);
+                if (provider) {
+                    provider.reviews = snap.exists() ? snap.val() : {};
+                }
+                return snap.exists() ? snap.val() : {};
+            } catch(e) {
+                console.warn('Could not load reviews:', e);
+                return {};
+            }
+        }
+
+        function openReviewModal(providerId) {
+            // Must be logged in to write a review
+            if (!firebaseUser) {
+                openLoginModal();
+                return;
+            }
+            const provider = providers.find(p => p.id === providerId);
+            if (!provider) return;
+
+            // Prevent provider from reviewing themselves
+            if (provider.ownerUid === firebaseUser.uid) {
+                showFirebaseStatus('You cannot review your own profile.', 'error');
+                return;
+            }
+
+            currentReviewProviderId = providerId;
+            currentReviewRating = 0;
+
+            document.getElementById('reviewProviderName').textContent = provider.name + ' — ' + (getTranslated(provider.service) || provider.service);
+
+            // Auto-fill name from logged-in user profile — locked, not editable
+            const loggedInName = userProfile?.name || firebaseUser.displayName || '';
+            const nameInput = document.getElementById('reviewerName');
+            nameInput.value = loggedInName;
+            nameInput.readOnly = true;
+            nameInput.classList.add('bg-gray-50', 'text-gray-500', 'cursor-not-allowed');
+            nameInput.title = 'Your name is taken from your profile';
+
+            document.getElementById('reviewText').value = '';
+            updateStarUI(0);
+            document.getElementById('reviewModal').classList.remove('hidden');
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.add('hidden');
+            currentReviewProviderId = null;
+            currentReviewRating = 0;
+        }
+
+        function updateStarUI(rating) {
+            const labels = ['', 'Poor 😞', 'Fair 😐', 'Good 🙂', 'Very Good 😊', 'Excellent 🌟'];
+            document.querySelectorAll('.star-btn').forEach(star => {
+                const val = parseInt(star.dataset.val);
+                star.style.color = val <= rating ? '#f59e0b' : '#d1d5db';
+            });
+            document.getElementById('ratingLabel').textContent = rating ? labels[rating] : 'Tap to rate';
+        }
+
+        // Star click handlers - use event delegation on document to avoid null errors
+        document.addEventListener('click', (e) => {
+            const star = e.target.closest('.star-btn');
+            if (!star) return;
+            currentReviewRating = parseInt(star.dataset.val);
+            updateStarUI(currentReviewRating);
+        });
+
+        document.addEventListener('mouseover', (e) => {
+            const star = e.target.closest('.star-btn');
+            if (star) updateStarUI(parseInt(star.dataset.val));
+        });
+
+        async function submitReview() {
+            // Must be logged in
+            if (!firebaseUser) {
+                closeReviewModal();
+                openLoginModal();
+                return;
+            }
+            if (!currentReviewRating) { showFirebaseStatus('Please select a star rating!', 'error'); return; }
+            const name = (userProfile?.name || firebaseUser.displayName || document.getElementById('reviewerName').value).trim();
+            const text = document.getElementById('reviewText').value.trim();
+            if (!name) { showFirebaseStatus('Could not detect your name. Please update your profile.', 'error'); return; }
+            if (!text) { showFirebaseStatus('Please write your review!', 'error'); return; }
+            if (text.length < 5) { showFirebaseStatus('Review is too short — please write at least a few words.', 'error'); return; }
+
+            // Check: one review per user per provider (check Firebase directly for accuracy)
+            const provider = providers.find(p => p.id === currentReviewProviderId);
+            try {
+                const reviewsSnap = await _firebase.get(_firebase.ref(_firebase.db, `reviews/${currentReviewProviderId}`));
+                if (reviewsSnap.exists()) {
+                    const existingReview = Object.values(reviewsSnap.val()).find(r => r.reviewerUid === firebaseUser.uid);
+                    if (existingReview) {
+                        showFirebaseStatus('You have already reviewed this provider. ✅', 'info');
+                        closeReviewModal();
+                        return;
+                    }
+                }
+            } catch(e) { /* proceed if check fails */ }
+
+            const review = {
+                id: 'r_' + Date.now(),
+                reviewerUid:  firebaseUser.uid,
+                reviewerName: name,
+                reviewerPhone: userProfile?.phone || '',
+                text: text,
+                rating: currentReviewRating,
+                date: new Date().toISOString(),
+                verified: true
+            };
+
+            try {
+                // Write to top-level `reviews/{providerId}/{reviewId}` 
+                // (not inside providers/ which requires admin access)
+                await _firebase.set(
+                    _firebase.ref(_firebase.db, `reviews/${currentReviewProviderId}/${review.id}`),
+                    review
+                );
+                closeReviewModal();
+                showFirebaseStatus('⭐ Review submitted! Thank you.', 'success');
+                // Award 2 wallet points for writing a review
+                awardWalletPoints(2, 'write_review', 'Wrote a review for ' + (provider?.name || ''));
+                // Reload reviews for this provider in memory
+                await loadProviderReviews(currentReviewProviderId);
+            } catch (err) {
+                console.error('Review save error:', err);
+                // Check if it's a permission error
+                if (err.code === 'PERMISSION_DENIED' || err.message?.includes('permission')) {
+                    showFirebaseStatus('Permission denied. Please ensure you are logged in.', 'error');
+                } else {
+                    showFirebaseStatus('Could not save review. Please check your connection.', 'error');
+                }
+            }
+        }
+
+        // ==================== PHASE E: PROVIDER PROFILE MODAL ====================
+        async function openProviderProfile(providerId) {
+            const p = providers.find(pr => pr.id === providerId);
+            if (!p) return;
+
+            // Load fresh reviews from reviews/ node
+            const freshReviews = await loadProviderReviews(providerId);
+            p.reviews = freshReviews;
+
+            const { avg, count } = getAvgRating(p);
+            const reviews = p.reviews ? Object.values(p.reviews).sort((a,b) => new Date(b.date) - new Date(a.date)) : [];
+            const waNum = p.whatsapp || p.mobile;
+            const waMsg = encodeURIComponent(buildWAMsg(p.name, p.service));
+            const stars = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
+
+            document.getElementById('profileModalContent').innerHTML = `
+                <!-- Header -->
+                <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-6 rounded-t-2xl text-white relative">
+                    <button onclick="document.getElementById('profileModal').classList.add('hidden')" class="absolute top-4 right-4 text-white text-2xl opacity-75 hover:opacity-100">✕</button>
+                    <div class="flex items-center gap-4">
+                        <div class="w-20 h-20 rounded-full overflow-hidden border-3 border-white shadow-xl flex-shrink-0">
+                            ${getProviderAvatar(p)}
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h2 class="text-2xl font-bold">${p.name}</h2>
+                                ${p.verified ? '<span class="bg-white text-blue-600 text-xs font-bold px-2 py-0.5 rounded-full">✅ Verified</span>' : ''}
+                            </div>
+                            <div class="opacity-90 font-medium">${p.service}</div>
+                            <div class="flex items-center gap-1 mt-1">
+                                <span class="text-yellow-300">${stars}</span>
+                                <span class="text-sm opacity-80">${avg.toFixed(1)} (${count} reviews)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class="p-5 space-y-4">
+                    ${p.bio ? `<div class="bg-orange-50 rounded-xl p-4 text-gray-700 italic">"${p.bio}"</div>` : ''}
+
+                    <!-- Info grid -->
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Service</div><div class="font-semibold">${p.service}</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Rate</div><div class="font-semibold text-green-600">₹${p.rate}/hr</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Experience</div><div class="font-semibold">${p.experience} years</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Language</div><div class="font-semibold">${Array.isArray(p.language) ? p.language.join(', ') : (p.language || 'N/A')}</div></div>
+                        ${Array.isArray(p.services) && p.services.length > 1 ? `<div class="bg-orange-50 rounded-xl p-3 col-span-2"><div class="text-gray-400 text-xs mb-1">🔧 All Services</div><div class="font-semibold text-sm">${p.services.join(' • ')}</div></div>` : ''}
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Religion</div><div class="font-semibold">${religionIcons[p.religion] || ''} ${p.religion}</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3"><div class="text-gray-400 text-xs mb-1">Working Hours</div><div class="font-semibold">${getWorkingHoursLabel(p.workingHours || '')}</div></div>
+                        <div class="bg-gray-50 rounded-xl p-3 col-span-2"><div class="text-gray-400 text-xs mb-1">📍 Location</div><div class="font-semibold">${p.location}</div></div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <a href="tel:+91${p.mobile.replace(/^\+91/,'')}"  class="bg-green-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-700 transition" style="text-decoration:none;">${t('callBtn')}</a>
+                        <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-600 transition" style="text-decoration:none;">${t('whatsappBtn')}</a>
+                        ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-blue-700 transition" style="text-decoration:none;">🗺️ Get Directions</a>` : '<div></div>'}
+                        <button onclick="document.getElementById('profileModal').classList.add('hidden'); openReviewModal('${p.id}')" class="bg-orange-100 text-orange-700 py-3 rounded-xl font-semibold hover:bg-orange-200 transition border border-orange-200">⭐ Write Review</button>
+                        <button onclick="document.getElementById('profileModal').classList.add('hidden'); openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}','tip')" class="bg-pink-100 text-pink-700 py-3 rounded-xl font-semibold hover:bg-pink-200 transition border border-pink-200">🙏 Send Tip</button>
+                        <button onclick="openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}')" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-base transition hover:from-purple-700 hover:to-indigo-700 shadow-lg">⚡ Hire Now &nbsp;<span class="text-sm font-normal opacity-80">(₹10 convenience fee)</span></button>
+                    </div>
+
+                    <!-- Reviews section -->
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-3">Customer Reviews ${count > 0 ? `(${count})` : ''}</h3>
+                        ${reviews.length === 0 
+                            ? '<div class="text-center py-6 text-gray-400">No reviews yet. Be the first to review!</div>'
+                            : reviews.map(r => `
+                                <div class="border rounded-xl p-4 mb-3 bg-gray-50">
+                                    <div class="flex justify-between items-start">
+                                        <div class="font-semibold text-gray-800">${r.reviewerName}</div>
+                                        <div class="text-yellow-400 text-sm">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+                                    </div>
+                                    <div class="text-gray-600 text-sm mt-1">${r.text}</div>
+                                    <div class="text-xs text-gray-400 mt-1">${new Date(r.date).toLocaleDateString()}</div>
+                                </div>`).join('')
+                        }
+                    </div>
+                </div>
+            `;
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
+
+        // ==================== PHASE E: ADMIN VERIFIED BADGE ====================
+        function toggleVerified(providerId, currentState) {
+            const action = currentState ? 'Remove Verified badge from' : 'Mark as Verified';
+            if (confirm(`${action} this provider?`)) {
+                updateProviderInFirebase(providerId, { verified: !currentState }).then(success => {
+                    if (success) showFirebaseStatus(`✅ Verified status updated!`, 'success');
+                });
+            }
+        }
+
+        // ==================== PWA INSTALL PROMPT ====================
+        let deferredInstallPrompt = null;
+
+        // Capture the install prompt event (Android/Chrome)
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+
+            // Don't show if already dismissed or installed
+            if (localStorage.getItem('pwaDismissed') === '1') return;
+            if (window.matchMedia('(display-mode: standalone)').matches) return;
+
+            // Show our custom banner after 3 seconds
+            setTimeout(() => {
+                document.getElementById('pwaInstallBanner').classList.remove('hidden');
+            }, 3000);
+        });
+
+        // Install button clicked
+        document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            document.getElementById('pwaInstallBanner').classList.add('hidden');
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            console.log('PWA install outcome:', outcome);
+            deferredInstallPrompt = null;
+            if (outcome === 'accepted') {
+                showFirebaseStatus('🎉 App installed! Find it on your home screen.', 'success');
+            }
+        });
+
+        // Dismiss banner
+        document.getElementById('pwaInstallDismiss')?.addEventListener('click', () => {
+            document.getElementById('pwaInstallBanner').classList.add('hidden');
+            localStorage.setItem('pwaDismissed', '1');
+        });
+
+        // iOS Safari detection — show manual instructions
+        (function checkiOS() {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const dismissed = localStorage.getItem('pwaDismissed') === '1';
+
+            if (isIOS && isSafari && !isStandalone && !dismissed) {
+                setTimeout(() => {
+                    document.getElementById('iosInstallBanner').classList.remove('hidden');
+                }, 3000);
+            }
+        })();
+
+        // Hide banner once app is installed
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('pwaInstallBanner').classList.add('hidden');
+            document.getElementById('iosInstallBanner').classList.add('hidden');
+            console.log('✅ PWA installed successfully');
+        });
+
+    </script>
+
+<!-- ══════════════════════════════════════════
+     HIRE CHECKOUT MODAL — embedded in index
+     No separate page = no back button loop
+══════════════════════════════════════════ -->
+<div id="hireModal" class="hidden fixed inset-0 z-50 bg-white overflow-y-auto">
+  <style>
+    #hireModal .hm-nav{background:#1E3A5F;padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(30,58,95,.3)}
+    #hireModal .hm-back{background:rgba(255,255,255,.12);border:none;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;cursor:pointer}
+    #hireModal .hm-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:white;flex:1}
+    #hireModal .hm-page{max-width:480px;margin:0 auto;padding:20px 16px 40px;font-family:'Poppins',sans-serif}
+    #hireModal .slbl{font-size:11px;font-weight:700;color:#64748B;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:6px;padding-left:4px}
+    #hireModal .pcard{background:white;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 16px rgba(0,0,0,.07);border:1px solid #E2E8F0;display:flex;align-items:center;gap:16px}
+    #hireModal .pavatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#EA580C,#D97706);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+    #hireModal .scard{background:white;border-radius:16px;padding:16px 18px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #E2E8F0}
+    #hireModal .srow{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    #hireModal .sinput{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px 14px;font-size:13px;font-family:'Poppins',sans-serif;color:#1E293B;outline:none;background:#FAFBFC}
+    #hireModal .sinput:focus{border-color:#EA580C;background:white}
+    #hireModal .ocard{background:white;border-radius:16px;padding:16px 18px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #E2E8F0}
+    #hireModal .orow{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+    #hireModal .amtctrl{display:flex;align-items:center;gap:8px}
+    #hireModal .amtbtn{width:28px;height:28px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    #hireModal .amtdisp{font-size:13px;font-weight:700;min-width:36px;text-align:center}
+    #hireModal .bcard{background:#1E3A5F;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 4px 24px rgba(30,58,95,.25)}
+    #hireModal .brow{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
+    #hireModal .bl{font-size:13px;color:rgba(255,255,255,.7)}
+    #hireModal .br{font-size:13px;font-weight:600;color:white}
+    #hireModal .bfree{color:#D1FAE5;font-size:12px}
+    #hireModal .bdiv{height:1px;background:rgba(255,255,255,.1);margin:12px 0}
+    #hireModal .crow{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;background:rgba(234,88,12,.12);border-radius:10px;padding:8px 12px;border:1px solid rgba(234,88,12,.25)}
+    #hireModal .cl{font-size:13px;color:rgba(255,255,255,.85);display:flex;align-items:center;gap:7px}
+    #hireModal .cr{font-size:14px;font-weight:700;color:#FED7AA}
+    #hireModal .trow{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+    #hireModal .tl{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:white}
+    #hireModal .tr{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:#FDE68A}
+    #hireModal .paybtn{width:100%;background:linear-gradient(135deg,#5F33B8,#7C3AED);border:none;border-radius:16px;padding:18px;font-size:16px;font-weight:700;color:white;font-family:'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 24px rgba(124,58,237,.4);display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px}
+    /* QR sheet */
+    #hireQrOverlay{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;backdrop-filter:blur(4px)}
+    #hireQrOverlay.open{opacity:1;pointer-events:all}
+    #hireQrSheet{background:white;border-radius:28px 28px 0 0;width:100%;max-width:480px;padding:10px 24px 40px;transform:translateY(100%);transition:transform .4s cubic-bezier(.22,1,.36,1)}
+    #hireQrOverlay.open #hireQrSheet{transform:translateY(0)}
+    #hireModal .donebtn{width:100%;background:linear-gradient(135deg,#059669,#047857);border:none;border-radius:50px;padding:15px;font-size:15px;font-weight:700;color:white;font-family:'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 20px rgba(5,150,105,.35)}
+  </style>
+
+  <!-- NAV -->
+  <div class="hm-nav">
+    <button class="hm-back" onclick="closeHireModal()">✕</button>
+    <div class="hm-title">Hire Provider</div>
+    <span style="font-size:10px;font-weight:700;color:#FED7AA;background:rgba(234,88,12,.2);padding:4px 10px;border-radius:20px;border:1px solid rgba(234,88,12,.3)">🔱 SC</span>
+  </div>
+
+  <div class="hm-page">
+    <p class="slbl">Selected Provider</p>
+    <div class="pcard">
+      <div class="pavatar">👷</div>
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:700;color:#1E293B;margin-bottom:3px" id="hm-pname">Provider</div>
+        <div style="display:inline-block;padding:3px 10px;background:#EFF6FF;color:#1D4ED8;border-radius:20px;font-size:10px;font-weight:600;margin-bottom:4px" id="hm-pservice">Service</div>
+        <div style="font-size:12px;color:#64748B" id="hm-prating">⭐ Rating</div>
+        <div style="font-size:11px;color:#64748B;margin-top:2px">📍 <span id="hm-ploc">Location</span></div>
+      </div>
+      <div style="text-align:center;flex-shrink:0"><div style="font-size:22px">✅</div><p style="font-size:8px;color:#059669;font-weight:700">VERIFIED</p></div>
+    </div>
+
+    <p class="slbl">Service Details</p>
+    <div class="scard">
+      <div class="srow">
+        <div style="font-size:20px;width:36px;text-align:center">📋</div>
+        <div style="flex:1"><div style="font-size:11px;color:#64748B;margin-bottom:1px">Describe your requirement</div>
+        <textarea class="sinput" rows="2" placeholder="e.g. Fix leaking tap in kitchen..."></textarea></div>
+      </div>
+      <div class="srow">
+        <div style="font-size:20px;width:36px;text-align:center">📅</div>
+        <div style="flex:1"><div style="font-size:11px;color:#64748B;margin-bottom:1px">Preferred date & time</div>
+        <input type="datetime-local" class="sinput"></div>
+      </div>
+      <div class="srow" style="margin-bottom:0">
+        <div style="font-size:20px;width:36px;text-align:center">📍</div>
+        <div style="flex:1"><div style="font-size:11px;color:#64748B;margin-bottom:1px">Your address</div>
+        <input type="text" class="sinput" placeholder="Enter your full address"></div>
+      </div>
+    </div>
+
+    <p class="slbl">Optional Add-ons</p>
+    <div class="ocard">
+      <div class="orow">
+        <div style="flex:1"><p style="font-size:13px;font-weight:600">🙏 Tip to Provider</p><span style="font-size:10px;color:#64748B">100% goes to provider · min ₹10</span></div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('tip',-10)">−</button>
+          <span style="font-size:13px;font-weight:700;min-width:36px;text-align:center;color:#1E293B" id="hm-tip-disp">₹0</span>
+          <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('tip',10)">+</button>
+          <input type="number" id="hm-tip-input" min="0" placeholder="₹ amt" style="width:64px;border:1.5px solid #CBD5E1;border-radius:8px;padding:4px 6px;font-size:12px;font-weight:600;color:#1E293B;text-align:center" oninput="hmSetAmt('tip',Math.max(0,parseInt(this.value)||0))">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:0">
+        <div style="flex:1"><p style="font-size:13px;font-weight:600">🌱 Charity Donation</p><span style="font-size:10px;color:#64748B">100% social welfare · min ₹10</span></div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('charity',-10)">−</button>
+          <span style="font-size:13px;font-weight:700;min-width:36px;text-align:center;color:#1E293B" id="hm-charity-disp">₹0</span>
+          <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid #CBD5E1;background:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" onclick="hmChangeAmt('charity',10)">+</button>
+          <input type="number" id="hm-charity-input" min="0" placeholder="₹ amt" style="width:64px;border:1.5px solid #CBD5E1;border-radius:8px;padding:4px 6px;font-size:12px;font-weight:600;color:#1E293B;text-align:center" oninput="hmSetAmt('charity',Math.max(0,parseInt(this.value)||0))">
+        </div>
+      </div>
+    </div>
+
+    <p class="slbl">Bill Summary</p>
+    <div class="bcard">
+      <div style="font-size:11px;font-weight:700;color:rgba(253,230,138,.6);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">💰 Payment Breakdown</div>
+      <div class="brow"><span class="bl">🔱 Provider Contact Fee</span><span class="br bfree">FREE ✓</span></div>
+      <div class="brow"><span class="bl">🙏 Tip to Provider</span><span class="br" id="hm-bill-tip">₹0</span></div>
+      <div class="brow"><span class="bl">🌱 Charity Donation</span><span class="br" id="hm-bill-charity">₹0</span></div>
+      <div class="bdiv"></div>
+      <div class="crow">
+        <div class="cl"><span>⚡</span><div>Platform Convenience Fee<span style="font-size:9px;color:rgba(253,230,138,.45);margin-top:3px;display:block">Keeps Sudarshan Chakra running</span></div></div>
+        <span class="cr">₹10</span>
+      </div>
+      <div class="bdiv"></div>
+      <div class="trow"><span class="tl">Total Payable</span><span class="tr" id="hm-total">₹10</span></div>
+    </div>
+
+    <!-- Wallet Points Redemption -->
+    <div id="hm-wallet-section" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:16px;padding:12px 14px;margin-bottom:12px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#92400e">🌟 Redeem Wallet Points</div>
+          <div id="hm-wallet-balance-txt" style="font-size:10px;color:#b45309;margin-top:2px">Loading balance...</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <span style="font-size:11px;font-weight:600;color:#92400e" id="hm-use-pts-label">Use pts</span>
+          <div style="position:relative;width:38px;height:22px">
+            <input type="checkbox" id="hm-use-wallet" onchange="hmToggleWalletPts()" style="opacity:0;width:0;height:0;position:absolute">
+            <span id="hm-wallet-toggle-bg" style="position:absolute;inset:0;background:#d1d5db;border-radius:11px;transition:.3s;cursor:pointer" onclick="document.getElementById('hm-use-wallet').click()"></span>
+            <span id="hm-wallet-toggle-dot" style="position:absolute;left:3px;top:3px;width:16px;height:16px;background:white;border-radius:50%;transition:.3s;pointer-events:none"></span>
+          </div>
+        </label>
+      </div>
+      <div id="hm-pts-applied-row" style="display:none;margin-top:8px;font-size:11px;color:#065f46;font-weight:600;text-align:center;background:rgba(255,255,255,.5);border-radius:8px;padding:4px 8px">
+        ✅ <span id="hm-pts-applied-txt">0 pts</span> applied → ₹<span id="hm-pts-savings">0</span> off!
+      </div>
+    </div>
+
+    <button class="paybtn" onclick="hmOpenQR()">
+      <span style="font-size:22px">💜</span> Pay with PhonePe / UPI
+    </button>
+    <p style="text-align:center;font-size:11px;color:#64748B;margin-bottom:16px">🔱 Provider registration is <span style="color:#059669;font-weight:700">always FREE</span> · No commission</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+      <span style="padding:5px 12px;background:white;border:1px solid #E2E8F0;border-radius:20px;font-size:10px;color:#64748B">🔒 Secure Payment</span>
+      <span style="padding:5px 12px;background:white;border:1px solid #E2E8F0;border-radius:20px;font-size:10px;color:#64748B">✅ Verified Provider</span>
+      <span style="padding:5px 12px;background:white;border:1px solid #E2E8F0;border-radius:20px;font-size:10px;color:#64748B">🇮🇳 Made in India</span>
+    </div>
+  </div>
+
+  <!-- QR SHEET -->
+  <div id="hireQrOverlay" onclick="if(event.target===this)hmCloseQR()">
+    <div id="hireQrSheet">
+      <div style="width:44px;height:4px;background:#E2E8F0;border-radius:2px;margin:0 auto 20px"></div>
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:#1E3A5F;text-align:center;margin-bottom:4px">Scan & Pay</div>
+      <p style="font-size:12px;color:#64748B;text-align:center;margin-bottom:20px" id="hm-sheet-sub">Pay ₹10 via PhonePe / any UPI app</p>
+      <div style="background:linear-gradient(135deg,#F8FAFC,#EFF6FF);border-radius:20px;padding:20px;text-align:center;margin-bottom:16px;border:2px solid #E2E8F0">
+        <div style="width:180px;height:180px;margin:0 auto 14px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.1)">
+          <svg viewBox="0 0 100 100" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="5" width="30" height="30" rx="3" fill="#1E3A5F"/><rect x="9" y="9" width="22" height="22" rx="1" fill="white"/><rect x="13" y="13" width="14" height="14" rx="1" fill="#1E3A5F"/>
+            <rect x="65" y="5" width="30" height="30" rx="3" fill="#1E3A5F"/><rect x="69" y="9" width="22" height="22" rx="1" fill="white"/><rect x="73" y="13" width="14" height="14" rx="1" fill="#1E3A5F"/>
+            <rect x="5" y="65" width="30" height="30" rx="3" fill="#1E3A5F"/><rect x="9" y="69" width="22" height="22" rx="1" fill="white"/><rect x="13" y="73" width="14" height="14" rx="1" fill="#1E3A5F"/>
+            <rect x="40" y="40" width="20" height="20" rx="2" fill="#EA580C"/><rect x="44" y="44" width="12" height="12" rx="1" fill="white"/>
+            <text x="50" y="53" font-family="serif" font-size="9" fill="#EA580C" text-anchor="middle" font-weight="bold">SC</text>
+          </svg>
+        </div>
+        <div style="background:linear-gradient(135deg,#EA580C,#D97706);color:white;border-radius:50px;padding:8px 20px;font-size:20px;font-weight:900;font-family:'Playfair Display',serif;display:inline-block;margin-bottom:8px" id="hm-qr-amount">₹10</div>
+        <div style="font-size:11px;color:#64748B">UPI ID: <span style="font-weight:700;color:#1E3A5F">9414055013@ybl</span></div>
+      </div>
+      <div style="background:#F8FAFC;border-radius:14px;padding:14px 16px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Provider Contact Fee</span><span style="color:#059669;font-weight:600">FREE</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Tip to Provider</span><span id="hm-mb-tip">₹0</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Charity Donation</span><span id="hm-mb-charity">₹0</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#EA580C;font-weight:600;margin-bottom:6px"><span>⚡ Platform Fee</span><span>₹10</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;color:#1E3A5F;border-top:1px solid #E2E8F0;padding-top:8px;margin-top:4px"><span>Total</span><span id="hm-mb-total">₹10</span></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer" onclick="hmOpenUPI('phonepe')"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;border:1.5px solid #E2E8F0;background:white">💜</div><p style="font-size:9px;color:#64748B;font-weight:600">PhonePe</p></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer" onclick="hmOpenUPI('gpay')"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;border:1.5px solid #E2E8F0;background:white">🟦</div><p style="font-size:9px;color:#64748B;font-weight:600">GPay</p></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer" onclick="hmOpenUPI('paytm')"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;border:1.5px solid #E2E8F0;background:white">🟠</div><p style="font-size:9px;color:#64748B;font-weight:600">Paytm</p></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer" onclick="hmOpenUPI('upi')"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;border:1.5px solid #E2E8F0;background:white">💳</div><p style="font-size:9px;color:#64748B;font-weight:600">Any UPI</p></div>
+      </div>
+      <button class="donebtn" onclick="hmPaymentDone()">✅ &nbsp;I Have Paid — Done!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ HIRE MODAL LOGIC ══
+let hmTipAmt = 0, hmCharityAmt = 0;
+const HM_CONV_FEE = 10;
+let hmLang = 'hi';
+let hmProviderId = null;
+let hmProviderOwnerUid = null;
+
+function openHireModal(name, service, location, rating, lang, providerId, ownerUid, mode) {
+  hmTipAmt = 0; hmCharityAmt = 0; hmLang = lang || 'hi';
+  hmProviderId = providerId || null;
+  hmProviderOwnerUid = ownerUid || null;
+  // Load wallet balance for points redemption
+  setTimeout(() => { if (typeof hmLoadWalletBalance === 'function') hmLoadWalletBalance(); }, 400);
+  // Decode URL params
+  try {
+    document.getElementById('hm-pname').textContent = decodeURIComponent(name);
+    document.getElementById('hm-pservice').textContent = decodeURIComponent(service);
+    document.getElementById('hm-ploc').textContent = decodeURIComponent(location);
+    document.getElementById('hm-prating').textContent = '⭐ ' + decodeURIComponent(rating);
+  } catch(e) {}
+  // Reset amounts
+  ['hm-tip-disp','hm-bill-tip','hm-mb-tip'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent='₹0'; });
+  ['hm-charity-disp','hm-bill-charity','hm-mb-charity'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent='₹0'; });
+  hmUpdateTotal();
+  document.getElementById('hireModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  // If opened directly for tipping, pre-set tip amount to ₹10 and highlight it
+  if (mode === 'tip') {
+    setTimeout(() => {
+      hmChangeAmt('tip', 10);
+      const tipSection = document.getElementById('hm-tip-disp');
+      if (tipSection) tipSection.closest('.scard')?.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 150);
+  }
+}
+
+function closeHireModal() {
+  document.getElementById('hireModal').classList.add('hidden');
+  document.getElementById('hireQrOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function hmChangeAmt(type, delta) {
+  if (type === 'tip') {
+    hmTipAmt = Math.max(0, hmTipAmt + delta);
+    document.getElementById('hm-tip-disp').textContent = '₹' + hmTipAmt;
+    document.getElementById('hm-bill-tip').textContent = '₹' + hmTipAmt;
+    document.getElementById('hm-mb-tip').textContent = '₹' + hmTipAmt;
+    const inp = document.getElementById('hm-tip-input'); if(inp) inp.value = hmTipAmt || '';
+  } else {
+    hmCharityAmt = Math.max(0, hmCharityAmt + delta);
+    document.getElementById('hm-charity-disp').textContent = '₹' + hmCharityAmt;
+    document.getElementById('hm-bill-charity').textContent = '₹' + hmCharityAmt;
+    document.getElementById('hm-mb-charity').textContent = '₹' + hmCharityAmt;
+    const inp = document.getElementById('hm-charity-input'); if(inp) inp.value = hmCharityAmt || '';
+  }
+  hmUpdateTotal();
+}
+
+function hmSetAmt(type, val) {
+  if (type === 'tip') {
+    hmTipAmt = val;
+    document.getElementById('hm-tip-disp').textContent = '₹' + hmTipAmt;
+    document.getElementById('hm-bill-tip').textContent = '₹' + hmTipAmt;
+    document.getElementById('hm-mb-tip').textContent   = '₹' + hmTipAmt;
+  } else {
+    hmCharityAmt = val;
+    document.getElementById('hm-charity-disp').textContent = '₹' + hmCharityAmt;
+    document.getElementById('hm-bill-charity').textContent = '₹' + hmCharityAmt;
+    document.getElementById('hm-mb-charity').textContent   = '₹' + hmCharityAmt;
+  }
+  hmUpdateTotal();
+}
+
+function hmUpdateTotal() {
+  // Portal fee (₹10) is ONLY charged when there is no tip and no charity.
+  // If user adds a tip or charity, they pay that amount only — no platform fee on top.
+  const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
+  const fee = hasTipOrCharity ? 0 : HM_CONV_FEE;
+  const total = fee + hmTipAmt + hmCharityAmt;
+  ['hm-total','hm-qr-amount','hm-mb-total'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent='₹'+total; });
+  // Show/hide portal fee row in bill breakdown
+  const feeRow = document.getElementById('hm-fee-row');
+  if (feeRow) feeRow.style.display = hasTipOrCharity ? 'none' : '';
+  const sub = document.getElementById('hm-sheet-sub');
+  if(sub) sub.textContent = 'Pay ₹' + total + ' via PhonePe / any UPI app';
+}
+
+function hmOpenQR() {
+  hmUpdateTotal();
+  document.getElementById('hireQrOverlay').classList.add('open');
+}
+
+function hmCloseQR() {
+  document.getElementById('hireQrOverlay').classList.remove('open');
+}
+
+function hmOpenUPI(app) {
+  // Same logic as hmUpdateTotal: portal fee only when no tip/charity
+  const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
+  const fee = hasTipOrCharity ? 0 : HM_CONV_FEE;
+  const total = fee + hmTipAmt + hmCharityAmt;
+  const UPI_ID = '9414055013@ybl';
+  const noteText = hmTipAmt > 0 ? 'SC Tip to Provider' : hmCharityAmt > 0 ? 'SC Charity Donation' : 'Sudarshan Chakra - Platform Fee';
+  const note = encodeURIComponent(noteText);
+  const upiUrl = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${total}&cu=INR&tn=${note}`;
+  const appUrls = {
+    phonepe: `phonepe://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${total}&cu=INR&tn=${note}`,
+    gpay: `tez://upi/pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${total}&cu=INR&tn=${note}`,
+    paytm: `paytmmp://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${total}&cu=INR&tn=${note}`,
+    upi: upiUrl
+  };
+  window.location.href = appUrls[app] || upiUrl;
+}
+
+async function hmPaymentDone() {
+  hmCloseQR();
+  closeHireModal();
+
+  // Determine correct transaction type and amount
+  // Rule: Portal Fee (₹10) is ONLY when there is NO tip and NO charity.
+  //       If tip or charity → that is the transaction, no platform fee charged.
+  const hasTip      = hmTipAmt > 0;
+  const hasCharity  = hmCharityAmt > 0;
+  const hasTipOrCharity = hasTip || hasCharity;
+
+  let gratType, amount, fee, pointsEarned;
+
+  if (hasTip) {
+    gratType     = 'tip';
+    amount       = hmTipAmt;          // only the tip amount
+    fee          = 0;                  // no portal fee
+    pointsEarned = Math.floor(hmTipAmt / 10); // 1 pt per ₹1 of tip
+  } else if (hasCharity) {
+    gratType     = 'charity';
+    amount       = hmCharityAmt;
+    fee          = 0;
+    pointsEarned = 0;                  // no points for charity
+  } else {
+    gratType     = 'portal';
+    amount       = HM_CONV_FEE;       // ₹10 portal fee only
+    fee          = HM_CONV_FEE;
+    pointsEarned = 10;                 // 10 pts for hiring
+  }
+
+  // ── Save transaction to Firebase ──
+  if (window._firebase && firebaseUser) {
+    try {
+      const txnId = Date.now();
+      const txn = {
+        type:        gratType,
+        amount:      amount,
+        fee:         fee,
+        tip:         hmTipAmt,
+        charity:     hmCharityAmt,
+        points:      pointsEarned,
+        providerId:  hmProviderId || '',
+        timestamp:   txnId,
+        date:        new Date().toLocaleDateString('en-IN')
+      };
+      // Save to seeker's transactions
+      await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${txnId}`), txn);
+
+      // Award points based on transaction type
+      if (pointsEarned > 0) {
+        const creditsRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`);
+        const snap = await _firebase.get(creditsRef);
+        const current = snap.exists() ? (snap.val() || 0) : 0;
+        await _firebase.set(creditsRef, current + pointsEarned);
+      }
+
+      // ── Credit tip to PROVIDER's earnings ──
+      if (hasTip && hmProviderId && hmTipAmt > 0) {
+        const earning = {
+          type:       'tip',
+          amount:     hmTipAmt,
+          fromUid:    firebaseUser.uid,
+          fromName:   window.userProfile?.name || 'Customer',
+          timestamp:  txnId,
+          date:       new Date().toLocaleDateString('en-IN')
+        };
+        await _firebase.set(_firebase.ref(_firebase.db, `providers/${hmProviderId}/earnings/${txnId}`), earning);
+        // Also update provider's total earnings counter
+        const earnRef = _firebase.ref(_firebase.db, `providers/${hmProviderId}/totalEarnings`);
+        const earnSnap = await _firebase.get(earnRef);
+        await _firebase.set(earnRef, (earnSnap.exists() ? (earnSnap.val()||0) : 0) + hmTipAmt);
+        // Notify provider
+        if (hmProviderOwnerUid) {
+          await addNotification(hmProviderOwnerUid, {
+            type: 'tip_received', title: '🙏 Tip Received!',
+            message: `${earning.fromName} sent you a ₹${hmTipAmt} tip!`,
+            timestamp: txnId
+          });
+        }
+      }
+    } catch(e) { console.warn('Wallet save error:', e); }
+  }
+
+  // Go to gratitude page
+  setTimeout(() => {
+    window.location.replace('gratitude.html?lang=' + hmLang + '&type=' + gratType);
+  }, 300);
+}
+</script>
+
+    <!-- ===== BOOKING MODAL ===== -->
+    <div id="bookingModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+            <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-5 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">📅 Book Service</h2>
+                    <button onclick="closeBookingModal()" class="text-white text-2xl font-bold hover:text-orange-200">✕</button>
+                </div>
+                <p class="text-orange-100 text-sm mt-1" id="bookingProviderName">Provider Name</p>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">📌 Service Required</label>
+                    <input type="text" id="bookingService" placeholder="e.g. Pipe repair, AC servicing..." class="w-full border rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">📅 Date</label>
+                        <input type="date" id="bookingDate" class="w-full border rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">⏰ Time</label>
+                        <input type="time" id="bookingTime" class="w-full border rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">📍 Your Address</label>
+                    <input type="text" id="bookingAddress" placeholder="Full address for the visit" class="w-full border rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">💬 Special Instructions</label>
+                    <textarea id="bookingNotes" rows="2" maxlength="200" placeholder="Any specific requirements..." class="w-full border rounded-xl px-4 py-2.5 resize-none focus:ring-2 focus:ring-orange-400 outline-none text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">💰 Budget (Optional)</label>
+                    <input type="number" id="bookingBudget" min="0" placeholder="₹ Expected budget" class="w-full border rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-orange-400 outline-none">
+                </div>
+                <button onclick="submitBooking()" class="w-full bg-orange-600 text-white py-3.5 rounded-xl font-bold text-base hover:bg-orange-700 transition">✅ Confirm Booking</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CHAT MODAL ===== -->
+    <div id="chatModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-end sm:items-center justify-center">
+        <div class="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md h-4/5 sm:h-auto sm:max-h-screen flex flex-col">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-3xl sm:rounded-t-2xl flex-shrink-0">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-lg font-bold" id="chatWithName">💬 Chat</h2>
+                        <p class="text-blue-200 text-xs" id="chatStatusLine">Online</p>
+                    </div>
+                    <button onclick="closeChatModal()" class="text-white text-2xl font-bold hover:text-blue-200">✕</button>
+                </div>
+            </div>
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50" style="min-height:300px;max-height:400px">
+                <div class="text-center text-gray-400 text-sm py-8">Loading messages... 💬</div>
+            </div>
+            <div class="p-3 border-t bg-white rounded-b-2xl flex-shrink-0">
+                <div class="flex gap-2 items-end">
+                    <textarea id="chatInput" rows="1" placeholder="Type a message..." maxlength="500"
+                        class="flex-1 border rounded-xl px-3 py-2 resize-none focus:ring-2 focus:ring-blue-400 outline-none text-sm"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
+                    <button onclick="sendChatMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 font-bold text-sm">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PORTFOLIO MODAL ===== -->
+    <div id="portfolioModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto">
+            <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                <h2 class="text-xl font-bold">📸 My Work Portfolio</h2>
+                <button onclick="closePortfolioModal()" class="text-white text-2xl font-bold hover:text-purple-200">✕</button>
+            </div>
+            <div class="p-5">
+                <div id="portfolioUploadSection" class="hidden mb-4 p-4 bg-purple-50 rounded-xl border-2 border-dashed border-purple-300">
+                    <p class="text-sm text-purple-700 font-semibold mb-2">📤 Add Work Photos (URLs)</p>
+                    <input type="url" id="portfolioImageUrl" placeholder="Paste image URL (e.g. from Google Drive, Imgur...)" class="w-full border rounded-lg px-3 py-2 text-sm mb-2 focus:ring-2 focus:ring-purple-400 outline-none">
+                    <input type="text" id="portfolioCaption" placeholder="Caption (e.g. 'AC installation at Jaipur client')" class="w-full border rounded-lg px-3 py-2 text-sm mb-2 focus:ring-2 focus:ring-purple-400 outline-none">
+                    <button onclick="addPortfolioItem()" class="w-full bg-purple-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-purple-700">+ Add to Portfolio</button>
+                </div>
+                <div id="portfolioGrid" class="grid grid-cols-2 gap-3">
+                    <div class="text-center col-span-2 text-gray-400 py-8">Loading portfolio... 📸</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PROVIDER DASHBOARD MODAL ===== -->
+    <div id="providerDashModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+            <div class="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                <h2 class="text-xl font-bold">📊 Provider Dashboard</h2>
+                <button onclick="closeProviderDash()" class="text-white text-2xl font-bold">✕</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-green-50 rounded-xl p-4 text-center">
+                        <div class="text-3xl font-bold text-green-600" id="dashBookingCount">0</div>
+                        <div class="text-xs text-green-700 mt-1 font-semibold">📅 Total Bookings</div>
+                    </div>
+                    <div class="bg-orange-50 rounded-xl p-4 text-center">
+                        <div class="text-3xl font-bold text-orange-600" id="dashRating">—</div>
+                        <div class="text-xs text-orange-700 mt-1 font-semibold">⭐ Avg Rating</div>
+                    </div>
+                    <div class="bg-blue-50 rounded-xl p-4 text-center">
+                        <div class="text-3xl font-bold text-blue-600" id="dashReviewCount">0</div>
+                        <div class="text-xs text-blue-700 mt-1 font-semibold">💬 Reviews</div>
+                    </div>
+                    <div class="bg-purple-50 rounded-xl p-4 text-center">
+                        <div class="text-3xl font-bold text-purple-600" id="dashProfileViews">0</div>
+                        <div class="text-xs text-purple-700 mt-1 font-semibold">👁️ Profile Views</div>
+                    </div>
+                    <div class="bg-teal-50 rounded-xl p-4 text-center col-span-2">
+                        <div class="text-3xl font-bold text-teal-600" id="dashTotalEarnings">₹0</div>
+                        <div class="text-xs text-teal-700 mt-1 font-semibold">💰 Total Tips Earned</div>
+                    </div>
+                </div>
+                <div class="bg-teal-50 rounded-xl p-4">
+                    <h3 class="font-bold text-teal-700 mb-3">💰 Tip Earnings</h3>
+                    <div id="dashEarningsList" class="space-y-1 text-sm max-h-40 overflow-y-auto">
+                        <div class="text-gray-400 text-center py-3 text-xs">No tips received yet</div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <h3 class="font-bold text-gray-700 mb-3">📋 Recent Bookings</h3>
+                    <div id="dashRecentBookings" class="space-y-2 text-sm max-h-48 overflow-y-auto">
+                        <div class="text-gray-400 text-center py-3">No bookings yet</div>
+                    </div>
+                </div>
+                <div class="bg-yellow-50 rounded-xl p-4">
+                    <h3 class="font-bold text-yellow-700 mb-2">🏅 Membership Plan</h3>
+                    <div id="dashMembershipInfo" class="text-sm text-gray-600"></div>
+                    <button onclick="closeProviderDash(); openSubscriptionModal()" class="mt-2 w-full bg-yellow-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-yellow-600">Upgrade Plan →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CHARITY MODAL ===== -->
+    <!-- ===== GRATITUDE MESSAGE MODAL ===== -->
+    <div id="gratitudeModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div class="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-bold">🙏 Send Gratitude</h2>
+                    <p class="text-orange-100 text-xs mt-0.5">Thank a provider · Share their work</p>
+                </div>
+                <button onclick="closeGratitudeModal()" class="text-white text-2xl font-bold">✕</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-sm text-gray-600 text-center">Write a thank-you message and share it. Earn <strong class="text-orange-600">3 wallet points</strong>!</p>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Provider Name</label>
+                    <input id="gratProviderName" type="text" placeholder="e.g. Ramesh Electrician" class="w-full mt-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-orange-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Your Message</label>
+                    <textarea id="gratMessage" rows="4" placeholder="e.g. Ramesh did an excellent job fixing our wiring. Very professional and on time. Highly recommended!" class="w-full mt-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-orange-400 focus:outline-none resize-none"></textarea>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="sendGratitudeWhatsApp()" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-green-700 transition">📲 Share on WhatsApp</button>
+                    <button onclick="copyGratitudeMessage()" class="flex-1 bg-orange-500 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-orange-600 transition">📋 Copy Message</button>
+                </div>
+                <p class="text-center text-xs text-gray-400">3 pts credited after sharing · Sudarshan Chakra 🙏</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="charityModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div class="bg-gradient-to-r from-teal-600 to-green-600 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                <h2 class="text-lg font-bold">🌱 Donate to Charity</h2>
+                <button onclick="closeCharityModal()" class="text-white text-2xl font-bold">✕</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-sm text-gray-600 text-center">Your donation goes 100% to social welfare. No platform fee charged.</p>
+                <div class="bg-teal-50 rounded-xl p-4">
+                    <div class="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Donation Amount (min ₹10)</div>
+                    <div class="flex items-center justify-center gap-3 mb-3">
+                        <button onclick="charityAmtChange(-10)" class="w-10 h-10 rounded-full border-2 border-teal-300 bg-white text-xl font-bold text-teal-600 hover:bg-teal-100 flex-shrink-0">−</button>
+                        <span class="text-3xl font-bold text-teal-700 min-w-16 text-center" id="charityAmtDisp">₹10</span>
+                        <button onclick="charityAmtChange(10)" class="w-10 h-10 rounded-full border-2 border-teal-300 bg-white text-xl font-bold text-teal-600 hover:bg-teal-100 flex-shrink-0">+</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-500 text-sm font-semibold">₹</span>
+                        <input type="number" id="charityCustomInput" min="10" placeholder="Enter amount" 
+                            class="flex-1 border-2 border-teal-200 rounded-xl px-3 py-2 text-sm font-semibold text-teal-800 focus:border-teal-500 focus:outline-none"
+                            oninput="setCharityAmt(Math.max(10, parseInt(this.value)||10))">
+                        <span class="text-xs text-gray-400">or type</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setCharityAmt(10)"  class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹10</button>
+                    <button onclick="setCharityAmt(51)"  class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹51</button>
+                    <button onclick="setCharityAmt(101)" class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹101</button>
+                    <button onclick="setCharityAmt(251)" class="py-2 bg-teal-100 text-teal-700 rounded-lg text-sm font-semibold hover:bg-teal-200">₹251</button>
+                </div>
+                <button onclick="proceedCharityPayment()" class="w-full bg-teal-600 text-white py-3 rounded-xl font-bold text-base hover:bg-teal-700 shadow-md">
+                    🙏 Donate via UPI
+                </button>
+                <p class="text-center text-xs text-gray-400">Powered by Sudarshan Chakra · Dharma &amp; Seva 🌸</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SUBSCRIPTION MODAL ===== -->
+    <!-- ===== MEMBERSHIP PLANS MODAL ===== -->
+    <div id="subscriptionModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div class="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg max-h-[95vh] overflow-y-auto">
+
+        <!-- Header -->
+        <div class="sticky top-0 bg-gradient-to-r from-orange-500 via-yellow-500 to-orange-400 text-white p-5 rounded-t-3xl z-10">
+          <div class="flex justify-between items-start">
+            <div>
+              <h2 class="text-xl font-bold">🏅 Membership Plans</h2>
+              <p class="text-orange-100 text-xs mt-1">Choose the plan that grows your business</p>
+            </div>
+            <button onclick="closeSubscriptionModal()" class="text-white text-2xl font-bold leading-none mt-1">✕</button>
+          </div>
+          <!-- Current plan indicator -->
+          <div id="currentPlanBanner" class="mt-3 bg-white bg-opacity-20 rounded-xl px-3 py-2 text-sm font-semibold text-center hidden"></div>
+        </div>
+
+        <div class="p-4 space-y-4">
+
+          <!-- ── PLAN COMPARISON TABLE ── -->
+          <div class="bg-gray-50 rounded-2xl p-4">
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Quick Comparison</p>
+            <div class="grid grid-cols-4 gap-1 text-center text-xs">
+              <div class="font-semibold text-gray-500 text-left pl-1">Feature</div>
+              <div class="font-bold text-gray-600">🆓 Basic</div>
+              <div class="font-bold text-blue-600">🥈 Pro</div>
+              <div class="font-bold text-yellow-600">🥇 Elite</div>
+
+              <div class="text-gray-500 text-left pl-1 py-1 border-t border-gray-200 mt-1 pt-2">Listing</div>
+              <div class="py-1 border-t border-gray-200 mt-1 pt-2">✅</div>
+              <div class="py-1 border-t border-gray-200 mt-1 pt-2">✅</div>
+              <div class="py-1 border-t border-gray-200 mt-1 pt-2">✅</div>
+
+              <div class="text-gray-500 text-left pl-1 py-1">Bookings</div>
+              <div class="py-1">✅</div>
+              <div class="py-1">✅</div>
+              <div class="py-1">✅</div>
+
+              <div class="text-gray-500 text-left pl-1 py-1">Portfolio photos</div>
+              <div class="py-1 text-gray-700">5</div>
+              <div class="py-1 text-blue-700">15</div>
+              <div class="py-1 text-yellow-700">∞</div>
+
+              <div class="text-gray-500 text-left pl-1 py-1">Search priority</div>
+              <div class="py-1">❌</div>
+              <div class="py-1">⬆️ High</div>
+              <div class="py-1">🔝 Top</div>
+
+              <div class="text-gray-500 text-left pl-1 py-1">Home featured</div>
+              <div class="py-1">❌</div>
+              <div class="py-1">❌</div>
+              <div class="py-1">✅</div>
+
+              <div class="text-gray-500 text-left pl-1 py-1">Profile badge</div>
+              <div class="py-1">—</div>
+              <div class="py-1">🥈</div>
+              <div class="py-1">🥇</div>
+
+              <div class="text-gray-500 text-left pl-1 py-1">Business card</div>
+              <div class="py-1">❌</div>
+              <div class="py-1">✅</div>
+              <div class="py-1">✅</div>
+
+              <div class="text-gray-500 text-left pl-1 py-1">Analytics</div>
+              <div class="py-1">❌</div>
+              <div class="py-1">Basic</div>
+              <div class="py-1">Full</div>
+
+              <div class="text-gray-500 text-left pl-1 py-1">Support</div>
+              <div class="py-1">Community</div>
+              <div class="py-1">Email</div>
+              <div class="py-1">Priority</div>
+            </div>
+          </div>
+
+          <!-- ── PLAN 1: BASIC (FREE) ── -->
+          <div id="planCard-free" class="border-2 border-gray-200 rounded-2xl overflow-hidden transition-all">
+            <div class="bg-gray-50 px-4 py-3 flex justify-between items-center">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center text-xl">🆓</div>
+                <div>
+                  <div class="font-bold text-gray-800 text-base">Basic Plan</div>
+                  <div class="text-xs text-gray-500">Perfect to get started</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-2xl font-extrabold text-gray-800">₹0</div>
+                <div class="text-xs text-gray-400">forever free</div>
+              </div>
+            </div>
+            <div class="px-4 py-3">
+              <div class="flex flex-wrap gap-2 mb-3">
+                <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">📋 Type: Starter</span>
+                <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">💰 Rate: Free</span>
+                <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">♾️ No expiry</span>
+              </div>
+              <ul class="space-y-1.5 text-sm text-gray-600">
+                <li class="flex items-center gap-2"><span class="text-green-500 font-bold">✓</span> Basic profile with photo &amp; bio</li>
+                <li class="flex items-center gap-2"><span class="text-green-500 font-bold">✓</span> Listed in search results</li>
+                <li class="flex items-center gap-2"><span class="text-green-500 font-bold">✓</span> Receive customer bookings</li>
+                <li class="flex items-center gap-2"><span class="text-green-500 font-bold">✓</span> 5 portfolio photos</li>
+                <li class="flex items-center gap-2"><span class="text-green-500 font-bold">✓</span> Customer reviews &amp; ratings</li>
+                <li class="flex items-center gap-2"><span class="text-red-400">✗</span> <span class="text-gray-400">No priority in search</span></li>
+                <li class="flex items-center gap-2"><span class="text-red-400">✗</span> <span class="text-gray-400">No digital business card</span></li>
+              </ul>
+              <span id="planBadgeFree" class="hidden mt-3 w-full bg-gray-100 text-gray-600 py-2 rounded-xl text-sm font-semibold text-center block">✅ Your Current Plan</span>
+            </div>
+          </div>
+
+          <!-- ── PLAN 2: PROFESSIONAL (SILVER) ── -->
+          <div id="planCard-silver" class="border-2 border-blue-400 rounded-2xl overflow-hidden transition-all shadow-md">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 flex justify-between items-center">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-white bg-opacity-20 flex items-center justify-center text-xl">🥈</div>
+                <div>
+                  <div class="font-bold text-white text-base">Professional Plan</div>
+                  <div class="text-xs text-blue-200">For growing providers</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-2xl font-extrabold text-white">₹99</div>
+                <div class="text-xs text-blue-200">per quarter (3 months)</div>
+              </div>
+            </div>
+            <div class="px-4 py-3 bg-blue-50">
+              <div class="flex flex-wrap gap-2 mb-3">
+                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">📋 Type: Professional</span>
+                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹99/Quarter</span>
+                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">📅 90-day (Quarter) validity</span>
+              </div>
+              <ul class="space-y-1.5 text-sm text-gray-700">
+                <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✓</span> Everything in Basic</li>
+                <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✓</span> <strong>⬆️ Priority placement</strong> in search results</li>
+                <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✓</span> 15 portfolio photos</li>
+                <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✓</span> 🥈 Silver verified badge on profile</li>
+                <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✓</span> 📇 Digital Business Card (shareable)</li>
+                <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✓</span> Basic analytics (views, bookings)</li>
+                <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✓</span> Email support within 24 hrs</li>
+                <li class="flex items-center gap-2"><span class="text-red-400">✗</span> <span class="text-gray-400">No Home page feature</span></li>
+              </ul>
+              <div class="mt-3 bg-blue-100 rounded-xl px-3 py-2 text-xs text-blue-800 font-medium">
+                💡 Providers on Professional get <strong>3× more views</strong> on average
+              </div>
+              <span id="planBadgeSilver" class="hidden mt-3 w-full bg-blue-100 text-blue-700 py-2 rounded-xl text-sm font-semibold text-center block">✅ Your Current Plan</span>
+              <div class="mt-3 flex gap-2">
+                <button onclick="redeemPointsForUpgrade('silver',99)" class="flex-1 bg-amber-400 text-amber-900 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500 transition">🌟 Use Points</button>
+                <button onclick="initiateSubscription('silver','99')" class="flex-2 flex-grow bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow">Pay ₹99 via UPI →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PLAN 3: ELITE (GOLD) ── -->
+          <div id="planCard-gold" class="border-2 border-yellow-400 rounded-2xl overflow-hidden transition-all shadow-xl">
+            <div class="relative bg-gradient-to-r from-yellow-500 via-orange-400 to-yellow-500 px-4 py-3 flex justify-between items-center">
+              <div class="absolute top-2 right-2 bg-red-500 text-white text-xs font-extrabold px-2 py-0.5 rounded-full animate-pulse">⭐ BEST VALUE</div>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-white bg-opacity-20 flex items-center justify-center text-xl">🥇</div>
+                <div>
+                  <div class="font-bold text-white text-base">Elite Plan</div>
+                  <div class="text-xs text-yellow-100">For top professionals</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-2xl font-extrabold text-white">₹199</div>
+                <div class="text-xs text-yellow-100">per quarter</div>
+              </div>
+            </div>
+            <div class="px-4 py-3 bg-yellow-50">
+              <div class="flex flex-wrap gap-2 mb-3">
+                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">📋 Type: Elite</span>
+                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹199/Quarter</span>
+                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">📅 90-day (Quarter) validity</span>
+                <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full font-semibold">🔥 Save ₹99 vs Pro×2</span>
+              </div>
+              <ul class="space-y-1.5 text-sm text-gray-700">
+                <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> Everything in Professional</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> <strong>🔝 Top placement</strong> — appear first in search</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> 🏠 <strong>Featured on Home page</strong> (prime visibility)</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> Unlimited portfolio photos &amp; videos</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> 🥇 Gold verified badge (trust boost)</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> 📊 Full analytics dashboard</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> 🎯 Customer behaviour insights</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> ⚡ Priority support (same-day response)</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> 📣 Promoted in category newsletters</li>
+              </ul>
+              <div class="mt-3 bg-yellow-100 rounded-xl px-3 py-2 text-xs text-yellow-900 font-medium">
+                🏆 Elite providers earn on average <strong>8× more bookings</strong> per month
+              </div>
+              <span id="planBadgeGold" class="hidden mt-3 w-full bg-yellow-100 text-yellow-700 py-2 rounded-xl text-sm font-semibold text-center block">✅ Your Current Plan</span>
+              <div class="mt-3 flex gap-2">
+                <button onclick="redeemPointsForUpgrade('gold',199)" class="flex-1 bg-amber-400 text-amber-900 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500 transition">🌟 Use Points</button>
+                <button onclick="initiateSubscription('gold','199')" class="flex-2 flex-grow bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 rounded-xl text-sm font-bold hover:from-yellow-600 hover:to-orange-600 transition shadow-lg">Pay ₹199 via UPI →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- UPI/Payment note -->
+          <div class="bg-gray-50 rounded-2xl p-4 text-center">
+            <p class="text-xs text-gray-500 font-medium">💳 Payment via UPI (PhonePe / GPay / Paytm)</p>
+            <p class="text-xs text-gray-400 mt-1">Plans valid for <strong>90 days (1 Quarter)</strong> · Activates in 2–4 hrs after admin approval</p>
+            <p class="text-xs text-gray-400">Renewal is manual — reminder sent 7 days before expiry · Points redeemable toward plan cost</p>
+          </div>
+
+          <!-- FAQ toggle -->
+          <details class="bg-orange-50 rounded-2xl p-4 text-sm cursor-pointer">
+            <summary class="font-semibold text-orange-800 list-none flex justify-between items-center">
+              ❓ Frequently Asked Questions
+              <span class="text-orange-400 text-lg">›</span>
+            </summary>
+            <div class="mt-3 space-y-3 text-gray-700">
+              <div><strong>Q: Can I upgrade mid-month?</strong><br>A: Yes. Upgrading starts a fresh 30-day cycle from payment date.</div>
+              <div><strong>Q: Is there a yearly plan?</strong><br>A: Coming soon! You'll get 1 month free on annual billing.</div>
+              <div><strong>Q: Can I use my wallet points?</strong><br>A: Yes! Click "🌟 Use Points" on any plan to apply your referral/earned points toward the cost.</div>
+              <div><strong>Q: What if I don't renew?</strong><br>A: Your profile reverts to Basic. All your data stays safe.</div>
+              <div><strong>Q: How do I prove payment?</strong><br>A: Screenshot your UPI receipt and send it via WhatsApp to our admin.</div>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== NOTIFICATION PANEL ===== -->
+    <div id="notifPanel" class="hidden fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 flex flex-col">
+        <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 flex justify-between items-center">
+            <h2 class="text-lg font-bold">🔔 Notifications</h2>
+            <div class="flex gap-2 items-center">
+                <button onclick="markAllNotifsRead()" class="text-xs text-orange-200 hover:text-white">Mark all read</button>
+                <button onclick="closeNotifPanel()" class="text-white text-xl font-bold">✕</button>
+            </div>
+        </div>
+        <div id="notifList" class="flex-1 overflow-y-auto p-3 space-y-2">
+            <div class="text-center text-gray-400 py-8 text-sm">No notifications yet 🔔</div>
+        </div>
+    </div>
+    <div id="notifOverlay" class="hidden fixed inset-0 bg-black bg-opacity-20 z-40" onclick="closeNotifPanel()"></div>
+
+
+<script>
+// ==================== BOOKING SYSTEM ====================
+let currentBookingProviderId = null;
+
+function openBookingModal(providerId) {
+    if (!firebaseUser) { openLoginModal(); return; }
+    currentBookingProviderId = providerId;
+    const p = providers.find(x => x.id === providerId);
+    if (!p) return;
+    document.getElementById('bookingProviderName').textContent = p.name + ' · ' + (getTranslated(p.service) || p.service || '');
+    document.getElementById('bookingService').value = getTranslated(p.service) || p.service || '';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('bookingDate').min = today;
+    document.getElementById('bookingDate').value = today;
+    document.getElementById('bookingTime').value = '10:00';
+    document.getElementById('bookingAddress').value = userProfile?.address || '';
+    document.getElementById('bookingNotes').value = '';
+    document.getElementById('bookingBudget').value = '';
+    document.getElementById('bookingModal').classList.remove('hidden');
+}
+function closeBookingModal() {
+    document.getElementById('bookingModal').classList.add('hidden');
+    currentBookingProviderId = null;
+}
+async function submitBooking() {
+    if (!firebaseUser) { openLoginModal(); return; }
+    const p = providers.find(x => x.id === currentBookingProviderId);
+    if (!p) return;
+    const service  = document.getElementById('bookingService').value.trim();
+    const date     = document.getElementById('bookingDate').value;
+    const time     = document.getElementById('bookingTime').value;
+    const address  = document.getElementById('bookingAddress').value.trim();
+    const notes    = document.getElementById('bookingNotes').value.trim();
+    const budget   = document.getElementById('bookingBudget').value;
+    if (!service || !date || !time || !address) {
+        showFirebaseStatus('Please fill all required fields', 'error'); return;
+    }
+    const booking = {
+        id: 'bk_' + Date.now(),
+        seekerUid: firebaseUser.uid,
+        seekerName: userProfile?.name || 'Customer',
+        seekerPhone: userProfile?.phone || '',
+        providerId: p.id,
+        providerName: p.name,
+        providerPhone: p.phone || '',
+        service, date, time, address, notes,
+        budget: budget ? parseInt(budget) : 0,
+        status: 'pending',
+        createdAt: Date.now(),
+        createdDate: new Date().toLocaleDateString('en-IN')
+    };
+    try {
+        await _firebase.set(_firebase.ref(_firebase.db, 'bookings/' + booking.id), booking);
+        await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/bookings/${booking.id}`), true);
+        await _firebase.set(_firebase.ref(_firebase.db, `providers/${p.id}/bookings/${booking.id}`), true);
+        if (p.ownerUid) {
+            await addNotification(p.ownerUid, {
+                type: 'new_booking',
+                title: '📅 New Booking Request!',
+                message: `${booking.seekerName} wants to book "${service}" on ${date} at ${time}`,
+                bookingId: booking.id,
+                timestamp: Date.now()
+            });
+        }
+        closeBookingModal();
+        showFirebaseStatus('✅ Booking sent! Provider will contact you shortly.', 'success');
+    } catch(e) { showFirebaseStatus('Booking failed: ' + e.message, 'error'); }
+}
+async function loadMyBookings() {
+    const list = document.getElementById('bookingsList');
+    if (!list) return;
+    list.innerHTML = '<div class="text-center text-gray-400 py-8">Loading... 🔄</div>';
+    if (!firebaseUser) { list.innerHTML = '<div class="text-center text-gray-400 py-8">Please login</div>'; return; }
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db, 'bookings'));
+        if (!snap.exists()) { list.innerHTML = '<div class="text-center text-gray-400 py-8">📅 No bookings yet</div>'; return; }
+        const all = Object.values(snap.val());
+        const seekerBtn = document.getElementById('bookViewSeeker');
+        const myMode = seekerBtn?.classList.contains('bg-orange-600') ? 'seeker' : 'provider';
+        const myProvider = providers.find(p => p.ownerUid === firebaseUser.uid);
+        let filtered = myMode === 'seeker'
+            ? all.filter(b => b.seekerUid === firebaseUser.uid)
+            : all.filter(b => myProvider && b.providerId === myProvider.id);
+        filtered.sort((a,b) => b.createdAt - a.createdAt);
+        if (!filtered.length) { list.innerHTML = '<div class="text-center text-gray-400 py-8">📅 No bookings yet</div>'; return; }
+        const sc = { pending:'bg-yellow-100 text-yellow-700', confirmed:'bg-green-100 text-green-700', completed:'bg-blue-100 text-blue-700', cancelled:'bg-red-100 text-red-600' };
+        list.innerHTML = filtered.map(b => `
+            <div class="bg-white border rounded-xl p-3 shadow-sm mb-2">
+                <div class="flex justify-between items-start mb-1">
+                    <div class="font-semibold text-gray-800 text-sm">${myMode==='seeker'?b.providerName:b.seekerName}</div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${sc[b.status]||'bg-gray-100 text-gray-500'}">${b.status.toUpperCase()}</span>
+                </div>
+                <div class="text-sm text-gray-600 mb-1">🔧 ${b.service}</div>
+                <div class="text-xs text-gray-500 mb-2">📅 ${b.date} · ⏰ ${b.time}</div>
+                <div class="text-xs text-gray-500 mb-2">📍 ${(b.address||'').substring(0,40)}${(b.address||'').length>40?'...':''}</div>
+                ${b.notes?`<div class="text-xs text-gray-400 mb-2 italic">"${b.notes}"</div>`:''}
+                <div class="flex gap-2 flex-wrap">
+                    ${myMode==='provider'&&b.status==='pending'?`
+                        <button onclick="updateBookingStatus('${b.id}','confirmed')" class="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-green-700">✅ Accept</button>
+                        <button onclick="updateBookingStatus('${b.id}','cancelled')" class="flex-1 bg-red-100 text-red-600 py-1.5 rounded-lg text-xs font-bold hover:bg-red-200">❌ Decline</button>
+                    `:''}
+                    ${b.status==='confirmed'?`<button onclick="updateBookingStatus('${b.id}','completed')" class="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700">✅ Mark Complete</button>`:''}
+                    <button onclick="openChatModal('${myMode==='seeker'?b.providerId:''}')" class="px-3 bg-blue-100 text-blue-600 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-200">💬 Chat</button>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) { list.innerHTML = '<div class="text-center text-red-400 py-4 text-sm">Error loading bookings</div>'; console.warn(e); }
+}
+function filterBookingsView(mode) {
+    const sb = document.getElementById('bookViewSeeker');
+    const pb = document.getElementById('bookViewProvider');
+    if (mode==='seeker') {
+        sb.className='flex-1 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm';
+        pb.className='flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold text-sm';
+    } else {
+        pb.className='flex-1 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm';
+        sb.className='flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold text-sm';
+    }
+    loadMyBookings();
+}
+async function updateBookingStatus(bookingId, newStatus) {
+    try {
+        await _firebase.update(_firebase.ref(_firebase.db, 'bookings/'+bookingId), {status:newStatus});
+        const snap = await _firebase.get(_firebase.ref(_firebase.db, 'bookings/'+bookingId));
+        const b = snap.val();
+        if (b && b.seekerUid) {
+            const msgs = {confirmed:'✅ Booking Confirmed!', completed:'🎉 Job Completed!', cancelled:'❌ Booking Declined'};
+            await addNotification(b.seekerUid, {
+                type:'booking_update', title: msgs[newStatus]||'Booking Updated',
+                message:`Your booking for "${b.service}" has been ${newStatus}`,
+                bookingId, timestamp:Date.now()
+            });
+        }
+        showFirebaseStatus('✅ Status updated!', 'success');
+        loadMyBookings();
+    } catch(e) { showFirebaseStatus('Update failed','error'); }
+}
+
+// ==================== CHAT SYSTEM ====================
+let currentChatProviderId = null;
+let chatUnsubscribe = null;
+
+function openChatModal(providerId) {
+    if (!providerId) return;
+    if (!firebaseUser) { openLoginModal(); return; }
+    currentChatProviderId = providerId;
+    const p = providers.find(x => x.id === providerId);
+    if (p) {
+        document.getElementById('chatWithName').textContent = '💬 ' + p.name;
+        document.getElementById('chatStatusLine').textContent = p.available!==false ? '🟢 Available' : '🔴 Busy';
+    }
+    document.getElementById('chatModal').classList.remove('hidden');
+    loadChatMessages();
+}
+function closeChatModal() {
+    document.getElementById('chatModal').classList.add('hidden');
+    if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe=null; }
+    currentChatProviderId = null;
+}
+function getChatRoomId() {
+    const uid = firebaseUser.uid;
+    const ids = [uid, currentChatProviderId].sort();
+    return 'chat_' + ids.join('_');
+}
+function loadChatMessages() {
+    const div = document.getElementById('chatMessages');
+    if (!div||!firebaseUser) return;
+    div.innerHTML = '<div class="text-center text-gray-400 text-sm py-4">Loading... 💬</div>';
+    const roomId = getChatRoomId();
+    const chatRef = _firebase.ref(_firebase.db, 'chats/'+roomId+'/messages');
+    if (chatUnsubscribe) chatUnsubscribe();
+    chatUnsubscribe = _firebase.onValue(chatRef, (snap) => {
+        const msgs = snap.exists() ? Object.values(snap.val()).sort((a,b)=>a.ts-b.ts) : [];
+        if (!msgs.length) {
+            div.innerHTML = '<div class="text-center text-gray-400 text-sm py-8">👋 Say hello! Start a conversation.</div>';
+        } else {
+            div.innerHTML = msgs.map(m => {
+                const isMe = m.senderUid===firebaseUser.uid;
+                return `<div class="flex ${isMe?'justify-end':'justify-start'} mb-2">
+                    <div class="max-w-xs px-3 py-2 rounded-2xl text-sm shadow-sm ${isMe?'bg-blue-600 text-white rounded-br-sm':'bg-white text-gray-800 border rounded-bl-sm'}">
+                        <div>${m.text}</div>
+                        <div class="text-xs ${isMe?'text-blue-200':'text-gray-400'} text-right mt-0.5">${new Date(m.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        div.scrollTop = div.scrollHeight;
+    });
+    _firebase.set(_firebase.ref(_firebase.db,`chats/${roomId}/read/${firebaseUser.uid}`), Date.now());
+}
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text||!firebaseUser||!currentChatProviderId) return;
+    input.value = '';
+    const roomId = getChatRoomId();
+    const p = providers.find(x=>x.id===currentChatProviderId);
+    const msg = { text, senderUid:firebaseUser.uid, senderName:userProfile?.name||'User', ts:Date.now() };
+    try {
+        await _firebase.set(_firebase.ref(_firebase.db,`chats/${roomId}/messages/${Date.now()}`), msg);
+        await _firebase.set(_firebase.ref(_firebase.db,`chats/${roomId}/meta`), {
+            participants:[firebaseUser.uid, currentChatProviderId],
+            lastMessage:text, lastTs:Date.now(),
+            providerName:p?.name||'', seekerName:userProfile?.name||''
+        });
+        if (p?.ownerUid && p.ownerUid!==firebaseUser.uid) {
+            await addNotification(p.ownerUid, {
+                type:'new_message', title:'💬 New Message',
+                message:(userProfile?.name||'Someone')+': '+text.substring(0,60),
+                chatProviderId:currentChatProviderId, timestamp:Date.now()
+            });
+        }
+    } catch(e) { showFirebaseStatus('Message failed','error'); }
+}
+
+// ==================== NOTIFICATIONS ====================
+let notifUnsubscribe = null;
+
+async function addNotification(uid, notif) {
+    try {
+        await _firebase.set(_firebase.ref(_firebase.db,`users/${uid}/notifications/${Date.now()}_${Math.random().toString(36).slice(2,6)}`), {...notif, read:false});
+    } catch(e) { console.warn('Notif error:',e); }
+}
+function listenForNotifications() {
+    if (!firebaseUser) return;
+    if (notifUnsubscribe) notifUnsubscribe();
+    const nRef = _firebase.ref(_firebase.db,`users/${firebaseUser.uid}/notifications`);
+    notifUnsubscribe = _firebase.onValue(nRef, (snap) => {
+        const notifs = snap.exists()
+            ? Object.entries(snap.val()).map(([id,n])=>({...n,id})).sort((a,b)=>b.timestamp-a.timestamp)
+            : [];
+        const unread = notifs.filter(n=>!n.read).length;
+        const badge = document.getElementById('notifBadge');
+        const bellBtn = document.getElementById('notifNavBtn');
+        if (badge) { badge.textContent = unread>9?'9+':unread; badge.classList.toggle('hidden', unread===0); }
+        if (bellBtn) bellBtn.classList.remove('hidden');
+        const list = document.getElementById('notifList');
+        if (!list) return;
+        if (!notifs.length) { list.innerHTML='<div class="text-center text-gray-400 py-8 text-sm">No notifications yet 🔔</div>'; return; }
+        list.innerHTML = notifs.slice(0,50).map(n=>`
+            <div class="p-3 rounded-xl border cursor-pointer hover:bg-gray-50 mb-2 ${n.read?'bg-white':'bg-orange-50 border-orange-200'}"
+                 onclick="handleNotifClick('${n.id}','${n.type||''}','${n.bookingId||''}','${n.chatProviderId||''}')">
+                <div class="font-semibold text-sm text-gray-800">${n.title||''}</div>
+                <div class="text-xs text-gray-500 mt-0.5">${n.message||''}</div>
+                <div class="text-xs text-gray-400 mt-1">${n.timestamp?new Date(n.timestamp).toLocaleString('en-IN'):''}</div>
+            </div>
+        `).join('');
+    });
+}
+function openNotifPanel() {
+    document.getElementById('notifPanel').classList.remove('hidden');
+    document.getElementById('notifOverlay').classList.remove('hidden');
+}
+function closeNotifPanel() {
+    document.getElementById('notifPanel').classList.add('hidden');
+    document.getElementById('notifOverlay').classList.add('hidden');
+}
+async function markAllNotifsRead() {
+    if (!firebaseUser) return;
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db,`users/${firebaseUser.uid}/notifications`));
+        if (!snap.exists()) return;
+        const updates = {};
+        Object.keys(snap.val()).forEach(k => updates[`users/${firebaseUser.uid}/notifications/${k}/read`]=true);
+        await _firebase.update(_firebase.ref(_firebase.db), updates);
+    } catch(e) { console.warn(e); }
+}
+async function handleNotifClick(notifId, type, bookingId, chatProviderId) {
+    if (!firebaseUser) return;
+    try { await _firebase.set(_firebase.ref(_firebase.db,`users/${firebaseUser.uid}/notifications/${notifId}/read`), true); } catch(e){}
+    closeNotifPanel();
+    if (type==='new_booking'||type==='booking_update') {
+        showPage('myProfile'); setTimeout(()=>showProfileTab('bookings'),300);
+    } else if (type==='new_message' && chatProviderId) {
+        openChatModal(chatProviderId);
+    }
+}
+// Hook auth state to start notifications
+window.addEventListener('authStateChanged', (e) => {
+    if (e.detail) {
+        setTimeout(()=>{ listenForNotifications(); }, 600);
+        const b = document.getElementById('notifNavBtn');
+        if (b) b.classList.remove('hidden');
+    } else {
+        if (notifUnsubscribe) { notifUnsubscribe(); notifUnsubscribe=null; }
+        const b = document.getElementById('notifNavBtn');
+        if (b) b.classList.add('hidden');
+    }
+});
+
+// ==================== PORTFOLIO ====================
+let portfolioProviderId = null;
+let isMyPortfolio = false;
+
+async function openPortfolioView(providerId) {
+    portfolioProviderId = providerId;
+    isMyPortfolio = false;
+    document.getElementById('portfolioUploadSection').classList.add('hidden');
+    document.getElementById('portfolioModal').classList.remove('hidden');
+    await loadPortfolio(providerId);
+    // Track profile view
+    trackProfileView(providerId);
+}
+async function openMyPortfolioModal() {
+    const myProvider = providers.find(p=>p.ownerUid===firebaseUser?.uid);
+    if (!myProvider) { showFirebaseStatus('Register as provider first','info'); return; }
+    portfolioProviderId = myProvider.id;
+    isMyPortfolio = true;
+    document.getElementById('portfolioUploadSection').classList.remove('hidden');
+    document.getElementById('portfolioModal').classList.remove('hidden');
+    await loadPortfolio(myProvider.id);
+}
+function closePortfolioModal() { document.getElementById('portfolioModal').classList.add('hidden'); }
+async function loadPortfolio(providerId) {
+    const grid = document.getElementById('portfolioGrid');
+    grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 py-6 text-sm">Loading portfolio... 📸</div>';
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${providerId}/portfolio`));
+        const items = snap.exists() ? Object.entries(snap.val()).map(([id,v])=>({...v,id})) : [];
+        if (!items.length) {
+            grid.innerHTML = `<div class="col-span-2 text-center text-gray-400 py-8">📸 No portfolio photos yet${isMyPortfolio?' — add your work above':''}</div>`;
+            return;
+        }
+        grid.innerHTML = items.map(item=>`
+            <div class="relative group rounded-xl overflow-hidden border shadow-sm">
+                <img src="${item.url}" alt="${item.caption||''}" class="w-full h-32 object-cover bg-gray-100"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div style="display:none" class="w-full h-32 bg-gray-100 items-center justify-center text-gray-400 text-3xl">📷</div>
+                <div class="p-2 bg-white"><p class="text-xs text-gray-600 truncate">${item.caption||'Work photo'}</p></div>
+                ${isMyPortfolio?`<button onclick="deletePortfolioItem('${item.id}')" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition">✕</button>`:''}
+            </div>
+        `).join('');
+    } catch(e) { grid.innerHTML='<div class="col-span-2 text-center text-red-400 py-4 text-sm">Error loading portfolio</div>'; }
+}
+async function addPortfolioItem() {
+    const url = document.getElementById('portfolioImageUrl').value.trim();
+    const caption = document.getElementById('portfolioCaption').value.trim();
+    if (!url) { showFirebaseStatus('Please enter an image URL','error'); return; }
+    if (!portfolioProviderId) return;
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/portfolio`));
+        const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+        const memSnap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/membership`));
+        const plan = memSnap.exists() ? (memSnap.val()?.plan||'free') : 'free';
+        const limits = {free:5, silver:15, gold:999};
+        if (count>=(limits[plan]||5)) {
+            showFirebaseStatus(`Portfolio full for ${plan} plan! Upgrade to add more.`,'error'); return;
+        }
+        await _firebase.set(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/portfolio/${Date.now()}`), {url, caption, addedAt:Date.now()});
+        document.getElementById('portfolioImageUrl').value='';
+        document.getElementById('portfolioCaption').value='';
+        showFirebaseStatus('✅ Photo added!','success');
+        loadPortfolio(portfolioProviderId);
+    } catch(e) { showFirebaseStatus('Failed: '+e.message,'error'); }
+}
+async function deletePortfolioItem(itemId) {
+    if (!portfolioProviderId||!confirm('Delete this photo?')) return;
+    await _firebase.remove(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/portfolio/${itemId}`));
+    loadPortfolio(portfolioProviderId);
+}
+
+// ==================== PROFILE VIEW TRACKING ====================
+function trackProfileView(providerId) {
+    if (!providerId) return;
+    const ref = _firebase.ref(_firebase.db,`providers/${providerId}/profileViews`);
+    _firebase.get(ref).then(s=>_firebase.set(ref,(s.exists()?(s.val()||0):0)+1)).catch(()=>{});
+}
+
+// ==================== PROVIDER DASHBOARD ====================
+async function openProviderDash() {
+    const myProvider = providers.find(p=>p.ownerUid===firebaseUser?.uid);
+    if (!myProvider) { showFirebaseStatus('Register as provider first','info'); return; }
+    document.getElementById('providerDashModal').classList.remove('hidden');
+    try {
+        // Bookings
+        const bkSnap = await _firebase.get(_firebase.ref(_firebase.db,'bookings'));
+        const myBookings = bkSnap.exists() ? Object.values(bkSnap.val()).filter(b=>b.providerId===myProvider.id) : [];
+        document.getElementById('dashBookingCount').textContent = myBookings.length;
+        // Reviews
+        const reviews = myProvider.reviews ? Object.values(myProvider.reviews) : [];
+        const avg = reviews.length ? (reviews.reduce((s,r)=>s+(r.rating||0),0)/reviews.length).toFixed(1) : '—';
+        document.getElementById('dashRating').textContent = avg;
+        document.getElementById('dashReviewCount').textContent = reviews.length;
+        // Views
+        const vSnap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${myProvider.id}/profileViews`));
+        document.getElementById('dashProfileViews').textContent = vSnap.exists()?vSnap.val():0;
+        // Recent bookings
+        const recent = myBookings.sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+        const sc = {pending:'bg-yellow-100 text-yellow-700',confirmed:'bg-green-100 text-green-700',completed:'bg-blue-100 text-blue-700',cancelled:'bg-red-100 text-red-600'};
+        document.getElementById('dashRecentBookings').innerHTML = recent.length
+            ? recent.map(b=>`
+                <div class="flex justify-between items-center py-1.5 border-b last:border-0">
+                    <div><div class="font-semibold text-gray-700 text-xs">${b.seekerName}</div>
+                    <div class="text-gray-500 text-xs">${b.service} · ${b.date}</div></div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${sc[b.status]||'bg-gray-100 text-gray-500'}">${b.status}</span>
+                </div>`).join('')
+            : '<div class="text-gray-400 text-center py-3 text-xs">No bookings yet</div>';
+        // Membership
+        const memSnap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${myProvider.id}/membership`));
+        const mem = memSnap.exists() ? memSnap.val() : {plan:'free'};
+        const planLabels = {free:'🆓 Basic Plan', silver:'🥈 Professional Plan', gold:'🥇 Elite Plan'};
+        const expiry = mem.expiry ? ` · Expires: ${new Date(mem.expiry).toLocaleDateString('en-IN')}` : '';
+        const statusNote = mem.status==='pending_verification' ? ' ⏳ (Awaiting verification)' : '';
+        document.getElementById('dashMembershipInfo').textContent = (planLabels[mem.plan]||'🆓 Free Plan') + expiry + statusNote;
+
+        // ── Earnings ──
+        const earnSnap = await _firebase.get(_firebase.ref(_firebase.db, `providers/${myProvider.id}/earnings`));
+        const totalSnap = await _firebase.get(_firebase.ref(_firebase.db, `providers/${myProvider.id}/totalEarnings`));
+        const totalEarned = totalSnap.exists() ? totalSnap.val() : 0;
+        document.getElementById('dashTotalEarnings').textContent = '₹' + totalEarned;
+
+        const earnings = earnSnap.exists() ? Object.values(earnSnap.val()).sort((a,b)=>b.timestamp-a.timestamp) : [];
+        const earningsEl = document.getElementById('dashEarningsList');
+        if (earningsEl) {
+            earningsEl.innerHTML = earnings.length
+                ? earnings.map(e => `
+                    <div class="flex justify-between items-center py-1.5 border-b last:border-0">
+                        <div>
+                            <div class="font-semibold text-gray-700 text-xs">🙏 Tip from ${e.fromName||'Customer'}</div>
+                            <div class="text-gray-400 text-xs">${e.date||''}</div>
+                        </div>
+                        <span class="text-green-700 font-bold text-sm">+₹${e.amount}</span>
+                    </div>`).join('')
+                : '<div class="text-gray-400 text-center py-3 text-xs">No tips received yet</div>';
+        }
+    } catch(e) { console.warn('Dashboard error:',e); }
+}
+function closeProviderDash() { document.getElementById('providerDashModal').classList.add('hidden'); }
+
+// ==================== SUBSCRIPTION / MEMBERSHIP ====================
+function openSubscriptionModal() {
+    if (!firebaseUser) { openLoginModal(); return; }
+    document.getElementById('subscriptionModal').classList.remove('hidden');
+    // Highlight current plan & show banner
+    try {
+        ['free','silver','gold'].forEach(p => {
+            const badge = document.getElementById('planBadge' + p.charAt(0).toUpperCase() + p.slice(1));
+            if (badge) badge.classList.add('hidden');
+        });
+        const myProvider = providers.find(p => p.ownerUid === firebaseUser.uid);
+        const provId = myProvider ? myProvider.id : firebaseUser.uid;
+        _firebase.get(_firebase.ref(_firebase.db, `providers/${provId}/membership`))
+            .then(snap => {
+                const mem  = snap.exists() ? snap.val() : null;
+                const plan = (mem && mem.status === 'active') ? mem.plan : 'free';
+                const key  = plan.charAt(0).toUpperCase() + plan.slice(1);
+                const badge = document.getElementById('planBadge' + key);
+                if (badge) badge.classList.remove('hidden');
+                const banner = document.getElementById('currentPlanBanner');
+                const names = {free:'🆓 Basic', silver:'🥈 Professional', gold:'🥇 Elite'};
+                if (banner) {
+                    let txt = 'Current Plan: ' + (names[plan] || 'Basic');
+                    if (mem && mem.status === 'pending') txt += ' · ⏳ Pending approval';
+                    banner.textContent = txt;
+                    banner.classList.remove('hidden');
+                }
+            }).catch(() => {});
+    } catch(e) {}
+}
+function closeSubscriptionModal() { document.getElementById('subscriptionModal').classList.add('hidden'); }
+async function initiateSubscription(plan, amount) {
+    if (!firebaseUser) { openLoginModal(); return; }
+    
+    const planNames = { free: '🆓 Basic', silver: '🥈 Professional', gold: '🥇 Elite' };
+    const planName  = planNames[plan] || plan;
+    
+    if (!confirm(`Activate ${planName} Plan for ₹${amount}/month?\n\nYou will be redirected to UPI payment.\nPlan activates within 2–4 hours after admin approval.`)) return;
+    
+    const UPI_ID = '9414055013@ybl';
+    const note   = encodeURIComponent(`SC ${planName} Plan`);
+    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${amount}&cu=INR&tn=${note}`;
+    
+    // Save subscription request to Firebase
+    try {
+        if (window._firebase && firebaseUser) {
+            const reqTs = Date.now();
+            await _firebase.set(_firebase.ref(_firebase.db, `admin/subscriptionRequests/${reqTs}`), {
+                providerId: firebaseUser.uid,
+                plan, amount: Number(amount),
+                requestedAt: new Date().toISOString(),
+                status: 'pending',
+                planName
+            });
+            await _firebase.set(_firebase.ref(_firebase.db, `providers/${firebaseUser.uid}/membership`), {
+                plan, amount: Number(amount),
+                status: 'pending',
+                planName,
+                requestedAt: new Date().toISOString()
+            });
+        }
+    } catch(e) { console.warn('Subscription save error:', e); }
+    
+    closeSubscriptionModal();
+    window.location.href = upiUrl;
+    setTimeout(() => {
+        showFirebaseStatus(`⏳ ${planName} plan requested! Activates in 2–4 hrs after payment confirmation.`, 'success');
+    }, 1500);
+}
+// ==================== ADVANCED GLOBAL SEARCH ====================
+function globalSearchSubmit(e) {
+    if (e && e.key && e.key!=='Enter') return;
+    const q = (document.getElementById('globalSearchInput')?.value||'').trim();
+    if (!q) return;
+    const lower = q.toLowerCase();
+    const results = providers.filter(p=>
+        (p.name||'').toLowerCase().includes(lower) ||
+        (getTranslated(p.service)||p.service||'').toLowerCase().includes(lower) ||
+        (p.location||'').toLowerCase().includes(lower) ||
+        (p.bio||'').toLowerCase().includes(lower) ||
+        (getTranslated(p.category)||'').toLowerCase().includes(lower)
+    );
+    showPage('browse');
+    setTimeout(()=>{
+        renderProviders(results);
+        const lbl = document.getElementById('browseResultsCount');
+        if (lbl) lbl.textContent = `🔍 "${q}" — ${results.length} result${results.length!==1?'s':''}`;
+    }, 150);
+}
+
+// ==================== MEMBERSHIP BADGE HELPER ====================
+function getMembershipBadge(provider) {
+    if (!provider?.membership) return '';
+    const plan = provider.membership.plan;
+    const valid = !provider.membership.expiry || provider.membership.expiry > Date.now();
+    const active = valid && provider.membership.status !== 'pending_verification';
+    if (plan==='gold'&&active) return '<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-1.5 py-0.5 rounded-full">🥇 Gold</span>';
+    if (plan==='silver'&&active) return '<span class="bg-blue-200 text-blue-800 text-xs font-bold px-1.5 py-0.5 rounded-full">🥈 Silver</span>';
+    return '';
+}
+
+// ==================== ADMIN: SUBSCRIPTION MANAGEMENT ====================
+async function loadAdminSubscriptions() {
+    const list = document.getElementById('adminSubsList');
+    if (!list) return;
+    list.innerHTML = '<p class="text-center text-gray-400 py-4">Loading...</p>';
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db,'admin/subscriptionRequests'));
+        if (!snap.exists()) { list.innerHTML='<div class="text-center py-8 text-gray-400">No subscription requests yet</div>'; return; }
+        const reqs = Object.entries(snap.val()).map(([id,v])=>({...v,reqId:id})).sort((a,b)=>b.timestamp-a.timestamp);
+        list.innerHTML = reqs.map(r=>`
+            <div class="border rounded-xl p-3 mb-2 ${r.status==='pending'?'bg-yellow-50 border-yellow-200':'bg-white'}">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="font-semibold text-sm">${r.providerName||r.providerId}</div>
+                        <div class="text-xs text-gray-500">Plan: <b>${r.plan?.toUpperCase()}</b> · ₹${r.amount} · Note: ${r.upiNote}</div>
+                        <div class="text-xs text-gray-400">${r.timestamp?new Date(r.timestamp).toLocaleString('en-IN'):''}</div>
+                    </div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${r.status==='pending'?'bg-yellow-100 text-yellow-700':r.status==='approved'?'bg-green-100 text-green-700':'bg-red-100 text-red-600'}">${r.status||'pending'}</span>
+                </div>
+                ${r.status==='pending'?`
+                <div class="flex gap-2 mt-2">
+                    <button onclick="approveSubscription('${r.providerId}','${r.plan}','${r.reqId}')" class="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-green-700">✅ Approve</button>
+                    <button onclick="rejectSubscription('${r.providerId}','${r.reqId}')" class="flex-1 bg-red-100 text-red-600 py-1.5 rounded-lg text-xs font-bold hover:bg-red-200">❌ Reject</button>
+                </div>`:''}
+            </div>
+        `).join('');
+    } catch(e) { list.innerHTML='<div class="text-center text-red-400 py-4 text-sm">Error loading</div>'; }
+}
+async function approveSubscription(providerId, plan, reqId) {
+    try {
+        await _firebase.update(_firebase.ref(_firebase.db,`providers/${providerId}/membership`), {plan, status:'active'});
+        await _firebase.update(_firebase.ref(_firebase.db,`admin/subscriptionRequests/${reqId}`), {status:'approved'});
+        showFirebaseStatus('✅ Subscription approved!','success');
+        loadAdminSubscriptions();
+    } catch(e) { showFirebaseStatus('Error: '+e.message,'error'); }
+}
+async function rejectSubscription(providerId, reqId) {
+    try {
+        await _firebase.update(_firebase.ref(_firebase.db,`providers/${providerId}/membership`), {plan:'free', status:'active'});
+        await _firebase.update(_firebase.ref(_firebase.db,`admin/subscriptionRequests/${reqId}`), {status:'rejected'});
+        showFirebaseStatus('Subscription rejected','info');
+        loadAdminSubscriptions();
+    } catch(e) { showFirebaseStatus('Error: '+e.message,'error'); }
+}
+</script>
+
+<script>
+// ==================== WALLET EARN ACTIONS ====================
+// Safe accessor — works across script blocks
+function _getFirebaseUser() { return window.firebaseUser || (typeof firebaseUser !== 'undefined' ? firebaseUser : null); }
+function _getFirebase()     { return window._firebase || null; }
+
+function shareReferralLink() {
+    const firebaseUser = _getFirebaseUser();
+    if (!firebaseUser) { openLoginModal(); return; }
+    const uid = firebaseUser.uid;
+    const baseUrl = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/';
+    const referralUrl = baseUrl + '?ref=' + uid.slice(0, 8);
+    const msg = `🙏 Namaste! I use Sudarshan Chakra to find trusted local service providers — plumbers, electricians, beauticians & more near you!
+
+📲 Join here: ${referralUrl}
+
+🌟 Verified providers · Real reviews · Book easily!`;
+
+    if (navigator.share) {
+        navigator.share({ title: 'Sudarshan Chakra', text: msg, url: referralUrl })
+            .then(() => {
+                // Award 5 points for sharing
+                awardWalletPoints(5, 'share_referral', 'Shared app referral link');
+            })
+            .catch(() => fallbackCopyReferral(referralUrl, msg));
+    } else {
+        fallbackCopyReferral(referralUrl, msg);
+    }
+}
+
+function fallbackCopyReferral(url, msg) {
+    // Try WhatsApp
+    const waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
+    const choice = confirm('Share via WhatsApp? Tap OK for WhatsApp, or Cancel to copy the link.');
+    if (choice) {
+        window.open(waUrl, '_blank');
+        awardWalletPoints(5, 'share_referral', 'Shared via WhatsApp');
+    } else {
+        navigator.clipboard.writeText(url).then(() => {
+            showFirebaseStatus('✅ Referral link copied! Share it with friends.', 'success');
+            awardWalletPoints(5, 'share_referral', 'Copied referral link');
+        }).catch(() => {
+            showFirebaseStatus('Your referral link: ' + url, 'info');
+        });
+    }
+}
+
+let charityAmt = 10;
+function openCharityModal() {
+    const firebaseUser = _getFirebaseUser();
+    if (!firebaseUser) { openLoginModal(); return; }
+    charityAmt = 10;
+    document.getElementById('charityAmtDisp').textContent = '₹' + charityAmt;
+    document.getElementById('charityModal').classList.remove('hidden');
+}
+function closeCharityModal() { document.getElementById('charityModal').classList.add('hidden'); }
+function charityAmtChange(delta) {
+    charityAmt = Math.max(10, charityAmt + delta);
+    document.getElementById('charityAmtDisp').textContent = '₹' + charityAmt;
+}
+function setCharityAmt(amt) {
+    charityAmt = Math.max(10, amt);
+    document.getElementById('charityAmtDisp').textContent = '₹' + charityAmt;
+    const inp = document.getElementById('charityCustomInput');
+    if (inp) inp.value = charityAmt;
+}
+async function proceedCharityPayment() {
+    const UPI_ID = '9414055013@ybl';
+    const note = encodeURIComponent('SC Charity Donation');
+    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${charityAmt}&cu=INR&tn=${note}`;
+    
+    // Save transaction to Firebase
+    const firebaseUser = _getFirebaseUser(); const _firebase = _getFirebase();
+    if (_firebase && firebaseUser) {
+        try {
+            const txnId = Date.now();
+            await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${txnId}`), {
+                type: 'charity', amount: charityAmt, fee: 0, points: 0,
+                timestamp: txnId, date: new Date().toLocaleDateString('en-IN')
+            });
+        } catch(e) { console.warn('Charity txn save error:', e); }
+    }
+    
+    closeCharityModal();
+    window.location.href = upiUrl;
+    setTimeout(() => showFirebaseStatus('🌱 Thank you for your donation! 🙏', 'success'), 1000);
+}
+
+function showReferProviderModal() {
+    const firebaseUser = _getFirebaseUser();
+    if (!firebaseUser) { openLoginModal(); return; }
+    const uid = firebaseUser.uid;
+    const baseUrl = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/';
+    const referralUrl = baseUrl + '?page=register&ref=' + uid.slice(0, 8);
+    const msg = `🛠️ Are you a skilled professional? Join Sudarshan Chakra and get customers near you!
+
+✅ Free to join
+✅ Get verified
+✅ Grow your business
+
+📲 Register here: ${referralUrl}`;
+
+    // Show a modal with the referral link and WhatsApp share
+    const existing = document.getElementById('referProviderModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'referProviderModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-5 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold">🤝 Refer a Provider</h2>
+                    <button onclick="document.getElementById('referProviderModal').remove()" class="text-white text-2xl font-bold">✕</button>
+                </div>
+                <p class="text-blue-200 text-xs mt-1">Earn 10 pts when they get their first hire</p>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="bg-blue-50 rounded-xl p-3 text-xs text-blue-800 leading-relaxed">${msg.replace(/
+/g,'<br>')}</div>
+                <div class="bg-gray-50 rounded-xl p-3 text-xs break-all text-gray-600 border">
+                    <span class="font-semibold">Your referral link:</span><br>
+                    <span id="referUrlText">${referralUrl}</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="window.open('https://wa.me/?text='+encodeURIComponent(document.querySelector('#referProviderModal .bg-blue-50').innerText),'_blank'); awardWalletPoints(0,'refer_provider_share','Shared provider referral')" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-green-700">📲 WhatsApp</button>
+                    <button onclick="navigator.clipboard.writeText('${referralUrl}').then(()=>showFirebaseStatus('Link copied!','success'))" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-200">📋 Copy Link</button>
+                </div>
+                <p class="text-xs text-gray-400 text-center">Points are credited automatically when the referred provider completes their first hire.</p>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function awardWalletPoints(pts, type, reason) {
+    const firebaseUser = _getFirebaseUser(); const _firebase = _getFirebase();
+    if (!firebaseUser || pts <= 0) return;
+    try {
+        const credRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`);
+        const snap = await _firebase.get(credRef);
+        const current = snap.exists() ? (snap.val() || 0) : 0;
+        await _firebase.set(credRef, current + pts);
+
+        // Log transaction
+        const txnRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${Date.now()}`);
+        await _firebase.set(txnRef, {
+            type, reason, points: pts,
+            amount: pts / 10,
+            timestamp: Date.now(),
+            date: new Date().toLocaleDateString('en-IN')
+        });
+
+        showFirebaseStatus(`🌟 +${pts} pts earned! (₹${(pts/10).toFixed(1)})`, 'success');
+        // Refresh wallet if open
+        const walletTab = document.getElementById('profileTab-wallet');
+        if (walletTab && !walletTab.classList.contains('hidden')) {
+            loadWallet();
+        }
+    } catch(e) { console.warn('Award points error:', e); }
+}
+
+// ==================== GRATITUDE MODAL ====================
+function openGratitudeModal() {
+    const fu = _getFirebaseUser();
+    if (!fu) { openLoginModal(); return; }
+    document.getElementById('gratitudeModal').classList.remove('hidden');
+}
+function closeGratitudeModal() {
+    document.getElementById('gratitudeModal').classList.add('hidden');
+}
+function sendGratitudeWhatsApp() {
+    const provider = document.getElementById('gratProviderName').value.trim();
+    const msg      = document.getElementById('gratMessage').value.trim();
+    if (!provider) { alert('Please enter the provider name'); return; }
+    if (!msg || msg.length < 10) { alert('Please write a message (at least 10 characters)'); return; }
+    const fullMsg  = `🙏 ${msg}
+
+— Shared via Sudarshan Chakra · India's trusted service marketplace
+https://sudarshanchakraindia.github.io/sudarshan-chakra/`;
+    window.open('https://wa.me/?text=' + encodeURIComponent(fullMsg), '_blank');
+    awardWalletPoints(3, 'gratitude_share', 'Sent gratitude message via WhatsApp');
+    closeGratitudeModal();
+}
+function copyGratitudeMessage() {
+    const provider = document.getElementById('gratProviderName').value.trim();
+    const msg      = document.getElementById('gratMessage').value.trim();
+    if (!msg) { alert('Please write a message first'); return; }
+    const fullMsg  = `🙏 ${msg}
+
+— Shared via Sudarshan Chakra
+https://sudarshanchakraindia.github.io/sudarshan-chakra/`;
+    navigator.clipboard.writeText(fullMsg)
+        .then(() => {
+            showFirebaseStatus('✅ Gratitude message copied! Share it anywhere.', 'success');
+            awardWalletPoints(3, 'gratitude_share', 'Copied gratitude message');
+            closeGratitudeModal();
+        })
+        .catch(() => showFirebaseStatus('Message: ' + fullMsg, 'info'));
+}
+
+// ==================== WALLET TOGGLE IN HIRE MODAL ====================
+let hmWalletPtsAvailable = 0;
+function hmLoadWalletBalance() {
+    const fu = _getFirebaseUser(); const fb = _getFirebase();
+    if (!fu || !fb) return;
+    const section = document.getElementById('hm-wallet-section');
+    if (section) section.style.display = 'block';
+    fb.get(fb.ref(fb.db, `users/${fu.uid}/walletCredits`)).then(snap => {
+        hmWalletPtsAvailable = snap.exists() ? (snap.val() || 0) : 0;
+        const txt = document.getElementById('hm-wallet-balance-txt');
+        if (txt) txt.textContent = `You have ${hmWalletPtsAvailable} pts (₹${(hmWalletPtsAvailable/10).toFixed(1)}) available`;
+    }).catch(() => {});
+}
+function hmToggleWalletPts() {
+    const cb  = document.getElementById('hm-use-wallet');
+    const bg  = document.getElementById('hm-wallet-toggle-bg');
+    const dot = document.getElementById('hm-wallet-toggle-dot');
+    const row = document.getElementById('hm-pts-applied-row');
+    if (cb.checked) {
+        if (bg)  { bg.style.background = '#f97316'; }
+        if (dot) { dot.style.left = '19px'; }
+        if (row) row.style.display = 'block';
+    } else {
+        if (bg)  { bg.style.background = '#d1d5db'; }
+        if (dot) { dot.style.left = '3px'; }
+        if (row) row.style.display = 'none';
+    }
+    hmUpdateTotalWithWallet();
+}
+function hmUpdateTotalWithWallet() {
+    // Recalculate total applying wallet discount
+    const cb = document.getElementById('hm-use-wallet');
+    const useWallet = cb && cb.checked;
+    const HM_CONV_FEE = 10;
+    const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
+    const baseFee = hasTipOrCharity ? 0 : HM_CONV_FEE;
+    const subtotal = baseFee + hmTipAmt + hmCharityAmt;
+    
+    let discount = 0;
+    if (useWallet && hmWalletPtsAvailable > 0) {
+        // 1 pt = ₹0.10; max discount = available pts value or subtotal, whichever is less
+        const maxDiscount = Math.floor(hmWalletPtsAvailable / 10);
+        discount = Math.min(maxDiscount, subtotal);
+    }
+    const total = Math.max(0, subtotal - discount);
+    
+    const ptsUsed = discount * 10;
+    const ptsEl   = document.getElementById('hm-pts-applied-txt');
+    const savEl   = document.getElementById('hm-pts-savings');
+    if (ptsEl) ptsEl.textContent = ptsUsed + ' pts';
+    if (savEl) savEl.textContent = discount;
+    
+    ['hm-total','hm-qr-amount','hm-mb-total'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '₹' + total;
+    });
+    // Store for payment
+    window._hmFinalTotal   = total;
+    window._hmWalletDiscount = discount;
+    window._hmPtsUsed = ptsUsed;
+}
+
+// ==================== REFERRAL POINTS TOWARD UPGRADE ====================
+function redeemPointsForUpgrade(plan, originalAmount) {
+    const fu = _getFirebaseUser(); const fb = _getFirebase();
+    if (!fu || !fb) { openLoginModal(); return; }
+    fb.get(fb.ref(fb.db, `users/${fu.uid}/walletCredits`)).then(snap => {
+        const pts        = snap.exists() ? (snap.val() || 0) : 0;
+        const maxRedeem  = Math.floor(pts / 10);
+        const redeemable = Math.min(maxRedeem, originalAmount);
+        const toPay      = originalAmount - redeemable;
+        const ptsToUse   = redeemable * 10;
+        let confirmMsg;
+        if (redeemable > 0) {
+            confirmMsg = 'You have ' + pts + ' pts (\u20B9' + Math.floor(pts/10) + ').\nRedeem ' + ptsToUse + ' pts \u2192 save \u20B9' + redeemable + '!\nYou pay: \u20B9' + toPay + ' via UPI.\n\nProceed?';
+        } else {
+            confirmMsg = 'You have ' + pts + ' pts (need 100+ to redeem).\nFull payment: \u20B9' + originalAmount + ' via UPI.\n\nProceed?';
+        }
+        if (confirm(confirmMsg)) {
+            if (redeemable > 0) {
+                initiateSubscription(plan, String(toPay), ptsToUse);
+            } else {
+                initiateSubscription(plan, String(originalAmount), 0);
+            }
+        }
+    }).catch(() => initiateSubscription(plan, String(originalAmount), 0));
+}
+
+// ── Expose ALL functions to window for onclick= attribute calls ──
+window.shareReferralLink      = shareReferralLink;
+window.fallbackCopyReferral   = fallbackCopyReferral;
+window.openCharityModal       = openCharityModal;
+window.closeCharityModal      = closeCharityModal;
+window.charityAmtChange       = charityAmtChange;
+window.setCharityAmt          = setCharityAmt;
+window.proceedCharityPayment  = proceedCharityPayment;
+window.showReferProviderModal = showReferProviderModal;
+window.awardWalletPoints      = awardWalletPoints;
+window.openGratitudeModal     = openGratitudeModal;
+window.closeGratitudeModal    = closeGratitudeModal;
+window.sendGratitudeWhatsApp  = sendGratitudeWhatsApp;
+window.copyGratitudeMessage   = copyGratitudeMessage;
+window.hmLoadWalletBalance    = hmLoadWalletBalance;
+window.hmToggleWalletPts      = hmToggleWalletPts;
+window.hmUpdateTotalWithWallet= hmUpdateTotalWithWallet;
+window.redeemPointsForUpgrade = redeemPointsForUpgrade;
+window.hmSetAmt               = hmSetAmt;
+
+// ==================== CHECK REFERRAL ON LOAD ====================
+(function checkReferral() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+        // Store referrer in localStorage for when user registers
+        localStorage.setItem('referredBy', ref);
+    }
+})();
+</script>
+
+<script>
+// ══════════════════════════════════════════════
+// PAGE-INFO: FAQ + AI CHATBOT
+// ══════════════════════════════════════════════
+
+// Build FAQ accordion
+const FAQ_DATA = [
+  ["Is Sudarshan Chakra India free to use?", "Browsing and searching for providers is completely free for seekers. Providers can register and list a basic profile at no cost. Premium membership tiers (Professional and Elite) are available for providers who want greater visibility — and earned Wallet points can be used to offset the upgrade cost."],
+  ["How do I login? Is a password required?", "We use secure mobile OTP login — no password needed. Enter your 10-digit mobile number, receive a 6-digit SMS code, enter it and you are in. Your session stays active across visits so you won't need to login every time on the same device."],
+  ["Is my personal information safe?", "Yes. Your mobile number is used only for OTP verification and is never displayed publicly. Identity verification documents are seen exclusively by our admin team and are never shared publicly. We do not sell your data to any third party under any circumstances."],
+  ["How does the Wallet and Reward Points system work?", "You earn points for daily logins (2 pts), leaving reviews (5 pts), completing bookings, and referring new users. Points accumulate in your Wallet and can be redeemed to reduce membership upgrade fees. You can also donate points to our Charity program to fund skill training for underprivileged youth."],
+  ["What is the Verified badge and how do I get it?", "The Verified badge (✅) is awarded to providers who upload a valid government ID (Aadhaar, Driving Licence, Voter ID, PAN or Passport) for admin review. Once approved, the badge appears on your profile and significantly increases seeker trust and booking rates."],
+  ["Can I use the app in my regional language?", "Absolutely! The app fully supports 12 languages: English, Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia and Assamese. Tap 🌏 in the navigation bar at any time to switch — the entire app updates instantly."],
+  ["How do I report a problem with a provider?", "On any provider's profile, tap the 🚩 Report button, describe your concern and submit. Our admin team reviews all reports within 24 hours. Providers with repeated or serious reports are investigated and may be suspended or removed."],
+  ["What is the Charity program and how does it work?", "The Charity program lets you donate your earned Wallet points to a fund that sponsors vocational skill training for underprivileged youth. Even a small donation helps fund a training programme that can transform someone's livelihood. Donate from the Wallet section of your profile."],
+  ["How does the Referral program work?", "Every registered user gets a unique referral link in their Wallet page. Share it with friends. When they register as a provider through your link, you earn Wallet points and a commission bonus. Track all referrals and earnings in your Wallet dashboard."],
+  ["What if a provider doesn't show up or does poor work?", "Leave an honest review with your star rating — this protects the next seeker. Use the Report feature for serious issues. For booking disputes, contact us at support@sudarshanchakraindia.com and our team will mediate. Building a transparent, accountable community is at our core."],
+  ["How do I install the app on my phone?", "Sudarshan Chakra India is a Progressive Web App (PWA). On Android: open in Chrome → tap three-dot menu → Add to Home Screen. On iPhone: open in Safari → tap Share → Add to Home Screen. The app icon appears on your home screen just like a native app and works offline too."]
 ];
 
-// Install — cache core files
-self.addEventListener('install', event => {
-  self.skipWaiting(); // Activate immediately
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(URLS_TO_CACHE))
-  );
-});
+function buildFAQ() {
+  const el = document.getElementById('faqList');
+  if (!el) return;
+  el.innerHTML = FAQ_DATA.map((faq, i) => `
+    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <button onclick="toggleFAQ(${i})" id="faq-btn-${i}"
+        class="w-full text-left px-4 py-3 flex justify-between items-center gap-3 hover:bg-orange-50 transition-colors">
+        <span class="font-semibold text-sm text-gray-800">${faq[0]}</span>
+        <span id="faq-ico-${i}" class="text-orange-500 font-bold text-xl flex-shrink-0 transition-transform">+</span>
+      </button>
+      <div id="faq-ans-${i}" class="hidden px-4 pb-4 text-xs text-gray-600 leading-relaxed border-t border-gray-100 pt-3">${faq[1]}</div>
+    </div>
+  `).join('');
+}
 
-// Activate — delete ALL old caches
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      )
-    ).then(() => self.clients.claim()) // Take control immediately
-  );
-});
+function toggleFAQ(i) {
+  const ans = document.getElementById('faq-ans-' + i);
+  const ico = document.getElementById('faq-ico-' + i);
+  if (!ans) return;
+  const isOpen = !ans.classList.contains('hidden');
+  // Close all
+  FAQ_DATA.forEach((_, j) => {
+    const a = document.getElementById('faq-ans-' + j);
+    const c = document.getElementById('faq-ico-' + j);
+    if (a) a.classList.add('hidden');
+    if (c) { c.textContent = '+'; c.style.transform = ''; }
+  });
+  if (!isOpen) {
+    ans.classList.remove('hidden');
+    ico.textContent = '×';
+  }
+}
 
-// Fetch — network first, fallback to cache
-// This ensures users always get fresh files
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Update cache with fresh response
-        if (response && response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
-        }
-        return response;
+// Build FAQ when page-info becomes visible (called from nav button onclick)
+// ── AI CHATBOT ──
+const INFO_CHAT_SYS = `You are the helpful AI guide for Sudarshan Chakra India, a hyperlocal service marketplace app for India.
+
+KEY APP FACTS:
+- Connects service seekers (people needing home services) with service providers (skilled workers)
+- 12 Indian languages: English, Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese — tap 🌏 to switch
+- Login: mobile OTP only — enter 10-digit number, get 6-digit SMS code, no password needed
+- 50+ service categories: Plumbing, Electrical, Beauty, Tutoring, AC Repair, Carpentry, Painting, Cooking, etc.
+- Provider registration: name, mobile, category, religion, languages spoken, hourly rate, working hours, service area, bio, photo, ID verification (optional → gets ✅ Verified badge)
+- Membership tiers: Basic (free), Professional, Elite — higher = better visibility and priority listing
+- Wallet points: daily login (2pts), reviews (5pts), referrals, bookings — redeemable against membership fees
+- Verified badge: upload Aadhaar/DL/Voter ID → admin reviews → badge appears on profile
+- Charity: donate Wallet points to fund skill training for underprivileged youth
+- Referral: unique link in Wallet page; earn points when others register as providers through it
+- Portfolio: providers upload up to 10 work photos after login
+- Booking: tap provider → Hire Now → fill date/location/details → submit
+- Call: tap 📞 on profile → opens phone dialer directly
+- WhatsApp: tap 💬 on profile → opens WhatsApp with pre-filled message
+- Report: tap 🚩 on profile → admin reviews within 24hrs
+- Gratitude tip: send a tip to exceptional provider via Gratitude button
+- Reviews: only real users who interacted with provider can leave reviews; star rating + written feedback
+- In-app chat: real-time messaging between seeker and provider
+- Voice search: tap 🎤, speak service name in any language
+- Map: shows providers near your location interactively
+- PWA: installable on phone home screen — works offline (Android: Chrome menu → Add to Home Screen; iPhone: Safari Share → Add to Home Screen)
+
+TONE: Warm, friendly, concise, helpful. Use emojis occasionally. Answer in whatever language the user writes in. If unsure about anything, suggest emailing support@sudarshanchakraindia.com.`;
+
+let infoChatHist = [];
+
+async function infoChatSend() {
+  const inp = document.getElementById('infoChatInput');
+  const msg = (inp ? inp.value : '').trim();
+  if (!msg) return;
+  inp.value = '';
+  const sendBtn = document.getElementById('infoChatSend');
+  if (sendBtn) sendBtn.disabled = true;
+
+  addInfoMsg(msg, 'user');
+  infoChatHist.push({ role: 'user', content: msg });
+  const typing = addInfoMsg('…', 'bot');
+
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        system: INFO_CHAT_SYS,
+        messages: infoChatHist.slice(-10)
       })
-      .catch(() => {
-        // Offline fallback — serve from cache
-        return caches.match(event.request);
-      })
-  );
-});
+    });
+    const d = await r.json();
+    const reply = (d.content && d.content[0] && d.content[0].text)
+      ? d.content[0].text
+      : 'Sorry, I could not answer that right now. Please try again or email support@sudarshanchakraindia.com 🙏';
+    typing.textContent = reply;
+    typing.classList.remove('opacity-50');
+    infoChatHist.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    typing.textContent = 'Connection issue — please try again in a moment. 🙏';
+    typing.classList.remove('opacity-50');
+  }
+  if (sendBtn) sendBtn.disabled = false;
+}
+
+function infoQuick(text) {
+  const inp = document.getElementById('infoChatInput');
+  if (inp) inp.value = text;
+  infoChatSend();
+}
+
+function addInfoMsg(text, type) {
+  const container = document.getElementById('infoChatMessages');
+  if (!container) return { textContent: '', classList: { remove: ()=>{} } };
+  const wrap = document.createElement('div');
+  wrap.className = 'flex gap-2' + (type === 'user' ? ' justify-end' : '');
+  const bubble = document.createElement('div');
+  bubble.textContent = text;
+  if (type === 'user') {
+    bubble.className = 'bg-orange-500 text-white rounded-2xl rounded-tr-sm px-3 py-2 max-w-xs leading-relaxed text-xs';
+  } else {
+    bubble.className = 'bg-white/15 text-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-xs leading-relaxed text-xs';
+  }
+  wrap.appendChild(bubble);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+  return bubble;
+}
+</script>
+
+</body>
+</html>
