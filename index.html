@@ -267,7 +267,7 @@
                 <button data-i18n="home" onclick="showPage('home')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Home</button>
                 <button data-i18n="browse" onclick="showPage('browse')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Browse</button>
                 <button data-i18n="map" onclick="showPage('map')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Map</button>
-                <button data-i18n="aboutNav" onclick="showPage('info')" class="px-3 py-2 text-orange-600 hover:text-orange-800 font-medium text-sm">ℹ️ About</button>
+                <button data-i18n="aboutNav" onclick="showPage('info'); buildFAQ();" class="px-3 py-2 text-orange-600 hover:text-orange-800 font-medium text-sm">ℹ️ About</button>
                 <!-- Show register/admin buttons only when NOT logged in -->
                 <div id="navGuestButtons" class="flex gap-2 items-center">
                     <button data-i18n="registerProvider" onclick="showPage('register')" class="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">Register Provider</button>
@@ -1747,8 +1747,8 @@
             <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
               <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📞 Get in Touch</h4>
               <div class="space-y-2 text-xs">
-                <div class="flex gap-2 items-start"><span class="flex-shrink-0">✉️</span><div><a href="mailto:support@sudarshanchakraindia.com" class="text-orange-600">support@sudarshanchakraindia.com</a><div class="text-gray-400">General support and queries</div></div></div>
-                <div class="flex gap-2 items-start"><span class="flex-shrink-0">🤝</span><div><a href="mailto:partners@sudarshanchakraindia.com" class="text-orange-600">partners@sudarshanchakraindia.com</a><div class="text-gray-400">Business partnerships</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">✉️</span><div><a href="/cdn-cgi/l/email-protection#1c6f696c6c736e685c6f69787d6e6f747d727f747d776e7d757278757d327f7371" class="text-orange-600"><span class="__cf_email__" data-cfemail="25565055554a5751655650414457564d444b464d444e57444c4b414c440b464a48">[email&#160;protected]</span></a><div class="text-gray-400">General support and queries</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">🤝</span><div><a href="/cdn-cgi/l/email-protection#a2d2c3d0d6ccc7d0d1e2d1d7c6c3d0d1cac3ccc1cac3c9d0c3cbccc6cbc38cc1cdcf" class="text-orange-600"><span class="__cf_email__" data-cfemail="93e3f2e1e7fdf6e1e0d3e0e6f7f2e1e0fbf2fdf0fbf2f8e1f2fafdf7faf2bdf0fcfe">[email&#160;protected]</span></a><div class="text-gray-400">Business partnerships</div></div></div>
                 <div class="flex gap-2 items-start"><span class="flex-shrink-0">💡</span><span class="text-gray-600">Have a feature idea? Tap 👎 in the app or email us — our best features come from the community.</span></div>
               </div>
             </div>
@@ -1801,7 +1801,7 @@
     </div>
     <!-- ═══════════ END PAGE-INFO ═══════════ -->
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // ==================== DATA & INITIALIZATION ====================
         let currentLanguage = localStorage.getItem('language') || 'en';
         let providers = []; // Populated from Firebase Realtime Database
@@ -8566,15 +8566,7 @@ function toggleFAQ(i) {
   }
 }
 
-// Build FAQ when page-info becomes visible
-const _origShowPage = showPage;
-function showPage(pageName) {
-  _origShowPage(pageName);
-  if (pageName === 'info') {
-    buildFAQ();
-  }
-}
-
+// Build FAQ when page-info becomes visible (called from nav button onclick)
 // ── AI CHATBOT ──
 const INFO_CHAT_SYS = `You are the helpful AI guide for Sudarshan Chakra India, a hyperlocal service marketplace app for India.
 
@@ -8656,9 +8648,9 @@ function addInfoMsg(text, type) {
   const bubble = document.createElement('div');
   bubble.textContent = text;
   if (type === 'user') {
-    bubble.className = 'bg-orange-500 text-white rounded-2xl rounded-tr-sm px-3 py-2 max-w-xs leading-relaxed';
+    bubble.className = 'bg-orange-500 text-white rounded-2xl rounded-tr-sm px-3 py-2 max-w-xs leading-relaxed text-xs';
   } else {
-    bubble.className = 'bg-white/15 text-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-xs leading-relaxed opacity-50';
+    bubble.className = 'bg-white/15 text-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-xs leading-relaxed text-xs';
   }
   wrap.appendChild(bubble);
   container.appendChild(wrap);
