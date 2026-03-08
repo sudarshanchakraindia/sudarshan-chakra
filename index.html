@@ -270,25 +270,6 @@
                 <div id="navAuthBtn">
                     <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>
                 </div>
-                <script>
-                // Instantly restore avatar from localStorage before Firebase loads
-                // Prevents "Login" flash for returning users
-                (function(){
-                    try {
-                        const uid  = localStorage.getItem('sc_auth_uid');
-                        const name = localStorage.getItem('sc_auth_name') || '';
-                        if (uid && name) {
-                            const ini = name.trim().split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'U';
-                            document.getElementById('navAuthBtn').innerHTML =
-                                '<div class="flex items-center gap-2 cursor-pointer" onclick="showPage('myProfile')" title="'+name+'">' +
-                                '<div class="w-8 h-8 rounded-full bg-orange-400 text-white flex items-center justify-center text-sm font-bold opacity-80">'+ini+'</div>' +
-                                '</div>';
-                            const wb = document.getElementById('walletNavBtn');
-                            if (wb) wb.classList.remove('hidden');
-                        }
-                    } catch(e) {}
-                })();
-                </script>
             </div>
         </div>
     </nav>
@@ -355,8 +336,8 @@
 
             <!-- Motivational Join Strip -->
             <div class="bg-gradient-to-r from-orange-600 to-orange-500 rounded-2xl p-5 mb-10 text-white text-center shadow-lg">
-                <div class="text-lg font-bold mb-1">🔱 Join Sudarshan Chakra Today!</div>
-                <div class="text-sm opacity-90 mb-3">Be part of India's growing skilled workforce network — get work, earn money, build reputation</div>
+                <div class="text-lg font-bold mb-1" data-i18n="joinTitle">🔱 Join Sudarshan Chakra Today!</div>
+                <div class="text-sm opacity-90 mb-3" data-i18n="joinSubtitle">Be part of India's growing skilled workforce network — get work, earn money, build reputation</div>
                 <div class="flex gap-3 justify-center flex-wrap">
                     <button onclick="showPage('register')" class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition">👷 Register as Provider</button>
                     <button onclick="showPage('seeker')" class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition">🙋 Register as Seeker</button>
@@ -777,7 +758,7 @@
                         <label for="providerPhoto" class="absolute bottom-0 right-0 bg-orange-600 text-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer shadow-md hover:bg-orange-700 transition">
                             📷
                         </label>
-                        <input type="file" id="providerPhoto" accept="image/*" capture="user" class="hidden" onchange="previewProviderPhoto(this)">
+                        <input type="file" id="providerPhoto" accept="image/*" class="hidden" onchange="previewProviderPhoto(this)">
                     </div>
                     <p class="text-sm text-gray-500 mt-2">Upload your profile photo (optional)</p>
                 </div>
@@ -793,7 +774,7 @@
                     </div>
                     <!-- PHASE E: WhatsApp Number -->
                     <div>
-                        <label class="block text-gray-700 font-medium mb-2">WhatsApp Number <span class="text-gray-400 font-normal">(if different from mobile)</span></label>
+                        <label class="block text-gray-700 font-medium mb-2" data-i18n="whatsappLabel">WhatsApp Number (if different from mobile)</label>
                         <div class="flex items-center border rounded-lg overflow-hidden">
                             <span class="bg-green-500 text-white px-3 py-2 text-lg">💬</span>
                             <input type="tel" id="providerWhatsapp" pattern="[0-9]{10}" placeholder="10-digit number" class="flex-1 px-3 py-2 outline-none">
@@ -814,7 +795,7 @@
                         <p class="text-xs text-gray-400 mt-1">You can offer multiple service types</p>
                     </div>
                     <div>
-                        <label class="block text-gray-700 font-medium mb-2">Religion *</label>
+                        <label class="block text-gray-700 font-medium mb-2" data-i18n="religion">Religion *</label>
                         <select id="providerReligion" required class="w-full px-4 py-2 border rounded-lg">
                             <option value="">Select Religion</option>
                             <option value="Hindu">Hindu 🕉️</option>
@@ -828,7 +809,7 @@
                     
                     <!-- PHASE B: Language Field - Multi-select -->
                     <div class="md:col-span-2">
-                        <label class="block text-gray-700 font-medium mb-2">🗣️ Languages Spoken * <span class="text-sm text-gray-400 font-normal">(select all you speak)</span></label>
+                        <label class="block text-gray-700 font-medium mb-2" data-i18n="langSpoken">🗣️ Languages Spoken</label>
                         <div id="providerLanguageChips" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
                             <label class="lang-chip"><input type="checkbox" name="providerLang" value="English"><span>🇬🇧 English</span></label>
                             <label class="lang-chip"><input type="checkbox" name="providerLang" value="Hindi"><span>हिंदी</span></label>
@@ -896,7 +877,7 @@
                 
                 <!-- PHASE E: Short Bio -->
                 <div class="mt-4">
-                    <label class="block text-gray-700 font-medium mb-2">About You / Bio <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <label class="block text-gray-700 font-medium mb-2" data-i18n="bioLabel">About You / Bio (optional)</label>
                     <textarea id="providerBio" rows="3" maxlength="250" placeholder="Tell customers about your skills, experience and what makes you special... (max 250 characters)" class="w-full px-4 py-2 border rounded-lg resize-none" oninput="document.getElementById('bioCount').textContent=this.value.length"></textarea>
                     <p class="text-xs text-gray-400 text-right"><span id="bioCount">0</span>/250</p>
                 </div>
@@ -920,12 +901,12 @@
                 </div>
                 
                 <div class="mt-6">
-                    <button type="submit" class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 text-lg">Register Now</button>
+                    <button type="submit" class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 text-lg" data-i18n="registerProviderBtn">Register as Provider</button>
                 </div>
 
                 <!-- PHASE G: ID Proof Upload -->
                 <div class="mt-6 border-t pt-6">
-                    <h3 class="font-bold text-gray-800 text-lg mb-1">🪪 Identity Verification <span class="text-sm font-normal text-gray-500">(Optional — can be done later)</span></h3>
+                    <h3 class="font-bold text-gray-800 text-lg mb-1" data-i18n="idVerify">🪪 Identity Verification</h3>
                     <p class="text-sm text-gray-500 mb-4">Upload your Aadhaar Card or Driving License. This is seen only by admin and helps you earn a ✅ Verified badge. Your document will never be shared publicly.</p>
                     <div class="grid md:grid-cols-2 gap-4">
                         <div>
@@ -1413,37 +1394,18 @@
 
             <!-- Step 2: Enter OTP -->
             <div id="loginStep2" class="p-6 hidden">
-                <div class="text-center mb-5">
-                    <div class="text-4xl mb-2">📲</div>
-                    <p class="text-gray-700 font-semibold">OTP sent to</p>
-                    <p class="text-orange-600 font-bold text-lg" id="loginPhoneDisplay"></p>
-                    <p class="text-xs text-gray-400 mt-1">Enter the 6-digit code · Auto-verifies when complete</p>
+                <div class="text-center mb-4">
+                    <div class="text-3xl mb-2">📲</div>
+                    <p class="text-gray-700 font-medium">OTP sent to <span id="loginPhoneDisplay" class="text-orange-600 font-bold"></span></p>
+                    <p class="text-sm text-gray-500 mt-1">Enter the 6-digit code</p>
                 </div>
-                <!-- 6 individual OTP digit boxes -->
-                <div class="flex gap-2 justify-center mb-5" id="otpBoxesRow">
-                    <input type="tel" inputmode="numeric" maxlength="1" autocomplete="one-time-code"
-                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
-                        oninput="otpBoxInput(this,0)" onkeydown="otpBoxKey(event,0)">
-                    <input type="tel" inputmode="numeric" maxlength="1"
-                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
-                        oninput="otpBoxInput(this,1)" onkeydown="otpBoxKey(event,1)">
-                    <input type="tel" inputmode="numeric" maxlength="1"
-                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
-                        oninput="otpBoxInput(this,2)" onkeydown="otpBoxKey(event,2)">
-                    <input type="tel" inputmode="numeric" maxlength="1"
-                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
-                        oninput="otpBoxInput(this,3)" onkeydown="otpBoxKey(event,3)">
-                    <input type="tel" inputmode="numeric" maxlength="1"
-                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
-                        oninput="otpBoxInput(this,4)" onkeydown="otpBoxKey(event,4)">
-                    <input type="tel" inputmode="numeric" maxlength="1"
-                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
-                        oninput="otpBoxInput(this,5)" onkeydown="otpBoxKey(event,5)">
+                <div class="flex gap-2 justify-center mb-5">
+                    <input type="tel" id="otpInput" maxlength="6" placeholder="— — — — — —"
+                        class="w-full text-center border-2 rounded-xl px-4 py-4 text-2xl font-bold tracking-widest focus:ring-2 focus:ring-orange-400 outline-none"
+                        oninput="this.value=this.value.replace(/\D/g,'').substring(0,6)">
                 </div>
-                <!-- Hidden input keeps verifyOTP() working unchanged -->
-                <input type="hidden" id="otpInput">
                 <button onclick="verifyOTP()" id="verifyOtpBtn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition text-lg">
-                    ✅ Verify & Login
+                    Verify & Login
                 </button>
                 <div class="text-center mt-3 min-h-[26px]">
                     <p id="resendCountdown" class="text-sm text-gray-500">Resend OTP in <span id="resendTimer" class="font-bold text-orange-500">30</span>s</p>
@@ -2339,6 +2301,92 @@
             'statClients':      { en:'Happy Clients', hi:'खुश ग्राहक', bn:'সন্তুষ্ট গ্রাহক', gu:'ખુशी ગ્રাહક', mr:'आनंदी ग्राहक', kn:'ಸಂತುಷ್ಟ ಗ್ರಾಹಕರು', te:'సంతృప్తి కస్టమర్లు', ml:'സന്തുഷ്ടരായ ഉപഭോക്താക്കൾ', ta:'மகிழ்ச்சியான வாடிக்கையாளர்கள்', pa:'ਖੁਸ਼ ਗ੍ਰਾਹਕ', or:'ଖୁସି ଗ୍ରାହକ', as:'সুখী গ্ৰাহক' },
             'statVerified':     { en:'Verified reviews', hi:'सत्यापित समीक्षाएं', bn:'যাচাইকৃত রিভিউ', gu:'ચકাसेला সमीক्षा', mr:'सत्यापित समीक्षा', kn:'ಪರಿಶೀಲಿತ ಶ್ಲಾಘನೆಗಳು', te:'ధృవీకరించిన సమీక్షలు', ml:'സ്ഥിരീകരിച്ച അഭിപ്രായങ്ങൾ', ta:'சரிபார்க்கப்பட்ட மதிப்பீடுகள்', pa:'ਪ੍ਰਮਾਣਿਤ ਸਮੀਖਿਆਵਾਂ', or:'ଯାଞ୍ଚ ସମୀକ୍ଷା', as:'পৰীক্ষিত মন্তব্য' },
             'managePlan':       { en:'Manage Membership Plan', hi:'सदस्यता योजना प्रबंधित करें', bn:'সদস্যতা পরিকল্পনা পরিচালনা করুন', gu:'સભ્યપદ યોજના', mr:'सदस्यता योजना व्यवस्थापित करा', kn:'ಸದಸ್ಯತ್ವ ಯೋಜನೆ', te:'సభ్యత్వ ప్రణాళిక', ml:'അംഗത്വ പദ്ധതി', ta:'உறுப்பினர் திட்டம்', pa:'ਮੈਂਬਰਸ਼ਿਪ ਯੋਜਨਾ', or:'ସଦସ୍ୟ ଯୋଜନା', as:'সদস্যতা পৰিকল্পনা' }
+            // ─── Join Banner ───────────────────────────────────────────
+            'joinTitle':     { en:'🔱 Join Sudarshan Chakra Today!',
+                               hi:'🔱 आज ही सुदर्शन चक्र से जुड़ें!',
+                               bn:'🔱 আজই সুদর্শন চক্রে যোগ দিন!',
+                               gu:'🔱 આজ સુદર્શન ચક્ર સાથે જોડાઓ!',
+                               mr:'🔱 आज सुदर्शन चक्रात सामील व्हा!',
+                               kn:'🔱 ಇಂದೇ ಸುದರ್ಶನ ಚಕ್ರಕ್ಕೆ ಸೇರಿ!',
+                               te:'🔱 నేడే సుదర్శన చక్రలో చేరండి!',
+                               ml:'🔱 ഇന്ന് സുദർശൻ ചക്രയിൽ ചേരൂ!',
+                               ta:'🔱 இன்றே சுதர்சன சக்ரத்தில் சேருங்கள்!',
+                               pa:'🔱 ਅੱਜ ਹੀ ਸੁਦਰਸ਼ਨ ਚੱਕਰ ਨਾਲ ਜੁੜੋ!',
+                               or:'🔱 ଆଜି ସୁଦର୍ଶନ ଚକ୍ରକୁ ଯୋଗ ଦିଅ!',
+                               as:'🔱 আজিয়েই সুদৰ্শন চক্ৰত যোগ দিয়ক!' },
+            'joinSubtitle':  { en:"Be part of India's growing skilled workforce — get work, earn money, build reputation",
+                               hi:'भारत के बढ़ते कुशल कार्यबल का हिस्सा बनें — काम पाएं, पैसा कमाएं, प्रतिष्ठा बनाएं',
+                               bn:'ভারতের ক্রমবর্ধমান দক্ষ কর্মী নেটওয়ার্কের অংশ হন',
+                               gu:'ભારતના કુશળ કામદાર નેટવર્કનો ભાગ બનો',
+                               mr:'भारताच्या कुशल कामगार नेटवर्कचा भाग व्हा',
+                               kn:'ಭಾರತದ ಕೌಶಲ್ಯ ಕಾರ್ಮಿಕ ನೆಟ್ವರ್ಕ್ ಭಾಗವಾಗಿ',
+                               te:'భారత నైపుణ్య కార్మిక నెట్‌వర్క్‌లో చేరండి',
+                               ml:'ഭാരതത്തിന്റെ നൈപുണ്യ തൊഴിലാളി ശൃംഖലയുടെ ഭാഗമാകൂ',
+                               ta:'இந்தியாவின் திறமையான தொழிலாளர் நெட்வொர்க்கில் சேருங்கள்',
+                               pa:'ਭਾਰਤ ਦੇ ਕੁਸ਼ਲ ਕਾਮਗਾਰ ਨੈੱਟਵਰਕ ਦਾ ਹਿੱਸਾ ਬਣੋ',
+                               or:'ଭାରତର ଦକ୍ଷ ଶ୍ରମ ନେଟୱାର୍କର ଅଂଶ ହୁଅ',
+                               as:'ভাৰতৰ দক্ষ কৰ্মী নেটৱৰ্কৰ অংশ হওক' },
+            // ─── Provider Registration Form ────────────────────────────────
+            'whatsappLabel': { en:'WhatsApp Number (if different from mobile)',
+                               hi:'व्हाट्सएप नंबर (मोबाइल से अलग होने पर)',
+                               bn:'হোয়াটসঅ্যাপ নম্বর (মোবাইল থেকে আলাদা হলে)',
+                               gu:'WhatsApp નંબર (મોબાઈલથી અલગ હોય તો)',
+                               mr:'WhatsApp नंबर (मोबाइलपेक्षा वेगळा असल्यास)',
+                               kn:'WhatsApp ಸಂಖ್ಯೆ (ಮೊಬೈಲ್‌ನಿಂದ ಭಿನ್ನವಾಗಿದ್ದರೆ)',
+                               te:'WhatsApp నంబర్ (మొబైల్ కంటే వేరుగా ఉంటే)',
+                               ml:'WhatsApp നംബർ (മൊബൈലിൽ നിന്ന് വ്യത്യസ്തമാണെങ്കിൽ)',
+                               ta:'WhatsApp எண் (மொபைலிலிருந்து வேறுபட்டால்)',
+                               pa:'WhatsApp ਨੰਬਰ (ਮੋਬਾਈਲ ਤੋਂ ਵੱਖ ਹੋਣ ਤੇ)',
+                               or:'WhatsApp ନଂ (ମୋବାଇଲ ଠୁ ଅଲଗ ହେଲେ)',
+                               as:'WhatsApp নং (মোবাইলৰ পৰা বেলেগ হলে)' },
+            'langSpoken':    { en:'🗣️ Languages Spoken',
+                               hi:'🗣️ बोली जाने वाली भाषाएं',
+                               bn:'🗣️ কথা বলা ভাষাসমূহ',
+                               gu:'🗣️ બોલાતી ભાષાઓ',
+                               mr:'🗣️ बोलल्या जाणाऱ्या भाषा',
+                               kn:'🗣️ ಮಾತನಾಡುವ ಭಾಷೆಗಳು',
+                               te:'🗣️ మాట్లాడే భాషలు',
+                               ml:'🗣️ സംസാരിക്കുന്ന ഭാഷകൾ',
+                               ta:'🗣️ பேசப்படும் மொழிகள்',
+                               pa:'🗣️ ਬੋਲੀਆਂ ਜਾਣ ਵਾਲੀਆਂ ਭਾਸ਼ਾਵਾਂ',
+                               or:'🗣️ କଥା ହେଉଥିବା ଭାଷା',
+                               as:'🗣️ কোৱা ভাষাসমূহ' },
+            'bioLabel':      { en:'About You / Bio (optional)',
+                               hi:'अपने बारे में / बायो (वैकल्पिक)',
+                               bn:'আপনার সম্পর্কে / বায়ো (ঐচ্ছিক)',
+                               gu:'તમારા વિશે / બાયો (વૈકલ્પિક)',
+                               mr:'स्वतःबद्दल / बायो (पर्यायी)',
+                               kn:'ನಿಮ್ಮ ಬಗ್ಗೆ / ಬಯೋ (ಐಚ್ಛಿಕ)',
+                               te:'మీ గురించి / బయో (ఐచ్ఛికం)',
+                               ml:'നിങ്ങളെക്കുറിച്ച് / ബയോ (ഐഛിക)',
+                               ta:'உங்களைப் பற்றி / பயோ (விருப்பம்)',
+                               pa:'ਆਪਣੇ ਬਾਰੇ / ਬਾਇਓ (ਵਿਕਲਪਿਕ)',
+                               or:'ନିଜ ବିଷୟରେ / ବାୟୋ (ଐଚ୍ଛିକ)',
+                               as:'আপোনাৰ বিষয়ে / বায়ো (ঐচ্ছিক)' },
+            'idVerify':      { en:'🪪 Identity Verification',
+                               hi:'🪪 पहचान सत्यापन',
+                               bn:'🪪 পরিচয় যাচাইকরণ',
+                               gu:'🪪 ઓળખ ચકાસણી',
+                               mr:'🪪 ओळख पडताळणी',
+                               kn:'🪪 ಗುರುತು ಪರಿಶೀಲನೆ',
+                               te:'🪪 గుర్తింపు ధృవీకరణ',
+                               ml:'🪪 ഐഡൻ്റിറ്റി പരിശോധന',
+                               ta:'🪪 அடையாள சரிபார்ப்பு',
+                               pa:'🪪 ਪਛਾਣ ਪੁਸ਼ਟੀ',
+                               or:'🪪 ପରିଚୟ ଯାଞ୍ଚ',
+                               as:'🪪 পৰিচয় যাচাইকৰণ' },
+            'registerProviderBtn': { en:'Register as Provider',
+                               hi:'सेवादाता के रूप में पंजीकरण करें',
+                               bn:'সেবাদাতা হিসেবে নিবন্ধন করুন',
+                               gu:'સેવાદાતા તરીકે નોંધણી કરો',
+                               mr:'सेवा देणारा म्हणून नोंदणी करा',
+                               kn:'ಸೇವಾ ಒದಗಿಸುವವರಾಗಿ ನೋಂದಾಯಿಸಿ',
+                               te:'సేవా అందించేవారిగా నమోదు చేయండి',
+                               ml:'സേവനദാതാവായി രജിസ്ടർ ചെയ്യൂ',
+                               ta:'சேவையாளராக பதிவு செய்யுங்கள்',
+                               pa:'ਸੇਵਾਦਾਤੇ ਵਜੋਂ ਰਜਿਸਟਰ ਕਰੋ',
+                               or:'ସେବାଦାତା ରୂପେ ପଞ୍ଜୀକରଣ କରନ୍ତୁ',
+                               as:'সেৱাদাতা হিচাপে নিবন্ধন কৰক' },
         };
         
         // Translation helper function with variable substitution
@@ -3291,6 +3339,10 @@
                 if (text.includes('Rate') && text.includes('*')) label.setAttribute('data-i18n', 'rate');
                 if (text === 'Location/Address *') label.setAttribute('data-i18n', 'location');
                 if (text === 'Set Your Location on Map') label.setAttribute('data-i18n', 'setLocation');
+                // Additional registration form labels
+                if (text.includes('WhatsApp Number')) label.setAttribute('data-i18n', 'whatsappLabel');
+                if (text.includes('Languages Spoken')) label.setAttribute('data-i18n', 'langSpoken');
+                if (text.includes('About You') || text.includes('Bio')) label.setAttribute('data-i18n', 'bioLabel');
             });
             
             // Mark buttons
@@ -3697,7 +3749,7 @@
                         <div class="flex items-center gap-1"><span>💰</span><span class="font-semibold text-gray-800">₹${p.rate}/${hrLabel}</span></div>
                     </div>
                     <div class="px-4 pb-4 grid grid-cols-2 gap-2">
-                        <a href="tel:+91${p.mobile.replace(/^\+91/,'')}" onclick="if(!navigator.userAgent.match(/Mobile|Android|iPhone/i)){event.preventDefault();alert(t('callBtn')+': '+p.mobile)}" class="bg-green-600 text-white text-center py-2.5 rounded-xl hover:bg-green-700 font-medium text-sm transition" style="text-decoration:none;">${t('callBtn')}</a>
+                        <a href="tel:+91${p.mobile.replace(/^\+91/,'')}"  class="bg-green-600 text-white text-center py-2.5 rounded-xl hover:bg-green-700 font-medium text-sm transition" style="text-decoration:none;">${t('callBtn')}</a>
                         <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-2.5 rounded-xl hover:bg-green-600 font-medium text-sm transition" style="text-decoration:none;">${t('whatsappBtn')}</a>
                         ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-2.5 rounded-xl hover:bg-blue-700 font-medium text-sm transition" style="text-decoration:none;">${t('directionsBtn')}</a>` : '<div></div>'}
                         <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">${t('reviewBtn')}</button>
@@ -5538,43 +5590,33 @@
 
         // ==================== PHASE F: LOGIN MODAL ====================
         function openLoginModal() {
-            // Already logged in — go to profile
-            if (firebaseUser) { closeLoginModal(); showPage('myProfile'); return; }
-
             document.getElementById('loginModal').classList.remove('hidden');
             document.getElementById('loginStep1').classList.remove('hidden');
             document.getElementById('loginStep2').classList.add('hidden');
             document.getElementById('loginStep3').classList.add('hidden');
-            // Clear OTP boxes
-            document.querySelectorAll('.otp-box').forEach(b => b.value = '');
-            const hiddenOtp = document.getElementById('otpInput');
-            if (hiddenOtp) hiddenOtp.value = '';
-
-            // Pre-fill phone from last session
+            document.getElementById('otpInput') && (document.getElementById('otpInput').value = '');
+            // Pre-fill phone if user verified today
             try {
                 const savedPhone = localStorage.getItem('sc_auth_phone') || '';
                 const savedDate  = localStorage.getItem('sc_otp_date') || '';
                 const today      = new Date().toLocaleDateString('en-IN');
                 const phoneInput = document.getElementById('loginPhone');
                 if (savedPhone && phoneInput) {
+                    // Strip +91 prefix for the input field (expects 10 digits)
                     phoneInput.value = savedPhone.replace(/^\+91/, '');
-                    // Focus Send OTP button since phone is pre-filled
-                    setTimeout(() => { const b = document.getElementById('sendOtpBtn'); if(b) b.focus(); }, 100);
-                } else if (phoneInput) {
-                    setTimeout(() => phoneInput.focus(), 100);
                 }
+                // Show "already verified today" hint
                 const hintEl = document.getElementById('otpDateHint');
                 if (hintEl) {
                     if (savedPhone && savedDate === today) {
-                        hintEl.textContent = '✅ Phone pre-filled · Tap Send OTP to continue';
+                        hintEl.textContent = '✅ You verified today — just send OTP again to resume.';
                         hintEl.className   = 'text-xs text-green-600 mt-1 text-center';
                     } else {
                         hintEl.textContent = '';
                     }
                 }
             } catch(e) {}
-            // Pre-warm reCAPTCHA so it is ready instantly when user taps Send OTP
-            setTimeout(() => { if (!_recaptchaVerifier) setupRecaptcha(); }, 300);
+            // Don't setup reCAPTCHA here - do it when user clicks Send OTP
         }
 
         function closeLoginModal() {
@@ -5584,53 +5626,6 @@
                 _recaptchaVerifier = null;
             }
         }
-
-        // ── OTP Box navigation helpers ──────────────────────────────
-        function otpBoxInput(el, idx) {
-            // Keep only digits
-            el.value = el.value.replace(/\D/g, '').slice(-1);
-            // Update hidden combined input
-            const boxes = document.querySelectorAll('.otp-box');
-            let combined = '';
-            boxes.forEach(b => combined += b.value);
-            const hidden = document.getElementById('otpInput');
-            if (hidden) hidden.value = combined;
-            // Move focus to next box
-            if (el.value && idx < 5) {
-                boxes[idx + 1].focus();
-            }
-            // Auto-verify when all 6 filled
-            if (combined.length === 6) {
-                setTimeout(verifyOTP, 100);
-            }
-        }
-
-        function otpBoxKey(event, idx) {
-            const boxes = document.querySelectorAll('.otp-box');
-            if (event.key === 'Backspace' && !boxes[idx].value && idx > 0) {
-                boxes[idx - 1].focus();
-                boxes[idx - 1].value = '';
-            }
-            if (event.key === 'ArrowLeft' && idx > 0) boxes[idx - 1].focus();
-            if (event.key === 'ArrowRight' && idx < 5) boxes[idx + 1].focus();
-            // Handle paste: e.g. user long-presses and pastes full 6-digit OTP
-            if (event.key === 'v' && (event.ctrlKey || event.metaKey)) return; // allow paste event
-        }
-
-        // Handle paste on any OTP box — distributes digits across all boxes
-        document.addEventListener('paste', function(e) {
-            const active = document.activeElement;
-            if (!active || !active.classList.contains('otp-box')) return;
-            e.preventDefault();
-            const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
-            const boxes  = document.querySelectorAll('.otp-box');
-            pasted.split('').forEach((digit, i) => { if (boxes[i]) boxes[i].value = digit; });
-            const hidden = document.getElementById('otpInput');
-            if (hidden) hidden.value = pasted;
-            if (boxes[pasted.length]) boxes[pasted.length].focus();
-            else if (boxes[5]) boxes[5].focus();
-            if (pasted.length === 6) setTimeout(verifyOTP, 100);
-        });
 
         function setupRecaptcha() {
             try {
@@ -5665,12 +5660,6 @@
                 document.getElementById('loginStep2').classList.remove('hidden');
                 showFirebaseStatus('📲 OTP sent to +91 ' + phone, 'success');
                 startResendCountdown();
-                // Auto-focus first OTP box
-                setTimeout(() => {
-                    const boxes = document.querySelectorAll('.otp-box');
-                    boxes.forEach(b => { b.value=''; b.classList.remove('border-red-500','border-green-400'); });
-                    if (boxes[0]) boxes[0].focus();
-                }, 150);
             } catch(err) {
                 console.error('OTP error:', err);
                 let msg = 'Failed to send OTP. ';
@@ -5726,27 +5715,19 @@
         }
 
         async function verifyOTP() {
-            // Collect from 6 digit boxes; fallback to hidden input
-            const boxes = document.querySelectorAll('.otp-box');
-            let otp = '';
-            boxes.forEach(b => otp += b.value.trim());
-            if (!otp) otp = (document.getElementById('otpInput').value || '').trim();
-
-            if (otp.length !== 6) {
-                showFirebaseStatus('Please enter all 6 digits of the OTP', 'error');
-                if (boxes[0]) boxes[0].focus();
-                return;
-            }
+            const otp = document.getElementById('otpInput').value.trim();
+            if (otp.length !== 6) { alert('Please enter the 6-digit OTP'); return; }
 
             const btn = document.getElementById('verifyOtpBtn');
             btn.disabled = true; btn.textContent = '⏳ Verifying...';
-            boxes.forEach(b => b.classList.add('border-green-400'));
 
             try {
                 const result = await _confirmationResult.confirm(otp);
                 firebaseUser = result.user;
+                // Check if user profile exists
                 const snap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}`));
                 if (!snap.exists()) {
+                    // New user — show setup step
                     document.getElementById('loginStep2').classList.add('hidden');
                     document.getElementById('loginStep3').classList.remove('hidden');
                 } else {
@@ -5757,13 +5738,8 @@
                 }
             } catch(err) {
                 console.error('OTP verify error:', err);
-                boxes.forEach(b => { b.classList.remove('border-green-400'); b.classList.add('border-red-500'); b.value = ''; });
-                showFirebaseStatus('❌ Wrong OTP. Please try again.', 'error');
-                btn.disabled = false; btn.textContent = '✅ Verify & Login';
-                setTimeout(() => {
-                    boxes.forEach(b => b.classList.remove('border-red-500'));
-                    if (boxes[0]) boxes[0].focus();
-                }, 1200);
+                alert('Invalid OTP. Please check and try again.');
+                btn.disabled = false; btn.textContent = 'Verify & Login';
             }
         }
 
@@ -6469,7 +6445,7 @@
 
                     <!-- Action buttons -->
                     <div class="grid grid-cols-2 gap-3">
-                        <a href="tel:+91${p.mobile.replace(/^\+91/,'')}" onclick="if(!navigator.userAgent.match(/Mobile|Android|iPhone/i)){event.preventDefault();alert('📞 Call: +91'+p.mobile.replace(/^\+91/,''))}" class="bg-green-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-700 transition" style="text-decoration:none;">${t('callBtn')}</a>
+                        <a href="tel:+91${p.mobile.replace(/^\+91/,'')}"  class="bg-green-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-700 transition" style="text-decoration:none;">${t('callBtn')}</a>
                         <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-600 transition" style="text-decoration:none;">${t('whatsappBtn')}</a>
                         ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-blue-700 transition" style="text-decoration:none;">🗺️ Get Directions</a>` : '<div></div>'}
                         <button onclick="document.getElementById('profileModal').classList.add('hidden'); openReviewModal('${p.id}')" class="bg-orange-100 text-orange-700 py-3 rounded-xl font-semibold hover:bg-orange-200 transition border border-orange-200">⭐ Write Review</button>
