@@ -8567,7 +8567,7 @@ function toggleFAQ(i) {
 }
 
 // Build FAQ when page-info becomes visible (called from nav button onclick)
-// ── AI CHATBOT ──
+// ── AI CHATBOT — LOCAL KNOWLEDGE BASE (no API needed, works on all browsers) ──
 const INFO_CHAT_SYS = `You are the helpful AI guide for Sudarshan Chakra India, a hyperlocal service marketplace app for India.
 
 KEY APP FACTS:
@@ -8595,43 +8595,81 @@ KEY APP FACTS:
 
 TONE: Warm, friendly, concise, helpful. Use emojis occasionally. Answer in whatever language the user writes in. If unsure about anything, suggest emailing support@sudarshanchakraindia.com.`;
 
-let infoChatHist = [];
+// ── Local Knowledge Base (no API needed — works on all browsers/GitHub Pages) ──
+const SC_KB = [
+  { k: ['register','provider','join','sign up','signup','enroll','how to register'],
+    a: "To register as a provider:\n1️⃣ Tap 'Register Provider' in the top nav\n2️⃣ Fill in your name, mobile, category, service area, working hours, and rate\n3️⃣ Upload a clear profile photo\n4️⃣ Submit — your profile goes live immediately!\n\nTip: Also upload your Aadhaar or Driving Licence to get the ✅ Verified badge and appear higher in search results." },
+  { k: ['wallet','points','reward','earn','redeem','coins'],
+    a: "💰 Wallet & Reward Points:\n• Daily login = 2 points\n• Leaving a review = 5 points\n• Referrals = bonus points per new provider\n• Completing bookings = points\n\nRedeem points to offset membership upgrade fees. You can also donate points to our Charity program. Find your Wallet in the top nav after logging in." },
+  { k: ['verified','badge','id','aadhaar','driving','licence','verification','trusted'],
+    a: "✅ Verified Badge:\n1. Login and go to your provider profile\n2. Tap 'Identity Verification'\n3. Upload Aadhaar, Driving Licence, Voter ID, PAN or Passport\n4. Admin reviews within 24 hours\n5. Badge appears on your profile once approved\n\nVerified providers appear higher in search results and get more bookings!" },
+  { k: ['book','booking','hire','service','how to book','hire now'],
+    a: "To book a service:\n1️⃣ Search or browse for the service you need\n2️⃣ Tap any provider card to view their full profile\n3️⃣ Check their reviews, rates, and working hours\n4️⃣ Tap 📞 Call, 💬 WhatsApp, or 'Hire Now'\n5️⃣ For Hire Now: fill in date, location and job details, then submit\n\nThe provider will confirm and contact you directly." },
+  { k: ['charity','donate','donation','skill','training','fund','underprivileged'],
+    a: "❤️ Charity Program:\nSudarshan Chakra India runs a Skill Development Fund where your earned Wallet points directly sponsor vocational training for underprivileged youth.\n\nTo donate:\n• Go to your Wallet section (login required)\n• Tap 'Donate to Charity'\n• Choose how many points to donate\n\nEven 10 points helps fund someone's skill training. Every donation builds India's future." },
+  { k: ['refer','referral','invite','link','commission','earn commission'],
+    a: "🤝 Referral Program:\n• Login and go to your Wallet page\n• Find your unique referral link\n• Share it with friends and fellow workers\n• When someone registers as a provider through your link, you earn Wallet points + commission!\n\nYou can track all referrals and earnings in your Wallet dashboard. The more you refer, the more you earn." },
+  { k: ['login','otp','mobile','password','sign in','log in','number'],
+    a: "🔑 How to Login:\n• No password needed — we use secure OTP login\n• Tap 'Login' in the top nav\n• Enter your 10-digit mobile number\n• You'll receive a 6-digit SMS code\n• Enter the code and you're in!\n\nYour session stays active across visits so you won't need to login every time on the same device." },
+  { k: ['language','hindi','bengali','gujarati','marathi','kannada','tamil','telugu','malayalam','punjabi','odia','assamese','change language'],
+    a: "🌏 12 Language Support:\nTap 🌏 in the top navigation bar to switch languages instantly.\n\nSupported: English, हिन्दी, বাংলা, ગુજરાતી, मराठी, ಕನ್ನಡ, తెలుగు, മലയാളം, தமிழ், ਪੰਜਾਬੀ, ଓଡ଼ିଆ, অসমীয়া\n\nThe entire app — every label, category, and form — updates instantly in your chosen language." },
+  { k: ['report','complaint','problem','issue','fraud','bad','unsafe','safety'],
+    a: "🚩 How to Report a Provider:\n1. Go to the provider's profile\n2. Tap the 🚩 Report button\n3. Describe your concern\n4. Submit\n\nOur admin team reviews all reports within 24 hours. Providers with serious or repeated reports are investigated and may be suspended. Your report helps keep the community safe." },
+  { k: ['membership','plan','basic','professional','elite','upgrade','tier','premium'],
+    a: "🏆 Membership Tiers:\n• Basic — Free! Standard listing\n• Professional — Higher visibility, priority listing, more portfolio space\n• Elite — Top priority listing, maximum visibility, all features\n\nUpgrade from your profile page. Use earned Wallet points to offset the upgrade cost, making it more affordable!" },
+  { k: ['portfolio','photo','work','showcase','picture','image','gallery'],
+    a: "📸 Portfolio Photos:\nAfter logging in as a provider:\n1. Go to your profile\n2. Tap 'Add Portfolio Photo'\n3. Upload photos of your completed work\n4. You can add up to 10 photos\n\nA strong portfolio is your most powerful tool — customers choose providers with good work photos. Show your best work!" },
+  { k: ['install','pwa','app','home screen','download','offline'],
+    a: "📱 Install the App:\nSudarshan Chakra India is a Progressive Web App — no app store needed!\n\nAndroid (Chrome):\n• Tap the 3-dot menu → 'Add to Home Screen'\n\niPhone (Safari):\n• Tap Share button → 'Add to Home Screen'\n\nThe app icon appears on your home screen and works offline too!" },
+  { k: ['call','phone','contact','whatsapp','message','reach'],
+    a: "📞 Contacting Providers:\n• Tap 📞 Call on any provider profile → directly opens your phone dialer\n• Tap 💬 WhatsApp → opens WhatsApp with a pre-filled message\n• Tap 💬 Chat → in-app chat without sharing phone numbers\n\nNo middleman — you connect directly with the provider." },
+  { k: ['free','cost','fee','price','charge','money','payment'],
+    a: "💸 Is it Free?\n• For Seekers: 100% free to browse, search, and contact providers\n• For Providers: Free Basic profile listing\n• Premium tiers (Professional/Elite) have a fee, but Wallet points can reduce the cost\n\nNo commission taken from your earnings. No hidden charges for seekers." },
+  { k: ['review','rating','star','feedback','comment'],
+    a: "⭐ Reviews & Ratings:\n• Only users who have interacted with a provider can leave reviews\n• Leave a star rating (1–5) + written feedback\n• Reviews help build the provider's reputation\n• Honest reviews protect other seekers\n\nTo leave a review: find the provider, scroll to Reviews section, tap 'Write Review'." },
+  { k: ['office','address','corporate','company','head','location','where'],
+    a: "🏢 Corporate Office:\nSudarshan Chakra India Pvt. Ltd.\nRegistered in India under the Companies Act\n\n⏰ Mon–Sat, 9:00 AM – 6:00 PM IST\n🌐 sudarshanchakraindia.github.io\n✉️ support@sudarshanchakraindia.com\n✉️ partners@sudarshanchakraindia.com (partnerships)\n\nDetailed office address is available to registered partners." },
+  { k: ['support','help','contact','email','reach us','connect'],
+    a: "🆘 Contact & Support:\n✉️ support@sudarshanchakraindia.com — General queries\n✉️ partners@sudarshanchakraindia.com — Business partnerships\n\n📖 Also check the FAQ and User Manual sections on this page for instant answers.\n\nFound a bug? Email us a screenshot and we'll fix it fast!" },
+  { k: ['chat','message','talk','communicate','inbox'],
+    a: "💬 In-App Chat:\nOnce you login, you can chat with any provider directly without sharing phone numbers.\n\n• Real-time messaging\n• Chat history saved for reference\n• Useful for discussing job details before committing\n\nFind the Chat button on any provider's profile after logging in." },
+  { k: ['voice','search','speak','microphone','mic','talk to search'],
+    a: "🎙️ Voice Search:\nTap the 🎤 microphone icon in the search bar.\nSpeak the service you need in any Indian language.\nThe app understands natural speech — just say 'plumber near me' or 'electrician' in your language!" },
+  { k: ['map','location','nearby','near me','distance','area'],
+    a: "🗺️ Map & Location Search:\nTap 'Map' in the top navigation bar.\nSee all providers near your location on an interactive map.\nFilter by distance to find someone who can reach you quickly.\n\nProviders also set their service area during registration so you'll always find local help." },
+];
 
-async function infoChatSend() {
+function scFindAnswer(query) {
+  const q = query.toLowerCase().trim();
+  let best = null, bestScore = 0;
+  for (const entry of SC_KB) {
+    let score = 0;
+    for (const kw of entry.k) {
+      if (q.includes(kw)) score += kw.length;
+      else if (kw.split(' ').some(w => w.length > 3 && q.includes(w))) score += 2;
+    }
+    if (score > bestScore) { bestScore = score; best = entry; }
+  }
+  if (best && bestScore > 0) return best.a;
+  // Fallback
+  return "I'm not sure about that specific question 🙏\n\nFor detailed help:\n✉️ support@sudarshanchakraindia.com\n\nOr try asking about:\n• How to register as a provider\n• Wallet and points\n• Getting Verified badge\n• How to book a service\n• Charity program\n• Referral program";
+}
+
+function infoChatSend() {
   const inp = document.getElementById('infoChatInput');
   const msg = (inp ? inp.value : '').trim();
   if (!msg) return;
   inp.value = '';
-  const sendBtn = document.getElementById('infoChatSend');
-  if (sendBtn) sendBtn.disabled = true;
 
   addInfoMsg(msg, 'user');
-  infoChatHist.push({ role: 'user', content: msg });
-  const typing = addInfoMsg('…', 'bot');
 
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 400,
-        system: INFO_CHAT_SYS,
-        messages: infoChatHist.slice(-10)
-      })
-    });
-    const d = await r.json();
-    const reply = (d.content && d.content[0] && d.content[0].text)
-      ? d.content[0].text
-      : 'Sorry, I could not answer that right now. Please try again or email support@sudarshanchakraindia.com 🙏';
+  // Simulate a brief "thinking" delay for natural feel
+  const typing = addInfoMsg('…', 'bot thinking');
+  setTimeout(() => {
+    const reply = scFindAnswer(msg);
     typing.textContent = reply;
-    typing.classList.remove('opacity-50');
-    infoChatHist.push({ role: 'assistant', content: reply });
-  } catch(e) {
-    typing.textContent = 'Connection issue — please try again in a moment. 🙏';
-    typing.classList.remove('opacity-50');
-  }
-  if (sendBtn) sendBtn.disabled = false;
+    typing.style.opacity = '1';
+  }, 600);
 }
 
 function infoQuick(text) {
@@ -8642,7 +8680,7 @@ function infoQuick(text) {
 
 function addInfoMsg(text, type) {
   const container = document.getElementById('infoChatMessages');
-  if (!container) return { textContent: '', classList: { remove: ()=>{} } };
+  if (!container) return { textContent: '', style: { opacity: '' }, classList: { remove: () => {} } };
   const wrap = document.createElement('div');
   wrap.className = 'flex gap-2' + (type === 'user' ? ' justify-end' : '');
   const bubble = document.createElement('div');
@@ -8650,13 +8688,15 @@ function addInfoMsg(text, type) {
   if (type === 'user') {
     bubble.className = 'bg-orange-500 text-white rounded-2xl rounded-tr-sm px-3 py-2 max-w-xs leading-relaxed text-xs';
   } else {
-    bubble.className = 'bg-white/15 text-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-xs leading-relaxed text-xs';
+    bubble.className = 'bg-white/15 text-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-xs leading-relaxed text-xs whitespace-pre-line';
+    bubble.style.opacity = type === 'bot thinking' ? '0.5' : '1';
   }
   wrap.appendChild(bubble);
   container.appendChild(wrap);
   container.scrollTop = container.scrollHeight;
   return bubble;
 }
+
 </script>
 
 </body>
