@@ -270,6 +270,25 @@
                 <div id="navAuthBtn">
                     <button onclick="openLoginModal()" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🔑 Login</button>
                 </div>
+                <script>
+                // Instantly restore avatar from localStorage before Firebase loads
+                // Prevents "Login" flash for returning users
+                (function(){
+                    try {
+                        const uid  = localStorage.getItem('sc_auth_uid');
+                        const name = localStorage.getItem('sc_auth_name') || '';
+                        if (uid && name) {
+                            const ini = name.trim().split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'U';
+                            document.getElementById('navAuthBtn').innerHTML =
+                                '<div class="flex items-center gap-2 cursor-pointer" onclick="showPage('myProfile')" title="'+name+'">' +
+                                '<div class="w-8 h-8 rounded-full bg-orange-400 text-white flex items-center justify-center text-sm font-bold opacity-80">'+ini+'</div>' +
+                                '</div>';
+                            const wb = document.getElementById('walletNavBtn');
+                            if (wb) wb.classList.remove('hidden');
+                        }
+                    } catch(e) {}
+                })();
+                </script>
             </div>
         </div>
     </nav>
@@ -1394,18 +1413,37 @@
 
             <!-- Step 2: Enter OTP -->
             <div id="loginStep2" class="p-6 hidden">
-                <div class="text-center mb-4">
-                    <div class="text-3xl mb-2">📲</div>
-                    <p class="text-gray-700 font-medium">OTP sent to <span id="loginPhoneDisplay" class="text-orange-600 font-bold"></span></p>
-                    <p class="text-sm text-gray-500 mt-1">Enter the 6-digit code</p>
+                <div class="text-center mb-5">
+                    <div class="text-4xl mb-2">📲</div>
+                    <p class="text-gray-700 font-semibold">OTP sent to</p>
+                    <p class="text-orange-600 font-bold text-lg" id="loginPhoneDisplay"></p>
+                    <p class="text-xs text-gray-400 mt-1">Enter the 6-digit code · Auto-verifies when complete</p>
                 </div>
-                <div class="flex gap-2 justify-center mb-5">
-                    <input type="tel" id="otpInput" maxlength="6" placeholder="— — — — — —"
-                        class="w-full text-center border-2 rounded-xl px-4 py-4 text-2xl font-bold tracking-widest focus:ring-2 focus:ring-orange-400 outline-none"
-                        oninput="this.value=this.value.replace(/\D/g,'').substring(0,6)">
+                <!-- 6 individual OTP digit boxes -->
+                <div class="flex gap-2 justify-center mb-5" id="otpBoxesRow">
+                    <input type="tel" inputmode="numeric" maxlength="1" autocomplete="one-time-code"
+                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
+                        oninput="otpBoxInput(this,0)" onkeydown="otpBoxKey(event,0)">
+                    <input type="tel" inputmode="numeric" maxlength="1"
+                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
+                        oninput="otpBoxInput(this,1)" onkeydown="otpBoxKey(event,1)">
+                    <input type="tel" inputmode="numeric" maxlength="1"
+                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
+                        oninput="otpBoxInput(this,2)" onkeydown="otpBoxKey(event,2)">
+                    <input type="tel" inputmode="numeric" maxlength="1"
+                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
+                        oninput="otpBoxInput(this,3)" onkeydown="otpBoxKey(event,3)">
+                    <input type="tel" inputmode="numeric" maxlength="1"
+                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
+                        oninput="otpBoxInput(this,4)" onkeydown="otpBoxKey(event,4)">
+                    <input type="tel" inputmode="numeric" maxlength="1"
+                        class="otp-box w-11 h-14 text-center border-2 border-gray-300 rounded-xl text-2xl font-bold focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition"
+                        oninput="otpBoxInput(this,5)" onkeydown="otpBoxKey(event,5)">
                 </div>
+                <!-- Hidden input keeps verifyOTP() working unchanged -->
+                <input type="hidden" id="otpInput">
                 <button onclick="verifyOTP()" id="verifyOtpBtn" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition text-lg">
-                    Verify & Login
+                    ✅ Verify & Login
                 </button>
                 <div class="text-center mt-3 min-h-[26px]">
                     <p id="resendCountdown" class="text-sm text-gray-500">Resend OTP in <span id="resendTimer" class="font-bold text-orange-500">30</span>s</p>
@@ -5500,33 +5538,43 @@
 
         // ==================== PHASE F: LOGIN MODAL ====================
         function openLoginModal() {
+            // Already logged in — go to profile
+            if (firebaseUser) { closeLoginModal(); showPage('myProfile'); return; }
+
             document.getElementById('loginModal').classList.remove('hidden');
             document.getElementById('loginStep1').classList.remove('hidden');
             document.getElementById('loginStep2').classList.add('hidden');
             document.getElementById('loginStep3').classList.add('hidden');
-            document.getElementById('otpInput') && (document.getElementById('otpInput').value = '');
-            // Pre-fill phone if user verified today
+            // Clear OTP boxes
+            document.querySelectorAll('.otp-box').forEach(b => b.value = '');
+            const hiddenOtp = document.getElementById('otpInput');
+            if (hiddenOtp) hiddenOtp.value = '';
+
+            // Pre-fill phone from last session
             try {
                 const savedPhone = localStorage.getItem('sc_auth_phone') || '';
                 const savedDate  = localStorage.getItem('sc_otp_date') || '';
                 const today      = new Date().toLocaleDateString('en-IN');
                 const phoneInput = document.getElementById('loginPhone');
                 if (savedPhone && phoneInput) {
-                    // Strip +91 prefix for the input field (expects 10 digits)
                     phoneInput.value = savedPhone.replace(/^\+91/, '');
+                    // Focus Send OTP button since phone is pre-filled
+                    setTimeout(() => { const b = document.getElementById('sendOtpBtn'); if(b) b.focus(); }, 100);
+                } else if (phoneInput) {
+                    setTimeout(() => phoneInput.focus(), 100);
                 }
-                // Show "already verified today" hint
                 const hintEl = document.getElementById('otpDateHint');
                 if (hintEl) {
                     if (savedPhone && savedDate === today) {
-                        hintEl.textContent = '✅ You verified today — just send OTP again to resume.';
+                        hintEl.textContent = '✅ Phone pre-filled · Tap Send OTP to continue';
                         hintEl.className   = 'text-xs text-green-600 mt-1 text-center';
                     } else {
                         hintEl.textContent = '';
                     }
                 }
             } catch(e) {}
-            // Don't setup reCAPTCHA here - do it when user clicks Send OTP
+            // Pre-warm reCAPTCHA so it is ready instantly when user taps Send OTP
+            setTimeout(() => { if (!_recaptchaVerifier) setupRecaptcha(); }, 300);
         }
 
         function closeLoginModal() {
@@ -5536,6 +5584,53 @@
                 _recaptchaVerifier = null;
             }
         }
+
+        // ── OTP Box navigation helpers ──────────────────────────────
+        function otpBoxInput(el, idx) {
+            // Keep only digits
+            el.value = el.value.replace(/\D/g, '').slice(-1);
+            // Update hidden combined input
+            const boxes = document.querySelectorAll('.otp-box');
+            let combined = '';
+            boxes.forEach(b => combined += b.value);
+            const hidden = document.getElementById('otpInput');
+            if (hidden) hidden.value = combined;
+            // Move focus to next box
+            if (el.value && idx < 5) {
+                boxes[idx + 1].focus();
+            }
+            // Auto-verify when all 6 filled
+            if (combined.length === 6) {
+                setTimeout(verifyOTP, 100);
+            }
+        }
+
+        function otpBoxKey(event, idx) {
+            const boxes = document.querySelectorAll('.otp-box');
+            if (event.key === 'Backspace' && !boxes[idx].value && idx > 0) {
+                boxes[idx - 1].focus();
+                boxes[idx - 1].value = '';
+            }
+            if (event.key === 'ArrowLeft' && idx > 0) boxes[idx - 1].focus();
+            if (event.key === 'ArrowRight' && idx < 5) boxes[idx + 1].focus();
+            // Handle paste: e.g. user long-presses and pastes full 6-digit OTP
+            if (event.key === 'v' && (event.ctrlKey || event.metaKey)) return; // allow paste event
+        }
+
+        // Handle paste on any OTP box — distributes digits across all boxes
+        document.addEventListener('paste', function(e) {
+            const active = document.activeElement;
+            if (!active || !active.classList.contains('otp-box')) return;
+            e.preventDefault();
+            const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+            const boxes  = document.querySelectorAll('.otp-box');
+            pasted.split('').forEach((digit, i) => { if (boxes[i]) boxes[i].value = digit; });
+            const hidden = document.getElementById('otpInput');
+            if (hidden) hidden.value = pasted;
+            if (boxes[pasted.length]) boxes[pasted.length].focus();
+            else if (boxes[5]) boxes[5].focus();
+            if (pasted.length === 6) setTimeout(verifyOTP, 100);
+        });
 
         function setupRecaptcha() {
             try {
@@ -5570,6 +5665,12 @@
                 document.getElementById('loginStep2').classList.remove('hidden');
                 showFirebaseStatus('📲 OTP sent to +91 ' + phone, 'success');
                 startResendCountdown();
+                // Auto-focus first OTP box
+                setTimeout(() => {
+                    const boxes = document.querySelectorAll('.otp-box');
+                    boxes.forEach(b => { b.value=''; b.classList.remove('border-red-500','border-green-400'); });
+                    if (boxes[0]) boxes[0].focus();
+                }, 150);
             } catch(err) {
                 console.error('OTP error:', err);
                 let msg = 'Failed to send OTP. ';
@@ -5625,19 +5726,27 @@
         }
 
         async function verifyOTP() {
-            const otp = document.getElementById('otpInput').value.trim();
-            if (otp.length !== 6) { alert('Please enter the 6-digit OTP'); return; }
+            // Collect from 6 digit boxes; fallback to hidden input
+            const boxes = document.querySelectorAll('.otp-box');
+            let otp = '';
+            boxes.forEach(b => otp += b.value.trim());
+            if (!otp) otp = (document.getElementById('otpInput').value || '').trim();
+
+            if (otp.length !== 6) {
+                showFirebaseStatus('Please enter all 6 digits of the OTP', 'error');
+                if (boxes[0]) boxes[0].focus();
+                return;
+            }
 
             const btn = document.getElementById('verifyOtpBtn');
             btn.disabled = true; btn.textContent = '⏳ Verifying...';
+            boxes.forEach(b => b.classList.add('border-green-400'));
 
             try {
                 const result = await _confirmationResult.confirm(otp);
                 firebaseUser = result.user;
-                // Check if user profile exists
                 const snap = await _firebase.get(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}`));
                 if (!snap.exists()) {
-                    // New user — show setup step
                     document.getElementById('loginStep2').classList.add('hidden');
                     document.getElementById('loginStep3').classList.remove('hidden');
                 } else {
@@ -5648,8 +5757,13 @@
                 }
             } catch(err) {
                 console.error('OTP verify error:', err);
-                alert('Invalid OTP. Please check and try again.');
-                btn.disabled = false; btn.textContent = 'Verify & Login';
+                boxes.forEach(b => { b.classList.remove('border-green-400'); b.classList.add('border-red-500'); b.value = ''; });
+                showFirebaseStatus('❌ Wrong OTP. Please try again.', 'error');
+                btn.disabled = false; btn.textContent = '✅ Verify & Login';
+                setTimeout(() => {
+                    boxes.forEach(b => b.classList.remove('border-red-500'));
+                    if (boxes[0]) boxes[0].focus();
+                }, 1200);
             }
         }
 
