@@ -135,6 +135,7 @@
             box-shadow: 0 0 0 2px #fed7aa;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body class="bg-gray-50">
 
@@ -7378,7 +7379,131 @@ async function hmPaymentDone() {
 
     <!-- ===== SUBSCRIPTION MODAL ===== -->
     <!-- ===== MEMBERSHIP PLANS MODAL ===== -->
-    <div id="subscriptionModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SC PAYMENT GATEWAY MODAL                                      -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="scPayModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div class="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md max-h-[96vh] overflow-y-auto">
+
+    <!-- Header -->
+    <div class="sticky top-0 bg-gradient-to-r from-orange-600 via-orange-500 to-yellow-500 text-white px-5 pt-5 pb-4 rounded-t-3xl z-10">
+      <div class="flex justify-between items-center">
+        <div>
+          <p class="text-xs text-orange-100 font-medium tracking-wide uppercase">Sudarshan Chakra India</p>
+          <h2 class="text-xl font-bold mt-0.5" id="scpay-title">Complete Payment</h2>
+        </div>
+        <button onclick="scPayClose()" class="w-9 h-9 rounded-full bg-white bg-opacity-20 flex items-center justify-center text-white text-xl font-bold hover:bg-opacity-30">✕</button>
+      </div>
+      <!-- Amount pill -->
+      <div class="mt-3 flex items-center gap-3">
+        <div class="bg-white bg-opacity-20 rounded-2xl px-4 py-2 flex items-center gap-2">
+          <span class="text-2xl font-black" id="scpay-amount-display">₹0</span>
+          <span class="text-orange-100 text-xs" id="scpay-desc-display">Payment</span>
+        </div>
+        <div class="bg-green-400 bg-opacity-30 rounded-full px-3 py-1 text-xs font-semibold">🔒 Secure UPI</div>
+      </div>
+    </div>
+
+    <div class="p-4 space-y-4">
+
+      <!-- STEP 1: QR CODE -->
+      <div class="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-4 text-center border border-orange-100">
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Step 1 — Scan QR to Pay</p>
+        <div id="scpay-qr-container" class="w-44 h-44 mx-auto bg-white rounded-2xl shadow-md flex items-center justify-center overflow-hidden border border-orange-100"></div>
+        <div class="mt-3 flex items-center justify-center gap-2">
+          <span class="text-xs text-gray-500">UPI ID:</span>
+          <span class="font-bold text-orange-700 text-sm" id="scpay-upi-display">9414055013@ybl</span>
+          <button onclick="scPayCopyUPI()" class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold hover:bg-orange-200">Copy</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: UPI APPS -->
+      <div>
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Step 2 — Or open your UPI app</p>
+        <div class="grid grid-cols-4 gap-2">
+          <button onclick="scPayOpenApp('phonepe')" class="flex flex-col items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-xl py-3 hover:bg-purple-100 transition">
+            <span class="text-2xl">💜</span>
+            <span class="text-xs font-semibold text-purple-700">PhonePe</span>
+          </button>
+          <button onclick="scPayOpenApp('gpay')" class="flex flex-col items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-xl py-3 hover:bg-blue-100 transition">
+            <span class="text-2xl">🔵</span>
+            <span class="text-xs font-semibold text-blue-700">GPay</span>
+          </button>
+          <button onclick="scPayOpenApp('paytm')" class="flex flex-col items-center gap-1.5 bg-sky-50 border border-sky-200 rounded-xl py-3 hover:bg-sky-100 transition">
+            <span class="text-2xl">🩵</span>
+            <span class="text-xs font-semibold text-sky-700">Paytm</span>
+          </button>
+          <button onclick="scPayOpenApp('upi')" class="flex flex-col items-center gap-1.5 bg-green-50 border border-green-200 rounded-xl py-3 hover:bg-green-100 transition">
+            <span class="text-2xl">💳</span>
+            <span class="text-xs font-semibold text-green-700">Any UPI</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: ENTER UTR -->
+      <div>
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Step 3 — Enter Transaction ID (UTR)</p>
+        <div class="bg-gray-50 rounded-xl p-3 border border-gray-200">
+          <p class="text-xs text-gray-500 mb-2">After paying, enter the 12-digit UTR number from your UPI app. This helps us verify your payment instantly.</p>
+          <input id="scpay-utr" type="text" placeholder="e.g. 123456789012" maxlength="20"
+            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            oninput="scPayValidate()">
+          <p id="scpay-utr-hint" class="text-xs text-gray-400 mt-1.5">📋 Found in: UPI app → Transactions → Payment detail → UTR / Ref No.</p>
+        </div>
+      </div>
+
+      <!-- STEP 4: UPLOAD SCREENSHOT (optional) -->
+      <div>
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Step 4 — Upload Screenshot <span class="font-normal text-gray-400">(optional, speeds up verification)</span></p>
+        <label id="scpay-upload-label" class="flex flex-col items-center gap-2 border-2 border-dashed border-orange-200 rounded-xl py-4 px-3 cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition bg-orange-50/30">
+          <span class="text-2xl" id="scpay-upload-icon">📸</span>
+          <span class="text-xs text-gray-500 text-center" id="scpay-upload-text">Tap to upload payment screenshot</span>
+          <input type="file" accept="image/*" class="hidden" id="scpay-screenshot" onchange="scPayPreviewScreenshot(this)">
+        </label>
+        <div id="scpay-preview-wrap" class="hidden mt-2 relative">
+          <img id="scpay-preview-img" class="w-full rounded-xl max-h-32 object-cover border border-orange-200">
+          <button onclick="scPayRemoveScreenshot()" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 text-xs font-bold">✕</button>
+        </div>
+      </div>
+
+      <!-- ORDER SUMMARY -->
+      <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Order Summary</p>
+        <div id="scpay-summary" class="space-y-1.5 text-xs text-gray-600"></div>
+        <div class="flex justify-between items-center border-t border-gray-200 mt-2 pt-2">
+          <span class="font-bold text-gray-800 text-sm">Total</span>
+          <span class="font-black text-orange-600 text-lg" id="scpay-total-display">₹0</span>
+        </div>
+      </div>
+
+      <!-- SUBMIT BUTTON -->
+      <button id="scpay-submit-btn" onclick="scPaySubmit()" disabled
+        class="w-full py-4 rounded-2xl font-bold text-base transition-all bg-gray-200 text-gray-400 cursor-not-allowed"
+        id="scpay-submit-btn">
+        ✅ I Have Paid — Confirm Payment
+      </button>
+      <p id="scpay-submit-hint" class="text-xs text-center text-gray-400">Please enter your UTR number above to confirm</p>
+
+      <!-- SECURITY NOTE -->
+      <div class="flex items-start gap-2 bg-blue-50 rounded-xl p-3 border border-blue-100">
+        <span class="text-lg">🔐</span>
+        <div class="text-xs text-blue-700">
+          <p class="font-semibold mb-0.5">Safe & Secure</p>
+          <p>Your payment goes directly to <strong>9414055013@ybl</strong>. We never ask for PIN, OTP, or passwords. Questions? Email support@sudarshanchakraindia.com</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Payment Success Toast -->
+<div id="scpay-toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-green-600 text-white px-6 py-3 rounded-2xl shadow-xl text-sm font-semibold flex items-center gap-2 max-w-xs text-center">
+  <span>✅</span><span id="scpay-toast-msg">Payment submitted successfully!</span>
+</div>
+
+<div id="subscriptionModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div class="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg max-h-[95vh] overflow-y-auto">
 
         <!-- Header -->
@@ -8075,44 +8200,51 @@ function openSubscriptionModal() {
     } catch(e) {}
 }
 function closeSubscriptionModal() { document.getElementById('subscriptionModal').classList.add('hidden'); }
-async function initiateSubscription(plan, amount) {
+function initiateSubscription(plan, amount) {
     if (!firebaseUser) { openLoginModal(); return; }
-    
     const planNames = { free: '🆓 Basic', silver: '🥈 Professional', gold: '🥇 Elite' };
     const planName  = planNames[plan] || plan;
-    
-    if (!confirm(`Activate ${planName} Plan for ₹${amount}/month?\n\nYou will be redirected to UPI payment.\nPlan activates within 2–4 hours after admin approval.`)) return;
-    
-    const UPI_ID = '9414055013@ybl';
-    const note   = encodeURIComponent(`SC ${planName} Plan`);
-    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${amount}&cu=INR&tn=${note}`;
-    
-    // Save subscription request to Firebase
-    try {
-        if (window._firebase && firebaseUser) {
+    const summary   = `<div class="flex justify-between"><span>Plan</span><span class="font-semibold">${planName}</span></div>
+                       <div class="flex justify-between"><span>Validity</span><span class="font-semibold">${plan==='gold'?'90 days (Quarter)':'30 days'}</span></div>
+                       <div class="flex justify-between"><span>Auto-renews</span><span class="font-semibold">Manual</span></div>`;
+    scPayOpen({
+        title:      `Activate ${planName}`,
+        amount:     Number(amount),
+        desc:       planName,
+        summary,
+        onSuccess:  async (utr, screenshotB64) => {
             const reqTs = Date.now();
-            await _firebase.set(_firebase.ref(_firebase.db, `admin/subscriptionRequests/${reqTs}`), {
+            const payload = {
                 providerId: firebaseUser.uid,
+                providerName: window.userProfile?.name || '',
                 plan, amount: Number(amount),
                 requestedAt: new Date().toISOString(),
                 status: 'pending',
-                planName
-            });
-            await _firebase.set(_firebase.ref(_firebase.db, `providers/${firebaseUser.uid}/membership`), {
-                plan, amount: Number(amount),
-                status: 'pending',
                 planName,
-                requestedAt: new Date().toISOString()
-            });
+                utr: utr,
+                upiNote: `SC ${planName} Plan`,
+                timestamp: reqTs,
+                screenshotB64: screenshotB64 || ''
+            };
+            if (window._firebase) {
+                await _firebase.set(_firebase.ref(_firebase.db, `admin/subscriptionRequests/${reqTs}`), payload);
+                await _firebase.set(_firebase.ref(_firebase.db, `providers/${firebaseUser.uid}/membership`), {
+                    plan, amount: Number(amount), status: 'pending', planName,
+                    requestedAt: new Date().toISOString(), utr
+                });
+                await addNotification(firebaseUser.uid, {
+                    type:'portal_info', title:'⏳ Membership Request Received',
+                    message:`Your ${planName} plan request (UTR: ${utr}) is under review. Activates within 2–4 hours.`,
+                    timestamp: reqTs
+                });
+            }
+            closeSubscriptionModal();
+            scPayShowToast(`✅ ${planName} request submitted! Activates in 2–4 hrs after verification.`);
         }
-    } catch(e) { console.warn('Subscription save error:', e); }
-    
-    closeSubscriptionModal();
-    window.location.href = upiUrl;
-    setTimeout(() => {
-        showFirebaseStatus(`⏳ ${planName} plan requested! Activates in 2–4 hrs after payment confirmation.`, 'success');
-    }, 1500);
+    });
 }
+
+
 // ==================== ADVANCED GLOBAL SEARCH ====================
 function globalSearchSubmit(e) {
     if (e && e.key && e.key!=='Enter') return;
@@ -8567,6 +8699,175 @@ function toggleFAQ(i) {
 }
 
 // Build FAQ when page-info becomes visible (called from nav button onclick)
+// ══════════════════════════════════════════════════════════════
+// SC PAYMENT GATEWAY — works on GitHub Pages, no backend needed
+// ══════════════════════════════════════════════════════════════
+
+const SC_UPI_ID   = '9414055013@ybl';
+const SC_UPI_NAME = 'Sudarshan%20Chakra%20India';
+
+// Internal state
+let _scpay = {
+    amount: 0, desc: '', title: '', summary: '',
+    onSuccess: null, screenshotB64: null, qrInstance: null
+};
+
+// ── Open the payment modal ──
+function scPayOpen({ title, amount, desc, summary, onSuccess }) {
+    _scpay = { amount, desc, title, summary, onSuccess, screenshotB64: null, qrInstance: null };
+
+    document.getElementById('scpay-title').textContent         = title;
+    document.getElementById('scpay-amount-display').textContent = '₹' + amount;
+    document.getElementById('scpay-desc-display').textContent   = desc;
+    document.getElementById('scpay-total-display').textContent  = '₹' + amount;
+    document.getElementById('scpay-summary').innerHTML          = summary || '';
+    document.getElementById('scpay-utr').value                  = '';
+    document.getElementById('scpay-utr-hint').textContent       = '📋 Found in: UPI app → Transactions → Payment detail → UTR / Ref No.';
+    document.getElementById('scpay-submit-hint').textContent    = 'Please enter your UTR number above to confirm';
+    document.getElementById('scpay-preview-wrap').classList.add('hidden');
+    document.getElementById('scpay-upload-icon').textContent    = '📸';
+    document.getElementById('scpay-upload-text').textContent    = 'Tap to upload payment screenshot';
+    document.getElementById('scpay-screenshot').value           = '';
+
+    const btn = document.getElementById('scpay-submit-btn');
+    btn.disabled  = true;
+    btn.className = 'w-full py-4 rounded-2xl font-bold text-base transition-all bg-gray-200 text-gray-400 cursor-not-allowed';
+
+    // Build QR code
+    const qrWrap = document.getElementById('scpay-qr-container');
+    qrWrap.innerHTML = '';
+    if (window.QRCode) {
+        try {
+            const upiUrl = `upi://pay?pa=${SC_UPI_ID}&pn=${SC_UPI_NAME}&am=${amount}&cu=INR&tn=${encodeURIComponent('SC ' + desc)}`;
+            _scpay.qrInstance = new QRCode(qrWrap, {
+                text: upiUrl, width: 160, height: 160,
+                colorDark: '#1e3a5f', colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch(e) { qrWrap.innerHTML = '<p class="text-xs text-gray-400 p-4">QR unavailable<br>Use UPI ID below</p>'; }
+    } else {
+        qrWrap.innerHTML = '<p class="text-xs text-gray-400 p-4">Scan UPI ID:<br><strong>9414055013@ybl</strong></p>';
+    }
+
+    document.getElementById('scPayModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+// ── Close modal ──
+function scPayClose() {
+    document.getElementById('scPayModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    _scpay.screenshotB64 = null;
+}
+
+// ── Open UPI app deep-link ──
+function scPayOpenApp(app) {
+    const { amount, desc } = _scpay;
+    const note   = encodeURIComponent('SC ' + desc);
+    const base   = `pa=${SC_UPI_ID}&pn=${SC_UPI_NAME}&am=${amount}&cu=INR&tn=${note}`;
+    const urls   = {
+        phonepe: `phonepe://pay?${base}`,
+        gpay:    `tez://upi/pay?${base}`,
+        paytm:   `paytmmp://pay?${base}`,
+        upi:     `upi://pay?${base}`
+    };
+    window.location.href = urls[app] || urls.upi;
+}
+
+// ── Copy UPI ID ──
+function scPayCopyUPI() {
+    navigator.clipboard?.writeText(SC_UPI_ID).then(() => {
+        scPayShowToast('UPI ID copied! ' + SC_UPI_ID);
+    }).catch(() => {
+        prompt('Copy UPI ID:', SC_UPI_ID);
+    });
+}
+
+// ── Validate UTR input → enable/disable submit button ──
+function scPayValidate() {
+    const utr = (document.getElementById('scpay-utr')?.value || '').trim().replace(/\s+/g, '');
+    const btn = document.getElementById('scpay-submit-btn');
+    const hint = document.getElementById('scpay-submit-hint');
+    if (utr.length >= 8) {
+        btn.disabled  = false;
+        btn.className = 'w-full py-4 rounded-2xl font-bold text-base transition-all bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:from-orange-600 hover:to-yellow-600 shadow-lg';
+        hint.textContent = '✅ Ready to confirm — tap the button above';
+        hint.className   = 'text-xs text-center text-green-600 font-semibold';
+    } else {
+        btn.disabled  = true;
+        btn.className = 'w-full py-4 rounded-2xl font-bold text-base transition-all bg-gray-200 text-gray-400 cursor-not-allowed';
+        hint.textContent = utr.length > 0 ? `UTR needs at least 8 digits (entered: ${utr.length})` : 'Please enter your UTR number above to confirm';
+        hint.className   = 'text-xs text-center text-gray-400';
+    }
+}
+
+// ── Preview screenshot ──
+function scPayPreviewScreenshot(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (file.size > 3 * 1024 * 1024) {
+        alert('Screenshot must be under 3MB. Please crop or compress it.');
+        input.value = '';
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        _scpay.screenshotB64 = e.target.result; // base64
+        document.getElementById('scpay-preview-img').src   = e.target.result;
+        document.getElementById('scpay-preview-wrap').classList.remove('hidden');
+        document.getElementById('scpay-upload-icon').textContent  = '✅';
+        document.getElementById('scpay-upload-text').textContent  = file.name + ' — tap to change';
+    };
+    reader.readAsDataURL(file);
+}
+
+// ── Remove screenshot ──
+function scPayRemoveScreenshot() {
+    _scpay.screenshotB64 = null;
+    document.getElementById('scpay-screenshot').value          = '';
+    document.getElementById('scpay-preview-wrap').classList.add('hidden');
+    document.getElementById('scpay-upload-icon').textContent   = '📸';
+    document.getElementById('scpay-upload-text').textContent   = 'Tap to upload payment screenshot';
+}
+
+// ── Submit confirmed payment ──
+async function scPaySubmit() {
+    const utr = (document.getElementById('scpay-utr')?.value || '').trim().replace(/\s+/g, '');
+    if (utr.length < 8) { alert('Please enter a valid UTR / Transaction ID (at least 8 characters).'); return; }
+
+    const btn = document.getElementById('scpay-submit-btn');
+    btn.disabled  = true;
+    btn.textContent = '⏳ Submitting…';
+    btn.className   = 'w-full py-4 rounded-2xl font-bold text-base bg-gray-300 text-gray-500 cursor-not-allowed';
+
+    try {
+        if (typeof _scpay.onSuccess === 'function') {
+            // Pass screenshot as base64 — store only a trimmed version if too large
+            let ssB64 = _scpay.screenshotB64 || '';
+            // Keep base64 under 500KB to stay within Firebase limits
+            if (ssB64.length > 500000) ssB64 = ssB64.substring(0, 500000);
+            await _scpay.onSuccess(utr, ssB64);
+        }
+        scPayClose();
+    } catch(e) {
+        console.warn('scPaySubmit error:', e);
+        btn.disabled  = false;
+        btn.textContent = '✅ I Have Paid — Confirm Payment';
+        btn.className   = 'w-full py-4 rounded-2xl font-bold text-base bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:from-orange-600 hover:to-yellow-600 shadow-lg';
+        alert('Error saving. Please check your connection and try again.');
+    }
+}
+
+// ── Toast notification ──
+function scPayShowToast(msg, duration = 4000) {
+    const toast = document.getElementById('scpay-toast');
+    const msgEl = document.getElementById('scpay-toast-msg');
+    if (!toast || !msgEl) return;
+    msgEl.textContent = msg;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), duration);
+}
+
 // ── AI CHATBOT — LOCAL KNOWLEDGE BASE (no API needed, works on all browsers) ──
 const INFO_CHAT_SYS = `You are the helpful AI guide for Sudarshan Chakra India, a hyperlocal service marketplace app for India.
 
