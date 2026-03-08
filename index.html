@@ -6934,15 +6934,7 @@
       <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:#1E3A5F;text-align:center;margin-bottom:4px">Scan & Pay</div>
       <p style="font-size:12px;color:#64748B;text-align:center;margin-bottom:20px" id="hm-sheet-sub">Pay ₹10 via PhonePe / any UPI app</p>
       <div style="background:linear-gradient(135deg,#F8FAFC,#EFF6FF);border-radius:20px;padding:20px;text-align:center;margin-bottom:16px;border:2px solid #E2E8F0">
-        <div style="width:180px;height:180px;margin:0 auto 14px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.1)">
-          <svg viewBox="0 0 100 100" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
-            <rect x="5" y="5" width="30" height="30" rx="3" fill="#1E3A5F"/><rect x="9" y="9" width="22" height="22" rx="1" fill="white"/><rect x="13" y="13" width="14" height="14" rx="1" fill="#1E3A5F"/>
-            <rect x="65" y="5" width="30" height="30" rx="3" fill="#1E3A5F"/><rect x="69" y="9" width="22" height="22" rx="1" fill="white"/><rect x="73" y="13" width="14" height="14" rx="1" fill="#1E3A5F"/>
-            <rect x="5" y="65" width="30" height="30" rx="3" fill="#1E3A5F"/><rect x="9" y="69" width="22" height="22" rx="1" fill="white"/><rect x="13" y="73" width="14" height="14" rx="1" fill="#1E3A5F"/>
-            <rect x="40" y="40" width="20" height="20" rx="2" fill="#EA580C"/><rect x="44" y="44" width="12" height="12" rx="1" fill="white"/>
-            <text x="50" y="53" font-family="serif" font-size="9" fill="#EA580C" text-anchor="middle" font-weight="bold">SC</text>
-          </svg>
-        </div>
+        <div id="hm-qr-real" style="width:180px;height:180px;margin:0 auto 14px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.1);overflow:hidden;padding:8px"></div>
         <div style="background:linear-gradient(135deg,#EA580C,#D97706);color:white;border-radius:50px;padding:8px 20px;font-size:20px;font-weight:900;font-family:'Playfair Display',serif;display:inline-block;margin-bottom:8px" id="hm-qr-amount">₹10</div>
         <div style="font-size:11px;color:#64748B">UPI ID: <span style="font-weight:700;color:#1E3A5F">9414055013@ybl</span></div>
       </div>
@@ -6950,7 +6942,7 @@
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Provider Contact Fee</span><span style="color:#059669;font-weight:600">FREE</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Tip to Provider</span><span id="hm-mb-tip">₹0</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Charity Donation</span><span id="hm-mb-charity">₹0</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:#EA580C;font-weight:600;margin-bottom:6px"><span>⚡ Platform Fee</span><span>₹10</span></div>
+        <div id="hm-fee-row" style="display:flex;justify-content:space-between;font-size:12px;color:#EA580C;font-weight:600;margin-bottom:6px"><span>⚡ Platform Fee</span><span>₹10</span></div>
         <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;color:#1E3A5F;border-top:1px solid #E2E8F0;padding-top:8px;margin-top:4px"><span>Total</span><span id="hm-mb-total">₹10</span></div>
       </div>
       <div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px">
@@ -7055,6 +7047,30 @@ function hmUpdateTotal() {
 
 function hmOpenQR() {
   hmUpdateTotal();
+  // Generate real QR code for the current amount
+  const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
+  const fee   = hasTipOrCharity ? 0 : HM_CONV_FEE;
+  const total = fee + hmTipAmt + hmCharityAmt;
+  const UPI_ID    = '9414055013@ybl';
+  const noteText  = hmTipAmt > 0 ? 'SC Tip to Provider' : hmCharityAmt > 0 ? 'SC Charity Donation' : 'Sudarshan Chakra - Platform Fee';
+  const upiUrl    = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${total}&cu=INR&tn=${encodeURIComponent(noteText)}`;
+  const qrWrap    = document.getElementById('hm-qr-real');
+  if (qrWrap) {
+    qrWrap.innerHTML = '';
+    if (window.QRCode) {
+      try {
+        new QRCode(qrWrap, {
+          text: upiUrl, width: 164, height: 164,
+          colorDark: '#1e3a5f', colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch(e) {
+        qrWrap.innerHTML = '<p style="font-size:11px;color:#64748B;padding:8px;text-align:center">Scan UPI ID:<br><strong>9414055013@ybl</strong></p>';
+      }
+    } else {
+      qrWrap.innerHTML = '<p style="font-size:11px;color:#64748B;padding:8px;text-align:center">UPI ID:<br><strong>9414055013@ybl</strong></p>';
+    }
+  }
   document.getElementById('hireQrOverlay').classList.add('open');
 }
 
@@ -7490,7 +7506,7 @@ async function hmPaymentDone() {
         <span class="text-lg">🔐</span>
         <div class="text-xs text-blue-700">
           <p class="font-semibold mb-0.5">Safe & Secure</p>
-          <p>Your payment goes directly to <strong>9414055013@ybl</strong>. We never ask for PIN, OTP, or passwords. Questions? Email support@sudarshanchakraindia.com</p>
+          <p>Your payment goes directly to <strong>9414055013@ybl</strong>. We never ask for PIN, OTP, or passwords. Questions? Email <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3d4e484d4d524f497d4e48595c4f4e555c535e555c564f5c545359545c135e5250">[email&#160;protected]</a></p>
         </div>
       </div>
 
@@ -7740,7 +7756,7 @@ async function hmPaymentDone() {
     <div id="notifOverlay" class="hidden fixed inset-0 bg-black bg-opacity-20 z-40" onclick="closeNotifPanel()"></div>
 
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ==================== BOOKING SYSTEM ====================
 let currentBookingProviderId = null;
 
@@ -8997,7 +9013,6 @@ function addInfoMsg(text, type) {
   container.scrollTop = container.scrollHeight;
   return bubble;
 }
-
 </script>
 
 </body>
