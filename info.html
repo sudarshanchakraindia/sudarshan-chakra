@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudarshan Chakra India — About, Help & AI Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --saffron:#E8571A; --saffron-d:#B83E0A; --saffron-l:#FFF4EE;
+  --gold:#F0A500; --gold-l:#FFF8E6;
+  --navy:#1A3A6E; --navy-l:#EEF3FF;
+  --green:#177A45; --green-l:#EDFAF3;
+  --ink:#1A1208; --muted:#6B5E50; --border:#E8DDD4;
+  --bg:#FDFAF7; --white:#fff;
+  --sh: 0 2px 20px rgba(26,18,8,.08);
+  --sh-lg: 0 8px 40px rgba(26,18,8,.14);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);line-height:1.65;overflow-x:hidden}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:rgba(253,250,247,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav-i{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:58px;padding:0 20px;gap:12px}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none}
+.logo-icon{font-size:24px}
+.logo-text{font-family:'Playfair Display',serif;font-size:17px;color:var(--saffron);font-weight:700;letter-spacing:-.3px}
+.nav-links{display:flex;gap:2px;list-style:none;flex-wrap:wrap}
+.nav-links a{font-size:12px;font-weight:500;color:var(--muted);text-decoration:none;padding:5px 9px;border-radius:6px;transition:.2s}
+.nav-links a:hover{color:var(--saffron);background:var(--saffron-l)}
+.nav-cta{background:var(--saffron);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;text-decoration:none;white-space:nowrap;transition:.2s;flex-shrink:0}
+.nav-cta:hover{background:var(--saffron-d)}
+@media(max-width:600px){.nav-links{display:none}}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#1A1208 0%,#2A1808 45%,#1A3A6E 100%);color:#fff;text-align:center;padding:88px 20px 100px;position:relative;overflow:hidden}
+.hero::before{content:'🔱';position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:340px;opacity:.035;pointer-events:none;line-height:1}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(240,165,0,.18);border:1px solid rgba(240,165,0,.35);color:var(--gold);font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;margin-bottom:22px}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(34px,6vw,66px);font-weight:900;line-height:1.06;margin-bottom:14px}
+.hero h1 em{color:var(--gold);font-style:normal}
+.hero-sub{font-size:clamp(14px,2vw,17px);color:rgba(255,255,255,.68);max-width:560px;margin:0 auto 36px}
+.hero-stats{display:flex;justify-content:center;gap:40px;flex-wrap:wrap;margin-top:40px;padding-top:36px;border-top:1px solid rgba(255,255,255,.1)}
+.stat-n{display:block;font-size:30px;font-weight:700;color:var(--gold)}
+.stat-l{font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px}
+
+/* SECTIONS */
+.sec{padding:72px 20px}
+.sec-i{max-width:1100px;margin:0 auto}
+.sec-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--saffron);margin-bottom:8px}
+.sec-title{font-family:'Playfair Display',serif;font-size:clamp(24px,4vw,38px);font-weight:700;line-height:1.15;margin-bottom:14px}
+.sec-sub{font-size:15px;color:var(--muted);max-width:600px;margin-bottom:44px}
+.divider{width:44px;height:3px;background:var(--saffron);border-radius:2px;margin-bottom:20px}
+.alt{background:#F5EFE6}
+.chip{display:inline-block;background:var(--saffron-l);color:var(--saffron);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin:2px 3px 2px 0}
+.chip.g{background:var(--green-l);color:var(--green)}
+.chip.b{background:var(--navy-l);color:var(--navy)}
+
+/* ABOUT GRID */
+.about-g{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+@media(max-width:680px){.about-g{grid-template-columns:1fr}}
+.about-txt p{color:var(--muted);font-size:15px;margin-bottom:15px}
+.about-txt strong{color:var(--ink)}
+.about-hl{background:linear-gradient(135deg,var(--saffron-l),var(--gold-l));border:1px solid var(--border);border-radius:20px;padding:30px}
+.hl-row{display:flex;gap:14px;margin-bottom:22px}
+.hl-row:last-child{margin-bottom:0}
+.hl-icon{width:50px;height:50px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:var(--sh)}
+.hl-row h4{font-size:14px;font-weight:600;margin-bottom:4px}
+.hl-row p{font-size:13px;color:var(--muted)}
+
+/* USER CARDS */
+.user-cards{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:620px){.user-cards{grid-template-columns:1fr}}
+.uc{border-radius:22px;padding:36px 30px;color:#fff}
+.uc.s{background:linear-gradient(135deg,var(--navy) 0%,#0F2455 100%)}
+.uc.p{background:linear-gradient(135deg,#3A1A08 0%,#6A2D08 100%)}
+.uc-em{font-size:46px;display:block;margin-bottom:14px}
+.uc h3{font-family:'Playfair Display',serif;font-size:22px;margin-bottom:8px}
+.uc > p{font-size:14px;opacity:.72;margin-bottom:18px}
+.uc ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.uc li{font-size:13px;display:flex;gap:8px;line-height:1.4}
+.uc li::before{content:'✦';color:var(--gold);flex-shrink:0;margin-top:2px}
+
+/* FEATURES */
+.feat-bg{background:var(--saffron-l)}
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:18px}
+.feat-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:26px 22px;box-shadow:var(--sh);transition:.2s}
+.feat-card:hover{transform:translateY(-4px);box-shadow:var(--sh-lg)}
+.feat-icon{font-size:30px;margin-bottom:12px;display:block}
+.feat-card h4{font-size:14px;font-weight:600;margin-bottom:5px}
+.feat-card p{font-size:13px;color:var(--muted);line-height:1.55}
+
+/* VISION */
+.vision{background:linear-gradient(135deg,#061A0E 0%,#0C2B18 100%);color:#fff}
+.vision-g{display:grid;grid-template-columns:1fr 1.3fr;gap:48px;align-items:center}
+@media(max-width:700px){.vision-g{grid-template-columns:1fr}}
+.vision-l h2{font-family:'Playfair Display',serif;font-size:clamp(22px,3.5vw,36px);margin-bottom:14px}
+.vision-l p{opacity:.68;font-size:14px;margin-bottom:14px}
+.pillars{display:flex;flex-direction:column;gap:14px}
+.pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:18px;display:flex;gap:14px}
+.pill-em{font-size:24px;flex-shrink:0}
+.pill h4{font-size:14px;font-weight:600;color:var(--gold);margin-bottom:3px}
+.pill p{font-size:13px;opacity:.6}
+
+/* MANUAL */
+.manual-g{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+@media(max-width:680px){.manual-g{grid-template-columns:1fr}}
+.manual-head{font-size:15px;font-weight:700;margin-bottom:18px}
+.steps{display:flex;flex-direction:column}
+.step{display:flex;gap:16px;padding:20px 0;border-bottom:1px solid var(--border)}
+.step:last-child{border-bottom:none}
+.step-n{width:36px;height:36px;border-radius:50%;background:var(--saffron);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-b h4{font-size:14px;font-weight:600;margin-bottom:4px}
+.step-b p{font-size:13px;color:var(--muted)}
+
+/* FAQ */
+.faq-list{display:flex;flex-direction:column;gap:10px}
+.faq-item{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.faq-q{width:100%;background:none;border:none;padding:16px 20px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600;color:var(--ink);font-family:'DM Sans',sans-serif;transition:.15s;gap:12px}
+.faq-q:hover{background:var(--saffron-l)}
+.faq-q .ico{font-size:18px;transition:transform .25s;flex-shrink:0}
+.faq-q.open .ico{transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease;font-size:13px;color:var(--muted);padding:0 20px}
+.faq-a.open{max-height:220px;padding:0 20px 16px}
+
+/* ABOUT US */
+.team-g{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+@media(max-width:700px){.team-g{grid-template-columns:1fr}}
+.team-card{text-align:center;padding:30px 20px;background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:var(--sh)}
+.t-av{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,var(--saffron),var(--gold));margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:30px}
+.team-card h4{font-size:14px;font-weight:600;margin-bottom:5px}
+.team-card p{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* CONTACT */
+.contact-bg{background:var(--navy-l)}
+.contact-g{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media(max-width:650px){.contact-g{grid-template-columns:1fr}}
+.c-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:26px;box-shadow:var(--sh)}
+.c-card h4{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+.c-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:13px}
+.c-row .em{font-size:16px;flex-shrink:0;margin-top:1px}
+.c-row a{color:var(--saffron);text-decoration:none}
+.c-row a:hover{text-decoration:underline}
+
+/* CHATBOT */
+.chat-sec{background:linear-gradient(135deg,#1A1208,#2A1808)}
+.chat-wrap{display:grid;grid-template-columns:1fr 1.65fr;gap:48px;align-items:start}
+@media(max-width:720px){.chat-wrap{grid-template-columns:1fr}}
+.chat-intro p{font-size:14px;opacity:.68;margin-bottom:14px}
+.chat-feat{display:flex;gap:10px;font-size:14px;margin-bottom:9px;color:rgba(255,255,255,.8)}
+.chat-feat::before{content:'◆';color:var(--gold);flex-shrink:0;margin-top:3px}
+#cw{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;overflow:hidden}
+.ch-hdr{background:rgba(255,255,255,.08);padding:13px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)}
+.ch-dot{width:9px;height:9px;border-radius:50%;background:#4AE48A;box-shadow:0 0 8px #4AE48A;flex-shrink:0}
+.ch-hdr span{font-size:13px;font-weight:600;color:#fff}
+.ch-hdr small{font-size:11px;opacity:.45;margin-left:auto;color:#fff}
+#cm{height:300px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent}
+.msg{max-width:84%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.msg.bot{background:rgba(255,255,255,.1);border-radius:4px 14px 14px 14px;align-self:flex-start;color:rgba(255,255,255,.9)}
+.msg.user{background:var(--saffron);border-radius:14px 14px 4px 14px;align-self:flex-end;color:#fff}
+.qbtns{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px}
+.qbtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:20px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,.78);cursor:pointer;transition:.15s;font-family:'DM Sans',sans-serif}
+.qbtn:hover{background:var(--saffron);border-color:var(--saffron);color:#fff}
+.ci-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid rgba(255,255,255,.08)}
+#ci{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 13px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:.2s}
+#ci:focus{border-color:var(--saffron)}
+#ci::placeholder{color:rgba(255,255,255,.32)}
+#cs{background:var(--saffron);border:none;border-radius:10px;color:#fff;font-size:17px;cursor:pointer;padding:8px 13px;transition:.2s;flex-shrink:0}
+#cs:hover{background:var(--saffron-d)}
+#cs:disabled{opacity:.45;cursor:not-allowed}
+
+/* PROMISE BOX */
+.promise{max-width:660px;margin:40px auto 0;text-align:center;padding:30px;background:var(--saffron-l);border:1px solid var(--border);border-radius:20px}
+
+/* FOOTER */
+footer{background:var(--ink);color:rgba(255,255,255,.45);padding:40px 20px;text-align:center}
+.ft-logo{font-family:'Playfair Display',serif;font-size:21px;color:var(--gold);margin-bottom:10px}
+footer p{font-size:13px;margin-bottom:5px}
+footer a{color:var(--saffron);text-decoration:none}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-i">
+    <a href="index.html" class="logo"><span class="logo-icon">🔱</span><strong class="logo-text">Sudarshan Chakra India</strong></a>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#vision">Vision</a></li>
+      <li><a href="#manual">User Manual</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#team">About Us</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <li><a href="#chatbot">AI Guide</a></li>
+    </ul>
+    <a href="index.html" class="nav-cta">Open App →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">🇮🇳 Made for Bharat &nbsp;·&nbsp; 12 Languages &nbsp;·&nbsp; Community First</div>
+  <h1>Connecting India's<br><em>Skilled Hands</em><br>with Every Home</h1>
+  <p class="hero-sub">Sudarshan Chakra India is a community-first service marketplace that empowers skilled workers to earn, grow, and be discovered — right in their own neighbourhood.</p>
+  <div class="hero-stats">
+    <div><strong class="stat-n">12</strong><span class="stat-l">Indian Languages</span></div>
+    <div><strong class="stat-n">50+</strong><span class="stat-l">Service Categories</span></div>
+    <div><strong class="stat-n">✅</strong><span class="stat-l">Verified Providers</span></div>
+    <div><strong class="stat-n">🔱</strong><span class="stat-l">Community Driven</span></div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="sec" id="about">
+  <div class="sec-i">
+    <div class="sec-label">Our Story</div>
+    <div class="divider"></div>
+    <div class="about-g">
+      <div class="about-txt">
+        <h2 class="sec-title">What is Sudarshan Chakra India?</h2>
+        <p>Sudarshan Chakra India is a <strong>hyperlocal service marketplace</strong> built for the heart of India — its skilled, hardworking people. Named after the sacred spinning disc of Lord Vishnu, our platform embodies perpetual motion, protection, and prosperity for every community it serves.</p>
+        <p>We bridge the gap between <strong>service seekers</strong> — families and individuals who need reliable, trusted help at home — and <strong>service providers</strong> — the plumbers, electricians, teachers, beauticians, cooks, and countless other skilled workers who form the backbone of India's economy.</p>
+        <p>Unlike global platforms, Sudarshan Chakra India is built ground-up for India: supporting <strong>12 regional languages</strong>, respecting India's diverse religions and communities, working on low-bandwidth connections, and prioritising dignity and fair earnings for every worker on the platform.</p>
+        <p>Our platform is more than a marketplace — it is a <strong>movement</strong> to formalise the informal economy, build trust through verified profiles and genuine reviews, and give every skilled Indian the digital presence they deserve.</p>
+        <div style="margin-top:18px">
+          <span class="chip">Hyperlocal</span><span class="chip">12 Languages</span><span class="chip g">Community First</span><span class="chip b">Verified Providers</span><span class="chip g">Charity Program</span><span class="chip b">Voice Search</span>
+        </div>
+      </div>
+      <div class="about-hl">
+        <div class="hl-row"><div class="hl-icon">🏠</div><div><h4>For Seekers — Peace of Mind</h4><p>Browse verified, rated providers near you. Book with confidence knowing every provider has a public profile, real reviews, and identity verification.</p></div></div>
+        <div class="hl-row"><div class="hl-icon">👷</div><div><h4>For Providers — Dignity & Livelihood</h4><p>Build your professional profile, get discovered by hundreds of families nearby, earn consistently without middlemen, and grow your reputation through reviews.</p></div></div>
+        <div class="hl-row"><div class="hl-icon">🌱</div><div><h4>For Communities — Growth Together</h4><p>Our Charity program and Referral system create a virtuous cycle where the platform's success directly funds skill development for those who need it most.</p></div></div>
+        <div class="hl-row"><div class="hl-icon">🔱</div><div><h4>The Sudarshan Philosophy</h4><p>Like the Sudarshan Chakra — always spinning, always protecting — our platform works 24×7 to connect, protect, and empower every user in our community.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEEKER / PROVIDER -->
+<section class="sec alt" id="users">
+  <div class="sec-i">
+    <div class="sec-label">Who is this for?</div>
+    <div class="divider"></div>
+    <h2 class="sec-title">Two Worlds, One Platform</h2>
+    <p class="sec-sub">Whether you need a service or you provide one, Sudarshan Chakra India is designed to make your life easier, safer and more rewarding.</p>
+    <div class="user-cards">
+      <div class="uc s">
+        <span class="uc-em">🏡</span>
+        <h3>Service Seekers</h3>
+        <p>Homeowners, families and businesses who need skilled help — fast, reliable, affordable.</p>
+        <ul>
+          <li>Search 50+ categories in your preferred language</li>
+          <li>View real photos, reviews and ratings before booking</li>
+          <li>Call or WhatsApp providers directly — no middleman</li>
+          <li>Save favourite providers for quick rebooking</li>
+          <li>Raise formal booking requests with details</li>
+          <li>Report concerns safely and confidentially</li>
+          <li>Earn Wallet points on every referral</li>
+          <li>Works in 12 Indian languages including all major scripts</li>
+        </ul>
+      </div>
+      <div class="uc p">
+        <span class="uc-em">⚙️</span>
+        <h3>Service Providers</h3>
+        <p>Skilled workers, freelancers, artisans and professionals who want to grow their client base and earn more.</p>
+        <ul>
+          <li>Create a free professional profile in minutes</li>
+          <li>Be discovered by hundreds of nearby families</li>
+          <li>Build reputation through genuine customer reviews</li>
+          <li>Share portfolio photos to showcase your work quality</li>
+          <li>Earn a ✅ Verified badge with government ID check</li>
+          <li>Upgrade to Professional or Elite for priority listing</li>
+          <li>Receive booking requests and manage your schedule</li>
+          <li>Earn Wallet commission on every provider you refer</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="sec feat-bg" id="features">
+  <div class="sec-i">
+    <div class="sec-label">Key Features</div>
+    <div class="divider"></div>
+    <h2 class="sec-title">What Makes Us Different</h2>
+    <p class="sec-sub">Every feature is crafted with one goal: making finding and providing services simpler, safer and more dignified for everyone across India.</p>
+    <div class="feat-grid">
+      <div class="feat-card"><span class="feat-icon">🌏</span><h4>12 Indian Languages</h4><p>Complete support for Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese and English. Every screen and label switches instantly to your language.</p></div>
+      <div class="feat-card"><span class="feat-icon">🎙️</span><h4>Voice Search</h4><p>Can't type? Just speak. Our voice search understands natural requests in multiple languages — making the app accessible to every Indian regardless of literacy or typing speed.</p></div>
+      <div class="feat-card"><span class="feat-icon">✅</span><h4>Verified Provider Badges</h4><p>Providers upload Aadhaar, Driving Licence or Voter ID for admin review. The ✅ Verified badge appears prominently on profiles, dramatically increasing seeker trust and bookings.</p></div>
+      <div class="feat-card"><span class="feat-icon">⭐</span><h4>Genuine Reviews & Ratings</h4><p>Star ratings, written feedback and verified reviews build a trustworthy reputation system. Only real users who interacted with a provider can leave reviews — no fake ratings.</p></div>
+      <div class="feat-card"><span class="feat-icon">💬</span><h4>In-App Chat</h4><p>Real-time messaging between seekers and providers without sharing phone numbers upfront. Chat history is preserved for reference and dispute resolution.</p></div>
+      <div class="feat-card"><span class="feat-icon">💰</span><h4>Wallet & Reward Points</h4><p>Earn points for daily logins, referrals, reviews and bookings. Redeem for membership upgrades. A loyalty system that genuinely gives back to the community.</p></div>
+      <div class="feat-card"><span class="feat-icon">🗺️</span><h4>Location-Based Discovery</h4><p>Interactive map shows verified providers near you in real time. Distance-based filtering ensures you find someone who can actually reach you quickly.</p></div>
+      <div class="feat-card"><span class="feat-icon">📱</span><h4>Mobile-First PWA</h4><p>Built for the smartphone-first Indian user. Works on any screen, loads fast on 3G, and is installable as a Progressive Web App directly on your phone home screen.</p></div>
+      <div class="feat-card"><span class="feat-icon">🏆</span><h4>Membership Tiers</h4><p>Basic, Professional and Elite tiers give providers greater visibility, portfolio space and priority listing. Wallet points make upgrades more accessible to everyone.</p></div>
+      <div class="feat-card"><span class="feat-icon">🤝</span><h4>Referral & Earn</h4><p>Share your unique referral link and earn Wallet points every time someone joins through it. Providers earn commissions when their referrals register — a true community economy.</p></div>
+      <div class="feat-card"><span class="feat-icon">🙏</span><h4>Gratitude Tips</h4><p>Found a provider exceptional? Send a Gratitude tip directly from their profile. This encourages excellence and ensures the best workers are rewarded beyond the standard rate.</p></div>
+      <div class="feat-card"><span class="feat-icon">❤️</span><h4>Charity Program</h4><p>Donate Wallet points to fund skill development for underprivileged workers. A platform feature that turns everyday business activity into meaningful social impact.</p></div>
+      <div class="feat-card"><span class="feat-icon">📸</span><h4>Portfolio Showcase</h4><p>Providers upload up to 10 work photos to showcase their craft. A strong portfolio is the most powerful tool to win new customers — your work speaks for itself.</p></div>
+      <div class="feat-card"><span class="feat-icon">🛡️</span><h4>Report & Safety System</h4><p>Tap 🚩 to report any concern about a provider. Our admin team reviews all reports within 24 hours, keeping the platform safe and trustworthy for everyone.</p></div>
+      <div class="feat-card"><span class="feat-icon">📅</span><h4>Booking Management</h4><p>Seekers can raise detailed booking requests specifying service, date, location and budget. Providers receive and manage bookings all from their dashboard.</p></div>
+      <div class="feat-card"><span class="feat-icon">🔔</span><h4>Smart Notifications</h4><p>In-app notifications for booking updates, new reviews, referral rewards, admin messages and platform announcements — all delivered in your preferred language.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- VISION / CHARITY -->
+<section class="sec vision" id="vision">
+  <div class="sec-i">
+    <div class="vision-g">
+      <div class="vision-l">
+        <div class="sec-label" style="color:var(--gold)">Our Vision</div>
+        <div class="divider"></div>
+        <h2>Skill. Dignity.<br>Livelihood for All.</h2>
+        <p>We believe every skilled worker in India deserves a fair chance to earn a dignified living from their craft. Sudarshan Chakra India is our commitment to making that happen — not just as a business, but as a movement.</p>
+        <p>Our vision is to build a self-sustaining ecosystem where the platform's growth directly funds skill training for the most vulnerable workers in society — creating a cycle of prosperity that grows stronger with every new member who joins.</p>
+        <p style="font-size:13px;opacity:.5;margin-top:20px">Powered by community · Driven by purpose · Built for Bharat</p>
+      </div>
+      <div class="pillars">
+        <div class="pill"><div class="pill-em">🎓</div><div><h4>Skill Development Fund</h4><p>A portion of every premium membership fee sponsors vocational training for underprivileged youth — turning Wallet point donations into real opportunities that change lives.</p></div></div>
+        <div class="pill"><div class="pill-em">🌾</div><div><h4>Rural Outreach Program</h4><p>Taking the platform to tier-2, tier-3 cities and villages. Our 12-language support and voice search are built specifically to serve India's rural skilled workers who have long been invisible to the digital economy.</p></div></div>
+        <div class="pill"><div class="pill-em">♀️</div><div><h4>Women in Services</h4><p>Dedicated support and safety features for women providers — beauticians, home tutors, cooks, tailors — empowering them to build independent livelihoods on their own terms.</p></div></div>
+        <div class="pill"><div class="pill-em">🔗</div><div><h4>Community Commerce</h4><p>Referral commissions, Wallet rewards and Charity donations create a circular economy — when any member thrives, everyone benefits. This is the Sudarshan Chakra in perpetual motion.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- USER MANUAL -->
+<section class="sec" id="manual">
+  <div class="sec-i">
+    <div class="sec-label">User Manual</div>
+    <div class="divider"></div>
+    <h2 class="sec-title">How to Use the App</h2>
+    <p class="sec-sub">Getting started is simple. Follow these steps to get the most out of Sudarshan Chakra India.</p>
+    <div class="manual-g">
+      <div>
+        <p class="manual-head" style="color:var(--navy)">👤 For Service Seekers</p>
+        <div class="steps">
+          <div class="step"><div class="step-n">1</div><div class="step-b"><h4>Choose Your Language</h4><p>Tap 🌏 in the top navigation bar and select your preferred language. Every screen, label and category instantly switches to your language.</p></div></div>
+          <div class="step"><div class="step-n">2</div><div class="step-b"><h4>Browse or Voice-Search</h4><p>Use the search bar, tap 🎤 to speak your need, or tap Browse Services to explore 50+ categories like Plumbing, Electrical, Beauty, Tutoring, AC Repair and more.</p></div></div>
+          <div class="step"><div class="step-n">3</div><div class="step-b"><h4>View Provider Profiles</h4><p>Tap any provider card to see their full profile — photo, services, hourly rate, working hours, location, portfolio, reviews and verification status.</p></div></div>
+          <div class="step"><div class="step-n">4</div><div class="step-b"><h4>Call, WhatsApp or Hire</h4><p>Contact the provider directly via 📞 Call or 💬 WhatsApp, or tap Hire Now to raise a formal booking request with date, location and details.</p></div></div>
+          <div class="step"><div class="step-n">5</div><div class="step-b"><h4>Login & Earn Rewards</h4><p>Login with your mobile number (OTP — no password needed). Save favourite providers, leave reviews, refer friends and earn Wallet points with every action.</p></div></div>
+        </div>
+      </div>
+      <div>
+        <p class="manual-head" style="color:var(--saffron)">⚙️ For Service Providers</p>
+        <div class="steps">
+          <div class="step"><div class="step-n">1</div><div class="step-b"><h4>Register Your Profile</h4><p>Tap Register as Provider. Fill in your name, mobile, category, service area, working hours and hourly rate. Upload a clear, professional profile photo.</p></div></div>
+          <div class="step"><div class="step-n">2</div><div class="step-b"><h4>Verify Your Identity</h4><p>Upload your Aadhaar, Driving Licence or Voter ID (optional but highly recommended). Verified providers earn a ✅ badge and appear higher in search results.</p></div></div>
+          <div class="step"><div class="step-n">3</div><div class="step-b"><h4>Add Portfolio Photos</h4><p>After logging in, visit your profile and upload photos of your past work. A strong portfolio of 5–10 photos significantly increases booking conversion.</p></div></div>
+          <div class="step"><div class="step-n">4</div><div class="step-b"><h4>Upgrade Your Membership</h4><p>Choose Basic (free), Professional or Elite membership for greater visibility, priority listing, and more features. Use earned Wallet points to reduce the upgrade cost.</p></div></div>
+          <div class="step"><div class="step-n">5</div><div class="step-b"><h4>Refer & Earn</h4><p>Share your unique referral link from your Wallet page. Earn points every time a new provider joins through your link. Build a team — earn more together.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="sec alt" id="faq">
+  <div class="sec-i">
+    <div class="sec-label">FAQ</div>
+    <div class="divider"></div>
+    <h2 class="sec-title">Frequently Asked Questions</h2>
+    <p class="sec-sub">Quick answers to the questions we hear most often from our community.</p>
+    <div class="faq-list">
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Is Sudarshan Chakra India free to use? <span class="ico">+</span></button><div class="faq-a">Browsing and searching for providers is completely free for seekers. Providers can register and list their basic profile at no cost. Premium membership tiers (Professional and Elite) are available for providers who want greater visibility and features, with pricing that can be partially offset using earned Wallet points.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">How do I login? Is a password required? <span class="ico">+</span></button><div class="faq-a">We use secure mobile OTP login — no password needed. Enter your 10-digit mobile number, receive a 6-digit SMS code, enter it and you're in. Your session persists across visits so you won't need to login every time on the same device.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Is my personal information safe? <span class="ico">+</span></button><div class="faq-a">Yes. Your mobile number is used only for OTP verification and is never displayed publicly. Identity verification documents are seen exclusively by our admin team and are never shared publicly. We do not sell your data to any third party under any circumstances.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">How does the Wallet & Reward Points system work? <span class="ico">+</span></button><div class="faq-a">You earn points for daily logins (2 pts), leaving reviews (5 pts), completing bookings, and referring new users. Points accumulate in your Wallet and can be redeemed to offset membership upgrade fees. A portion can also be donated to our Charity program to fund skill development for underprivileged workers.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">What is the ✅ Verified badge and how do I get it? <span class="ico">+</span></button><div class="faq-a">The Verified badge is awarded to providers who upload a valid government ID (Aadhaar, Driving Licence, Voter ID, PAN or Passport) for admin review. Once approved, the badge appears prominently on your profile, significantly increasing seeker trust and booking rates.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">Can I use the app in my regional language? <span class="ico">+</span></button><div class="faq-a">Absolutely. Sudarshan Chakra India fully supports 12 languages: English, Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia and Assamese. Tap 🌏 in the navigation bar at any time to switch languages. The entire app — every label, category and form — instantly updates to your chosen language.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">How do I report a problem with a provider? <span class="ico">+</span></button><div class="faq-a">On any provider's profile, tap the 🚩 Report button, describe your concern and submit. Our admin team reviews all reports within 24 hours. Providers with repeated or serious reports are investigated and may be suspended or removed from the platform.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">What is the Charity program and how does it work? <span class="ico">+</span></button><div class="faq-a">Our Charity program lets you donate your earned Wallet points to a fund that sponsors vocational skill training for underprivileged youth. Even a small donation contributes to a training programme that can transform someone's livelihood. You can donate via the Wallet section of your profile.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">How does the Referral program work for providers? <span class="ico">+</span></button><div class="faq-a">Every registered user gets a unique referral link accessible from their Wallet page. Share it with friends and colleagues. When they register as a provider through your link, you earn Wallet points. You can track all referrals, earnings and referral history in your Wallet dashboard.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">What if a provider doesn't show up or does poor quality work? <span class="ico">+</span></button><div class="faq-a">Leave an honest review with your star rating — this protects the next seeker. Use the Report feature for serious issues. For booking disputes, contact us via the Help section below and our team will mediate. Building a transparent, accountable community is at the core of what we do.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="faqToggle(this)">How do I install the app on my phone? <span class="ico">+</span></button><div class="faq-a">Sudarshan Chakra India is a Progressive Web App (PWA). On Android: open the site in Chrome, tap the three-dot menu and select "Add to Home Screen". On iPhone: open in Safari, tap Share, then "Add to Home Screen". The app icon will appear on your home screen just like a native app, and it works offline too.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT US -->
+<section class="sec" id="team">
+  <div class="sec-i">
+    <div class="sec-label">About Us</div>
+    <div class="divider"></div>
+    <h2 class="sec-title">The People Behind the Platform</h2>
+    <p class="sec-sub">Built by a small, passionate team that believes technology should serve people — not the other way around.</p>
+    <div class="team-g">
+      <div class="team-card"><div class="t-av">🔱</div><h4>Founder & Vision</h4><p>Driven by a belief that every skilled worker in India deserves a digital platform that respects their craft, their language and their dignity. The vision began with a simple question: why should finding a good plumber be harder than ordering pizza?</p></div>
+      <div class="team-card"><div class="t-av">💻</div><h4>Technology Team</h4><p>A focused engineering team building India's most accessible service marketplace — mobile-first, language-first, community-first. We obsess over performance, accessibility, and making every feature work beautifully for users with modest devices and slow connections.</p></div>
+      <div class="team-card"><div class="t-av">🌱</div><h4>Community & Impact</h4><p>Dedicated to growing the provider network, running the Charity program and ensuring every user feels heard, safe and valued. We read every feedback, investigate every report, and celebrate every provider success story.</p></div>
+    </div>
+    <div class="promise">
+      <div style="font-size:34px;margin-bottom:10px">🔱</div>
+      <h3 style="font-family:'Playfair Display',serif;font-size:21px;margin-bottom:10px">Our Promise to You</h3>
+      <p style="color:var(--muted);font-size:14px;line-height:1.7">We will always put the community before profit. We will always protect your data and privacy. We will always build features that serve India's diverse needs — in every language, every region, every community. <strong style="color:var(--ink)">Jai Hind. 🇮🇳</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="sec contact-bg" id="contact">
+  <div class="sec-i">
+    <div class="sec-label">Connect With Us</div>
+    <div class="divider"></div>
+    <h2 class="sec-title">We're Here to Help</h2>
+    <p class="sec-sub">Reach out for support, partnerships, feedback or just to say hello. We read every message.</p>
+    <div class="contact-g">
+      <div class="c-card">
+        <h4>🏢 Corporate Office</h4>
+        <div class="c-row"><span class="em">🔱</span><div><strong>Sudarshan Chakra India Pvt. Ltd.</strong><br><span style="color:var(--muted);font-size:12px">Registered in India under the Companies Act</span></div></div>
+        <div class="c-row"><span class="em">📍</span><div style="font-size:13px;color:var(--muted)">Head Office: India<br>(Detailed address available to registered partners)</div></div>
+        <div class="c-row"><span class="em">⏰</span><div style="font-size:13px;color:var(--muted)">Monday – Saturday &nbsp;|&nbsp; 9:00 AM – 6:00 PM IST</div></div>
+        <div class="c-row"><span class="em">🌐</span><div style="font-size:13px"><a href="https://sudarshanchakraindia.github.io/sudarshan-chakra/" target="_blank">sudarshanchakraindia.github.io</a></div></div>
+      </div>
+      <div class="c-card">
+        <h4>📞 Get in Touch</h4>
+        <div class="c-row"><span class="em">✉️</span><div><a href="mailto:support@sudarshanchakraindia.com">support@sudarshanchakraindia.com</a><br><span style="font-size:12px;color:var(--muted)">General support & queries</span></div></div>
+        <div class="c-row"><span class="em">🤝</span><div><a href="mailto:partners@sudarshanchakraindia.com">partners@sudarshanchakraindia.com</a><br><span style="font-size:12px;color:var(--muted)">Business partnerships & media</span></div></div>
+        <div class="c-row"><span class="em">💡</span><div style="font-size:13px;color:var(--muted)">Feature suggestions? Tap 👎 in the app or email us. Our best features come from community ideas.</div></div>
+      </div>
+      <div class="c-card">
+        <h4>🆘 Help & Support Guide</h4>
+        <div class="c-row"><span class="em">🤖</span><div style="font-size:13px;color:var(--muted)">Use the <strong style="color:var(--ink)">AI Guide chatbot</strong> below for instant answers to any question about the app — available 24×7.</div></div>
+        <div class="c-row"><span class="em">📖</span><div style="font-size:13px;color:var(--muted)">Read the <a href="#manual">User Manual</a> above for step-by-step instructions on using every feature.</div></div>
+        <div class="c-row"><span class="em">❓</span><div style="font-size:13px;color:var(--muted)">Check the <a href="#faq">FAQ section</a> — most questions are answered there in under 30 seconds.</div></div>
+        <div class="c-row"><span class="em">🐛</span><div style="font-size:13px;color:var(--muted)">Found a bug? Email us a screenshot and we'll fix it in the next update.</div></div>
+      </div>
+      <div class="c-card">
+        <h4>📲 Stay Connected</h4>
+        <div class="c-row"><span class="em">🏗️</span><div style="font-size:13px;color:var(--muted)">Sudarshan Chakra India is actively growing. We're adding new cities, categories and features every month based on community feedback.</div></div>
+        <div class="c-row"><span class="em">🙏</span><div style="font-size:13px;color:var(--muted)">Thank you for being part of this journey. Every provider registered, every review written, every referral shared — it all matters and it all builds something meaningful.</div></div>
+        <div class="c-row"><span class="em">💬</span><div style="font-size:13px;color:var(--muted)">In-app chat and WhatsApp support available via provider profiles. We're always a tap away.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI CHATBOT -->
+<section class="sec chat-sec" id="chatbot">
+  <div class="sec-i">
+    <div class="chat-wrap">
+      <div class="chat-intro" style="color:#fff">
+        <div class="sec-label" style="color:var(--gold)">AI Guide</div>
+        <div class="divider"></div>
+        <h2 class="sec-title" style="color:#fff">Your 24×7<br>AI Assistant</h2>
+        <p>Have a question about the app? Not sure how something works? Our AI Guide answers instantly — in plain language, any time of day.</p>
+        <div class="chat-feat">How to register as a provider</div>
+        <div class="chat-feat">Understanding Wallet & points</div>
+        <div class="chat-feat">Getting the Verified badge</div>
+        <div class="chat-feat">How to book a service</div>
+        <div class="chat-feat">Troubleshooting login issues</div>
+        <div class="chat-feat">Referral program & Charity</div>
+        <p style="margin-top:18px;font-size:12px;opacity:.4;color:#fff">Powered by Claude AI · Knowledgeable · Always improving</p>
+      </div>
+      <div>
+        <div id="cw">
+          <div class="ch-hdr">
+            <div class="ch-dot"></div>
+            <span>🔱 Sudarshan Guide</span>
+            <small>AI Assistant · Online</small>
+          </div>
+          <div id="cm">
+            <div class="msg bot">Namaste! 🙏 I'm your Sudarshan Chakra Guide. I can help with anything about the app — finding services, registering as a provider, Wallet points, booking, verification, or anything else. What would you like to know?</div>
+          </div>
+          <div class="qbtns">
+            <button class="qbtn" onclick="sq('How do I register as a provider?')">Register as provider</button>
+            <button class="qbtn" onclick="sq('How does the Wallet work?')">Wallet & Points</button>
+            <button class="qbtn" onclick="sq('How do I get a Verified badge?')">Get Verified</button>
+            <button class="qbtn" onclick="sq('How do I book a service?')">Book a service</button>
+            <button class="qbtn" onclick="sq('How does the Charity program work?')">Charity program</button>
+          </div>
+          <div class="ci-row">
+            <input id="ci" type="text" placeholder="Ask anything about the app…" onkeydown="if(event.key==='Enter')sc()">
+            <button id="cs" onclick="sc()">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="ft-logo">🔱 Sudarshan Chakra India</div>
+  <p>Connecting India's skilled hands with every home &nbsp;·&nbsp; 12 Languages &nbsp;·&nbsp; 50+ Service Categories</p>
+  <p style="margin-top:8px"><a href="index.html">Open App</a> &nbsp;·&nbsp; <a href="#about">About</a> &nbsp;·&nbsp; <a href="#features">Features</a> &nbsp;·&nbsp; <a href="#faq">FAQ</a> &nbsp;·&nbsp; <a href="#contact">Contact</a> &nbsp;·&nbsp; <a href="#chatbot">AI Guide</a></p>
+  <p style="margin-top:16px;font-size:11px;opacity:.35">© 2025 Sudarshan Chakra India Pvt. Ltd. &nbsp;·&nbsp; All rights reserved &nbsp;·&nbsp; Built with ❤️ for Bharat</p>
+</footer>
+
+<script>
+// FAQ
+function faqToggle(btn) {
+  const a = btn.nextElementSibling;
+  const open = a.classList.contains('open');
+  document.querySelectorAll('.faq-a.open').forEach(x => x.classList.remove('open'));
+  document.querySelectorAll('.faq-q.open').forEach(x => x.classList.remove('open'));
+  if (!open) { a.classList.add('open'); btn.classList.add('open'); }
+}
+
+// AI Chatbot
+const SYS = `You are the helpful AI guide for Sudarshan Chakra India, a hyperlocal service marketplace app built for India.
+
+KEY FACTS ABOUT THE APP:
+- Connects service seekers (people needing home services) with service providers (skilled workers)
+- Supports 12 Indian languages: English, Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese
+- Login: mobile OTP only — enter 10-digit number, get 6-digit SMS code, no password needed
+- 50+ service categories: Plumbing, Electrical, Beauty, Tutoring, AC Repair, Carpentry, Painting, Cooking, etc.
+- Provider registration: name, mobile, category, religion, languages spoken, hourly rate, working hours, service area, bio, photo, ID verification (optional → gets ✅ Verified badge)
+- Membership tiers: Basic (free), Professional, Elite — higher = better visibility and priority listing
+- Wallet points: daily login (2pts), reviews (5pts), referrals, bookings — redeemable against membership fees
+- Verified badge: upload Aadhaar/DL/Voter ID → admin reviews → approves → badge appears on profile
+- Charity: donate Wallet points to fund skill training for underprivileged youth
+- Referral: unique link in Wallet page; earn points when others join through it
+- Portfolio: providers upload up to 10 work photos
+- Booking: tap provider → Hire Now → fill date/location/details → submit
+- Call: tap 📞 on profile → opens phone dialer directly on all devices
+- WhatsApp: tap 💬 on profile → opens WhatsApp with pre-filled message
+- Report: tap 🚩 on profile → describe issue → admin reviews within 24hrs
+- Gratitude tip: send tip to exceptional provider via Gratitude button
+- Reviews: only users who interacted with provider can review; star + written
+- In-app chat: real-time messaging without sharing phone numbers upfront
+- Voice search: tap 🎤, speak service name in any language
+- Map: shows providers near your location interactively
+- PWA: installable on phone home screen (Android: Chrome menu → Add to Home Screen; iPhone: Safari Share → Add to Home Screen)
+- Works offline once installed
+- sw.js service worker caches files for fast loading
+
+TONE: Warm, friendly, concise. Use emojis occasionally. Answer in whatever language the user writes in. For anything you are unsure about, suggest emailing support@sudarshanchakraindia.com.`;
+
+let hist = [];
+
+async function sc() {
+  const inp = document.getElementById('ci');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  addMsg(msg, 'user');
+  document.getElementById('cs').disabled = true;
+  hist.push({ role: 'user', content: msg });
+  const typing = addMsg('…', 'bot');
+
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        system: SYS,
+        messages: hist.slice(-10)
+      })
+    });
+    const d = await r.json();
+    const reply = d.content?.[0]?.text || 'Sorry, I could not answer that right now. Please try again or email support@sudarshanchakraindia.com 🙏';
+    typing.textContent = reply;
+    hist.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    typing.textContent = 'Connection issue. Please try again in a moment. 🙏';
+  }
+  document.getElementById('cs').disabled = false;
+}
+
+function sq(t) { document.getElementById('ci').value = t; sc(); }
+
+function addMsg(text, type) {
+  const cm = document.getElementById('cm');
+  const d = document.createElement('div');
+  d.className = 'msg ' + type;
+  d.textContent = text;
+  cm.appendChild(d);
+  cm.scrollTop = cm.scrollHeight;
+  return d;
+}
+</script>
+</body>
+</html>
