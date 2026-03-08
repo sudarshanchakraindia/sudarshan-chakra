@@ -267,6 +267,7 @@
                 <button data-i18n="home" onclick="showPage('home')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Home</button>
                 <button data-i18n="browse" onclick="showPage('browse')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Browse</button>
                 <button data-i18n="map" onclick="showPage('map')" class="px-3 py-2 text-gray-700 hover:text-orange-600 font-medium text-sm">Map</button>
+                <button data-i18n="aboutNav" onclick="showPage('info')" class="px-3 py-2 text-orange-600 hover:text-orange-800 font-medium text-sm">ℹ️ About</button>
                 <!-- Show register/admin buttons only when NOT logged in -->
                 <div id="navGuestButtons" class="flex gap-2 items-center">
                     <button data-i18n="registerProvider" onclick="showPage('register')" class="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">Register Provider</button>
@@ -1583,6 +1584,223 @@
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: INFO — About / Features / Vision / FAQ / Office / AI -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div id="page-info" class="page hidden">
+      <div class="max-w-4xl mx-auto px-4 py-6 space-y-8">
+
+        <button onclick="showPage('home')" class="flex items-center gap-2 text-orange-600 hover:text-orange-800 font-medium text-sm">← Back to Home</button>
+
+        <!-- ABOUT -->
+        <div class="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100 shadow-sm">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-700 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow">SC</div>
+            <div><h2 class="text-xl font-bold text-orange-700">🔱 Sudarshan Chakra India</h2><p class="text-xs text-gray-500">Connecting India's Skilled Hands with Every Home</p></div>
+          </div>
+          <p class="text-sm text-gray-700 leading-relaxed mb-3"><strong>Sudarshan Chakra India</strong> is a hyperlocal service marketplace built for the heart of India — its skilled, hardworking people. Named after the sacred spinning disc of Lord Vishnu, our platform embodies perpetual motion, protection and prosperity for every community it serves.</p>
+          <p class="text-sm text-gray-700 leading-relaxed mb-3">We bridge the gap between <strong>service seekers</strong> — families who need reliable, trusted help at home — and <strong>service providers</strong> — the plumbers, electricians, teachers, beauticians, cooks and countless other skilled workers who form the backbone of India's economy.</p>
+          <p class="text-sm text-gray-700 leading-relaxed mb-4">Built ground-up for India: <strong>12 regional languages</strong>, voice search, verified profiles, genuine reviews, Wallet rewards, in-app chat, Charity program and community referrals — all in one platform that works beautifully even on slow connections.</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full">12 Languages</span>
+            <span class="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full">Community First</span>
+            <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full">Verified Providers</span>
+            <span class="bg-purple-100 text-purple-700 text-xs font-semibold px-3 py-1 rounded-full">Charity Program</span>
+            <span class="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full">Wallet Rewards</span>
+            <span class="bg-pink-100 text-pink-700 text-xs font-semibold px-3 py-1 rounded-full">Voice Search</span>
+          </div>
+        </div>
+
+        <!-- SEEKERS & PROVIDERS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-blue-900 text-white rounded-2xl p-5">
+            <div class="text-3xl mb-2">🏡</div>
+            <h3 class="font-bold text-base mb-1">For Service Seekers</h3>
+            <p class="text-blue-200 text-xs mb-3">Find trusted help for your home — fast, reliable, affordable.</p>
+            <ul class="space-y-1.5 text-xs text-blue-100">
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Search 50+ categories in your language</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>View photos, reviews and ratings before booking</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Call or WhatsApp providers directly — no middleman</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Save favourite providers for quick rebooking</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Earn Wallet points on every referral</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Report concerns safely and confidentially</li>
+            </ul>
+          </div>
+          <div class="bg-orange-900 text-white rounded-2xl p-5">
+            <div class="text-3xl mb-2">⚙️</div>
+            <h3 class="font-bold text-base mb-1">For Service Providers</h3>
+            <p class="text-orange-200 text-xs mb-3">Build your profile, get discovered, earn more — no middlemen.</p>
+            <ul class="space-y-1.5 text-xs text-orange-100">
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Free professional profile in minutes</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Discovered by hundreds of nearby families</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>✅ Verified badge with government ID check</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Upload portfolio photos to showcase your work</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Professional and Elite membership tiers</li>
+              <li class="flex gap-2"><span class="text-yellow-400 flex-shrink-0">✦</span>Earn Wallet commission on every referral</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- KEY FEATURES -->
+        <div>
+          <h3 class="text-base font-bold text-gray-800 mb-3">✨ Key Features That Make Us Special</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🌏</span><div><h4 class="font-semibold text-xs">12 Indian Languages</h4><p class="text-xs text-gray-500">Entire app in Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese and English — switch any time with 🌏</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🎙️</span><div><h4 class="font-semibold text-xs">Voice Search</h4><p class="text-xs text-gray-500">Speak your service need in any Indian language — no typing required, making the app accessible to everyone</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">✅</span><div><h4 class="font-semibold text-xs">Verified Provider Badges</h4><p class="text-xs text-gray-500">Government ID-verified providers earn a trusted badge — seekers can book with full confidence</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">⭐</span><div><h4 class="font-semibold text-xs">Genuine Reviews & Ratings</h4><p class="text-xs text-gray-500">Only real users who interacted with a provider can leave reviews — no fake ratings, ever</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">💬</span><div><h4 class="font-semibold text-xs">In-App Chat</h4><p class="text-xs text-gray-500">Real-time messaging without sharing phone numbers upfront — chat history saved for reference</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">💰</span><div><h4 class="font-semibold text-xs">Wallet & Reward Points</h4><p class="text-xs text-gray-500">Earn points for daily logins, reviews, referrals and bookings — redeem for membership upgrades</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">❤️</span><div><h4 class="font-semibold text-xs">Charity Program</h4><p class="text-xs text-gray-500">Donate Wallet points to fund vocational skill training for underprivileged youth in India</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🤝</span><div><h4 class="font-semibold text-xs">Referral & Earn</h4><p class="text-xs text-gray-500">Share your unique link — earn Wallet points when new providers join through you</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🗺️</span><div><h4 class="font-semibold text-xs">Location-Based Discovery</h4><p class="text-xs text-gray-500">Interactive map shows verified providers near you in real time — find someone who can reach you quickly</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🏆</span><div><h4 class="font-semibold text-xs">Membership Tiers</h4><p class="text-xs text-gray-500">Basic (free), Professional and Elite tiers give providers greater visibility and priority listing</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">🙏</span><div><h4 class="font-semibold text-xs">Gratitude Tips</h4><p class="text-xs text-gray-500">Send a tip to an exceptional provider via the Gratitude button — rewards excellence beyond the standard rate</p></div></div>
+            <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex gap-3 items-start"><span class="text-xl flex-shrink-0">📱</span><div><h4 class="font-semibold text-xs">Installable PWA</h4><p class="text-xs text-gray-500">Add to phone home screen — works offline, loads fast on 3G, no app store needed</p></div></div>
+          </div>
+        </div>
+
+        <!-- VISION -->
+        <div class="bg-gradient-to-br from-green-900 to-green-800 text-white rounded-2xl p-5">
+          <h3 class="text-base font-bold mb-2">🌱 Our Vision — Skill. Dignity. Livelihood for All.</h3>
+          <p class="text-green-200 text-xs leading-relaxed mb-4">We believe every skilled worker in India deserves a fair chance to earn a dignified living from their craft. Our platform is more than a marketplace — it is a movement to formalise the informal economy and give every skilled Indian the digital presence they deserve.</p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-white/10 rounded-xl p-3"><div class="text-lg mb-1">🎓</div><strong>Skill Development Fund</strong><p class="text-green-200 mt-1">Premium membership fees fund vocational training for underprivileged youth</p></div>
+            <div class="bg-white/10 rounded-xl p-3"><div class="text-lg mb-1">🌾</div><strong>Rural Outreach</strong><p class="text-green-200 mt-1">Taking the platform to villages and tier-2/3 cities across India</p></div>
+            <div class="bg-white/10 rounded-xl p-3"><div class="text-lg mb-1">♀️</div><strong>Women in Services</strong><p class="text-green-200 mt-1">Dedicated support for women providers to earn independently</p></div>
+            <div class="bg-white/10 rounded-xl p-3"><div class="text-lg mb-1">🔗</div><strong>Community Commerce</strong><p class="text-green-200 mt-1">When any member thrives, the entire community benefits</p></div>
+          </div>
+        </div>
+
+        <!-- USER MANUAL -->
+        <div>
+          <h3 class="text-base font-bold text-gray-800 mb-3">📖 How to Use the App</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white border border-blue-100 rounded-xl p-4 shadow-sm">
+              <h4 class="font-bold text-blue-800 mb-3 text-xs uppercase tracking-wide">👤 For Seekers — Step by Step</h4>
+              <ol class="space-y-2 text-xs text-gray-600">
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">1</span><span><strong>Choose language</strong> — Tap 🌏 to switch the entire app to your language instantly</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">2</span><span><strong>Browse or search</strong> — Search bar, 🎤 voice, or tap Browse Services for 50+ categories</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">3</span><span><strong>View profiles</strong> — See photos, rates, reviews, working hours, verification status</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">4</span><span><strong>Contact or book</strong> — Tap 📞 Call, 💬 WhatsApp, or Hire Now for a formal request</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">5</span><span><strong>Login and review</strong> — OTP login (no password), leave reviews, earn Wallet points</span></li>
+              </ol>
+            </div>
+            <div class="bg-white border border-orange-100 rounded-xl p-4 shadow-sm">
+              <h4 class="font-bold text-orange-700 mb-3 text-xs uppercase tracking-wide">⚙️ For Providers — Step by Step</h4>
+              <ol class="space-y-2 text-xs text-gray-600">
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">1</span><span><strong>Register</strong> — Tap Register as Provider, fill name, category, rate, area, photo</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">2</span><span><strong>Verify ID</strong> — Upload Aadhaar or Driving Licence for ✅ Verified badge</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">3</span><span><strong>Add portfolio</strong> — Upload 5–10 photos of your work to win more clients</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">4</span><span><strong>Upgrade membership</strong> — Use earned Wallet points to offset upgrade cost</span></li>
+                <li class="flex gap-2 items-start"><span class="bg-orange-500 text-white rounded-full w-5 h-5 flex-shrink-0 flex items-center justify-center font-bold text-xs">5</span><span><strong>Refer and earn</strong> — Share your link, earn commission for every new provider who joins</span></li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div>
+          <h3 class="text-base font-bold text-gray-800 mb-3">❓ Frequently Asked Questions</h3>
+          <div id="faqList" class="space-y-2"></div>
+        </div>
+
+        <!-- ABOUT US -->
+        <div class="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-5 border border-orange-100">
+          <h3 class="text-base font-bold text-gray-800 mb-4">👥 About Us</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div class="text-center bg-white rounded-xl p-4 shadow-sm">
+              <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full mx-auto mb-2 flex items-center justify-center text-xl">🔱</div>
+              <h4 class="font-bold text-xs mb-1">Founder & Vision</h4>
+              <p class="text-xs text-gray-500">Driven by the belief that every skilled worker deserves a digital platform that respects their craft, language and dignity.</p>
+            </div>
+            <div class="text-center bg-white rounded-xl p-4 shadow-sm">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full mx-auto mb-2 flex items-center justify-center text-xl">💻</div>
+              <h4 class="font-bold text-xs mb-1">Technology Team</h4>
+              <p class="text-xs text-gray-500">Building India's most accessible service marketplace — mobile-first, language-first, community-first, always improving.</p>
+            </div>
+            <div class="text-center bg-white rounded-xl p-4 shadow-sm">
+              <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full mx-auto mb-2 flex items-center justify-center text-xl">🌱</div>
+              <h4 class="font-bold text-xs mb-1">Community & Impact</h4>
+              <p class="text-xs text-gray-500">Running the Charity program and ensuring every user feels heard, safe and valued in our growing community.</p>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-4 text-center border border-orange-100">
+            <div class="text-xl mb-1">🔱</div>
+            <p class="text-xs text-gray-700 leading-relaxed"><strong>Our Promise:</strong> We will always put the community before profit. We will always protect your data and privacy. We will always build for India's diverse needs — in every language, every region, every community. <strong>Jai Hind 🇮🇳</strong></p>
+          </div>
+        </div>
+
+        <!-- CORPORATE OFFICE & CONTACT -->
+        <div>
+          <h3 class="text-base font-bold text-gray-800 mb-3">🏢 Corporate Office & Connect Us</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">🏢 Corporate Office</h4>
+              <div class="space-y-2 text-xs">
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">🔱</span><div><strong class="text-sm">Sudarshan Chakra India Pvt. Ltd.</strong><div class="text-gray-400">Registered in India under the Companies Act</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">📍</span><div class="text-gray-600">Head Office: India<div class="text-gray-400">(Address available to registered partners)</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">⏰</span><span class="text-gray-600">Mon–Sat · 9:00 AM – 6:00 PM IST</span></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">🌐</span><a href="https://sudarshanchakraindia.github.io/sudarshan-chakra/" class="text-orange-600 break-all" target="_blank">sudarshanchakraindia.github.io</a></div>
+              </div>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📞 Get in Touch</h4>
+              <div class="space-y-2 text-xs">
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">✉️</span><div><a href="mailto:support@sudarshanchakraindia.com" class="text-orange-600">support@sudarshanchakraindia.com</a><div class="text-gray-400">General support and queries</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">🤝</span><div><a href="mailto:partners@sudarshanchakraindia.com" class="text-orange-600">partners@sudarshanchakraindia.com</a><div class="text-gray-400">Business partnerships</div></div></div>
+                <div class="flex gap-2 items-start"><span class="flex-shrink-0">💡</span><span class="text-gray-600">Have a feature idea? Tap 👎 in the app or email us — our best features come from the community.</span></div>
+              </div>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">🆘 Help Guide</h4>
+              <ul class="space-y-1.5 text-xs text-gray-600">
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🤖</span>Use the <strong>AI Guide chatbot below</strong> for instant 24x7 answers</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">❓</span>Read the FAQ section above for quick answers</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">📖</span>Follow the User Manual steps above</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🐛</span>Found a bug? Email us a screenshot — we fix fast</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🚩</span>Tap Report on any provider profile for safety issues</li>
+              </ul>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📲 Stay Connected</h4>
+              <ul class="space-y-1.5 text-xs text-gray-600">
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🏗️</span>New cities, categories and features added every month</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">📱</span>Install PWA: Chrome menu → Add to Home Screen (Android) or Safari Share → Add to Home Screen (iPhone)</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🙏</span>Thank you for being part of this journey — every review, referral and booking builds something meaningful for India</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI GUIDE CHATBOT -->
+        <div class="bg-gradient-to-br from-gray-900 to-orange-900 rounded-2xl overflow-hidden shadow-xl">
+          <div class="p-5 pb-2">
+            <h3 class="text-white text-base font-bold mb-1">🤖 AI Guide — Ask Anything</h3>
+            <p class="text-orange-200 text-xs mb-1">Your 24x7 AI assistant powered by Claude. Ask anything about the app in any language.</p>
+          </div>
+          <div id="infoChatMessages" class="mx-5 bg-black/20 rounded-xl h-52 overflow-y-auto p-3 space-y-2 mb-3 text-xs">
+            <div class="flex gap-2"><div class="bg-white/15 text-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-xs leading-relaxed">Namaste! 🙏 I am your Sudarshan Guide. Ask me anything about the app — registration, Wallet points, bookings, verification, Charity, referrals, or anything else!</div></div>
+          </div>
+          <div class="mx-5 flex gap-2 flex-wrap mb-3">
+            <button onclick="infoQuick('How do I register as a provider?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Register as provider</button>
+            <button onclick="infoQuick('How does the Wallet work?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Wallet and Points</button>
+            <button onclick="infoQuick('How do I get a Verified badge?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Get Verified badge</button>
+            <button onclick="infoQuick('How does the Charity program work?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Charity program</button>
+            <button onclick="infoQuick('How do I book a service?')" class="bg-white/10 hover:bg-orange-500 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 transition-colors">Book a service</button>
+          </div>
+          <div class="mx-5 mb-5 flex gap-2">
+            <input id="infoChatInput" type="text" placeholder="Ask anything about the app…"
+              class="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2.5 text-white text-xs placeholder-white/40 outline-none focus:border-orange-400"
+              onkeydown="if(event.key==='Enter')infoChatSend()">
+            <button id="infoChatSend" onclick="infoChatSend()" class="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-2 text-sm font-bold transition-colors">➤</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- ═══════════ END PAGE-INFO ═══════════ -->
+
     <script>
         // ==================== DATA & INITIALIZATION ====================
         let currentLanguage = localStorage.getItem('language') || 'en';
@@ -2313,6 +2531,7 @@
             'statClients':      { en:'Happy Clients', hi:'खुश ग्राहक', bn:'সন্তুষ্ট গ্রাহক', gu:'ખુशी ગ્રাહક', mr:'आनंदी ग्राहक', kn:'ಸಂತುಷ್ಟ ಗ್ರಾಹಕರು', te:'సంతృప్తి కస్టమర్లు', ml:'സന്തുഷ്ടരായ ഉപഭോക്താക്കൾ', ta:'மகிழ்ச்சியான வாடிக்கையாளர்கள்', pa:'ਖੁਸ਼ ਗ੍ਰਾਹਕ', or:'ଖୁସି ଗ୍ରାହକ', as:'সুখী গ্ৰাহক' },
             'statVerified':     { en:'Verified reviews', hi:'सत्यापित समीक्षाएं', bn:'যাচাইকৃত রিভিউ', gu:'ચકাसेला সमीক्षा', mr:'सत्यापित समीक्षा', kn:'ಪರಿಶೀಲಿತ ಶ್ಲಾಘನೆಗಳು', te:'ధృవీకరించిన సమీక్షలు', ml:'സ്ഥിരീകരിച്ച അഭിപ്രായങ്ങൾ', ta:'சரிபார்க்கப்பட்ட மதிப்பீடுகள்', pa:'ਪ੍ਰਮਾਣਿਤ ਸਮੀਖਿਆਵਾਂ', or:'ଯାଞ୍ଚ ସମୀକ୍ଷା', as:'পৰীক্ষিত মন্তব্য' },
             'managePlan':       { en:'Manage Membership Plan', hi:'सदस्यता योजना प्रबंधित करें', bn:'সদস্যতা পরিকল্পনা পরিচালনা করুন', gu:'સભ્યપદ યોજના', mr:'सदस्यता योजना व्यवस्थापित करा', kn:'ಸದಸ್ಯತ್ವ ಯೋಜನೆ', te:'సభ్యత్వ ప్రణాళిక', ml:'അംഗത്വ പദ്ധതി', ta:'உறுப்பினர் திட்டம்', pa:'ਮੈਂਬਰਸ਼ਿਪ ਯੋਜਨਾ', or:'ସଦସ୍ୟ ଯୋଜନା', as:'সদস্যতা পৰিকল্পনা' },
+            'aboutNav':         { en:'ℹ️ About', hi:'ℹ️ जानकारी', bn:'ℹ️ সম্পর্কে', gu:'ℹ️ માહિતી', mr:'ℹ️ माहिती', kn:'ℹ️ ಮಾಹಿತಿ', te:'ℹ️ గురించి', ml:'ℹ️ കുറിച്ച്', ta:'ℹ️ பற்றி', pa:'ℹ️ ਜਾਣਕਾਰੀ', or:'ℹ️ ବିଷୟରେ', as:'ℹ️ বিষয়ে' },
             // ─── Join Banner ───────────────────────────────────────────
             'joinTitle':     { en:'🔱 Join Sudarshan Chakra Today!',
                                hi:'🔱 आज ही सुदर्शन चक्र से जुड़ें!',
@@ -8292,6 +8511,160 @@ window.hmSetAmt               = hmSetAmt;
         localStorage.setItem('referredBy', ref);
     }
 })();
+</script>
+
+<script>
+// ══════════════════════════════════════════════
+// PAGE-INFO: FAQ + AI CHATBOT
+// ══════════════════════════════════════════════
+
+// Build FAQ accordion
+const FAQ_DATA = [
+  ["Is Sudarshan Chakra India free to use?", "Browsing and searching for providers is completely free for seekers. Providers can register and list a basic profile at no cost. Premium membership tiers (Professional and Elite) are available for providers who want greater visibility — and earned Wallet points can be used to offset the upgrade cost."],
+  ["How do I login? Is a password required?", "We use secure mobile OTP login — no password needed. Enter your 10-digit mobile number, receive a 6-digit SMS code, enter it and you are in. Your session stays active across visits so you won't need to login every time on the same device."],
+  ["Is my personal information safe?", "Yes. Your mobile number is used only for OTP verification and is never displayed publicly. Identity verification documents are seen exclusively by our admin team and are never shared publicly. We do not sell your data to any third party under any circumstances."],
+  ["How does the Wallet and Reward Points system work?", "You earn points for daily logins (2 pts), leaving reviews (5 pts), completing bookings, and referring new users. Points accumulate in your Wallet and can be redeemed to reduce membership upgrade fees. You can also donate points to our Charity program to fund skill training for underprivileged youth."],
+  ["What is the Verified badge and how do I get it?", "The Verified badge (✅) is awarded to providers who upload a valid government ID (Aadhaar, Driving Licence, Voter ID, PAN or Passport) for admin review. Once approved, the badge appears on your profile and significantly increases seeker trust and booking rates."],
+  ["Can I use the app in my regional language?", "Absolutely! The app fully supports 12 languages: English, Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia and Assamese. Tap 🌏 in the navigation bar at any time to switch — the entire app updates instantly."],
+  ["How do I report a problem with a provider?", "On any provider's profile, tap the 🚩 Report button, describe your concern and submit. Our admin team reviews all reports within 24 hours. Providers with repeated or serious reports are investigated and may be suspended or removed."],
+  ["What is the Charity program and how does it work?", "The Charity program lets you donate your earned Wallet points to a fund that sponsors vocational skill training for underprivileged youth. Even a small donation helps fund a training programme that can transform someone's livelihood. Donate from the Wallet section of your profile."],
+  ["How does the Referral program work?", "Every registered user gets a unique referral link in their Wallet page. Share it with friends. When they register as a provider through your link, you earn Wallet points and a commission bonus. Track all referrals and earnings in your Wallet dashboard."],
+  ["What if a provider doesn't show up or does poor work?", "Leave an honest review with your star rating — this protects the next seeker. Use the Report feature for serious issues. For booking disputes, contact us at support@sudarshanchakraindia.com and our team will mediate. Building a transparent, accountable community is at our core."],
+  ["How do I install the app on my phone?", "Sudarshan Chakra India is a Progressive Web App (PWA). On Android: open in Chrome → tap three-dot menu → Add to Home Screen. On iPhone: open in Safari → tap Share → Add to Home Screen. The app icon appears on your home screen just like a native app and works offline too."]
+];
+
+function buildFAQ() {
+  const el = document.getElementById('faqList');
+  if (!el) return;
+  el.innerHTML = FAQ_DATA.map((faq, i) => `
+    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <button onclick="toggleFAQ(${i})" id="faq-btn-${i}"
+        class="w-full text-left px-4 py-3 flex justify-between items-center gap-3 hover:bg-orange-50 transition-colors">
+        <span class="font-semibold text-sm text-gray-800">${faq[0]}</span>
+        <span id="faq-ico-${i}" class="text-orange-500 font-bold text-xl flex-shrink-0 transition-transform">+</span>
+      </button>
+      <div id="faq-ans-${i}" class="hidden px-4 pb-4 text-xs text-gray-600 leading-relaxed border-t border-gray-100 pt-3">${faq[1]}</div>
+    </div>
+  `).join('');
+}
+
+function toggleFAQ(i) {
+  const ans = document.getElementById('faq-ans-' + i);
+  const ico = document.getElementById('faq-ico-' + i);
+  if (!ans) return;
+  const isOpen = !ans.classList.contains('hidden');
+  // Close all
+  FAQ_DATA.forEach((_, j) => {
+    const a = document.getElementById('faq-ans-' + j);
+    const c = document.getElementById('faq-ico-' + j);
+    if (a) a.classList.add('hidden');
+    if (c) { c.textContent = '+'; c.style.transform = ''; }
+  });
+  if (!isOpen) {
+    ans.classList.remove('hidden');
+    ico.textContent = '×';
+  }
+}
+
+// Build FAQ when page-info becomes visible
+const _origShowPage = showPage;
+function showPage(pageName) {
+  _origShowPage(pageName);
+  if (pageName === 'info') {
+    buildFAQ();
+  }
+}
+
+// ── AI CHATBOT ──
+const INFO_CHAT_SYS = `You are the helpful AI guide for Sudarshan Chakra India, a hyperlocal service marketplace app for India.
+
+KEY APP FACTS:
+- Connects service seekers (people needing home services) with service providers (skilled workers)
+- 12 Indian languages: English, Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese — tap 🌏 to switch
+- Login: mobile OTP only — enter 10-digit number, get 6-digit SMS code, no password needed
+- 50+ service categories: Plumbing, Electrical, Beauty, Tutoring, AC Repair, Carpentry, Painting, Cooking, etc.
+- Provider registration: name, mobile, category, religion, languages spoken, hourly rate, working hours, service area, bio, photo, ID verification (optional → gets ✅ Verified badge)
+- Membership tiers: Basic (free), Professional, Elite — higher = better visibility and priority listing
+- Wallet points: daily login (2pts), reviews (5pts), referrals, bookings — redeemable against membership fees
+- Verified badge: upload Aadhaar/DL/Voter ID → admin reviews → badge appears on profile
+- Charity: donate Wallet points to fund skill training for underprivileged youth
+- Referral: unique link in Wallet page; earn points when others register as providers through it
+- Portfolio: providers upload up to 10 work photos after login
+- Booking: tap provider → Hire Now → fill date/location/details → submit
+- Call: tap 📞 on profile → opens phone dialer directly
+- WhatsApp: tap 💬 on profile → opens WhatsApp with pre-filled message
+- Report: tap 🚩 on profile → admin reviews within 24hrs
+- Gratitude tip: send a tip to exceptional provider via Gratitude button
+- Reviews: only real users who interacted with provider can leave reviews; star rating + written feedback
+- In-app chat: real-time messaging between seeker and provider
+- Voice search: tap 🎤, speak service name in any language
+- Map: shows providers near your location interactively
+- PWA: installable on phone home screen — works offline (Android: Chrome menu → Add to Home Screen; iPhone: Safari Share → Add to Home Screen)
+
+TONE: Warm, friendly, concise, helpful. Use emojis occasionally. Answer in whatever language the user writes in. If unsure about anything, suggest emailing support@sudarshanchakraindia.com.`;
+
+let infoChatHist = [];
+
+async function infoChatSend() {
+  const inp = document.getElementById('infoChatInput');
+  const msg = (inp ? inp.value : '').trim();
+  if (!msg) return;
+  inp.value = '';
+  const sendBtn = document.getElementById('infoChatSend');
+  if (sendBtn) sendBtn.disabled = true;
+
+  addInfoMsg(msg, 'user');
+  infoChatHist.push({ role: 'user', content: msg });
+  const typing = addInfoMsg('…', 'bot');
+
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        system: INFO_CHAT_SYS,
+        messages: infoChatHist.slice(-10)
+      })
+    });
+    const d = await r.json();
+    const reply = (d.content && d.content[0] && d.content[0].text)
+      ? d.content[0].text
+      : 'Sorry, I could not answer that right now. Please try again or email support@sudarshanchakraindia.com 🙏';
+    typing.textContent = reply;
+    typing.classList.remove('opacity-50');
+    infoChatHist.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    typing.textContent = 'Connection issue — please try again in a moment. 🙏';
+    typing.classList.remove('opacity-50');
+  }
+  if (sendBtn) sendBtn.disabled = false;
+}
+
+function infoQuick(text) {
+  const inp = document.getElementById('infoChatInput');
+  if (inp) inp.value = text;
+  infoChatSend();
+}
+
+function addInfoMsg(text, type) {
+  const container = document.getElementById('infoChatMessages');
+  if (!container) return { textContent: '', classList: { remove: ()=>{} } };
+  const wrap = document.createElement('div');
+  wrap.className = 'flex gap-2' + (type === 'user' ? ' justify-end' : '');
+  const bubble = document.createElement('div');
+  bubble.textContent = text;
+  if (type === 'user') {
+    bubble.className = 'bg-orange-500 text-white rounded-2xl rounded-tr-sm px-3 py-2 max-w-xs leading-relaxed';
+  } else {
+    bubble.className = 'bg-white/15 text-white rounded-2xl rounded-tl-sm px-3 py-2 max-w-xs leading-relaxed opacity-50';
+  }
+  wrap.appendChild(bubble);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+  return bubble;
+}
 </script>
 
 </body>
