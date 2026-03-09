@@ -7055,7 +7055,7 @@
     /* QR sheet */
     #hireQrOverlay{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;backdrop-filter:blur(4px)}
     #hireQrOverlay.open{opacity:1;pointer-events:all}
-    #hireQrSheet{background:white;border-radius:28px 28px 0 0;width:100%;max-width:480px;padding:10px 24px 40px;transform:translateY(100%);transition:transform .4s cubic-bezier(.22,1,.36,1)}
+    #hireQrSheet{background:white;border-radius:28px 28px 0 0;width:100%;max-width:480px;padding:10px 24px 40px;transform:translateY(100%);transition:transform .4s cubic-bezier(.22,1,.36,1);max-height:92vh;overflow-y:auto;}
     #hireQrOverlay.open #hireQrSheet{transform:translateY(0)}
     #hireModal .donebtn{width:100%;background:linear-gradient(135deg,#059669,#047857);border:none;border-radius:50px;padding:15px;font-size:15px;font-weight:700;color:white;font-family:'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 20px rgba(5,150,105,.35)}
   </style>
@@ -7175,7 +7175,7 @@
       <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:#1E3A5F;text-align:center;margin-bottom:4px">Scan & Pay</div>
       <p style="font-size:12px;color:#64748B;text-align:center;margin-bottom:20px" id="hm-sheet-sub">Pay ₹10 via PhonePe / any UPI app</p>
       <div style="background:linear-gradient(135deg,#F8FAFC,#EFF6FF);border-radius:20px;padding:20px;text-align:center;margin-bottom:16px;border:2px solid #E2E8F0;overflow:visible;">
-        <div id="hm-qr-real" style="width:200px;margin:0 auto 14px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.1);min-height:200px;overflow:visible;"></div>
+        <div id="hm-qr-real" style="width:160px;margin:0 auto 10px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.1);min-height:160px;overflow:visible;"></div>
         <div style="background:linear-gradient(135deg,#EA580C,#D97706);color:white;border-radius:50px;padding:8px 20px;font-size:20px;font-weight:900;font-family:'Playfair Display',serif;display:inline-block;margin-bottom:8px" id="hm-qr-amount">₹10</div>
         <div style="font-size:11px;color:#64748B">UPI ID: <span style="font-weight:700;color:#1E3A5F">9414055013@ybl</span></div>
       </div>
@@ -7317,7 +7317,7 @@ function hmOpenQR() {
     if (window.QRCode) {
       try {
         new QRCode(qrWrap, {
-          text: upiUrl, width: 180, height: 180,
+          text: upiUrl, width: 150, height: 150,
           colorDark: '#1e3a5f', colorLight: '#ffffff',
           correctLevel: QRCode.CorrectLevel.M
         });
