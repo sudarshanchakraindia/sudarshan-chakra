@@ -1,6 +1,6 @@
 // Sudarshan Chakra — Service Worker
 // Version bump forces cache refresh on every deploy
-const CACHE_NAME = 'sc-cache-v50';
+const CACHE_NAME = 'sc-cache-v51';
 const URLS_TO_CACHE = [
   './',
   './index.html',
