@@ -3,6 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+// Replace hire_checkout in history so back button skips it
+if (document.referrer.includes('hire_checkout')) {
+  history.replaceState(null, '', window.location.href);
+  // Push home so back goes there
+  history.pushState(null, '', 'index.html');
+  history.pushState(null, '', window.location.href);
+}
+// Intercept back button — always go home
+window.addEventListener('popstate', function() {
+  window.location.replace('index.html');
+});
+</script>
 <title>सुदर्शन चक्र — धन्यवाद! | Sudarshan Chakra</title>
 
 <!-- ── OPEN GRAPH (WhatsApp rich preview) ── -->
@@ -106,6 +119,7 @@ html,body {
 
 /* ── LANG SPECIFIC FONT ── */
 .msg-box p.hi  { font-family:'Noto Sans Devanagari',sans-serif;font-size:13px; }
+.msg-box p.en { font-family:'Poppins',sans-serif;font-size:13px;color:rgba(253,230,138,0.88); }
 .msg-box p.ta  { font-family:'Noto Sans Tamil',sans-serif;font-size:13px; }
 .msg-box p.te  { font-family:'Noto Sans Telugu',sans-serif;font-size:13px; }
 .msg-box p.kn  { font-family:'Noto Sans Kannada',sans-serif;font-size:13px; }
