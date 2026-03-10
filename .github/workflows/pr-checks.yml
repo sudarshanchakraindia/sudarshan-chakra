@@ -1,0 +1,99 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Job 1: Validate HTML files
+  # ─────────────────────────────────────────────
+  validate-html:
+    name: Validate HTML
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install html-validate
+        run: npm install -g html-validate
+
+      - name: Run HTML validation
+        run: |
+          echo "Validating all HTML files..."
+          find . -name "*.html" -not -path "./.git/*" | while read file; do
+            echo "Checking: $file"
+            html-validate "$file" || true
+          done
+          echo "HTML validation complete."
+
+  # ─────────────────────────────────────────────
+  # Job 2: Check for sensitive data leaks
+  # ─────────────────────────────────────────────
+  security-scan:
+    name: Security - Check for Secrets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Scan for hardcoded secrets
+        run: |
+          echo "Scanning for potential hardcoded secrets..."
+          # Check for common secret patterns
+          if grep -rn --include="*.html" --include="*.js" --include="*.json"             -E "(apiKey|api_key|password|passwd|secret|token|private_key|firebase)"             --exclude-dir=".git" . | grep -v "//"; then
+            echo "WARNING: Potential sensitive data found. Please review before merging."
+          else
+            echo "No obvious secrets detected."
+          fi
+
+  # ─────────────────────────────────────────────
+  # Job 3: Check file sizes (performance)
+  # ─────────────────────────────────────────────
+  file-size-check:
+    name: Check File Sizes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for large files
+        run: |
+          echo "Checking for files larger than 1MB..."
+          find . -not -path "./.git/*" -size +1M | while read file; do
+            echo "LARGE FILE: $file ($(du -h "$file" | cut -f1))"
+          done
+          echo "File size check complete."
+
+  # ─────────────────────────────────────────────
+  # Job 4: PR Title Lint
+  # ─────────────────────────────────────────────
+  pr-title-lint:
+    name: Lint PR Title
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Check PR title follows convention
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "PR Title: $PR_TITLE"
+          if echo "$PR_TITLE" | grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .+"; then
+            echo "PR title follows the convention. ✅"
+          else
+            echo "WARNING: PR title does not follow convention."
+            echo "Expected format: type: description"
+            echo "Examples: feat: add voice search, fix: correct checkout flow"
+            echo "Types: feat, fix, docs, style, refactor, test, chore"
+          fi
