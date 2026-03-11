@@ -9308,5 +9308,15 @@ function addInfoMsg(text, type) {
 }
 </script>
 
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sudarshan-chakra/sw.js')
+        .then(reg => console.log('Sudarshan Chakra SW Registered!', reg))
+        .catch(err => console.log('SW Registration Failed:', err));
+    });
+  }
+</script>
+
 </body>
 </html>
