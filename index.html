@@ -1124,6 +1124,9 @@
                         <button onclick="showAdminTab('subscriptions')" id="tab-subscriptions" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
                             🏅 Plans
                         </button>
+                        <button onclick="showAdminTab('hirerequests')" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent" id="tab-hirerequests">
+                            💼 Hire Requests
+                        </button>
                         <button onclick="showAdminTab('settings')" id="tab-settings" class="flex-1 px-6 py-4 font-semibold text-gray-600 hover:text-orange-600 border-b-2 border-transparent">
                             ⚙️ Settings
                         </button>
@@ -1347,6 +1350,20 @@
                         </div>
                     </div>
                 </div>
+
+                    <!-- ═══════════ HIRE REQUESTS TAB ═══════════ -->
+                    <div id="adminTab-hirerequests" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-800">💼 Hire Requests</h2>
+                            <div class="flex gap-2">
+                                <button onclick="loadAdminHireRequests()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 font-semibold text-sm">🔄 Refresh</button>
+                                <button onclick="fixAllProviderVisibility()" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 font-semibold text-sm" title="Fix provider visibility in Browse">🔧 Fix Provider Visibility</button>
+                            </div>
+                        </div>
+                        <div id="adminHireRequestsSection">
+                            <p class="text-gray-400 text-center py-12">Click Refresh to load hire requests.</p>
+                        </div>
+                    </div>
             </div>
         </div>
     </div>
@@ -4729,6 +4746,7 @@
                 rating: 4.0 + Math.random() * 0.5,
                 reviews: {},
                 ownerUid: firebaseUser?.uid || null,
+                isActive:          true,
                 status: 'active',
                 registered: new Date().toISOString()
             };
@@ -4835,7 +4853,7 @@
         }
         
         function showAdminTab(tabName) {
-            ['users','reports','reviews','categories','idverify','subscriptions','settings','accounts'].forEach(t => {
+            ['users','reports','reviews','categories','idverify','subscriptions','hirerequests','settings','accounts'].forEach(t => {
                 document.getElementById('adminTab-' + t).classList.add('hidden');
                 document.getElementById('tab-' + t).classList.remove('border-orange-600','text-orange-600');
             });
@@ -4843,6 +4861,7 @@
             document.getElementById('tab-' + tabName).classList.add('border-orange-600','text-orange-600');
             if (tabName === 'users') { loadProvidersList(); loadSeekersList(); }
             else if (tabName === 'categories') { loadAdminCategories(); }
+            if (tabName === 'hirerequests') { loadAdminHireRequests(); }
             else if (tabName === 'reviews') { loadAdminReviews(); }
             else if (tabName === 'reports') { loadAdminReports(); }
             else if (tabName === 'idverify') { loadIdVerifications(); }
@@ -5131,71 +5150,73 @@
         }
 
         function loadAdminCategories() {
-            const list = document.getElementById('categoriesListAdmin');
-            if (!list) return;
-            
-            if (categories.length === 0) {
-                list.innerHTML = '<div class="text-center py-12 text-gray-500"><p class="text-lg">No categories yet. Click "Add New Category" to get started!</p></div>';
-                return;
-            }
-            
-            list.innerHTML = categories.map((cat, catIdx) => `
-                <div class="border-2 border-gray-200 rounded-xl p-4 hover:border-orange-300 transition">
-                    <div class="flex items-center justify-between bg-orange-50 p-4 rounded-lg mb-3">
-                        <div class="flex items-center gap-3">
-                            ${renderIcon(cat.icon, 'text-4xl', 'w-12 h-12')}
-                            <div>
-                                <h3 class="text-xl font-bold text-gray-800">${cat.name.en || cat.name}</h3>
-                                <p class="text-sm text-gray-500">${(cat.subcategories || []).length} subcategories</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="editCategory(${catIdx})" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 font-medium">✏️ Edit</button>
-                            <button onclick="showAddSubcategoryModal(${catIdx})" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 font-medium">➕ Add Subcategory</button>
-                            <button onclick="deleteCategory(${catIdx})" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 font-medium">🗑️ Delete</button>
-                        </div>
+    const list = document.getElementById('adminCategoriesList') || document.getElementById('categoriesListAdmin');
+    if (!list) return;
+    if (!categories || categories.length === 0) {
+        list.innerHTML = '<div class="text-center py-12 text-gray-500"><p class="text-lg">No categories yet. Click \"Add New Category\".</p></div>';
+        return;
+    }
+    list.innerHTML = categories.map((cat, catIdx) => `
+        <div class="border-2 border-gray-200 rounded-xl mb-2 overflow-hidden">
+          <div class="flex items-center justify-between bg-orange-50 px-4 py-3 cursor-pointer select-none" onclick="toggleAdminCat('acc-cat-${catIdx}', this)">
+              <div class="flex items-center gap-3">
+                  ${renderIcon(cat.icon, 'text-3xl', 'w-10 h-10')}
+                  <div><h3 class="text-base font-bold text-gray-800">${cat.name?.en || cat.name}</h3>
+                  <p class="text-xs text-gray-500">${(cat.subcategories||[]).length} subcategories</p></div>
+              </div>
+              <div class="flex items-center gap-2">
+                  <button onclick="event.stopPropagation();editCategory(${catIdx})" class="bg-blue-500 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-blue-600">✏️ Edit</button>
+                  <button onclick="event.stopPropagation();showAddSubcategoryModal(${catIdx})" class="bg-green-500 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-green-600">+ Sub</button>
+                  <button onclick="event.stopPropagation();deleteCategory(${catIdx})" class="bg-red-500 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-red-600">🗑️</button>
+                  <span class="text-gray-400 text-lg acc-arrow">▶</span>
+              </div>
+          </div>
+          <div id="acc-cat-${catIdx}" class="hidden">
+            ${(cat.subcategories || []).map((sub, subIdx) => `
+              <div class="border-t border-gray-100">
+                <div class="flex items-center justify-between bg-blue-50 px-6 py-2 cursor-pointer select-none" onclick="toggleAdminCat('acc-sub-${catIdx}-${subIdx}', this)">
+                    <div class="flex items-center gap-2">
+                        ${renderIcon(sub.icon, 'text-xl', 'w-7 h-7')}
+                        <div><span class="font-semibold text-gray-800 text-sm">${sub.name?.en || sub.name}</span>
+                        <span class="text-xs text-gray-400 ml-2">${(sub.subsubcategories||[]).length} services</span></div>
                     </div>
-                    
-                    <div class="ml-8 space-y-3">
-                        ${(cat.subcategories || []).map((sub, subIdx) => `
-                            <div class="border-l-4 border-blue-400 bg-blue-50 p-3 rounded-r-lg">
-                                <div class="flex items-center justify-between mb-2">
-                                    <div class="flex items-center gap-2">
-                                        ${renderIcon(sub.icon, 'text-2xl', 'w-8 h-8')}
-                                        <div>
-                                            <h4 class="font-bold text-gray-800">${sub.name.en || sub.name}</h4>
-                                            <p class="text-xs text-gray-500">${(sub.subsubcategories || []).length} services · ${(sub.subsubcategories || []).filter(s=>s.paused).length > 0 ? '<span class="text-yellow-600">'+((sub.subsubcategories||[]).filter(s=>s.paused).length)+' paused</span>' : 'all active'}</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button onclick="editSubcategory(${catIdx}, ${subIdx})" class="bg-blue-400 text-white px-3 py-1 rounded hover:bg-blue-500 text-sm">✏️ Edit</button>
-                                        <button onclick="showAddServiceModal(${catIdx}, ${subIdx})" class="bg-green-400 text-white px-3 py-1 rounded hover:bg-green-500 text-sm">➕ Add Service</button>
-                                        <button onclick="deleteSubcategory(${catIdx}, ${subIdx})" class="bg-red-400 text-white px-3 py-1 rounded hover:bg-red-500 text-sm">🗑️</button>
-                                    </div>
-                                </div>
-                                
-                                <div class="ml-6 space-y-1">
-                                    ${(sub.subsubcategories || []).map((service, serviceIdx) => `
-                                        <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 ${service.paused ? 'bg-yellow-50 opacity-60' : 'bg-white'}">
-                                            <div class="flex items-center gap-2">
-                                                ${renderIcon(service.icon, 'text-lg', 'w-6 h-6')}
-                                                <span class="text-sm ${service.paused ? 'text-gray-400 line-through' : 'text-gray-700'}">${service.name.en || service.name}</span>
-                                            </div>
-                                            <div class="flex gap-1 items-center">
-                                                ${service.paused ? '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">⏸ Paused</span>' : ''}
-                                                <button onclick="togglePauseService(${catIdx}, ${subIdx}, ${serviceIdx})" class="px-2 py-1 rounded text-xs font-semibold ${service.paused ? 'bg-green-400 hover:bg-green-500 text-white' : 'bg-yellow-400 hover:bg-yellow-500 text-white'}">${service.paused ? '▶️ Resume' : '⏸️ Pause'}</button>
-                                                <button onclick="editService(${catIdx}, ${subIdx}, ${serviceIdx})" class="bg-blue-300 text-white px-2 py-1 rounded hover:bg-blue-400 text-xs">✏️</button>
-                                                <button onclick="deleteService(${catIdx}, ${subIdx}, ${serviceIdx})" class="bg-red-300 text-white px-2 py-1 rounded hover:bg-red-400 text-xs">🗑️</button>
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        `).join('')}
+                    <div class="flex items-center gap-2">
+                        <button onclick="event.stopPropagation();editSubcategory(${catIdx},${subIdx})" class="bg-blue-400 text-white px-2 py-0.5 rounded text-xs hover:bg-blue-500">✏️</button>
+                        <button onclick="event.stopPropagation();showAddServiceModal(${catIdx},${subIdx})" class="bg-green-400 text-white px-2 py-0.5 rounded text-xs hover:bg-green-500">+ Service</button>
+                        <button onclick="event.stopPropagation();deleteSubcategory(${catIdx},${subIdx})" class="bg-red-400 text-white px-2 py-0.5 rounded text-xs hover:bg-red-500">🗑️</button>
+                        <span class="text-gray-400 text-sm acc-arrow">▶</span>
                     </div>
                 </div>
-            `).join('');
-        }
+                <div id="acc-sub-${catIdx}-${subIdx}" class="hidden bg-white">
+                  ${(sub.subsubcategories || []).map((svc, svcIdx) => `
+                    <div class="flex items-center justify-between px-10 py-1.5 border-b border-gray-50 hover:bg-gray-50 ${svc.paused ? 'opacity-50' : ''}">
+                        <div class="flex items-center gap-2">
+                            ${renderIcon(svc.icon, 'text-base', 'w-5 h-5')}
+                            <span class="text-sm ${svc.paused ? 'line-through text-gray-400' : 'text-gray-700'}">${svc.name?.en || svc.name}</span>
+                            ${svc.paused ? '<span class="text-xs bg-yellow-100 text-yellow-700 px-1.5 rounded font-semibold">⏸ Paused</span>' : ''}
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="togglePauseService(${catIdx},${subIdx},${svcIdx})" class="text-xs px-2 py-0.5 rounded font-semibold ${svc.paused ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${svc.paused ? '▶ Resume' : '⏸ Pause'}</button>
+                            <button onclick="editService(${catIdx},${subIdx},${svcIdx})" class="bg-blue-300 text-white px-2 py-0.5 rounded text-xs hover:bg-blue-400">✏️</button>
+                            <button onclick="deleteService(${catIdx},${subIdx},${svcIdx})" class="bg-red-300 text-white px-2 py-0.5 rounded text-xs hover:bg-red-400">🗑️</button>
+                        </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+    `).join('');
+}
+function toggleAdminCat(id, headerEl) {
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    const isOpen = !panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', isOpen);
+    const arrow = headerEl.querySelector('.acc-arrow');
+    if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
+}
         
         // Update live stats on home page
         function updateHomeStats() {
@@ -5752,6 +5773,112 @@
             } catch(e) {
                 list.innerHTML = '<p class="text-red-400 text-center">Could not load reports.</p>';
             }
+        }
+
+        // ════════════════════════════════════════════════════════
+        // HIRE REQUESTS ADMIN — verify payment, notify both parties
+        // ════════════════════════════════════════════════════════
+        async function loadAdminHireRequests() {
+            const container = document.getElementById('adminHireRequestsSection');
+            if (!container) return;
+            container.innerHTML = '<p class="text-gray-500 text-center py-8">Loading hire requests...</p>';
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, 'admin/hireRequests'));
+                if (!snap.exists() || !snap.val()) { container.innerHTML = '<p class="text-gray-400 text-center py-12">No hire requests yet.</p>'; return; }
+                const requests = Object.values(snap.val()).sort((a,b) => b.timestamp - a.timestamp);
+                const pending = requests.filter(r => r.status === 'pending');
+                const others  = requests.filter(r => r.status !== 'pending');
+                const renderRow = req => {
+                    const sc = req.status==='approved'?'bg-green-100 text-green-700':req.status==='rejected'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700';
+                    return `<div class="border rounded-xl p-4 mb-3 bg-white shadow-sm"><div class="flex flex-wrap justify-between items-start gap-2"><div>
+                        <p class="font-bold text-gray-800">${req.seekerName||'?'} → ${req.providerName||'?'}</p>
+                        <p class="text-sm text-gray-600">Service: ${req.service||'—'} | ₹${req.amount}</p>
+                        <p class="text-sm text-gray-500">UTR: <span class="font-mono font-bold text-orange-700">${req.utr||'—'}</span></p>
+                        <p class="text-xs text-gray-400">${req.date||''} | ${req.seekerPhone||''}</p></div>
+                        <div class="flex flex-col items-end gap-2">
+                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${sc}">${req.status.toUpperCase()}</span>
+                        ${req.status==='pending'?`<div class="flex gap-2"><button onclick="approveHireRequest('${req.requestId}')" class="bg-green-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-600 font-semibold">✅ Approve</button><button onclick="rejectHireRequest('${req.requestId}')" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600 font-semibold">❌ Reject</button></div>`:''}
+                        </div></div></div>`;
+                };
+                container.innerHTML = `<h3 class="text-lg font-bold text-orange-700 mb-3">⏳ Pending Verification (${pending.length})</h3>${pending.length?pending.map(renderRow).join(''):'<p class="text-gray-400 text-sm mb-4">No pending requests.</p>'}<h3 class="text-lg font-bold text-gray-600 mt-6 mb-3">📋 History (${others.length})</h3>${others.length?others.map(renderRow).join(''):'<p class="text-gray-400 text-sm">No history yet.</p>'}`;
+            } catch(e) { container.innerHTML = `<p class="text-red-500 text-center py-8">Error: ${e.message}</p>`; }
+        }
+
+        async function approveHireRequest(requestId) {
+            if (!confirm(`Approve hire request ${requestId}?\nThis will notify both seeker and provider.`)) return;
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `admin/hireRequests/${requestId}`));
+                if (!snap.exists()) { alert('Request not found.'); return; }
+                const req = snap.val();
+                await _firebase.update(_firebase.ref(_firebase.db, `admin/hireRequests/${requestId}`), { status:'approved', approvedAt: new Date().toISOString() });
+                if (req.seekerUid && req.timestamp) {
+                    await _firebase.update(_firebase.ref(_firebase.db, `users/${req.seekerUid}/transactions/${req.timestamp}`), { status:'approved' });
+                    const credRef = _firebase.ref(_firebase.db, `users/${req.seekerUid}/walletCredits`);
+                    const cs = await _firebase.get(credRef);
+                    await _firebase.set(credRef, (cs.exists()?(cs.val()||0):0) + 5);
+                    await addNotification(req.seekerUid, { type:'hire_confirmed', title:'🎉 Payment Confirmed — Hire Successful!',
+                        message: `Your payment of ₹${req.amount} (UTR: ${req.utr}) for hiring ${req.providerName} has been verified by Sudarshan Chakra Portal. Your provider has been informed and will contact you shortly. You also earned 5 wallet points! Thank you for trusting us. 🙏🔱`,
+                        timestamp: Date.now() });
+                }
+                if (req.ownerUid) {
+                    await addNotification(req.ownerUid, { type:'hire_payment_received', title:'✅ Portal Convenience Fee Confirmed — New Job!',
+                        message: `Dear ${req.providerName||'Provider'}, the service seeker ${req.seekerName} (${req.seekerPhone}) has successfully paid the Sudarshan Chakra portal convenience fee of ₹${req.fee||req.amount}. You have a confirmed new job for "${req.service||'your service'}". Please contact the seeker at your earliest convenience. Sudarshan Chakra Portal wishes you success! 🔱`,
+                        timestamp: Date.now() });
+                }
+                showFirebaseStatus('✅ Hire approved! Seeker & provider notified.', 'success');
+                loadAdminHireRequests();
+            } catch(e) { alert('Error approving: ' + e.message); }
+        }
+
+        async function rejectHireRequest(requestId) {
+            const reason = prompt('Reason for rejection (will be shown to seeker):');
+            if (!reason) return;
+            try {
+                const snap = await _firebase.get(_firebase.ref(_firebase.db, `admin/hireRequests/${requestId}`));
+                if (!snap.exists()) return;
+                const req = snap.val();
+                await _firebase.update(_firebase.ref(_firebase.db, `admin/hireRequests/${requestId}`), { status:'rejected', rejectedAt: new Date().toISOString(), rejectReason: reason });
+                if (req.seekerUid) {
+                    await addNotification(req.seekerUid, { type:'payment_rejected', title:'❌ Payment Not Verified',
+                        message: `Your hire request (UTR: ${req.utr}) could not be verified. Reason: ${reason}. Please retry or contact support. 🔱`,
+                        timestamp: Date.now() });
+                }
+                showFirebaseStatus('❌ Hire request rejected. Seeker notified.', 'error');
+                loadAdminHireRequests();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function repairProviderIndices(providerId) {
+            const ps = await _firebase.get(_firebase.ref(_firebase.db, `providers/${providerId}`));
+            if (!ps.exists()) { alert('Provider not found.'); return; }
+            const p = ps.val();
+            const sn = (p.service||'').toLowerCase().trim();
+            let fCat=null, fSub=null, fSvc=null;
+            for (const cat of (categories||[])) {
+                for (let si=0; si<(cat.subcategories||[]).length; si++) {
+                    for (let vi=0; vi<(cat.subcategories[si].subsubcategories||[]).length; vi++) {
+                        const svc = cat.subcategories[si].subsubcategories[vi];
+                        if ((svc.name?.en||svc.name||'').toLowerCase().trim()===sn) { fCat=cat.id; fSub=String(si); fSvc=String(vi); }
+                    }
+                }
+            }
+            if (fCat) {
+                await _firebase.update(_firebase.ref(_firebase.db, `providers/${providerId}`), { categoryId:fCat, subcategoryIdx:fSub, subsubcategoryIdx:fSvc, isActive:true, status:'active' });
+                showFirebaseStatus(`✅ Provider "${p.name}" linked to ${fCat}. Now visible in Browse!`, 'success');
+            } else { alert(`⚠️ Service "${p.service}" not found in any category.`); }
+        }
+
+        async function fixAllProviderVisibility() {
+            if (!confirm('Add isActive:true to all active providers missing it. Proceed?')) return;
+            const snap = await _firebase.get(_firebase.ref(_firebase.db, 'providers'));
+            if (!snap.exists()) return;
+            const updates = {}; let fixed = 0;
+            snap.forEach(child => {
+                const p = child.val();
+                if (p.status === 'active' && p.isActive !== true) { updates[`providers/${child.key}/isActive`] = true; fixed++; }
+            });
+            if (fixed > 0) { await _firebase.update(_firebase.ref(_firebase.db), updates); showFirebaseStatus(`✅ Fixed ${fixed} providers — isActive:true added`, 'success'); }
+            else { showFirebaseStatus('All providers already have isActive set.', 'info'); }
         }
 
         async function updateReportStatus(reportId, status) {
@@ -7380,103 +7507,73 @@ async function hmValidateUTR() {
 }
 
 function hmConfirmPayment() {
-  const utr = (document.getElementById('hm-utr-input')?.value || '').trim();
-  if (utr.length < 8) { alert('Please enter a valid UTR / Transaction ID (8+ digits).'); return; }
-  // Store UTR for saving with transaction
-  window._hmUTR = utr;
-  hmPaymentDone();
-}
-
-async function hmPaymentDone() {
-  hmCloseQR();
-  closeHireModal();
-
-  // Determine correct transaction type and amount
-  // Rule: Portal Fee (₹10) is ONLY when there is NO tip and NO charity.
-  //       If tip or charity → that is the transaction, no platform fee charged.
-  const hasTip      = hmTipAmt > 0;
-  const hasCharity  = hmCharityAmt > 0;
-  const hasTipOrCharity = hasTip || hasCharity;
-
-  let gratType, amount, fee, pointsEarned;
-
-  if (hasTip) {
-    gratType     = 'tip';
-    amount       = hmTipAmt;          // only the tip amount
-    fee          = 0;                  // no portal fee
-    pointsEarned = Math.floor(hmTipAmt / 10); // 1 pt per ₹1 of tip
-  } else if (hasCharity) {
-    gratType     = 'charity';
-    amount       = hmCharityAmt;
-    fee          = 0;
-    pointsEarned = 0;                  // no points for charity
-  } else {
-    gratType     = 'portal';
-    amount       = HM_CONV_FEE;       // ₹10 portal fee only
-    fee          = HM_CONV_FEE;
-    pointsEarned = 10;                 // 10 pts for hiring
-  }
-
-  // ── Save transaction to Firebase ──
-  if (window._firebase && firebaseUser) {
-    try {
-      const txnId = Date.now();
-      const txn = {
-        type:        gratType,
-        amount:      amount,
-        fee:         fee,
-        tip:         hmTipAmt,
-        charity:     hmCharityAmt,
-        points:      pointsEarned,
-        providerId:  hmProviderId || '',
-        utr:         window._hmUTR || '',
-        timestamp:   txnId,
-        date:        new Date().toLocaleDateString('en-IN')
-      };
-      window._hmUTR = '';
-      // Save to seeker's transactions
-      await _firebase.set(_firebase.ref(_firebase.db, `users/${firebaseUser.uid}/transactions/${txnId}`), txn);
-
-      // Award points based on transaction type
-      if (pointsEarned > 0) {
-        const creditsRef = _firebase.ref(_firebase.db, `users/${firebaseUser.uid}/walletCredits`);
-        const snap = await _firebase.get(creditsRef);
-        const current = snap.exists() ? (snap.val() || 0) : 0;
-        await _firebase.set(creditsRef, current + pointsEarned);
-      }
-
-      // ── Credit tip to PROVIDER's earnings ──
-      if (hasTip && hmProviderId && hmTipAmt > 0) {
-        const earning = {
-          type:       'tip',
-          amount:     hmTipAmt,
-          fromUid:    firebaseUser.uid,
-          fromName:   window.userProfile?.name || 'Customer',
-          timestamp:  txnId,
-          date:       new Date().toLocaleDateString('en-IN')
-        };
-        await _firebase.set(_firebase.ref(_firebase.db, `providers/${hmProviderId}/earnings/${txnId}`), earning);
-        // Also update provider's total earnings counter
-        const earnRef = _firebase.ref(_firebase.db, `providers/${hmProviderId}/totalEarnings`);
-        const earnSnap = await _firebase.get(earnRef);
-        await _firebase.set(earnRef, (earnSnap.exists() ? (earnSnap.val()||0) : 0) + hmTipAmt);
-        // Notify provider
-        if (hmProviderOwnerUid) {
-          await addNotification(hmProviderOwnerUid, {
-            type: 'tip_received', title: '🙏 Tip Received!',
-            message: `${earning.fromName} sent you a ₹${hmTipAmt} tip!`,
-            timestamp: txnId
-          });
+        const utr = (document.getElementById('hm-utr-input')?.value || '').trim().replace(/\s/g, '');
+        if (utr.length < 8) { alert('Please enter a valid UTR / Transaction ID (at least 8 digits).'); return; }
+        window._hmUTR = utr;
+        hmPaymentDone();
         }
-      }
-    } catch(e) { console.warn('Wallet save error:', e); }
-  }
-
-  // Go to gratitude page
-  setTimeout(() => {
-    window.location.replace('gratitude.html?lang=' + hmLang + '&type=' + gratType);
-  }, 300);
-}
+        async function hmPaymentDone() {
+        hmCloseQR();
+        closeHireModal();
+        const utr         = window._hmUTR || '';
+        const seekerName  = window.userProfile?.name || 'A Customer';
+        const seekerUid   = window.firebaseUser?.uid  || null;
+        const seekerPhone = window.firebaseUser?.phoneNumber || '';
+        const txnId       = Date.now();
+        const dateStr     = new Date().toLocaleDateString('en-IN');
+        const hasTip      = (window.hmTipAmt     || 0) > 0;
+        const hasCharity  = (window.hmCharityAmt || 0) > 0;
+        let txnType, amount, fee;
+        if (hasTip)          { txnType = 'tip';      amount = window.hmTipAmt;     fee = 0;  }
+        else if (hasCharity) { txnType = 'charity';  amount = window.hmCharityAmt; fee = 0;  }
+        else                 { txnType = 'hire_fee'; amount = 10;                  fee = 10; }
+        if (!window._firebase || !window.firebaseUser) {
+            showFirebaseStatus('⚠️ Please log in to confirm a hire.', 'error');
+            return;
+        }
+        try {
+            const hireRequest = {
+                requestId:    'hire_' + txnId,
+                seekerUid:    seekerUid,
+                seekerName:   seekerName,
+                seekerPhone:  seekerPhone,
+                providerId:   window.hmProviderId        || '',
+                providerName: window.hmProviderName      || '',
+                ownerUid:     window.hmProviderOwnerUid  || '',
+                service:      window.hmProviderService   || '',
+                utr:          utr,
+                amount:       amount,
+                fee:          fee,
+                tip:          window.hmTipAmt     || 0,
+                charity:      window.hmCharityAmt || 0,
+                type:         txnType,
+                status:       'pending',
+                requestedAt:  new Date().toISOString(),
+                timestamp:    txnId,
+                date:         dateStr
+            };
+            await _firebase.set(_firebase.ref(_firebase.db, `admin/hireRequests/hire_${txnId}`), hireRequest);
+            if (seekerUid) {
+                await _firebase.set(_firebase.ref(_firebase.db, `users/${seekerUid}/transactions/${txnId}`), Object.assign({}, hireRequest, {status:'pending'}));
+                await addNotification(seekerUid, {
+                    type: 'payment_pending', title: '⏳ Payment Under Review',
+                    message: `Your hire request for ${hireRequest.providerName || 'the provider'} (UTR: ${utr}) has been received. We are verifying your payment of ₹${amount}. You will be notified once confirmed. Thank you for choosing Sudarshan Chakra! 🔱`,
+                    timestamp: txnId
+                });
+            }
+            if (window.hmProviderOwnerUid) {
+                await addNotification(window.hmProviderOwnerUid, {
+                    type: 'hire_request_pending', title: '🔔 New Hire Request Received!',
+                    message: `Dear ${hireRequest.providerName || 'Provider'}, ${seekerName} (${seekerPhone}) has initiated a hire request for your service "${hireRequest.service || 'your service'}". Payment of ₹${amount} (UTR: ${utr}) is being verified by Sudarshan Chakra Portal. You will receive final confirmation once payment is approved. Please be ready! 🔱`,
+                    timestamp: txnId
+                });
+            }
+            showFirebaseStatus("✅ Hire request submitted! Payment is under review. We'll notify you shortly.", 'success');
+        } catch(e) {
+            console.warn('hmPaymentDone error:', e);
+            alert('Error submitting hire request. Please check your connection and try again.');
+        }
+        }
 </script>
 
     <!-- ===== BOOKING MODAL ===== -->
