@@ -29,6 +29,8 @@
         fixBug7_ChatModalEmptyId();
         fixBug3_HomeStats();
         fixBug4_WalletDeduction();
+        fixBug8_BookingsDefaultTab();
+        fixBug9_RoleDetection();
         console.log('✅ Sudarshan Chakra: All bug fixes applied!');
     }
 
@@ -246,4 +248,73 @@
         }, 500);
     }
 
+})();
+
+// ══════════════════════════════════════════════════════
+// BUG 8: Bookings tab defaults to "Received Jobs" — should be "My Requests"
+// ══════════════════════════════════════════════════════
+(function fixBug8_BookingsDefaultTab() {
+    const wait = setInterval(function() {
+        if (typeof loadMyBookings === 'undefined') return;
+        clearInterval(wait);
+        const orig = window.loadMyBookings;
+        window.loadMyBookings = function() {
+            // Always reset to "My Requests" view on first load
+            const sb = document.getElementById('bookViewSeeker');
+            const pb = document.getElementById('bookViewProvider');
+            if (sb && pb) {
+                sb.className = 'flex-1 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm';
+                pb.className = 'flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold text-sm';
+            }
+            orig.apply(this, arguments);
+        };
+        console.log('✅ Fix 8: Bookings defaults to My Requests');
+    }, 500);
+})();
+
+// ══════════════════════════════════════════════════════
+// BUG 9: Role shows "Service Seeker" even when user has a provider profile
+// Cross-checks the providers array after Firebase loads
+// ══════════════════════════════════════════════════════
+(function fixBug9_RoleDetection() {
+    const wait = setInterval(function() {
+        if (typeof renderProfilePage === 'undefined') return;
+        clearInterval(wait);
+        const orig = window.renderProfilePage;
+        window.renderProfilePage = function() {
+            orig.apply(this, arguments);
+            // After render, check Firebase providers for this user
+            setTimeout(function() {
+                const fu = window.firebaseUser;
+                if (!fu) return;
+                function applyRoleFix() {
+                    if (typeof providers === 'undefined' || !Array.isArray(providers)) return false;
+                    const myProvider = providers.find(function(p) { return p.ownerUid === fu.uid; });
+                    const roleEl = document.getElementById('myProfileRole');
+                    if (!roleEl) return false;
+                    if (myProvider) {
+                        const hasSeeker = typeof seekers !== 'undefined' && seekers.some(function(s){ return s.ownerUid === fu.uid; });
+                        roleEl.textContent = hasSeeker ? '🛠️ Provider  |  🔍 Seeker' : '🛠️ Service Provider';
+                        roleEl.style.color = '#fed7aa';
+                        // Show provider card
+                        const card = document.getElementById('myProviderCard');
+                        if (card) card.classList.remove('hidden');
+                        // Populate provider info if empty
+                        const info = document.getElementById('myProviderInfo');
+                        if (info && !info.innerHTML.trim()) {
+                            info.innerHTML = '<div class="grid grid-cols-2 gap-2"><div><span class="font-medium">Service:</span> ' + (myProvider.service||'') + '</div><div><span class="font-medium">Rate:</span> ₹' + (myProvider.rate||'') + '/hr</div><div><span class="font-medium">Experience:</span> ' + (myProvider.experience||'') + ' yrs</div><div><span class="font-medium">Location:</span> ' + (myProvider.location||'') + '</div></div>';
+                        }
+                    }
+                    return true;
+                }
+                // Retry if providers not yet loaded from Firebase
+                var tries = 0;
+                var retry = setInterval(function() {
+                    if (applyRoleFix() || ++tries > 10) clearInterval(retry);
+                }, 1500);
+                applyRoleFix();
+            }, 800);
+        };
+        console.log('✅ Fix 9: Role detection checks provider profile');
+    }, 500);
 })();
