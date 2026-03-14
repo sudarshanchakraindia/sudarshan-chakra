@@ -420,8 +420,10 @@ window.radheyLocalAnswer = function(query) {
     window._radheyListening = false;
     window._radheyRec = null;
 
-    const PROVIDER_STEPS = ['type','name','mobile','category','subcategory','service','language','hours','area','religion','location','rate','bio','photo','gps','id'];
-    const SEEKER_STEPS   = ['type','name','mobile','language','religion','location'];
+    window._PROVIDER_STEPS = ['type','name','mobile','category','subcategory','service','language','hours','area','religion','location','rate','bio','photo','gps','id'];
+    window._SEEKER_STEPS   = ['type','name','mobile','language','religion','location'];
+    const PROVIDER_STEPS = window._PROVIDER_STEPS;
+    const SEEKER_STEPS   = window._SEEKER_STEPS;
 
     window.radheyToggle = function () {
         panel.classList.toggle('open');
@@ -455,13 +457,14 @@ window.radheyLocalAnswer = function(query) {
         msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
     };
 
-    function setProgress(step, total) {
+    window._radheySetProgress = function(step, total) {
         const bar = document.getElementById('radhey-progress');
         const fill = document.getElementById('radhey-progress-bar');
         if (!bar || !fill) return;
         bar.style.display = total > 0 ? 'block' : 'none';
         fill.style.width = total > 0 ? Math.round((step / total) * 100) + '%' : '0%';
-    }
+    };
+    function setProgress(step, total) { window._radheySetProgress(step, total); }
 
     window.radheyAsk = function (forced) {
         const inp = document.getElementById('radhey-inp');
@@ -511,7 +514,7 @@ window.radheyLocalAnswer = function(query) {
         window._radheyRegData = {}; window._radheySteps = null;
         panel.classList.add('open');
         radheyBot('🎤 Voice Registration शुरू!\n\nMain step-by-step guide karunga.\n\nStep 1: Aap kya banana chahte hain?\n\n👷 "Provider" — agar aap kaam dete hain\n🔍 "Seeker" — agar aapko kaam karaana hai\n🤝 "Dono" — agar aap dono hain');
-        setProgress(0, 1);
+        window._radheySetProgress(0, 1);
         setTimeout(radheyAutoMic, 1200);
     };
 
@@ -519,23 +522,23 @@ window.radheyLocalAnswer = function(query) {
         const a = answer.toLowerCase().trim();
         const d = window._radheyRegData;
         const step = window._radheyRegStep;
-        const total = (window._radheySteps || PROVIDER_STEPS).length;
+        const total = (window._radheySteps || (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])).length;
         const field = window._radheySteps ? window._radheySteps[step] : null;
 
-        setProgress(step, total);
+        window._radheySetProgress(step, total);
 
         if (step === 0) {
             if (a.includes('provider') || a.includes('kaam deta') || a.includes('kaam deti') || a.includes('काम देता')) {
-                d.type = 'provider'; window._radheySteps = [...PROVIDER_STEPS]; window._radheyRegStep = 1;
-                setProgress(1, PROVIDER_STEPS.length);
+                d.type = 'provider'; window._radheySteps = [...(window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])]; window._radheyRegStep = 1;
+                window._radheySetProgress(1, (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"]).length);
                 radheyBot('✅ Provider!\n\nStep 2: Aapka poora naam?\nJaise: "Ramesh Kumar"');
             } else if (a.includes('seeker') || a.includes('kaam karana') || a.includes('kaam kaaraana') || a.includes('काम कराना')) {
-                d.type = 'seeker'; window._radheySteps = [...SEEKER_STEPS]; window._radheyRegStep = 1;
-                setProgress(1, SEEKER_STEPS.length);
+                d.type = 'seeker'; window._radheySteps = [...(window._SEEKER_STEPS||["type","name","mobile","language","religion","location"])]; window._radheyRegStep = 1;
+                window._radheySetProgress(1, (window._SEEKER_STEPS||["type","name","mobile","language","religion","location"]).length);
                 radheyBot('✅ Seeker!\n\nStep 2: Aapka poora naam?\nJaise: "Sunita Devi"');
             } else if (a.includes('dono') || a.includes('both') || a.includes('दोनों')) {
-                d.type = 'both'; window._radheySteps = [...PROVIDER_STEPS]; window._radheyRegStep = 1;
-                setProgress(1, PROVIDER_STEPS.length);
+                d.type = 'both'; window._radheySteps = [...(window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])]; window._radheyRegStep = 1;
+                window._radheySetProgress(1, (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"]).length);
                 radheyBot('✅ Dono!\n\nStep 2: Aapka poora naam?\nJaise: "Ramesh Kumar"');
             } else {
                 radheyBot('❓ "Provider", "Seeker" ya "Dono" bolein.');
@@ -546,7 +549,7 @@ window.radheyLocalAnswer = function(query) {
         if (field === 'name') {
             if (answer.trim().length < 2) { radheyBot('❓ Poora naam batayein.'); setTimeout(radheyAutoMic, 600); return; }
             d.name = answer.trim(); window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             radheyBot('✅ Naam: ' + d.name + '\n\nStep ' + (window._radheyRegStep + 1) + ': 10 digit mobile number?\nJaise: "9414055013"');
             setTimeout(radheyAutoMic, 600); return;
         }
@@ -555,7 +558,7 @@ window.radheyLocalAnswer = function(query) {
             const nums = answer.replace(/\D/g, '').slice(-10);
             if (nums.length !== 10) { radheyBot('❌ 10 digit number chahiye. Dobara bolein.'); setTimeout(radheyAutoMic, 600); return; }
             d.mobile = nums; window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             if (d.type === 'provider' || d.type === 'both') {
                 let catList = '';
                 if (typeof categories !== 'undefined') catList = categories.slice(0, 9).map((c, i) => (i + 1) + '. ' + (c.name?.en || c.name)).join('\n');
@@ -577,7 +580,7 @@ window.radheyLocalAnswer = function(query) {
             if (matched) {
                 d.categoryId = matched.id; d.categoryName = matched.name?.en || matched.name;
                 window._radheyRegStep++;
-                setProgress(window._radheyRegStep, total);
+                window._radheySetProgress(window._radheyRegStep, total);
                 const subs = (matched.subcategories || []).slice(0, 9).map((s, i) => (i + 1) + '. ' + (s.name?.en || s.name)).join('\n');
                 radheyBot('✅ Category: ' + d.categoryName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Sub-category:\n\n' + (subs || 'Koi sub-category nahi') + '\n\nNumber ya naam bolein.');
             } else {
@@ -596,7 +599,7 @@ window.radheyLocalAnswer = function(query) {
             if (matched) {
                 d.subcategoryIdx = subs.indexOf(matched); d.subcategoryName = matched.name?.en || matched.name;
                 window._radheyRegStep++;
-                setProgress(window._radheyRegStep, total);
+                window._radheySetProgress(window._radheyRegStep, total);
                 const svcs = (matched.subsubcategories || []).slice(0, 9).map((s, i) => (i + 1) + '. ' + (s.name?.en || s.name)).join('\n');
                 radheyBot('✅ Sub-category: ' + d.subcategoryName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Service type:\n\n' + (svcs || 'Default service') + '\n\nNumber ya naam bolein.');
             } else { radheyBot('❓ Sub-category naam ya number bolein.'); }
@@ -614,7 +617,7 @@ window.radheyLocalAnswer = function(query) {
             d.serviceName = matched ? (matched.name?.en || matched.name) : (d.subcategoryName || 'General Service');
             d.serviceIdx = matched ? svcs.indexOf(matched) : 0;
             window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             radheyBot('✅ Service: ' + d.serviceName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bhasha?\nHindi, English, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese\n\n(Ek ya zyada bol sakte hain)');
             setTimeout(radheyAutoMic, 600); return;
         }
@@ -625,7 +628,7 @@ window.radheyLocalAnswer = function(query) {
             for (const [k, v] of Object.entries(lmap)) { if (a.includes(k.toLowerCase())) found.push(v); }
             d.language = found.length ? [...new Set(found)] : ['Hindi'];
             window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             const nextField = (window._radheySteps || [])[window._radheyRegStep];
             if (nextField === 'hours') {
                 radheyBot('✅ Bhasha: ' + d.language.join(', ') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Kab kaam karte hain?\n1. Mon-Fri\n2. Weekends Only\n3. Roz (All 7 days)\n4. 24×7');
@@ -644,7 +647,7 @@ window.radheyLocalAnswer = function(query) {
             d.workingHours = h;
             const hl = { 'mon-fri': 'Mon-Fri', 'weekends': 'Weekends', 'all-days': 'All Days', '24x7': '24×7' }[h] || h;
             window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             radheyBot('✅ Hours: ' + hl + '\n\nStep ' + (window._radheyRegStep + 1) + ': Service area?\n1. 10 km tak\n2. Poore shehar mein');
             setTimeout(radheyAutoMic, 600); return;
         }
@@ -652,7 +655,7 @@ window.radheyLocalAnswer = function(query) {
         if (field === 'area') {
             d.serviceArea = (a.includes('1') || a.includes('10') || a.includes('paas') || a.includes('पास')) ? '10km' : 'city';
             window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             radheyBot('✅ Area: ' + (d.serviceArea === '10km' ? '10 km' : 'Poora shehar') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Dharm?\nHindu, Muslim, Christian, Sikh, Buddhist, Jain');
             setTimeout(radheyAutoMic, 600); return;
         }
@@ -663,14 +666,14 @@ window.radheyLocalAnswer = function(query) {
             for (const [k, v] of Object.entries(rmap)) { if (a.includes(k.toLowerCase())) { rel = v; break; } }
             if (!rel) { radheyBot('❓ Dharm clearly bolein: Hindu, Muslim, Christian, Sikh, Buddhist, Jain'); setTimeout(radheyAutoMic, 600); return; }
             d.religion = rel; window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             radheyBot('✅ Dharm: ' + rel + '\n\nStep ' + (window._radheyRegStep + 1) + ': Shehar / Address?\nJaise: "Malviya Nagar, Jaipur"');
             setTimeout(radheyAutoMic, 600); return;
         }
 
         if (field === 'location') {
             d.location = answer.trim(); window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             const nextField2 = (window._radheySteps || [])[window._radheyRegStep];
             if (nextField2 === 'rate') {
                 radheyBot('✅ Location: ' + d.location + '\n\nStep ' + (window._radheyRegStep + 1) + ': Rate per ghanta (₹)?\nJaise: "200" ya "paanch sau"');
@@ -685,7 +688,7 @@ window.radheyLocalAnswer = function(query) {
             if (!rate) rate = parseInt(answer.replace(/\D/g, '')) || 0;
             if (rate < 50) { radheyBot('❌ Rate minimum ₹50 hona chahiye. Dobara bolein.'); setTimeout(radheyAutoMic, 600); return; }
             d.rate = rate; window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             radheyBot('✅ Rate: ₹' + rate + '/ghanta\n\nStep ' + (window._radheyRegStep + 1) + ': Bio (apne baare mein)?\nJaise: "Main 5 saal se kaam kar raha hoon."\n\nYa "skip" bolein.');
             setTimeout(radheyAutoMic, 600); return;
         }
@@ -693,7 +696,7 @@ window.radheyLocalAnswer = function(query) {
         if (field === 'bio') {
             if (!a.includes('skip') && !a.includes('nahi') && answer.trim().length > 3) d.bio = answer.trim();
             window._radheyRegStep++;
-            setProgress(window._radheyRegStep, total);
+            window._radheySetProgress(window._radheyRegStep, total);
             radheyBot((d.bio ? '✅ Bio save hua!' : 'Bio skip kiya.') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Profile Photo 📸\n\nApni photo lein!\n"Photo lo" ya "camera" bolein\n"gallery" — gallery se chunein\n"skip" — baad mein add karein');
             setTimeout(radheyAutoMic, 600); return;
         }
@@ -701,7 +704,7 @@ window.radheyLocalAnswer = function(query) {
         if (field === 'photo') {
             if (a.includes('skip') || a.includes('nahi') || a.includes('baad')) {
                 window._radheyRegStep++;
-                setProgress(window._radheyRegStep, total);
+                window._radheySetProgress(window._radheyRegStep, total);
                 radheyBot('Photo skip kiya.\n\nStep ' + (window._radheyRegStep + 1) + ': Aapki GPS location detect karein?\n"Haan" — GPS se auto\n"Nahi" — address use hogi');
                 setTimeout(radheyAutoMic, 600);
             } else {
@@ -721,13 +724,13 @@ window.radheyLocalAnswer = function(query) {
                             radheyUser('📍 Location mili!');
                             radheyBot('✅ GPS Location mil gayi!\n' + pos.coords.latitude.toFixed(4) + ', ' + pos.coords.longitude.toFixed(4) + '\n\nStep ' + (window._radheyRegStep + 2) + ': Identity Proof (Optional)\nAadhaar, DL, Voter ID, PAN, Passport?\n"skip" bolein agar nahi hai.');
                             window._radheyRegStep++;
-                            setProgress(window._radheyRegStep, total);
+                            window._radheySetProgress(window._radheyRegStep, total);
                             setTimeout(radheyAutoMic, 800);
                         },
                         function() {
                             radheyBot('GPS nahi mila. Manual address use hogi.\n\nStep ' + (window._radheyRegStep + 2) + ': Identity Proof (Optional)\nAadhaar, DL, Voter ID, PAN?\n"skip" bolein agar nahi hai.');
                             window._radheyRegStep++;
-                            setProgress(window._radheyRegStep, total);
+                            window._radheySetProgress(window._radheyRegStep, total);
                             setTimeout(radheyAutoMic, 800);
                         },
                         { enableHighAccuracy: true, timeout: 8000 }
@@ -735,13 +738,13 @@ window.radheyLocalAnswer = function(query) {
                 } else {
                     radheyBot('GPS is device par supported nahi.\n\nAge badh rahe hain...');
                     window._radheyRegStep++;
-                    setProgress(window._radheyRegStep, total);
+                    window._radheySetProgress(window._radheyRegStep, total);
                     setTimeout(radheyAutoMic, 600);
                 }
             } else {
                 radheyBot('ठीक है, manual address use hogi.\n\nStep ' + (window._radheyRegStep + 2) + ': Identity Proof (Optional)\nAadhaar, DL, Voter ID, PAN?\n"skip" bolein agar nahi hai.');
                 window._radheyRegStep++;
-                setProgress(window._radheyRegStep, total);
+                window._radheySetProgress(window._radheyRegStep, total);
                 setTimeout(radheyAutoMic, 600);
             }
             return;
@@ -758,13 +761,13 @@ window.radheyLocalAnswer = function(query) {
         }
 
         // Confirmation
-        if (step >= (window._radheySteps || PROVIDER_STEPS).length) {
+        if (step >= (window._radheySteps || (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])).length) {
             if (a.includes('haan') || a.includes('yes') || a.includes('हां') || a.includes('हाँ') || a.includes('sahi') || a.includes('bilkul') || a.includes('correct')) {
                 radheySubmitReg();
             } else if (a.includes('nahi') || a.includes('no') || a.includes('galat') || a.includes('wrong')) {
                 window._radheyRegMode = false; window._radheyRegStep = 0;
                 radheyBot('ठीक है! Dobara try karein — "🎤 Register" button tap karein.');
-                setProgress(0, 0);
+                window._radheySetProgress(0, 0);
             } else {
                 radheyBot('"Haan" bolein confirm karne ke liye\n"Nahi" bolein dobara shuru karne ke liye.');
                 setTimeout(radheyAutoMic, 600);
@@ -814,7 +817,7 @@ window.radheyLocalAnswer = function(query) {
                     radheyBot('✅ Photo save ho gayi! 📸\n\nStep ' + (window._radheyRegStep + 2) + ': GPS location detect karein?\n"Haan" ya "Nahi" bolein.');
                     window._radheyRegStep++;
                     const total = (window._radheySteps || ['type','name','mobile','category','subcategory','service','language','hours','area','religion','location','rate','bio','photo','gps','id']).length;
-                    setProgress(window._radheyRegStep, total);
+                    window._radheySetProgress(window._radheyRegStep, total);
                     setTimeout(radheyAutoMic, 600);
                 };
                 img.src = e.target.result;
@@ -846,7 +849,7 @@ window.radheyLocalAnswer = function(query) {
         }
         s += '\n━━━━━━━━━━━━━━━\n✅ "Haan" — Register karo\n❌ "Nahi" — Dobara shuru karo';
         radheyBot(s);
-        window._radheyRegStep = (window._radheySteps || PROVIDER_STEPS).length;
+        window._radheyRegStep = (window._radheySteps || (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])).length;
         setTimeout(radheyAutoMic, 1000);
     };
 
@@ -862,11 +865,11 @@ window.radheyLocalAnswer = function(query) {
             const txt = e.results[0][0].transcript;
             radheyUser(txt);
             const step = window._radheyRegStep;
-            const total = (window._radheySteps || PROVIDER_STEPS).length;
+            const total = (window._radheySteps || (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])).length;
             if (step >= total) {
                 const a = txt.toLowerCase();
                 if (a.includes('haan') || a.includes('yes') || a.includes('हां') || a.includes('sahi') || a.includes('bilkul')) { radheySubmitReg(); }
-                else if (a.includes('nahi') || a.includes('no') || a.includes('galat')) { window._radheyRegMode = false; window._radheyRegStep = 0; radheyBot('ठीक है! Dobara try karein.'); setProgress(0, 0); }
+                else if (a.includes('nahi') || a.includes('no') || a.includes('galat')) { window._radheyRegMode = false; window._radheyRegStep = 0; radheyBot('ठीक है! Dobara try karein.'); window._radheySetProgress(0, 0); }
                 else { radheyBot('"Haan" ya "Nahi" bolein.'); setTimeout(radheyAutoMic, 600); }
             } else { radheyHandleRegStep(txt); }
         };
@@ -879,7 +882,7 @@ window.radheyLocalAnswer = function(query) {
         const d = window._radheyRegData;
         radheyBot('⏳ Registration ho rahi hai...');
         window._radheyRegMode = false;
-        setProgress(1, 1);
+        window._radheySetProgress(1, 1);
         const fb = window._firebase;
         if (!fb) { radheyBot('❌ Database connect nahi hua.\nManually register karein ya dobara try karein.'); return; }
         try {
@@ -895,13 +898,13 @@ window.radheyLocalAnswer = function(query) {
                 const ref = await fb.push(fb.ref(fb.db, 'seekers'), s);
                 await fb.update(ref, { id: ref.key });
             }
-            setProgress(1, 1);
+            window._radheySetProgress(1, 1);
             radheyBot('🎉 बधाई हो ' + d.name + ' जी!\n\nRegistration successfully complete!\n\n✅ Ab aap Sudarshan Chakra ke member hain\n✅ Profile icon → apna profile dekhen\n✅ Customers ab aapko dhundh sakenge\n\n🙏 Sudarshan Chakra mein swagat!\nJai Hind 🇮🇳');
-            setTimeout(() => setProgress(0, 0), 3000);
+            setTimeout(() => window._radheySetProgress(0, 0), 3000);
         } catch (e) {
             console.error('RADHEY reg error:', e);
             radheyBot('❌ Registration mein error.\nManually register karein ya email karein:\nsupport@sudarshanchakraindia.com');
-            setProgress(0, 0);
+            window._radheySetProgress(0, 0);
         }
     };
 
