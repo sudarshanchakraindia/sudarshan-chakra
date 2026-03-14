@@ -7,7 +7,7 @@
 // ── Local Knowledge Base for RADHEY (works offline, no CORS) ──
 window.radheyLocalAnswer = function(query) {
     const q = (query || '').toLowerCase().trim();
-    if (q.includes('register') || q.includes('join') || q.includes('provider banna') || q.includes('seeker banna') || q.includes('kaise banein'))
+    if (q.includes('register') || q.includes('registr') || q.includes('join') || q.includes('provider banna') || q.includes('seeker banna') || q.includes('kaise banein') || q.includes('registration') || q.includes('पंजीकरण') || q.includes('ragistration') || q.includes('ragister') || q.includes('karna hai') || q.includes('banana hai') || q.includes('banna hai') || q.includes('member') || q.includes('account'))
         return '📝 RADHEY se voice register karein!\n"🎤 Register" button tap karein — main step-by-step guide karunga.\n\nYa nav mein "Register Provider" button tap karein 🙏';
     if (q.includes('login') || q.includes('otp') || q.includes('password') || q.includes('sign in') || q.includes('log in'))
         return '🔑 Login karne ke liye:\n1. "Login" button tap karein\n2. 10 digit mobile number dalein\n3. SMS OTP aayega\n4. 6 digit code dalein\n\nKoi password nahi chahiye! 🙏';
@@ -471,11 +471,23 @@ window.radheyLocalAnswer = function(query) {
         radheyUser(text);
         if (window._radheyRegMode) { radheyHandleRegStep(text); return; }
         const q = text.toLowerCase();
-        if (['chahiye','खोजो','find','search','book','hire','need','want','ढूंढो','दिखाओ'].some(w => q.includes(w))) {
+
+        // Registration intent — auto-start voice registration
+        const regWords = ['register','registr','registration','पंजीकरण','ragist','member banna','account banao','provider banna','seeker banna','banana hai','banna hai','join karna','naam darz','enroll','signup','sign up','naam likhao','apna naam','karna hai'];
+        if (regWords.some(w => q.includes(w))) {
+            radheyBot('📝 Bilkul! Main aapko abhi register karta hoon...\n\nShuru karte hain! 🎤');
+            setTimeout(radheyStartVoiceReg, 900);
+            return;
+        }
+
+        // Service search intent
+        if (['chahiye','खोजो','find','search','book','hire','need','want','ढूंढो','दिखाओ','dikhao','khojo','dhundho'].some(w => q.includes(w))) {
             if (typeof processVoiceCommand === 'function') processVoiceCommand(q);
             radheyBot('🔍 Search chal rahi hai...\nBrowse page mein results dekhen!');
             return;
         }
+
+        // Use local knowledge base
         radheyBot(window.radheyLocalAnswer(text));
     };
 
