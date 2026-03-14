@@ -542,521 +542,751 @@
 })();
 
 // ════════════════════════════════════════════════════════════════
-// RADHEY — Floating AI Assistant (Hindi + English)
-// Visible on ALL pages, bottom-right corner
+// RADHEY — Floating AI Assistant (Top-right, Chakra icon)
+// Complete voice registration with all fields
 // ════════════════════════════════════════════════════════════════
 (function initRADHEY() {
-    // Don't init twice
-    if (document.getElementById('radhey-bubble')) return;
+    if (document.getElementById('radhey-widget')) return;
 
     // ── Styles ──
     const style = document.createElement('style');
     style.textContent = `
-        #radhey-bubble {
-            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-            width: 60px; height: 60px; border-radius: 50%;
-            background: linear-gradient(135deg, #ff6b00, #ffb347);
-            box-shadow: 0 4px 20px rgba(255,107,0,0.5);
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            font-size: 28px; border: 3px solid white;
-            transition: transform 0.2s, box-shadow 0.2s;
+        /* RADHEY nav widget — sits in top nav */
+        #radhey-widget {
+            display: flex; align-items: center; gap: 6px;
+            cursor: pointer; padding: 4px 10px 4px 6px;
+            border-radius: 20px;
+            background: linear-gradient(135deg,#fff7ed,#ffedd5);
+            border: 2px solid #fb923c;
+            transition: all 0.2s;
+            position: relative;
+            user-select: none;
+        }
+        #radhey-widget:hover { background: linear-gradient(135deg,#ffedd5,#fed7aa); box-shadow: 0 2px 12px rgba(234,88,12,0.3); }
+        #radhey-chakra {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: linear-gradient(135deg,#ea580c,#f97316);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0; border: 2px solid #fff;
+            box-shadow: 0 2px 8px rgba(234,88,12,0.4);
+            animation: chakraSpin 8s linear infinite;
+        }
+        @keyframes chakraSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        #radhey-widget:hover #radhey-chakra { animation-duration: 1s; }
+        #radhey-widget-text { line-height: 1.1; }
+        #radhey-widget-text .r-name { font-size: 11px; font-weight: 800; color: #c2410c; letter-spacing: 0.5px; }
+        #radhey-widget-text .r-sub  { font-size: 9px; color: #9a3412; }
+        #radhey-dot {
+            position: absolute; top: 2px; right: 2px;
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #16a34a; border: 1.5px solid white;
             animation: radheyPulse 2s infinite;
         }
-        #radhey-bubble:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(255,107,0,0.7); }
-        @keyframes radheyPulse {
-            0%,100% { box-shadow: 0 4px 20px rgba(255,107,0,0.5); }
-            50%      { box-shadow: 0 4px 30px rgba(255,107,0,0.9); }
-        }
-        #radhey-badge {
-            position: absolute; top: -4px; right: -4px;
-            background: #16a34a; color: white; border-radius: 50%;
-            width: 20px; height: 20px; font-size: 10px; font-weight: bold;
-            display: flex; align-items: center; justify-content: center;
-            border: 2px solid white;
-        }
+        @keyframes radheyPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        /* RADHEY chat panel */
         #radhey-panel {
-            position: fixed; bottom: 96px; right: 24px; z-index: 9998;
-            width: 340px; max-height: 520px;
-            background: linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
-            border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+            position: fixed; top: 70px; right: 16px; z-index: 9998;
+            width: 340px; max-height: 560px;
+            background: linear-gradient(160deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);
+            border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
             display: flex; flex-direction: column; overflow: hidden;
-            border: 1px solid rgba(255,107,0,0.3);
-            transform: scale(0.8) translateY(20px); opacity: 0;
+            border: 1px solid rgba(234,88,12,0.4);
+            transform: scale(0.9) translateY(-10px); opacity: 0;
             pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            transition: all 0.25s cubic-bezier(0.34,1.4,0.64,1);
         }
-        #radhey-panel.open {
-            transform: scale(1) translateY(0); opacity: 1; pointer-events: all;
+        #radhey-panel.open { transform: scale(1) translateY(0); opacity:1; pointer-events:all; }
+        #radhey-panel-head {
+            background: linear-gradient(90deg,#ea580c,#f97316,#fb923c);
+            padding: 12px 14px; display:flex; align-items:center; gap:10px; flex-shrink:0;
         }
-        #radhey-header {
-            background: linear-gradient(90deg, #ff6b00, #ffb347);
-            padding: 14px 16px; display: flex; align-items: center; gap: 10px;
-        }
-        #radhey-avatar {
-            width: 40px; height: 40px; border-radius: 50%;
-            background: white; display: flex; align-items: center; justify-content: center;
-            font-size: 22px; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.5);
+        #radhey-panel-avatar {
+            width:38px;height:38px;border-radius:50%;
+            background:white;display:flex;align-items:center;justify-content:center;
+            font-size:20px;flex-shrink:0;
+            animation: chakraSpin 6s linear infinite;
         }
         #radhey-messages {
-            flex: 1; overflow-y: auto; padding: 12px;
-            display: flex; flex-direction: column; gap: 8px;
-            max-height: 320px; min-height: 200px;
+            flex:1;overflow-y:auto;padding:10px;
+            display:flex;flex-direction:column;gap:7px;
+            max-height:300px; min-height:160px;
+            scrollbar-width:thin; scrollbar-color:rgba(234,88,12,0.3) transparent;
         }
-        .radhey-msg-bot {
-            background: rgba(255,255,255,0.08); color: #f1f1f1;
-            border-radius: 16px 16px 16px 4px;
-            padding: 10px 13px; font-size: 12px; line-height: 1.6;
-            max-width: 88%; align-self: flex-start; white-space: pre-wrap;
-            border: 1px solid rgba(255,107,0,0.2);
+        .rm-bot {
+            background:rgba(255,255,255,0.07);color:#f1f1f1;
+            border-radius:14px 14px 14px 3px;
+            padding:9px 12px;font-size:12px;line-height:1.6;
+            max-width:90%;align-self:flex-start;white-space:pre-wrap;
+            border:1px solid rgba(234,88,12,0.15);
         }
-        .radhey-msg-user {
-            background: linear-gradient(135deg, #ff6b00, #ffb347);
-            color: white; border-radius: 16px 16px 4px 16px;
-            padding: 10px 13px; font-size: 12px; line-height: 1.6;
-            max-width: 80%; align-self: flex-end;
+        .rm-user {
+            background:linear-gradient(135deg,#ea580c,#f97316);
+            color:white;border-radius:14px 14px 3px 14px;
+            padding:9px 12px;font-size:12px;line-height:1.6;
+            max-width:82%;align-self:flex-end;
         }
-        #radhey-input-row {
-            padding: 10px 12px; border-top: 1px solid rgba(255,255,255,0.08);
-            display: flex; gap: 6px; align-items: center; background: rgba(0,0,0,0.2);
+        #radhey-quick {
+            padding:7px 10px;display:flex;flex-wrap:wrap;gap:4px;
+            border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;
         }
-        #radhey-input {
-            flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,107,0,0.3);
-            border-radius: 20px; padding: 8px 14px; color: white; font-size: 12px; outline: none;
+        .rq-btn {
+            background:rgba(234,88,12,0.15);border:1px solid rgba(234,88,12,0.35);
+            border-radius:14px;padding:4px 9px;font-size:10px;color:#fb923c;
+            cursor:pointer;white-space:nowrap;transition:all 0.15s;
         }
-        #radhey-input::placeholder { color: rgba(255,255,255,0.4); }
-        #radhey-send {
-            width: 34px; height: 34px; border-radius: 50%;
-            background: linear-gradient(135deg, #ff6b00, #ffb347);
-            border: none; color: white; font-size: 16px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        .rq-btn:hover{background:rgba(234,88,12,0.3);}
+        #radhey-inputrow {
+            padding:8px 10px;border-top:1px solid rgba(255,255,255,0.07);
+            display:flex;gap:5px;align-items:center;background:rgba(0,0,0,0.25);flex-shrink:0;
         }
-        #radhey-mic {
-            width: 34px; height: 34px; border-radius: 50%;
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,107,0,0.4);
-            color: white; font-size: 16px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        #radhey-inp {
+            flex:1;background:rgba(255,255,255,0.08);
+            border:1px solid rgba(234,88,12,0.3);
+            border-radius:16px;padding:7px 13px;color:white;font-size:12px;outline:none;
         }
-        #radhey-mic.listening { background: #dc2626; animation: radheyPulse 1s infinite; }
-        .radhey-quick-btn {
-            display: inline-block; background: rgba(255,107,0,0.15);
-            border: 1px solid rgba(255,107,0,0.4); border-radius: 20px;
-            padding: 4px 10px; font-size: 10px; color: #ffb347;
-            cursor: pointer; margin: 2px; white-space: nowrap;
+        #radhey-inp::placeholder{color:rgba(255,255,255,0.35);}
+        #radhey-inp:focus{border-color:#f97316;}
+        .r-icon-btn {
+            width:32px;height:32px;border-radius:50%;border:none;
+            display:flex;align-items:center;justify-content:center;
+            font-size:15px;cursor:pointer;flex-shrink:0;transition:all 0.15s;
         }
-        .radhey-quick-btn:hover { background: rgba(255,107,0,0.3); }
-        #radhey-label {
-            position: absolute; bottom: 68px; right: 90px;
-            background: #1a1a2e; color: #ffb347; font-size: 11px; font-weight: 700;
-            padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,107,0,0.4);
-            white-space: nowrap; pointer-events: none;
-            animation: radheyLabel 3s ease-in-out infinite;
+        #radhey-mic-btn { background:rgba(255,255,255,0.1); color:white; }
+        #radhey-mic-btn.listening { background:#dc2626; animation:radheyPulse 0.8s infinite; }
+        #radhey-send-btn { background:linear-gradient(135deg,#ea580c,#f97316); color:white; }
+        #radhey-send-btn:hover { background:linear-gradient(135deg,#c2410c,#ea580c); }
+
+        /* Progress bar for voice reg */
+        #radhey-progress {
+            height:3px;background:rgba(255,255,255,0.1);flex-shrink:0;
+            display:none;
         }
-        @keyframes radheyLabel {
-            0%,100% { opacity:1; } 50% { opacity:0.6; }
+        #radhey-progress-bar {
+            height:100%;background:linear-gradient(90deg,#ea580c,#fb923c);
+            transition:width 0.4s;width:0%;
         }
-        @media (max-width: 480px) {
-            #radhey-panel { width: calc(100vw - 32px); right: 16px; bottom: 90px; }
-            #radhey-bubble { bottom: 16px; right: 16px; }
-            #radhey-label { right: 80px; }
+
+        @media(max-width:480px){
+            #radhey-panel{width:calc(100vw - 20px);right:10px;top:64px;}
         }
     `;
     document.head.appendChild(style);
 
-    // ── HTML ──
-    const bubble = document.createElement('div');
-    bubble.id = 'radhey-bubble';
-    bubble.innerHTML = '🙏<span id="radhey-badge">●</span>';
-    bubble.title = 'RADHEY — आपका AI सहायक';
+    // ── Inject RADHEY widget into nav ──
+    function injectNavWidget() {
+        const nav = document.querySelector('nav .flex.gap-2');
+        if (!nav) { setTimeout(injectNavWidget, 500); return; }
+        if (document.getElementById('radhey-widget')) return;
 
-    const label = document.createElement('div');
-    label.id = 'radhey-label';
-    label.textContent = '🙏 RADHEY — Ask me anything!';
+        const widget = document.createElement('div');
+        widget.id = 'radhey-widget';
+        widget.title = 'RADHEY — आपका AI सहायक';
+        widget.innerHTML = `
+            <div id="radhey-chakra">🔱</div>
+            <div id="radhey-widget-text">
+                <div class="r-name">RADHEY</div>
+                <div class="r-sub">🙏 Namaste</div>
+            </div>
+            <div id="radhey-dot"></div>
+        `;
+        // Insert before the language button (🌏)
+        const langBtn = nav.querySelector('button[onclick="changeLang()"]');
+        if (langBtn) nav.insertBefore(widget, langBtn);
+        else nav.appendChild(widget);
 
+        widget.onclick = radheyTogglePanel;
+    }
+
+    // ── Chat Panel HTML ──
     const panel = document.createElement('div');
     panel.id = 'radhey-panel';
     panel.innerHTML = `
-        <div id="radhey-header">
-            <div id="radhey-avatar">🙏</div>
+        <div id="radhey-panel-head">
+            <div id="radhey-panel-avatar">🔱</div>
             <div style="flex:1">
-                <div style="font-weight:800;font-size:15px;color:white;letter-spacing:0.5px">RADHEY</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.8)">आपका AI सहायक · Your AI Guide</div>
+                <div style="font-weight:800;font-size:14px;color:white">RADHEY &nbsp;🙏</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.85)">Sudarshan Chakra · AI सहायक</div>
             </div>
-            <div style="display:flex;gap:6px">
-                <button onclick="radheyStartVoiceReg()" title="Voice Register" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:30px;height:30px;color:white;font-size:14px;cursor:pointer">📝</button>
-                <button onclick="document.getElementById('radhey-panel').classList.remove('open')" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:30px;height:30px;color:white;font-size:16px;cursor:pointer;font-weight:bold">✕</button>
-            </div>
+            <button onclick="radheyStartVoiceReg()" title="Voice Registration"
+                style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;padding:4px 8px;color:white;font-size:11px;cursor:pointer;font-weight:700">
+                🎤 Register
+            </button>
+            <button onclick="radheyTogglePanel()"
+                style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:26px;height:26px;color:white;font-size:14px;cursor:pointer;margin-left:4px">✕</button>
         </div>
+        <div id="radhey-progress"><div id="radhey-progress-bar"></div></div>
         <div id="radhey-messages"></div>
-        <div style="padding:8px 12px;display:flex;flex-wrap:wrap;gap:4px;border-top:1px solid rgba(255,255,255,0.06)">
-            <span class="radhey-quick-btn" onclick="radheyAsk('प्लंबर खोजो')">🔧 प्लंबर</span>
-            <span class="radhey-quick-btn" onclick="radheyAsk('इलेक्ट्रीशियन चाहिए')">⚡ बिजली मिस्त्री</span>
-            <span class="radhey-quick-btn" onclick="radheyAsk('सफाई सेवा')">🧹 सफाई</span>
-            <span class="radhey-quick-btn" onclick="radheyAsk('provider register karna hai')">📝 Register</span>
-            <span class="radhey-quick-btn" onclick="radheyAsk('wallet points kaise kamayein')">💰 Wallet</span>
-            <span class="radhey-quick-btn" onclick="radheyStartVoiceReg()">🎤 Voice Register</span>
+        <div id="radhey-quick">
+            <span class="rq-btn" onclick="radheyAsk('plumber chahiye')">🔧 Plumber</span>
+            <span class="rq-btn" onclick="radheyAsk('electrician chahiye')">⚡ Electrician</span>
+            <span class="rq-btn" onclick="radheyAsk('safai chahiye')">🧹 Cleaning</span>
+            <span class="rq-btn" onclick="radheyAsk('wallet points kaise kamayein')">💰 Wallet</span>
+            <span class="rq-btn" onclick="radheyStartVoiceReg()">🎤 Voice Register</span>
+            <span class="rq-btn" onclick="radheyAsk('verified badge kaise milega')">✅ Verify</span>
         </div>
-        <div id="radhey-input-row">
-            <input id="radhey-input" placeholder="Kuch bhi pucho... / Ask anything..." onkeydown="if(event.key==='Enter') radheyAsk()">
-            <button id="radhey-mic" onclick="radheyToggleMic()" title="Voice input">🎤</button>
-            <button id="radhey-send" onclick="radheyAsk()">➤</button>
+        <div id="radhey-inputrow">
+            <input id="radhey-inp" placeholder="Kuch bhi pucho... / Ask me anything"
+                onkeydown="if(event.key==='Enter')radheyAsk()">
+            <button class="r-icon-btn" id="radhey-mic-btn" onclick="radheyToggleMic()" title="Voice">🎤</button>
+            <button class="r-icon-btn" id="radhey-send-btn" onclick="radheyAsk()">➤</button>
         </div>
     `;
-
-    document.body.appendChild(label);
-    document.body.appendChild(bubble);
     document.body.appendChild(panel);
 
-    // ── Toggle panel ──
-    bubble.onclick = function() {
+    // Close panel on outside click
+    document.addEventListener('click', function(e) {
+        if (!panel.contains(e.target) && e.target.id !== 'radhey-widget' && !document.getElementById('radhey-widget')?.contains(e.target)) {
+            panel.classList.remove('open');
+        }
+    });
+
+    // ── State ──
+    window._radheyOpen       = false;
+    window._radheyRegMode    = false;
+    window._radheyRegStep    = 0;
+    window._radheyRegData    = {};
+    window._radheyListening  = false;
+    window._radheyRec        = null;
+
+    // Total registration steps (for progress bar)
+    const REG_STEPS_PROVIDER = 10; // type,name,mobile,category,subcategory,service,language,hours,area,religion,location,rate,bio,id = 14 but we group
+    const REG_STEPS_SEEKER   = 6;
+
+    window.radheyTogglePanel = function() {
         const p = document.getElementById('radhey-panel');
-        const lbl = document.getElementById('radhey-label');
+        if (!p) return;
         p.classList.toggle('open');
-        if (lbl) lbl.style.display = 'none';
-        if (p.classList.contains('open') && document.getElementById('radhey-messages').children.length === 0) {
+        window._radheyOpen = p.classList.contains('open');
+        if (window._radheyOpen && document.getElementById('radhey-messages').children.length === 0) {
             radheyGreet();
         }
     };
 
-    // Hide label after 8 seconds
-    setTimeout(function() {
-        const lbl = document.getElementById('radhey-label');
-        if (lbl) lbl.style.opacity = '0';
-        setTimeout(function() { if(lbl) lbl.style.display='none'; }, 1000);
-    }, 8000);
-
-    // ── RADHEY conversation state ──
-    window._radheyHistory = [];
-    window._radheyRegMode = false;
-    window._radheyRegStep = 0;
-    window._radheyRegData = {};
-
-    // ── Greet user ──
     window.radheyGreet = function() {
         const fu = window.firebaseUser;
-        const name = fu ? (window.userProfile?.name || 'दोस्त') : 'दोस्त';
-        radheyBotMsg(`🙏 Namaste ${name}!\n\nMain RADHEY hoon — Sudarshan Chakra ka AI sahayak.\n\nमैं आपकी मदद कर सकता हूं:\n• कोई भी सेवा खोजें 🔍\n• Provider/Seeker बनें 📝\n• Wallet & Points समझें 💰\n• Voice से Registration करें 🎤\n\nBataiye, kya chahiye? 😊`);
+        const name = (fu && window.userProfile?.name) ? window.userProfile.name.split(' ')[0] : 'दोस्त';
+        radheyBotMsg(`🙏 Namaste ${name}!\n\nMain RADHEY hoon — Sudarshan Chakra ka AI sahayak.\n\nMain kya kar sakta hoon:\n🔍 Koi bhi service dhundhna\n📝 Provider / Seeker register karna (voice se!)\n💰 Wallet & points samjhana\n✅ Verification guide karna\n\nBataiye, kya chahiye? 😊`);
     };
 
-    // ── Add bot message ──
+    // ── Messages ──
     window.radheyBotMsg = function(text) {
         const msgs = document.getElementById('radhey-messages');
         if (!msgs) return;
-        const div = document.createElement('div');
-        div.className = 'radhey-msg-bot';
-        div.textContent = text;
-        msgs.appendChild(div);
-        msgs.scrollTop = msgs.scrollHeight;
-        // Text-to-speech for short messages
-        if (text.length < 200 && 'speechSynthesis' in window) {
-            const lang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'hi';
-            const utt = new SpeechSynthesisUtterance(text.replace(/[🙏🔍💰📝🎤⚡🧹🔧✅❌⏳]/gu, ''));
-            utt.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
-            utt.rate = 0.9; utt.volume = 0.8;
-            window.speechSynthesis.speak(utt);
+        const d = document.createElement('div');
+        d.className = 'rm-bot'; d.textContent = text;
+        msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
+        // TTS
+        if ('speechSynthesis' in window && text.length < 250) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text.replace(/[🔱🙏🔍💰📝🎤⚡🧹🔧✅❌⏳📋━]/gu,''));
+            u.lang = (typeof currentLanguage!=='undefined' && currentLanguage==='hi') ? 'hi-IN' : 'en-IN';
+            u.rate = 0.88; u.volume = 0.85;
+            window.speechSynthesis.speak(u);
         }
     };
-
-    // ── Add user message ──
     window.radheyUserMsg = function(text) {
         const msgs = document.getElementById('radhey-messages');
         if (!msgs) return;
-        const div = document.createElement('div');
-        div.className = 'radhey-msg-user';
-        div.textContent = text;
-        msgs.appendChild(div);
-        msgs.scrollTop = msgs.scrollHeight;
+        const d = document.createElement('div');
+        d.className = 'rm-user'; d.textContent = text;
+        msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
     };
 
+    function setProgress(step, total) {
+        const bar = document.getElementById('radhey-progress');
+        const fill = document.getElementById('radhey-progress-bar');
+        if (!bar || !fill) return;
+        bar.style.display = total > 0 ? 'block' : 'none';
+        fill.style.width = total > 0 ? Math.round((step/total)*100)+'%' : '0%';
+    }
+
     // ── Ask RADHEY ──
-    window.radheyAsk = async function(forcedText) {
-        const inp = document.getElementById('radhey-input');
-        const text = forcedText || (inp ? inp.value.trim() : '');
+    window.radheyAsk = async function(forced) {
+        const inp = document.getElementById('radhey-inp');
+        const text = forced || (inp ? inp.value.trim() : '');
         if (!text) return;
         if (inp) inp.value = '';
         radheyUserMsg(text);
 
-        // If in voice registration mode, handle registration flow
-        if (window._radheyRegMode) {
-            radheyHandleRegStep(text);
+        if (window._radheyRegMode) { radheyHandleRegStep(text); return; }
+
+        const q = text.toLowerCase();
+        // Service search
+        if (['chahiye','खोजो','find','search','book','hire','need','want','ढूंढो','दिखाओ','show'].some(w=>q.includes(w))) {
+            if (typeof processVoiceCommand==='function') processVoiceCommand(q);
+            radheyBotMsg('🔍 Search chal rahi hai...\nBrowse page mein results dekhen!');
+            if (typeof showPage==='function') setTimeout(()=>showPage('browse'),800);
+            return;
+        }
+        if (q.includes('register')||q.includes('join')||q.includes('provider banna')||q.includes('seeker banna')) {
+            radheyBotMsg('📝 Main aapko voice se register kar sakta hoon!\n"🎤 Register" button tap karein — main step by step guide karunga.');
+            return;
+        }
+        if (q.includes('wallet')||q.includes('points')||q.includes('paise')) {
+            radheyBotMsg('💰 Wallet Points:\n• Daily login = 2 pts\n• Review = 5 pts\n• Referral = 5 pts\n• Provider refer = 10 pts\n\n10 pts = ₹1\n\nWallet tab → profile icon tap karein 🌟');
             return;
         }
 
-        // Check for service search intent
-        const lower = text.toLowerCase();
-        const serviceWords = ['खोजो','खोजें','चाहिए','find','search','book','hire','need','want','ढूंढो','दिखाओ'];
-        const isServiceSearch = serviceWords.some(w => lower.includes(w));
-
-        if (isServiceSearch && typeof processVoiceCommand === 'function') {
-            processVoiceCommand(lower);
-            radheyBotMsg('🔍 Searching for: ' + text + '\n\nBrowse page mein results dekh sakte hain!');
-            return;
-        }
-
-        // Registration intents
-        if (lower.includes('register') || lower.includes('पंजीकरण') || lower.includes('provider banna') || lower.includes('join')) {
-            radheyBotMsg('📝 Provider register karne ke liye:\n1. "Register Provider" button tap karein\n2. Ya main aapko voice se register kar sakta hoon!\n\nVoice registration ke liye "Voice Register" button tap karein 🎤');
-            return;
-        }
-
-        // Wallet intents
-        if (lower.includes('wallet') || lower.includes('points') || lower.includes('पॉइंट') || lower.includes('earn')) {
-            radheyBotMsg('💰 Wallet Points kamaane ke tarike:\n• Daily login = 2 pts\n• Review likhein = 5 pts\n• Referral = 5 pts\n• Provider refer karein = 10 pts\n\n10 points = ₹1\nWallet tab mein jaayein aur points dekhen! 🌟');
-            return;
-        }
-
-        // Use Claude API for complex questions
+        // Claude API
         const typing = document.createElement('div');
-        typing.className = 'radhey-msg-bot';
-        typing.textContent = '⏳ Soch raha hoon...';
+        typing.className='rm-bot'; typing.textContent='⏳ Soch raha hoon...';
         document.getElementById('radhey-messages').appendChild(typing);
-        document.getElementById('radhey-messages').scrollTop = 999999;
-
+        document.getElementById('radhey-messages').scrollTop=999999;
         try {
-            const lang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'hi';
-            const sysPrompt = `You are RADHEY, the friendly AI assistant for Sudarshan Chakra India — a hyperlocal service marketplace app for India. 
-
-Key facts: connects seekers with providers (plumbers, electricians, beauticians, tutors, etc.), 12 Indian languages, OTP login, Wallet reward points (10pts=₹1), Verified badge with ID upload, Membership plans (Basic free, Professional ₹99/quarter, Elite ₹199/quarter), charity program, referral system.
-
-IMPORTANT: Reply in ${lang === 'hi' ? 'Hindi (Devanagari script mixed with some English)' : 'English'}. Be warm, concise, use emojis. Address user as "aap" in Hindi. Keep replies under 150 words.`;
-
-            const res = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
+            const lang = (typeof currentLanguage!=='undefined'&&currentLanguage==='hi')?'hi':'en';
+            const res = await fetch("https://api.anthropic.com/v1/messages",{
+                method:"POST", headers:{"Content-Type":"application/json"},
                 body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 300,
-                    system: sysPrompt,
-                    messages: [{ role: "user", content: text }]
+                    model:"claude-sonnet-4-20250514", max_tokens:300,
+                    system:`You are RADHEY, friendly AI for Sudarshan Chakra India (hyperlocal service app). Reply in ${lang==='hi'?'Hindi (Devanagari + some English)':'English'}. Warm, concise, use emojis. Under 120 words. Key facts: OTP login, 12 languages, wallet points (10pts=₹1), verified badge via ID upload, plans Basic(free)/Pro(₹99)/Elite(₹199) per quarter.`,
+                    messages:[{role:"user",content:text}]
                 })
             });
-            if (res.ok) {
-                const data = await res.json();
-                const reply = data.content && data.content[0] && data.content[0].text;
-                typing.textContent = reply || 'Maafi chahta hoon, samajh nahi aaya. Dobara puchen? 🙏';
-            } else { throw new Error(); }
-        } catch(e) {
-            typing.textContent = 'Abhi internet se connect nahi ho pa raha. Kripya dobara try karein 🙏\n\nYa email karein: support@sudarshanchakraindia.com';
-        }
-        document.getElementById('radhey-messages').scrollTop = 999999;
+            if(res.ok){const d=await res.json(); typing.textContent=d.content?.[0]?.text||'Maafi, dobara try karein 🙏';}
+            else throw new Error();
+        } catch(e){ typing.textContent='Net connection mein dikkat hai.\nEmail: support@sudarshanchakraindia.com 🙏'; }
+        document.getElementById('radhey-messages').scrollTop=999999;
     };
 
-    // ── Voice Mic Toggle ──
+    // ── Mic ──
     window.radheyToggleMic = function() {
-        const mic = document.getElementById('radhey-mic');
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            radheyBotMsg('❌ Aapka browser voice support nahi karta. Chrome use karein.');
-            return;
+        const mic = document.getElementById('radhey-mic-btn');
+        if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
+            radheyBotMsg('❌ Voice support nahi hai. Chrome browser use karein.'); return;
         }
-        if (window._radheyListening) {
-            window._radheyRec && window._radheyRec.stop();
-            mic.classList.remove('listening');
-            window._radheyListening = false;
-            return;
-        }
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if(window._radheyListening){ window._radheyRec?.stop(); return; }
+        const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
         const rec = new SR();
-        const lang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'hi';
-        rec.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
-        rec.interimResults = false;
-        rec.onresult = function(e) {
-            const txt = e.results[0][0].transcript;
-            const inp = document.getElementById('radhey-input');
-            if (inp) inp.value = txt;
-            radheyAsk(txt);
-        };
-        rec.onend = function() {
-            mic.classList.remove('listening');
-            window._radheyListening = false;
-        };
-        rec.onerror = function() { mic.classList.remove('listening'); window._radheyListening = false; };
+        rec.lang = (typeof currentLanguage!=='undefined'&&currentLanguage==='hi')?'hi-IN':'en-IN';
+        rec.onresult = e => { const t=e.results[0][0].transcript; const inp=document.getElementById('radhey-inp'); if(inp)inp.value=t; radheyAsk(t); };
+        rec.onend = ()=>{ if(mic)mic.classList.remove('listening'); window._radheyListening=false; };
+        rec.onerror = ()=>{ if(mic)mic.classList.remove('listening'); window._radheyListening=false; };
         rec.start();
-        mic.classList.add('listening');
-        window._radheyListening = true;
-        window._radheyRec = rec;
+        if(mic)mic.classList.add('listening');
+        window._radheyListening=true; window._radheyRec=rec;
     };
 
     // ════════════════════════════════════════════════════════
-    // VOICE-GUIDED REGISTRATION — for illiterate users
-    // RADHEY walks user through registration step by step
+    // VOICE REGISTRATION — Complete flow (14 steps for provider)
     // ════════════════════════════════════════════════════════
+
+    // Step definitions
+    const PROVIDER_STEPS = [
+        'type','name','mobile','category','subcategory','service','language','hours','area','religion','location','rate','bio','id'
+    ];
+    const SEEKER_STEPS = [
+        'type','name','mobile','language','religion','location'
+    ];
+
     window.radheyStartVoiceReg = function() {
         window._radheyRegMode = true;
         window._radheyRegStep = 0;
-        window._radheyRegData = { type: null, name: null, mobile: null, service: null, location: null, rate: null, religion: null };
-        
-        const panel = document.getElementById('radhey-panel');
-        if (panel) panel.classList.add('open');
+        window._radheyRegData = {};
+        window._radheySteps  = null; // set after type chosen
 
-        radheyBotMsg(`🎤 RADHEY Voice Registration शुरू हो रही है!\n\nMain aapko step-by-step guide karunga.\nHar sawaal ke baad bolein ya type karein.\n\n━━━━━━━━━━━━━━━\n\nSabse pehle:\nKya aap Provider (kaam dene wale) hain ya Seeker (kaam karaane wale)?\n\n👷 Provider ke liye "Provider" bolein\n🔍 Seeker ke liye "Seeker" bolein`);
-        
-        setTimeout(radheyMicAutoStart, 1000);
+        const p = document.getElementById('radhey-panel');
+        if(p) p.classList.add('open');
+        window._radheyOpen = true;
+
+        radheyBotMsg(`🎤 Voice Registration शुरू!\n\nMain aapko step by step guide karunga.\nHar sawaal ke baad bolein ya type karein.\n\n━━━━━━━━━━━━━━━\n\nStep 1: Aap kya banana chahte hain?\n\n👷 "Provider" — agar aap kaam dete hain\n🔍 "Seeker" — agar aapko kaam karaana hai\n🤝 "Dono" — agar aap dono hain`);
+
+        setProgress(0, 1);
+        setTimeout(radheyAutoMic, 1200);
     };
 
     window.radheyHandleRegStep = function(answer) {
-        const step = window._radheyRegStep;
-        const data = window._radheyRegData;
         const a = answer.toLowerCase().trim();
+        const d = window._radheyRegData;
+        const step = window._radheyRegStep;
 
+        // Step 0: Type selection
         if (step === 0) {
-            // Role selection
-            if (a.includes('provider') || a.includes('काम') || a.includes('kaam de') || a.includes('प्रोवाइडर')) {
-                data.type = 'provider';
-                window._radheyRegStep = 1;
-                radheyBotMsg('✅ Provider — अच्छा!\n\nAb aapka poora naam batayein.\nJaise: "Ramesh Kumar" ya "Sunita Devi"');
-            } else if (a.includes('seeker') || a.includes('सीकर') || a.includes('kaam kara') || a.includes('चाहिए')) {
-                data.type = 'seeker';
-                window._radheyRegStep = 1;
-                radheyBotMsg('✅ Seeker — bilkul!\n\nAb aapka poora naam batayein.\nJaise: "Ramesh Kumar"');
+            if (a.includes('provider')||a.includes('प्रोवाइडर')||a.includes('kaam deta')||a.includes('काम देता')) {
+                d.type='provider'; window._radheySteps=[...PROVIDER_STEPS]; window._radheyRegStep=1;
+                setProgress(1,PROVIDER_STEPS.length);
+                radheyBotMsg('✅ Provider!\n\nStep 2: Aapka poora naam batayein.\nJaise: "Ramesh Kumar"');
+            } else if(a.includes('seeker')||a.includes('सीकर')||a.includes('kaam karana')||a.includes('काम कराना')) {
+                d.type='seeker'; window._radheySteps=[...SEEKER_STEPS]; window._radheyRegStep=1;
+                setProgress(1,SEEKER_STEPS.length);
+                radheyBotMsg('✅ Seeker!\n\nStep 2: Aapka poora naam batayein.\nJaise: "Sunita Devi"');
+            } else if(a.includes('dono')||a.includes('both')||a.includes('दोनों')) {
+                d.type='both'; window._radheySteps=[...PROVIDER_STEPS]; window._radheyRegStep=1;
+                setProgress(1,PROVIDER_STEPS.length);
+                radheyBotMsg('✅ Dono — Provider aur Seeker!\n\nStep 2: Aapka poora naam batayein.\nJaise: "Ramesh Kumar"');
             } else {
-                radheyBotMsg('❓ Samajh nahi aaya.\n\n"Provider" bolein — agar aap kaam karte hain\n"Seeker" bolein — agar aapko kaam karaana hai');
+                radheyBotMsg('❓ "Provider", "Seeker" ya "Dono" bolein.');
             }
-        } else if (step === 1) {
-            // Name
-            data.name = answer.trim();
-            window._radheyRegStep = 2;
-            radheyBotMsg(`✅ Naam: ${data.name}\n\nAb aapka 10 digit mobile number batayein.\nJaise: "9414055013"`);
-        } else if (step === 2) {
-            // Mobile
-            const nums = answer.replace(/\D/g, '');
-            if (nums.length === 10) {
-                data.mobile = nums;
-                window._radheyRegStep = 3;
-                if (data.type === 'provider') {
-                    radheyBotMsg(`✅ Mobile: ${nums}\n\nAb batayein aap kya kaam karte hain?\nJaise: "Plumber", "Electrician", "Painter", "Cook", "Carpenter"`);
-                } else {
-                    radheyBotMsg(`✅ Mobile: ${nums}\n\nAapka dharm batayein:\n"Hindu", "Muslim", "Christian", "Sikh", "Buddhist", ya "Jain"`);
-                    window._radheyRegStep = 4; // skip service step for seeker
-                }
-            } else {
-                radheyBotMsg('❌ Mobile number 10 digit ka hona chahiye.\nDobara bolein, sirf numbers mein.');
-            }
-        } else if (step === 3) {
-            // Service (provider only)
-            data.service = answer.trim();
-            window._radheyRegStep = 4;
-            radheyBotMsg(`✅ Kaam: ${data.service}\n\nAapka dharm batayein:\n"Hindu", "Muslim", "Christian", "Sikh", "Buddhist", ya "Jain"`);
-        } else if (step === 4) {
-            // Religion
-            const religions = ['hindu','muslim','christian','sikh','buddhist','jain','हिंदू','मुस्लिम','सिख','बौद्ध','जैन'];
-            const found = religions.find(r => a.includes(r));
-            if (found) {
-                data.religion = found.charAt(0).toUpperCase() + found.slice(1);
-                window._radheyRegStep = 5;
-                radheyBotMsg(`✅ Dharm: ${data.religion}\n\nAapka shehar ya mohalla batayein.\nJaise: "Jaipur, Rajasthan" ya "Malviya Nagar"`);
-            } else {
-                radheyBotMsg('❓ Please ek dharm batayein:\nHindu, Muslim, Christian, Sikh, Buddhist, ya Jain');
-            }
-        } else if (step === 5) {
-            // Location
-            data.location = answer.trim();
-            if (data.type === 'provider') {
-                window._radheyRegStep = 6;
-                radheyBotMsg(`✅ Location: ${data.location}\n\nAap ek ghante ka kitna charge lete hain? (₹ mein)\nJaise: "300" ya "teen sau rupaye"`);
-            } else {
-                window._radheyRegStep = 7;
-                radheyConfirmReg();
-            }
-        } else if (step === 6) {
-            // Rate (provider only)
-            const rate = parseInt(answer.replace(/\D/g, '')) || 0;
-            if (rate >= 50) {
-                data.rate = rate;
-                window._radheyRegStep = 7;
-                radheyConfirmReg();
-            } else {
-                radheyBotMsg('❌ Rate kam se kam ₹50 hona chahiye.\nDobara batayein — jaise "200" ya "do sau"');
-            }
+            setTimeout(radheyAutoMic,600); return;
         }
-        setTimeout(radheyMicAutoStart, 500);
+
+        const totalSteps = window._radheySteps ? window._radheySteps.length : PROVIDER_STEPS.length;
+        const currentField = window._radheySteps ? window._radheySteps[step] : null;
+        setProgress(step, totalSteps);
+
+        // Step 1: Name
+        if (currentField === 'name') {
+            if (answer.trim().length < 2) { radheyBotMsg('❓ Kripya apna poora naam batayein.'); setTimeout(radheyAutoMic,600); return; }
+            d.name = answer.trim();
+            window._radheyRegStep++;
+            setProgress(window._radheyRegStep, totalSteps);
+            radheyBotMsg(`✅ Naam: ${d.name}\n\nStep ${window._radheyRegStep+1}: Aapka 10 digit mobile number?\nJaise: "9414055013"`);
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 2: Mobile
+        if (currentField === 'mobile') {
+            const nums = answer.replace(/\D/g,'').slice(-10);
+            if (nums.length !== 10) { radheyBotMsg('❌ 10 digit number chahiye.\nDobara bolein.'); setTimeout(radheyAutoMic,600); return; }
+            d.mobile = nums;
+            window._radheyRegStep++;
+            setProgress(window._radheyRegStep, totalSteps);
+
+            if (d.type === 'provider' || d.type === 'both') {
+                // Build category list for voice
+                let catList = '';
+                if(typeof categories!=='undefined' && categories.length) {
+                    catList = categories.slice(0,8).map((c,i)=>`${i+1}. ${c.name?.en||c.name}`).join('\n');
+                } else {
+                    catList = '1. Home Services\n2. Beauty & Wellness\n3. Cleaning Services\n4. Event Services\n5. Education\n6. Transport\n7. Business Services\n8. Pet Services';
+                }
+                radheyBotMsg(`✅ Mobile: ${nums}\n\nStep ${window._radheyRegStep+1}: Kaunsi category mein aap kaam karte hain?\n\n${catList}\n\nNumber bolein ya naam bolein.`);
+            } else {
+                // Seeker → go to language
+                radheyBotMsg(`✅ Mobile: ${nums}\n\nStep ${window._radheyRegStep+1}: Aap kaunsi bhasha mein baat karna chahte hain?\n\nHindi, English, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi`);
+            }
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 3: Category (provider)
+        if (currentField === 'category') {
+            let matchedCat = null;
+            if(typeof categories!=='undefined') {
+                // Try by number
+                const num = parseInt(a);
+                if (num > 0 && num <= categories.length) matchedCat = categories[num-1];
+                // Try by name
+                if (!matchedCat) matchedCat = categories.find(c => {
+                    const n = (c.name?.en||c.name||'').toLowerCase();
+                    return n.includes(a) || a.includes(n.split(' ')[0].toLowerCase());
+                });
+                // Common Hindi keywords
+                if (!matchedCat) {
+                    const hindiMap = {'घर':'Home Services','सफाई':'Cleaning Services','सौंदर्य':'Beauty & Wellness','खाना':'Food & Catering','health':'Health & Medical','transport':'Transport & Travel','शिक्षा':'Education & Skill Services','event':'Events & Entertainment'};
+                    for (const [k,v] of Object.entries(hindiMap)) {
+                        if (a.includes(k)) { matchedCat = categories.find(c=>(c.name?.en||c.name)===v); break; }
+                    }
+                }
+            }
+            if (!matchedCat && typeof categories!=='undefined') {
+                // Fuzzy: any partial match
+                matchedCat = categories.find(c => a.includes((c.name?.en||c.name||'').toLowerCase().split(' ')[0]));
+            }
+            if (matchedCat) {
+                d.categoryId = matchedCat.id;
+                d.categoryName = matchedCat.name?.en || matchedCat.name;
+                window._radheyRegStep++;
+                setProgress(window._radheyRegStep, totalSteps);
+                // List subcategories
+                const subs = matchedCat.subcategories || [];
+                const subList = subs.slice(0,8).map((s,i)=>`${i+1}. ${s.name?.en||s.name}`).join('\n');
+                radheyBotMsg(`✅ Category: ${d.categoryName}\n\nStep ${window._radheyRegStep+1}: Sub-category chunein:\n\n${subList||'Koi sub-category nahi'}\n\nNumber ya naam bolein.`);
+            } else {
+                radheyBotMsg('❓ Category clearly batayein.\nJaise: "Home Services", "Cleaning", "Beauty", ya number bolein.');
+            }
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 4: Subcategory (provider)
+        if (currentField === 'subcategory') {
+            const cat = typeof categories!=='undefined' ? categories.find(c=>c.id===d.categoryId) : null;
+            const subs = cat ? (cat.subcategories||[]) : [];
+            let matchedSub = null;
+            const num = parseInt(a);
+            if (num > 0 && num <= subs.length) matchedSub = subs[num-1];
+            if (!matchedSub) matchedSub = subs.find(s=>(s.name?.en||s.name||'').toLowerCase().includes(a)||a.includes((s.name?.en||s.name||'').toLowerCase()));
+            if (matchedSub) {
+                d.subcategoryIdx = subs.indexOf(matchedSub);
+                d.subcategoryName = matchedSub.name?.en || matchedSub.name;
+                window._radheyRegStep++;
+                setProgress(window._radheyRegStep, totalSteps);
+                const svcs = matchedSub.subsubcategories || [];
+                const svcList = svcs.slice(0,8).map((s,i)=>`${i+1}. ${s.name?.en||s.name}`).join('\n');
+                radheyBotMsg(`✅ Sub-category: ${d.subcategoryName}\n\nStep ${window._radheyRegStep+1}: Service type chunein:\n\n${svcList||'Koi service nahi'}\n\nNumber ya naam bolein.`);
+            } else {
+                radheyBotMsg('❓ Sub-category naam ya number bolein.');
+            }
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 5: Service type (provider)
+        if (currentField === 'service') {
+            const cat = typeof categories!=='undefined' ? categories.find(c=>c.id===d.categoryId) : null;
+            const sub = cat ? (cat.subcategories||[])[d.subcategoryIdx] : null;
+            const svcs = sub ? (sub.subsubcategories||[]) : [];
+            let matchedSvc = null;
+            const num = parseInt(a);
+            if (num > 0 && num <= svcs.length) matchedSvc = svcs[num-1];
+            if (!matchedSvc) matchedSvc = svcs.find(s=>(s.name?.en||s.name||'').toLowerCase().includes(a));
+            if (matchedSvc || svcs.length === 0) {
+                d.serviceName = matchedSvc ? (matchedSvc.name?.en||matchedSvc.name) : d.subcategoryName;
+                d.serviceIdx = matchedSvc ? svcs.indexOf(matchedSvc) : 0;
+                window._radheyRegStep++;
+                setProgress(window._radheyRegStep, totalSteps);
+                radheyBotMsg(`✅ Service: ${d.serviceName}\n\nStep ${window._radheyRegStep+1}: Aap kaunsi bhasha mein baat kar sakte hain?\n\nHindi, English, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese\n\n(Ek ya zyada bol sakte hain)`);
+            } else {
+                radheyBotMsg('❓ Service number ya naam clearly bolein.');
+            }
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 6: Language
+        if (currentField === 'language') {
+            const langMap = {
+                'hindi':'Hindi','english':'English','bengali':'Bengali','gujarati':'Gujarati',
+                'marathi':'Marathi','kannada':'Kannada','telugu':'Telugu','malayalam':'Malayalam',
+                'tamil':'Tamil','punjabi':'Punjabi','odia':'Odia','assamese':'Assamese',
+                'हिंदी':'Hindi','अंग्रेजी':'English','बंगाली':'Bengali','गुजराती':'Gujarati',
+                'मराठी':'Marathi','कन्नड़':'Kannada','तेलुगू':'Telugu','मलयालम':'Malayalam',
+                'तमिल':'Tamil','पंजाबी':'Punjabi','ओडिया':'Odia','असमिया':'Assamese'
+            };
+            const found = [];
+            for (const [k,v] of Object.entries(langMap)) { if(a.includes(k.toLowerCase())) found.push(v); }
+            if (found.length === 0) found.push('Hindi'); // default
+            const langs = [...new Set(found)];
+            d.language = langs;
+            window._radheyRegStep++;
+            setProgress(window._radheyRegStep, totalSteps);
+
+            if (window._radheySteps[window._radheyRegStep] === 'hours') {
+                radheyBotMsg(`✅ Bhasha: ${langs.join(', ')}\n\nStep ${window._radheyRegStep+1}: Aap kab kaam karte hain?\n\n1. सोम-शुक्र (Monday to Friday)\n2. Weekends only\n3. Roz (All 7 days)\n4. 24×7 Available`);
+            } else {
+                // Seeker → religion
+                radheyBotMsg(`✅ Bhasha: ${langs.join(', ')}\n\nStep ${window._radheyRegStep+1}: Aapka dharm?\nHindu, Muslim, Christian, Sikh, Buddhist, Jain`);
+            }
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 7: Working hours (provider)
+        if (currentField === 'hours') {
+            let hours = 'all-days';
+            if(a.includes('1')||a.includes('mon')||a.includes('सोम')||a.includes('friday')) hours='mon-fri';
+            else if(a.includes('2')||a.includes('weekend')||a.includes('शनि')||a.includes('रवि')) hours='weekends';
+            else if(a.includes('3')||a.includes('roz')||a.includes('रोज')||a.includes('all')) hours='all-days';
+            else if(a.includes('4')||a.includes('24')||a.includes('हमेशा')) hours='24x7';
+            d.workingHours = hours;
+            const hLabel = {'mon-fri':'Mon-Fri','weekends':'Weekends','all-days':'All Days','24x7':'24×7'}[hours]||hours;
+            window._radheyRegStep++;
+            setProgress(window._radheyRegStep, totalSteps);
+            radheyBotMsg(`✅ Kaam ke ghante: ${hLabel}\n\nStep ${window._radheyRegStep+1}: Aap kitne door tak jaate hain?\n\n1. 10 km tak\n2. Poore shehar mein`);
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 8: Service area (provider)
+        if (currentField === 'area') {
+            let area = 'city';
+            if(a.includes('1')||a.includes('10')||a.includes('paas')||a.includes('पास')) area='10km';
+            else if(a.includes('2')||a.includes('city')||a.includes('shehar')||a.includes('शहर')) area='city';
+            d.serviceArea = area;
+            window._radheyRegStep++;
+            setProgress(window._radheyRegStep, totalSteps);
+            radheyBotMsg(`✅ Service Area: ${area==='10km'?'10 km tak':'Poora shehar'}\n\nStep ${window._radheyRegStep+1}: Aapka dharm?\nHindu, Muslim, Christian, Sikh, Buddhist, ya Jain`);
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 9: Religion
+        if (currentField === 'religion') {
+            const relMap = {'hindu':'Hindu','muslim':'Muslim','christian':'Christian','sikh':'Sikh','buddhist':'Buddhist','jain':'Jain','हिंदू':'Hindu','मुस्लिम':'Muslim','सिख':'Sikh','बौद्ध':'Buddhist','जैन':'Jain','ईसाई':'Christian'};
+            let rel = null;
+            for(const [k,v] of Object.entries(relMap)){if(a.includes(k.toLowerCase())){rel=v;break;}}
+            if(!rel){radheyBotMsg('❓ Dharm clearly bolein: Hindu, Muslim, Christian, Sikh, Buddhist, ya Jain'); setTimeout(radheyAutoMic,600); return;}
+            d.religion = rel;
+            window._radheyRegStep++;
+            setProgress(window._radheyRegStep, totalSteps);
+            radheyBotMsg(`✅ Dharm: ${rel}\n\nStep ${window._radheyRegStep+1}: Aapka shehar / mohalla / address batayein.\nJaise: "Malviya Nagar, Jaipur"`);
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 10: Location
+        if (currentField === 'location') {
+            d.location = answer.trim();
+            window._radheyRegStep++;
+            setProgress(window._radheyRegStep, totalSteps);
+
+            if(window._radheySteps[window._radheyRegStep] === 'rate') {
+                radheyBotMsg(`✅ Location: ${d.location}\n\nStep ${window._radheyRegStep+1}: Aap ek ghante ka kitna charge lete hain? (₹)\nJaise: "200", "300", "paanch sau"`);
+            } else {
+                radheyConfirmReg();
+            }
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 11: Rate (provider)
+        if (currentField === 'rate') {
+            const words = {'ek sau':100,'do sau':200,'teen sau':300,'char sau':400,'paanch sau':500,'ek hazaar':1000,'panch sau':500,'das sau':1000};
+            let rate = 0;
+            for(const[k,v] of Object.entries(words)){if(a.includes(k)){rate=v;break;}}
+            if(!rate) rate = parseInt(answer.replace(/\D/g,''))||0;
+            if(rate < 50){radheyBotMsg('❌ Rate kam se kam ₹50 hona chahiye.\nDobara bolein.'); setTimeout(radheyAutoMic,600); return;}
+            d.rate = rate;
+            window._radheyRegStep++;
+            setProgress(window._radheyRegStep, totalSteps);
+            radheyBotMsg(`✅ Rate: ₹${rate}/ghanta\n\nStep ${window._radheyRegStep+1}: Apne baare mein kuch batayein (Bio).\nJaise: "Main 5 saal se kaam kar raha hoon, professional aur time par aata hoon."\n\nYa "skip" bolein.`);
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 12: Bio (provider)
+        if (currentField === 'bio') {
+            if(!a.includes('skip')&&!a.includes('nahi')&&answer.trim().length>3) {
+                d.bio = answer.trim();
+            }
+            window._radheyRegStep++;
+            setProgress(window._radheyRegStep, totalSteps);
+            radheyBotMsg(`${d.bio?'✅ Bio save hua!':' Bio skip kiya.'}\n\nStep ${window._radheyRegStep+1}: Identity Verification (Optional)\n\nAapke paas koi ID hai?\nAadhaar, Driving Licence, Voter ID, PAN\n\nID type bolein ya "skip" bolein.\n(ID se ✅ Verified badge milta hai — zyada customers aate hain!)`);
+            setTimeout(radheyAutoMic,600); return;
+        }
+
+        // Step 13: ID type (provider)
+        if (currentField === 'id') {
+            if(!a.includes('skip')&&!a.includes('nahi')) {
+                const idMap={'aadhaar':'aadhaar','aadhar':'aadhaar','driving':'driving','licence':'driving','voter':'voter','pan':'pan','passport':'passport','आधार':'aadhaar','ड्राइविंग':'driving','वोटर':'voter','पैन':'pan'};
+                for(const[k,v] of Object.entries(idMap)){if(a.includes(k)){d.idType=v;break;}}
+                if(d.idType) {
+                    radheyBotMsg(`✅ ID Type: ${d.idType.toUpperCase()}\n\n📸 Ab apni ID ki photo upload karein.\n"Register Provider" form mein ID section mein upload kar sakte hain baad mein bhi.\n\nAbhi confirm karte hain!`);
+                } else {
+                    radheyBotMsg('✅ ID noted!\n\nAbhi confirm karte hain!');
+                }
+            }
+            window._radheyRegStep++;
+            setTimeout(()=>radheyConfirmReg(), 800);
+            return;
+        }
+
+        // Confirmation step
+        if (window._radheyRegStep >= (window._radheySteps||PROVIDER_STEPS).length) {
+            if(a.includes('haan')||a.includes('yes')||a.includes('हां')||a.includes('हाँ')||a.includes('sahi')||a.includes('correct')||a.includes('bilkul')) {
+                radheySubmitReg();
+            } else if(a.includes('nahi')||a.includes('no')||a.includes('galat')||a.includes('wrong')) {
+                window._radheyRegMode=false; window._radheyRegStep=0;
+                radheyBotMsg('ठीक है! Dobara try karein — "🎤 Register" button tap karein.');
+                setProgress(0,0);
+            } else {
+                radheyBotMsg('"Haan" bolein confirm karne ke liye\n"Nahi" bolein dobara shuru karne ke liye.');
+                setTimeout(radheyAutoMic,600);
+            }
+            return;
+        }
+
+        setTimeout(radheyAutoMic,600);
     };
 
     window.radheyConfirmReg = function() {
         const d = window._radheyRegData;
-        let summary = `📋 Registration Summary:\n━━━━━━━━━━━━━━━\n`;
-        summary += `👤 Naam: ${d.name}\n`;
-        summary += `📱 Mobile: ${d.mobile}\n`;
-        summary += `🙏 Dharm: ${d.religion}\n`;
-        summary += `📍 Location: ${d.location}\n`;
-        if (d.type === 'provider') {
-            summary += `🔧 Kaam: ${d.service}\n`;
-            summary += `💰 Rate: ₹${d.rate}/ghanta\n`;
+        let s = `📋 Registration Summary:\n━━━━━━━━━━━━━━━\n`;
+        s += `👤 Naam: ${d.name||'-'}\n`;
+        s += `📱 Mobile: ${d.mobile||'-'}\n`;
+        s += `🙏 Dharm: ${d.religion||'-'}\n`;
+        s += `📍 Location: ${d.location||'-'}\n`;
+        s += `🗣️ Bhasha: ${(d.language||[]).join(', ')||'-'}\n`;
+        if(d.type==='provider'||d.type==='both'){
+            s += `📋 Category: ${d.categoryName||'-'}\n`;
+            s += `🔧 Service: ${d.serviceName||'-'}\n`;
+            s += `⏰ Kaam ke ghante: ${d.workingHours||'-'}\n`;
+            s += `🗺️ Area: ${d.serviceArea||'-'}\n`;
+            s += `💰 Rate: ₹${d.rate||'-'}/ghanta\n`;
+            if(d.bio) s += `📝 Bio: ${d.bio.slice(0,50)}...\n`;
+            if(d.idType) s += `🪪 ID: ${d.idType.toUpperCase()}\n`;
         }
-        summary += `\n━━━━━━━━━━━━━━━\nKya ye sahi hai? "Haan" ya "Yes" bolein confirm karne ke liye.\n"Nahi" bolein dobara shuru karne ke liye.`;
-        radheyBotMsg(summary);
-        window._radheyRegStep = 8;
+        s += `\n━━━━━━━━━━━━━━━\nKya ye sahi hai?\n✅ "Haan" — Register karo\n❌ "Nahi" — Dobara shuru karo`;
+        radheyBotMsg(s);
+        window._radheyRegStep = (window._radheySteps||PROVIDER_STEPS).length;
+        setTimeout(radheyAutoMic, 800);
     };
 
-    window.radheyMicAutoStart = function() {
-        // Auto-start mic for voice registration flow
-        if (!window._radheyRegMode) return;
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const rec = new SR();
-        const lang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'hi';
-        rec.lang = (lang === 'hi') ? 'hi-IN' : 'en-IN';
-        rec.interimResults = false;
-        rec.onresult = function(e) {
-            const txt = e.results[0][0].transcript;
+    window.radheyAutoMic = function() {
+        if(!window._radheyRegMode) return;
+        if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)) return;
+        if(window._radheyListening) return;
+        const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+        const rec=new SR();
+        rec.lang='hi-IN';
+        rec.interimResults=false;
+        rec.onresult=function(e){
+            const txt=e.results[0][0].transcript;
             radheyUserMsg(txt);
-            if (window._radheyRegStep === 8) {
-                const a = txt.toLowerCase();
-                if (a.includes('haan') || a.includes('yes') || a.includes('हां') || a.includes('हाँ') || a.includes('correct') || a.includes('sahi')) {
-                    radheySubmitReg();
-                } else {
-                    window._radheyRegMode = false;
-                    window._radheyRegStep = 0;
-                    radheyBotMsg('ठीक है, dobara shuru karte hain। "Voice Register" button tap karein।');
-                }
-            } else {
-                radheyHandleRegStep(txt);
-            }
+            const step=window._radheyRegStep;
+            const total=(window._radheySteps||PROVIDER_STEPS).length;
+            if(step>=total){
+                const a=txt.toLowerCase();
+                if(a.includes('haan')||a.includes('yes')||a.includes('हां')||a.includes('sahi')||a.includes('bilkul')){radheySubmitReg();}
+                else if(a.includes('nahi')||a.includes('no')||a.includes('galat')){window._radheyRegMode=false;window._radheyRegStep=0;radheyBotMsg('ठीक है! Dobara try karein.');setProgress(0,0);}
+                else{radheyBotMsg('"Haan" ya "Nahi" bolein.');setTimeout(radheyAutoMic,600);}
+            } else { radheyHandleRegStep(txt); }
         };
-        rec.onerror = function() {};
-        try { rec.start(); } catch(e) {}
+        rec.onend=()=>{window._radheyListening=false;};
+        rec.onerror=()=>{window._radheyListening=false;};
+        try{rec.start();window._radheyListening=true;window._radheyRec=rec;}catch(e){}
     };
 
     window.radheySubmitReg = async function() {
-        const d = window._radheyRegData;
-        radheyBotMsg('⏳ Registration ho rahi hai...');
-        window._radheyRegMode = false;
+        const d=window._radheyRegData;
+        radheyBotMsg('⏳ Registration ho rahi hai Firebase mein...');
+        window._radheyRegMode=false;
+        setProgress(1,1);
+
+        const fb=window._firebase;
+        if(!fb){radheyBotMsg('❌ Database se connect nahi ho pa raha.\nManually register karein ya dobara try karein.'); return;}
 
         try {
-            if (!window._firebase) throw new Error('Firebase not ready');
-            const fb = window._firebase;
+            const uid=window.firebaseUser?.uid||null;
+            const now=new Date().toISOString();
 
-            if (d.type === 'provider') {
-                const provider = {
-                    id: 'p_' + Date.now(),
-                    name: d.name, mobile: d.mobile,
-                    service: d.service, religion: d.religion,
-                    location: d.location, rate: d.rate,
-                    language: ['Hindi'], experience: 0,
-                    status: 'active', verified: false,
-                    registered: new Date().toISOString(),
-                    ownerUid: window.firebaseUser?.uid || null,
-                    lat: 26.9124, lng: 75.7873 // default Jaipur coords
+            if(d.type==='provider'||d.type==='both'){
+                const provider={
+                    id:'p_'+Date.now(), name:d.name, mobile:d.mobile,
+                    religion:d.religion, location:d.location,
+                    language:d.language||['Hindi'],
+                    categoryId:d.categoryId||null,
+                    subcategoryIdx:d.subcategoryIdx??null,
+                    subsubcategoryIdx:d.serviceIdx??null,
+                    service:d.serviceName||d.subcategoryName||'General Service',
+                    services:d.serviceName?[d.serviceName]:null,
+                    workingHours:d.workingHours||'all-days',
+                    serviceArea:d.serviceArea||'city',
+                    rate:d.rate||200, experience:0,
+                    bio:d.bio||null,
+                    idVerification:d.idType?{type:d.idType,status:'pending',submittedAt:now}:null,
+                    verified:false, status:'active',
+                    ownerUid:uid, registered:now,
+                    lat:26.9124, lng:75.7873
                 };
-                const ref = await fb.push(fb.ref(fb.db, 'providers'), provider);
-                await fb.update(ref, { id: ref.key });
-                radheyBotMsg(`🎉 बधाई हो ${d.name} जी!\n\nAapka Provider profile successfully create ho gaya!\n\n✅ Ab aap "Browse" mein dikhaai denge\n✅ Customers aapko call kar sakenge\n\nApna profile dekhen — top mein "AS" icon tap karein 🙏`);
-            } else {
-                const seeker = {
-                    id: 's_' + Date.now(),
-                    name: d.name, mobile: d.mobile,
-                    religion: d.religion, location: d.location,
-                    language: ['Hindi'], status: 'active',
-                    registered: new Date().toISOString(),
-                    ownerUid: window.firebaseUser?.uid || null,
-                    lat: 26.9124, lng: 75.7873
-                };
-                const ref = await fb.push(fb.ref(fb.db, 'seekers'), seeker);
-                await fb.update(ref, { id: ref.key });
-                radheyBotMsg(`🎉 Swagat hai ${d.name} जी!\n\nAapka Seeker profile ban gaya!\n\n✅ Ab aap providers dhundh sakte hain\n✅ Browse karein aur koi bhi service book karein\n\n"Browse" button tap karein shuru karne ke liye 🙏`);
+                const ref=await fb.push(fb.ref(fb.db,'providers'),provider);
+                await fb.update(ref,{id:ref.key});
             }
-        } catch(e) {
-            radheyBotMsg('❌ Registration mein thodi problem aayi.\nKripya manually "Register Provider" button use karein.\nYa email karein: support@sudarshanchakraindia.com');
+            if(d.type==='seeker'||d.type==='both'){
+                const seeker={
+                    id:'s_'+Date.now(), name:d.name, mobile:d.mobile,
+                    religion:d.religion, location:d.location,
+                    language:d.language||['Hindi'],
+                    status:'active', ownerUid:uid, registered:now,
+                    lat:26.9124, lng:75.7873
+                };
+                const ref=await fb.push(fb.ref(fb.db,'seekers'),seeker);
+                await fb.update(ref,{id:ref.key});
+            }
+
+            setProgress(1,1);
+            radheyBotMsg(`🎉 बधाई हो ${d.name} जी!\n\nAapka registration successfully complete hua!\n\n✅ Aap ab Sudarshan Chakra ke member hain\n✅ Browse mein apna profile dekhen\n✅ Customers ab aapko dhundh sakte hain\n\n🙏 Sudarshan Chakra mein aapka swagat hai!\nJai Hind 🇮🇳`);
+            setTimeout(()=>setProgress(0,0),3000);
+
+        } catch(e){
+            console.error('RADHEY reg error:',e);
+            radheyBotMsg('❌ Registration mein error aaya.\nPlease manually register karein ya support@sudarshanchakraindia.com par email karein.');
+            setProgress(0,0);
         }
     };
 
-    console.log('✅ RADHEY floating AI assistant initialized!');
+    // ── Init ──
+    injectNavWidget();
+    console.log('✅ RADHEY v2.0 initialized — Top-right nav, complete 14-step voice registration');
 })();
