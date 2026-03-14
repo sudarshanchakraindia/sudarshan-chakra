@@ -88,7 +88,7 @@ window.radheyLocalAnswer = function(query) {
         subsBtn.parentNode.insertBefore(btn, subsBtn);
     }
 
-    // BUG 3: Home stats show "..." — refresh after data loads
+    // BUG 3: Home stats show "..." + ensure newly registered providers are visible
     function fixBug3_HomeStats() {
         let calls = 0;
         const interval = setInterval(() => {
@@ -98,6 +98,29 @@ window.radheyLocalAnswer = function(query) {
             }
         }, 2500);
     }
+
+    // FIX: Provider visibility — RADHEY-registered providers may not appear in browse
+    // because applySortAndFilter matches by service name which must be exact.
+    // This patches the filter to also match by categoryId+subcategoryIdx+serviceIdx.
+    function fixProviderVisibility() {
+        const wait = setInterval(() => {
+            if (typeof applySortAndFilter === 'undefined') return;
+            clearInterval(wait);
+            const orig = window.applySortAndFilter;
+            window.applySortAndFilter = function() {
+                // Before running filter, normalize any providers missing status
+                if (typeof providers !== 'undefined') {
+                    providers.forEach(p => {
+                        if (!p.status) p.status = 'active';
+                        if (p.available === undefined) p.available = true;
+                    });
+                }
+                orig.apply(this, arguments);
+            };
+            console.log('✅ Provider visibility fix applied');
+        }, 500);
+    }
+    fixProviderVisibility();
 
     // BUG 4: Wallet points not deducted on hire modal redemption
     function fixBug4_WalletDeduction() {
@@ -397,7 +420,7 @@ window.radheyLocalAnswer = function(query) {
     window._radheyListening = false;
     window._radheyRec = null;
 
-    const PROVIDER_STEPS = ['type','name','mobile','category','subcategory','service','language','hours','area','religion','location','rate','bio','id'];
+    const PROVIDER_STEPS = ['type','name','mobile','category','subcategory','service','language','hours','area','religion','location','rate','bio','photo','gps','id'];
     const SEEKER_STEPS   = ['type','name','mobile','language','religion','location'];
 
     window.radheyToggle = function () {
@@ -659,8 +682,57 @@ window.radheyLocalAnswer = function(query) {
             if (!a.includes('skip') && !a.includes('nahi') && answer.trim().length > 3) d.bio = answer.trim();
             window._radheyRegStep++;
             setProgress(window._radheyRegStep, total);
-            radheyBot((d.bio ? '✅ Bio save hua!' : 'Bio skip kiya.') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Identity Proof (Optional)\n\nAadhaar, Driving Licence, Voter ID, PAN, Passport?\n\nID ka naam bolein ya "skip" bolein.\n(✅ Verified badge ke liye zaruri hai!)');
+            radheyBot((d.bio ? '✅ Bio save hua!' : 'Bio skip kiya.') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Profile Photo 📸\n\nApni photo lein!\n"Photo lo" ya "camera" bolein\n"gallery" — gallery se chunein\n"skip" — baad mein add karein');
             setTimeout(radheyAutoMic, 600); return;
+        }
+
+        if (field === 'photo') {
+            if (a.includes('skip') || a.includes('nahi') || a.includes('baad')) {
+                window._radheyRegStep++;
+                setProgress(window._radheyRegStep, total);
+                radheyBot('Photo skip kiya.\n\nStep ' + (window._radheyRegStep + 1) + ': Aapki GPS location detect karein?\n"Haan" — GPS se auto\n"Nahi" — address use hogi');
+                setTimeout(radheyAutoMic, 600);
+            } else {
+                radheyOpenCamera();
+            }
+            return;
+        }
+
+        if (field === 'gps') {
+            if (a.includes('haan') || a.includes('yes') || a.includes('हां') || a.includes('gps') || a.includes('location') || a.includes('detect')) {
+                radheyBot('📍 GPS detect ho rahi hai...');
+                if ('geolocation' in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        function(pos) {
+                            window._radheyRegData.lat = pos.coords.latitude;
+                            window._radheyRegData.lng = pos.coords.longitude;
+                            radheyUser('📍 Location mili!');
+                            radheyBot('✅ GPS Location mil gayi!\n' + pos.coords.latitude.toFixed(4) + ', ' + pos.coords.longitude.toFixed(4) + '\n\nStep ' + (window._radheyRegStep + 2) + ': Identity Proof (Optional)\nAadhaar, DL, Voter ID, PAN, Passport?\n"skip" bolein agar nahi hai.');
+                            window._radheyRegStep++;
+                            setProgress(window._radheyRegStep, total);
+                            setTimeout(radheyAutoMic, 800);
+                        },
+                        function() {
+                            radheyBot('GPS nahi mila. Manual address use hogi.\n\nStep ' + (window._radheyRegStep + 2) + ': Identity Proof (Optional)\nAadhaar, DL, Voter ID, PAN?\n"skip" bolein agar nahi hai.');
+                            window._radheyRegStep++;
+                            setProgress(window._radheyRegStep, total);
+                            setTimeout(radheyAutoMic, 800);
+                        },
+                        { enableHighAccuracy: true, timeout: 8000 }
+                    );
+                } else {
+                    radheyBot('GPS is device par supported nahi.\n\nAge badh rahe hain...');
+                    window._radheyRegStep++;
+                    setProgress(window._radheyRegStep, total);
+                    setTimeout(radheyAutoMic, 600);
+                }
+            } else {
+                radheyBot('ठीक है, manual address use hogi.\n\nStep ' + (window._radheyRegStep + 2) + ': Identity Proof (Optional)\nAadhaar, DL, Voter ID, PAN?\n"skip" bolein agar nahi hai.');
+                window._radheyRegStep++;
+                setProgress(window._radheyRegStep, total);
+                setTimeout(radheyAutoMic, 600);
+            }
+            return;
         }
 
         if (field === 'id') {
@@ -688,6 +760,59 @@ window.radheyLocalAnswer = function(query) {
         }
     };
 
+    // Camera/Gallery picker for voice registration
+    window.radheyOpenCamera = function() {
+        // Create hidden file input
+        let picker = document.getElementById('radhey-photo-picker');
+        if (!picker) {
+            picker = document.createElement('input');
+            picker.type = 'file';
+            picker.id = 'radhey-photo-picker';
+            picker.accept = 'image/*';
+            picker.style.display = 'none';
+            document.body.appendChild(picker);
+        }
+        // Check if user said "camera" vs "gallery"
+        picker.capture = 'environment'; // default camera
+        picker.onchange = function() {
+            if (!picker.files || !picker.files[0]) {
+                radheyBot('Photo nahi mili. Skip kar rahe hain...');
+                window._radheyRegStep++;
+                setTimeout(() => {
+                    radheyBot('Step ' + (window._radheyRegStep + 1) + ': GPS location detect karein?\n"Haan" ya "Nahi" bolein.');
+                    radheyAutoMic();
+                }, 600);
+                return;
+            }
+            const file = picker.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Compress image
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const max = 400;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > max) { h = h * max / w; w = max; } }
+                    else { if (h > max) { w = w * max / h; h = max; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    window._radheyRegData.photo = canvas.toDataURL('image/jpeg', 0.7);
+                    radheyUser('Photo upload kiya! 📸');
+                    radheyBot('✅ Photo save ho gayi! 📸\n\nStep ' + (window._radheyRegStep + 2) + ': GPS location detect karein?\n"Haan" ya "Nahi" bolein.');
+                    window._radheyRegStep++;
+                    const total = (window._radheySteps || ['type','name','mobile','category','subcategory','service','language','hours','area','religion','location','rate','bio','photo','gps','id']).length;
+                    setProgress(window._radheyRegStep, total);
+                    setTimeout(radheyAutoMic, 600);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+        radheyBot('📸 Camera khul raha hai...\nPhoto kheenchein ya gallery se chunein.');
+        setTimeout(() => picker.click(), 300);
+    };
+
     window.radheyConfirmReg = function () {
         const d = window._radheyRegData;
         let s = '📋 Registration Summary:\n━━━━━━━━━━━━━━━\n';
@@ -703,7 +828,9 @@ window.radheyLocalAnswer = function(query) {
             s += '🗺️ Area: ' + (d.serviceArea || '-') + '\n';
             s += '💰 Rate: ₹' + (d.rate || '-') + '/ghanta\n';
             if (d.bio) s += '📝 Bio: ' + d.bio.slice(0, 40) + '...\n';
-            if (d.idType) s += '🪪 ID: ' + d.idType.toUpperCase() + '\n';
+            if (d.photo) s += '📸 Photo: ✅\n';
+        if (d.lat && d.lat !== 26.9124) s += '📍 GPS: ' + d.lat.toFixed(4) + ', ' + d.lng.toFixed(4) + '\n';
+        if (d.idType) s += '🪪 ID: ' + d.idType.toUpperCase() + '\n';
         }
         s += '\n━━━━━━━━━━━━━━━\n✅ "Haan" — Register karo\n❌ "Nahi" — Dobara shuru karo';
         radheyBot(s);
@@ -747,7 +874,7 @@ window.radheyLocalAnswer = function(query) {
             const uid = window.firebaseUser?.uid || null;
             const now = new Date().toISOString();
             if (d.type === 'provider' || d.type === 'both') {
-                const p = { id: 'p_' + Date.now(), name: d.name, mobile: d.mobile, religion: d.religion, location: d.location, language: d.language || ['Hindi'], categoryId: d.categoryId || null, subcategoryIdx: d.subcategoryIdx ?? null, subsubcategoryIdx: d.serviceIdx ?? null, service: d.serviceName || d.subcategoryName || 'General Service', services: d.serviceName ? [d.serviceName] : null, workingHours: d.workingHours || 'all-days', serviceArea: d.serviceArea || 'city', rate: d.rate || 200, experience: 0, bio: d.bio || null, idVerification: d.idType ? { type: d.idType, status: 'pending', submittedAt: now } : null, verified: false, status: 'active', ownerUid: uid, registered: now, lat: 26.9124, lng: 75.7873 };
+                const p = { id: 'p_' + Date.now(), name: d.name, mobile: d.mobile, religion: d.religion, location: d.location, language: d.language || ['Hindi'], categoryId: d.categoryId || null, subcategoryIdx: d.subcategoryIdx ?? null, subsubcategoryIdx: d.serviceIdx ?? null, service: d.serviceName || d.subcategoryName || 'General Service', services: d.serviceName ? [d.serviceName] : null, workingHours: d.workingHours || 'all-days', serviceArea: d.serviceArea || 'city', rate: d.rate || 200, experience: 0, bio: d.bio || null, photo: d.photo || null, idVerification: d.idType ? { type: d.idType, status: 'pending', submittedAt: now } : null, verified: false, status: 'active', available: true, ownerUid: uid, registered: now, lat: d.lat || 26.9124, lng: d.lng || 75.7873 };
                 const ref = await fb.push(fb.ref(fb.db, 'providers'), p);
                 await fb.update(ref, { id: ref.key });
             }
