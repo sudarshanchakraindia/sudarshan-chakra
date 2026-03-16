@@ -443,13 +443,19 @@ window.radheyLocalAnswer = function(quehry) {
         msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            // Extract key question for speech: confirmation + question line (avoids reading long lists)
-            const cleanText = text.replace(/[🔱🙏🔍💰📝🎤⚡🧹🔧✅❌⏳📋━📅🌟⭐🏆🌱👷🔍🤝📸📍]/gu, '');
-            const parts = cleanText.split(/\n+/).map(s => s.trim()).filter(Boolean);
-            const confirm = parts.find(p => p.startsWith('\u2705') || p.startsWith('\u274c') || p.startsWith('\u2753'));
-            const question = parts.find(p => /step \d|\?|bolein|batayein|chahiye|karain/i.test(p) && !p.startsWith('Jaise'));
-            const speakText = [confirm, question].filter(Boolean).join('. ') || parts.slice(0, 2).join('. ');
-            const u = new SpeechSynthesisUtterance(speakText.substring(0, 300));
+            // Clean and speak the full Radhey message naturally (strip emojis/decorators)
+            const speakText = text
+                .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{1F300}-\u{1F9FF}\u{FE00}-\u{FEFF}]/gu, '')
+                .replace(/[━─|]/g, '')
+                .split('\n')
+                .map(s => s.trim())
+                .filter(s => s.length > 0)
+                .join('. ')
+                .replace(/\.{2,}/g, '. ')
+                .trim()
+                .substring(0, 500);
+            if (!speakText) return;
+            const u = new SpeechSynthesisUtterance(speakText);
             u.lang = (typeof currentLanguage !== 'undefined' && currentLanguage === 'hi') ? 'hi-IN' : 'en-IN';
             // Select Indian voice (hi-IN preferred, then en-IN, then any -IN locale)
             (function() {
@@ -460,7 +466,7 @@ window.radheyLocalAnswer = function(quehry) {
                                     voices.find(v => v.name.toLowerCase().includes('india'));
                 if (indianVoice) { u.voice = indianVoice; u.lang = indianVoice.lang; }
             })();
-            u.rate = 0.88; u.volume = 0.85;
+            u.rate = 0.88; u.volume = 0.95;
             // Auto-restart mic after Radhey finishes speaking (only during voice registration)
             u.onend = function() {
                 if (window._radheyRegMode && !window._radheyListening) {
