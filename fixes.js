@@ -5,7 +5,7 @@
  */
 
 // ── Local Knowledge Base for RADHEY (works offline, no CORS) ──
-window.radheyLocalAnswer = function(query) {
+window.radheyLocalAnswer = function(quehry) {
     const q = (query || '').toLowerCase().trim();
     if (q.includes('register') || q.includes('registr') || q.includes('join') || q.includes('provider banna') || q.includes('seeker banna') || q.includes('kaise banein') || q.includes('registration') || q.includes('पंजीकरण') || q.includes('ragistration') || q.includes('ragister') || q.includes('karna hai') || q.includes('banana hai') || q.includes('banna hai') || q.includes('member') || q.includes('account'))
         return '📝 RADHEY se voice register karein!\n"🎤 Register" button tap karein — main step-by-step guide karunga.\n\nYa nav mein "Register Provider" button tap karein 🙏';
@@ -445,6 +445,15 @@ window.radheyLocalAnswer = function(query) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text.replace(/[🔱🙏🔍💰📝🎤⚡🧹🔧✅❌⏳📋━📅🌟⭐🏆🌱]/gu, ''));
             u.lang = (typeof currentLanguage !== 'undefined' && currentLanguage === 'hi') ? 'hi-IN' : 'en-IN';
+            // Select Indian voice (hi-IN preferred, then en-IN, then any -IN locale)
+            (function() {
+                const voices = window.speechSynthesis.getVoices();
+                const indianVoice = voices.find(v => v.lang === 'hi-IN') ||
+                                    voices.find(v => v.lang === 'en-IN') ||
+                                    voices.find(v => v.lang.endsWith('-IN')) ||
+                                    voices.find(v => v.name.toLowerCase().includes('india'));
+                if (indianVoice) { u.voice = indianVoice; u.lang = indianVoice.lang; }
+            })();
             u.rate = 0.88; u.volume = 0.85;
             window.speechSynthesis.speak(u);
         }
