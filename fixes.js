@@ -455,25 +455,47 @@ window.radheyLocalAnswer = function(quehry) {
                 .trim()
                 .substring(0, 500);
             if (!speakText) return;
-            const u = new SpeechSynthesisUtterance(speakText);
-            u.lang = (typeof currentLanguage !== 'undefined' && currentLanguage === 'hi') ? 'hi-IN' : 'en-IN';
-            // Select Indian voice (hi-IN preferred, then en-IN, then any -IN locale)
-            (function() {
+            // Function to speak once voices are ready (important on mobile)
+            const doSpeak = function() {
+                const u = new SpeechSynthesisUtterance(speakText);
+                u.lang = 'hi-IN';
                 const voices = window.speechSynthesis.getVoices();
                 const indianVoice = voices.find(v => v.lang === 'hi-IN') ||
                                     voices.find(v => v.lang === 'en-IN') ||
                                     voices.find(v => v.lang.endsWith('-IN')) ||
                                     voices.find(v => v.name.toLowerCase().includes('india'));
                 if (indianVoice) { u.voice = indianVoice; u.lang = indianVoice.lang; }
-            })();
-            u.rate = 0.88; u.volume = 0.95;
-            // Auto-restart mic after Radhey finishes speaking (only during voice registration)
-            u.onend = function() {
-                if (window._radheyRegMode && !window._radheyListening) {
-                    setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 400);
-                }
+                u.rate = 0.88; u.volume = 0.95;
+                u.onend = function() {
+                    if (window._radheyRegMode && !window._radheyListening) {
+                        setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 400);
+                    }
+                };
+                window.speechSynthesis.speak(u);
+                // Mobile keep-alive: prevent browser from pausing TTS after ~15s
+                if (window._ttsKeepAlive) clearInterval(window._ttsKeepAlive);
+                window._ttsKeepAlive = setInterval(function() {
+                    if (window.speechSynthesis.speaking) {
+                        window.speechSynthesis.pause();
+                        window.speechSynthesis.resume();
+                    } else {
+                        clearInterval(window._ttsKeepAlive);
+                    }
+                }, 10000);
             };
-            window.speechSynthesis.speak(u);
+            // Wait for voices to load (critical on mobile first load)
+            const loadedVoices = window.speechSynthesis.getVoices();
+            if (loadedVoices.length > 0) {
+                doSpeak();
+            } else {
+                window.speechSynthesis.onvoiceschanged = function() {
+                    window.speechSynthesis.onvoiceschanged = null;
+                    doSpeak();
+                };
+                setTimeout(function() {
+                    if (window.speechSynthesis.getVoices().length > 0) doSpeak();
+                }, 600);
+            }
         }
     };
     window.radheyUser = function (text) {
@@ -588,11 +610,11 @@ window.radheyLocalAnswer = function(quehry) {
             window._radheySetProgress(window._radheyRegStep, total);
             if (d.type === 'provider' || d.type === 'both') {
                 let catList = '';
-                if (typeof categories !== 'undefined') catList = categories.slice(0, 9).map((c, i) => (i + 1) + '. ' + (c.name?.en || c.name)).join('\n');
+                if (typeof categories !== 'undefined') catList = categories.map((c, i) => (i + 1) + '. ' + (c.name?.en || c.name)).join('\n');
                 else catList = '1. Home Services\n2. Beauty & Wellness\n3. Cleaning Services\n4. Event Services\n5. Education\n6. Transport\n7. Business\n8. Pet Services';
                 radheyBot('✅ Mobile: ' + nums + '\n\nStep ' + (window._radheyRegStep + 1) + ': Category chunein:\n\n' + catList + '\n\nNumber ya naam bolein.');
             } else {
-                radheyBot('✅ Mobile: ' + nums + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bhasha?\nHindi, English, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi');
+                radheyBot('✅ Mobile: ' + nums + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bhasha chunein (number bolein):\n1. Hindi\n2. English\n3. Bengali\n4. Gujarati\n5. Marathi\n6. Kannada\n7. Telugu\n8. Malayalam\n9. Tamil\n10. Punjabi\n\nEk ya zyada number bolein.');
             }
             setTimeout(radheyAutoMic, 4500); return;
         }
@@ -600,7 +622,9 @@ window.radheyLocalAnswer = function(quehry) {
         if (field === 'category') {
             let matched = null;
             if (typeof categories !== 'undefined') {
-                const num = parseInt(a);
+                const hindiNums = {'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'chhe':6,'saat':7,'aath':8,'nau':9,'das':10,'gyarah':11,'barah':12,'terah':13,'chaudah':14,'pandrah':15,'solah':16,'satrah':17,'atharah':18,'unnis':19,'bees':20,'एक':1,'दो':2,'तीन':3,'चार':4,'पाँच':5,'छह':6,'सात':7,'आठ':8,'नौ':9,'दस':10,'ग्यारह':11,'बारह':12,'तेरह':13,'चौदह':14,'पंद्रह':15,'सोलह':16,'सत्रह':17,'अठारह':18,'उन्नीस':19,'बीस':20};
+                let num = parseInt(a);
+                if (!(num > 0)) { for (const [w,n] of Object.entries(hindiNums)) { if (a.includes(w)) { num = n; break; } } }
                 if (num > 0 && num <= categories.length) matched = categories[num - 1];
                 if (!matched) matched = categories.find(c => { const n = (c.name?.en || c.name || '').toLowerCase(); return n.includes(a) || a.includes(n.split(' ')[0]); });
             }
@@ -645,13 +669,18 @@ window.radheyLocalAnswer = function(quehry) {
             d.serviceIdx = matched ? svcs.indexOf(matched) : 0;
             window._radheyRegStep++;
             window._radheySetProgress(window._radheyRegStep, total);
-            radheyBot('✅ Service: ' + d.serviceName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bhasha?\nHindi, English, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese\n\n(Ek ya zyada bol sakte hain)');
+            radheyBot('✅ Service: ' + d.serviceName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bhasha chunein (number bolein):\n1. Hindi\n2. English\n3. Bengali\n4. Gujarati\n5. Marathi\n6. Kannada\n7. Telugu\n8. Malayalam\n9. Tamil\n10. Punjabi\n11. Odia\n12. Assamese\n\nEk ya zyada number bolein.');
             setTimeout(radheyAutoMic, 4500); return;
         }
 
         if (field === 'language') {
-            const lmap = { 'hindi': 'Hindi', 'english': 'English', 'bengali': 'Bengali', 'gujarati': 'Gujarati', 'marathi': 'Marathi', 'kannada': 'Kannada', 'telugu': 'Telugu', 'malayalam': 'Malayalam', 'tamil': 'Tamil', 'punjabi': 'Punjabi', 'odia': 'Odia', 'assamese': 'Assamese', 'हिंदी': 'Hindi', 'अंग्रेजी': 'English' };
+            const langList = ['Hindi','English','Bengali','Gujarati','Marathi','Kannada','Telugu','Malayalam','Tamil','Punjabi','Odia','Assamese'];
+            const lmap = { 'hindi': 'Hindi', 'english': 'English', 'bengali': 'Bengali', 'gujarati': 'Gujarati', 'marathi': 'Marathi', 'kannada': 'Kannada', 'telugu': 'Telugu', 'malayalam': 'Malayalam', 'tamil': 'Tamil', 'punjabi': 'Punjabi', 'odia': 'Odia', 'assamese': 'Assamese', 'हिंदी': 'Hindi', 'अंग्रेजी': 'English', 'हिन्दी': 'Hindi' };
+            const numWords = {'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'chhe':6,'saat':7,'aath':8,'nau':9,'das':10,'gyarah':11,'barah':12,'एक':1,'दो':2,'तीन':3,'चार':4,'पाँच':5,'छह':6,'सात':7,'आठ':8,'नौ':9,'दस':10,'ग्यारह':11,'बारह':12};
             const found = [];
+            for (const [w, n] of Object.entries(numWords)) { if (a.includes(w) && langList[n-1]) found.push(langList[n-1]); }
+            const digitMatches = a.match(/\b(\d+)\b/g) || [];
+            for (const d2 of digitMatches) { const n = parseInt(d2); if (n >= 1 && n <= langList.length) found.push(langList[n-1]); }
             for (const [k, v] of Object.entries(lmap)) { if (a.includes(k.toLowerCase())) found.push(v); }
             d.language = found.length ? [...new Set(found)] : ['Hindi'];
             window._radheyRegStep++;
@@ -660,7 +689,7 @@ window.radheyLocalAnswer = function(quehry) {
             if (nextField === 'hours') {
                 radheyBot('✅ Bhasha: ' + d.language.join(', ') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Kab kaam karte hain?\n1. Mon-Fri\n2. Weekends Only\n3. Roz (All 7 days)\n4. 24×7');
             } else {
-                radheyBot('✅ Bhasha: ' + d.language.join(', ') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Aapka dharm?\nHindu, Muslim, Christian, Sikh, Buddhist, Jain');
+                radheyBot('✅ Bhasha: ' + d.language.join(', ') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Dharm chunein (number bolein):\n1. Hindu\n2. Muslim\n3. Christian\n4. Sikh\n5. Buddhist\n6. Jain');
             }
             setTimeout(radheyAutoMic, 4500); return;
         }
@@ -683,15 +712,18 @@ window.radheyLocalAnswer = function(quehry) {
             d.serviceArea = (a.includes('1') || a.includes('10') || a.includes('paas') || a.includes('पास')) ? '10km' : 'city';
             window._radheyRegStep++;
             window._radheySetProgress(window._radheyRegStep, total);
-            radheyBot('✅ Area: ' + (d.serviceArea === '10km' ? '10 km' : 'Poora shehar') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Dharm?\nHindu, Muslim, Christian, Sikh, Buddhist, Jain');
+            radheyBot('✅ Area: ' + (d.serviceArea === '10km' ? '10 km' : 'Poora shehar') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Dharm chunein (number bolein):\n1. Hindu\n2. Muslim\n3. Christian\n4. Sikh\n5. Buddhist\n6. Jain');
             setTimeout(radheyAutoMic, 4500); return;
         }
 
         if (field === 'religion') {
+            const relList = ['Hindu','Muslim','Christian','Sikh','Buddhist','Jain'];
             const rmap = { 'hindu': 'Hindu', 'muslim': 'Muslim', 'christian': 'Christian', 'sikh': 'Sikh', 'buddhist': 'Buddhist', 'jain': 'Jain', 'हिंदू': 'Hindu', 'मुस्लिम': 'Muslim', 'सिख': 'Sikh', 'बौद्ध': 'Buddhist', 'जैन': 'Jain', 'ईसाई': 'Christian' };
             let rel = null;
-            for (const [k, v] of Object.entries(rmap)) { if (a.includes(k.toLowerCase())) { rel = v; break; } }
-            if (!rel) { radheyBot('❓ Dharm clearly bolein: Hindu, Muslim, Christian, Sikh, Buddhist, Jain'); setTimeout(radheyAutoMic, 4500); return; }
+            const rNum = parseInt(a.match(/\b(\d+)\b/)?.[0]);
+            if (rNum >= 1 && rNum <= relList.length) rel = relList[rNum - 1];
+            if (!rel) { for (const [k, v] of Object.entries(rmap)) { if (a.includes(k.toLowerCase())) { rel = v; break; } } }
+            if (!rel) { radheyBot('❓ Number bolein:\n1. Hindu  2. Muslim  3. Christian\n4. Sikh  5. Buddhist  6. Jain'); setTimeout(radheyAutoMic, 4500); return; }
             d.religion = rel; window._radheyRegStep++;
             window._radheySetProgress(window._radheyRegStep, total);
             radheyBot('✅ Dharm: ' + rel + '\n\nStep ' + (window._radheyRegStep + 1) + ': Shehar / Address?\nJaise: "Malviya Nagar, Jaipur"');
@@ -729,13 +761,27 @@ window.radheyLocalAnswer = function(quehry) {
         }
 
         if (field === 'photo') {
-            if (a.includes('skip') || a.includes('nahi') || a.includes('baad')) {
+            if (a.includes('skip') || a.includes('nahi') || a.includes('baad') || a.includes('bad mein') || a.includes('later')) {
                 window._radheyRegStep++;
                 window._radheySetProgress(window._radheyRegStep, total);
-                radheyBot('Photo skip kiya.\n\nStep ' + (window._radheyRegStep + 1) + ': Aapki GPS location detect karein?\n"Haan" — GPS se auto\n"Nahi" — address use hogi');
+                radheyBot('Photo skip kiya.\n\nStep ' + (window._radheyRegStep + 1) + ': GPS location detect karein?\n1. Haan — GPS se auto\n2. Nahi — address use hogi');
                 setTimeout(radheyAutoMic, 4500);
-            } else {
+            } else if (a.includes('camera') || a.includes('photo') || a.includes('gallery') || a.includes('selfie') || a.includes('lo') || a.includes('lelo')) {
+                radheyBot('📸 File picker khul raha hai. Ya "skip" bolein agar abhi nahi chahiye.');
                 radheyOpenCamera();
+                // Auto-skip after 25 seconds if no photo selected (desktop file dialog)
+                if (window._photoTimeout) clearTimeout(window._photoTimeout);
+                window._photoTimeout = setTimeout(function() {
+                    if (window._radheySteps && window._radheySteps[window._radheyRegStep] === 'photo') {
+                        radheyBot('Photo nahi mili. Skip kar rahe hain.\n\nGPS location detect karein?\n1. Haan  2. Nahi');
+                        window._radheyRegStep++;
+                        window._radheySetProgress(window._radheyRegStep, total);
+                        setTimeout(radheyAutoMic, 4500);
+                    }
+                }, 25000);
+            } else {
+                radheyBot('Photo ke liye bolein:\n"camera" — photo lein\n"gallery" — chunein\n"skip" — baad mein');
+                setTimeout(radheyAutoMic, 4500);
             }
             return;
         }
@@ -882,27 +928,57 @@ window.radheyLocalAnswer = function(quehry) {
 
     window.radheyAutoMic = function () {
         if (!window._radheyRegMode) return;
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            radheyBot('❌ Is browser mein voice recognition nahi hai. Chrome use karein ya manually type karein.');
+            return;
+        }
         if (window._radheyListening) return;
+        // Wait for TTS to finish before listening
+        if (window.speechSynthesis && window.speechSynthesis.speaking) {
+            setTimeout(radheyAutoMic, 300);
+            return;
+        }
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SR();
         rec.lang = 'hi-IN';
         rec.interimResults = false;
+        rec.maxAlternatives = 3;
+        rec.continuous = false;
         rec.onresult = function (e) {
             const txt = e.results[0][0].transcript;
             radheyUser(txt);
+            window._radheyListening = false;
             const step = window._radheyRegStep;
             const total = (window._radheySteps || (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])).length;
             if (step >= total) {
                 const a = txt.toLowerCase();
-                if (a.includes('haan') || a.includes('yes') || a.includes('हां') || a.includes('sahi') || a.includes('bilkul')) { radheySubmitReg(); }
-                else if (a.includes('nahi') || a.includes('no') || a.includes('galat')) { window._radheyRegMode = false; window._radheyRegStep = 0; radheyBot('ठीक है! Dobara try karein.'); window._radheySetProgress(0, 0); }
+                if (a.includes('haan') || a.includes('yes') || a.includes('हां') || a.includes('हाँ') || a.includes('sahi') || a.includes('bilkul') || a.includes('ha') || a.includes('ok')) { radheySubmitReg(); }
+                else if (a.includes('nahi') || a.includes('no') || a.includes('galat') || a.includes('nai')) { window._radheyRegMode = false; window._radheyRegStep = 0; radheyBot('ठीक है! Dobara try karein.'); window._radheySetProgress(0, 0); }
                 else { radheyBot('"Haan" ya "Nahi" bolein.'); setTimeout(radheyAutoMic, 4500); }
             } else { radheyHandleRegStep(txt); }
         };
-        rec.onend = () => { window._radheyListening = false; };
-        rec.onerror = () => { window._radheyListening = false; };
-        try { rec.start(); window._radheyListening = true; window._radheyRec = rec; } catch (e) { }
+        rec.onnomatch = function() {
+            window._radheyListening = false;
+            radheyBot('Samajh nahi aaya. Dobara bolein.');
+            setTimeout(radheyAutoMic, 1500);
+        };
+        rec.onend = function() { window._radheyListening = false; };
+        rec.onerror = function(e) {
+            window._radheyListening = false;
+            if (e.error === 'no-speech') {
+                setTimeout(function() { if (window._radheyRegMode && !window._radheyListening) radheyAutoMic(); }, 1500);
+            } else if (e.error === 'network') {
+                radheyBot('Network error. Dobara try karein.');
+            }
+        };
+        try {
+            rec.start();
+            window._radheyListening = true;
+            window._radheyRec = rec;
+        } catch (err) {
+            window._radheyListening = false;
+            setTimeout(radheyAutoMic, 1000);
+        }
     };
 
     window.radheySubmitReg = async function () {
