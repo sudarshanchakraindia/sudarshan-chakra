@@ -732,8 +732,8 @@
                     <textarea id="editBio" rows="3" maxlength="250" class="w-full border rounded-xl px-4 py-2 resize-none outline-none focus:ring-2 focus:ring-orange-400" placeholder="Tell customers about yourself..."></textarea>
                 </div>
                 <div>
-                    <label class="block text-gray-700 text-sm font-medium mb-1">Rate (₹/hour)</label>
-                    <input type="number" id="editRate" min="50" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400">
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Charges (₹/hour) <span class="text-gray-400 font-normal">— Optional</span></label>
+                    <input type="number" id="editRate" min="0" placeholder="Leave blank = Negotiable by mutual" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400">
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-medium mb-1">WhatsApp Number</label>
@@ -4067,7 +4067,7 @@
                     <div class="px-5 pb-3 grid grid-cols-3 gap-2 text-xs text-gray-600 border-t border-gray-50 pt-3">
                         <div class="flex items-center gap-1"><span>📍</span><span class="truncate">${distText}</span></div>
                         <div class="flex items-center gap-1"><span>🕐</span><span>${p.experience} ${yrsLabel}</span></div>
-                        <div class="flex items-center gap-1"><span>💰</span><span class="font-semibold text-gray-800">₹${p.rate}/${hrLabel}</span></div>
+                        <div class="flex items-center gap-1"><span>💰</span><span class="font-semibold text-gray-800">${p.rate ? '₹'+p.rate+'/'+hrLabel : 'Negotiable'}</span></div>
                     </div>
                     <div class="px-4 pb-4 grid grid-cols-2 gap-2">
                         <a href="tel:+91${p.mobile.replace(/^\+91/,'')}"  class="bg-green-600 text-white text-center py-2.5 rounded-xl hover:bg-green-700 font-medium text-sm transition" style="text-decoration:none;">${t('callBtn')}</a>
@@ -4076,7 +4076,7 @@
                         <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">${t('reviewBtn')}</button>
                         <button onclick="toggleFavourite('${p.id}')" id="fav-${p.id}" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-500 border-gray-200 hover:bg-red-50 hover:text-red-500">🤍</button>
                         <button onclick="openReportModal('${p.id}','provider','${p.name}')" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-400 border-gray-200 hover:bg-red-50 hover:text-red-500" title="Report">🚨</button>
-                        <button onclick="openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}')" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2.5 rounded-xl font-bold text-sm transition hover:from-purple-700 hover:to-indigo-700 shadow-md">${t('hireNow')} &nbsp;<span class="text-xs font-normal opacity-80">(₹10 fee)</span></button>
+                        <button onclick="hireWithVerificationCheck('${p.id}','${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.ownerUid||\'\'}',${!!p.verified})" class="col-span-2 flex items-center justify-center gap-2 ${p.verified ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700' : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'} text-white py-2.5 rounded-xl font-bold text-sm transition shadow-md">${t('hireNow')} &nbsp;<span class="text-xs font-normal opacity-80">${p.verified ? '(₹10 fee)' : '⚠️ Unverified'}</span></button>
                     </div>
                 </div>`;
             }).join('');
@@ -7375,6 +7375,44 @@ function openHireModal(name, service, location, rating, lang, providerId, ownerU
       if (tipSection) tipSection.closest('.scard')?.scrollIntoView({behavior:'smooth', block:'center'});
     }, 150);
   }
+}
+
+function hireWithVerificationCheck(providerId, name, service, location, rating, lang, ownerUid, isVerified) {
+  if (isVerified) {
+    openHireModal(name, service, location, rating, lang, providerId, ownerUid);
+    return;
+  }
+  const decodedName = decodeURIComponent(name);
+  const decodedService = decodeURIComponent(service);
+  const confirmed1 = confirm(
+    '⚠️ VERIFICATION PENDING\n\n' +
+    decodedName + ' (' + decodedService + ') is NOT yet verified by Sudarshan Chakra.\n\n' +
+    'Hiring an unverified provider is at your OWN RISK.\n\n' +
+    'Click OK to proceed anyway, or Cancel to wait for verification.'
+  );
+  if (!confirmed1) return;
+  const confirmed2 = confirm(
+    '🔔 FINAL WARNING\n\n' +
+    'Are you SURE you want to hire this UNVERIFIED provider?\n\n' +
+    'We strongly recommend waiting until they receive their ✅ Verified Badge.\n\n' +
+    'Click OK to proceed at your own risk.'
+  );
+  if (!confirmed2) return;
+  notifyUnverifiedProvider(providerId, ownerUid, decodedName, decodedService);
+  openHireModal(name, service, location, rating, lang, providerId, ownerUid);
+}
+
+async function notifyUnverifiedProvider(providerId, ownerUid, providerName, service) {
+  try {
+    if (!ownerUid || typeof addNotification !== 'function') return;
+    await addNotification(ownerUid, {
+      type: 'hire_attempt_unverified',
+      title: '🔔 Someone wants to hire you!',
+      message: 'A seeker tried to hire you for "' + service + '" but your profile is NOT yet verified. Complete your verification (photo, Aadhaar etc.) ASAP to be fully available. Go to My Profile → Verification.',
+      timestamp: Date.now(),
+      read: false
+    });
+  } catch(e) { console.warn('Notify provider error:', e); }
 }
 
 function closeHireModal() {
