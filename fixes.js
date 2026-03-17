@@ -603,11 +603,11 @@ window.radheyLocalAnswer = function(quehry) {
         window._radheySetProgress(step, total);
 
         if (step === 0) {
-            if (a.includes('provider') || a.includes('kaam deta') || a.includes('kaam deti') || a.includes('काम देता')) {
+            if (a.includes('provider') || a.includes('प्रोवाइडर') || a.includes('kaam deta') || a.includes('kaam deti') || a.includes('काम देता') || a.includes('काम देती')) {
                 d.type = 'provider'; window._radheySteps = [...(window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])]; window._radheyRegStep = 1;
                 window._radheySetProgress(1, (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"]).length);
                 radheyBot('✅ Provider!\n\nStep 2: Aapka poora naam?\nJaise: "Ramesh Kumar"');
-            } else if (a.includes('seeker') || a.includes('kaam karana') || a.includes('kaam kaaraana') || a.includes('काम कराना')) {
+            } else if (a.includes('seeker') || a.includes('सीकर') || a.includes('kaam karana') || a.includes('kaam kaaraana') || a.includes('काम कराना') || a.includes('काम चाहिए')) {
                 d.type = 'seeker'; window._radheySteps = [...(window._SEEKER_STEPS||["type","name","mobile","language","religion","location"])]; window._radheyRegStep = 1;
                 window._radheySetProgress(1, (window._SEEKER_STEPS||["type","name","mobile","language","religion","location"]).length);
                 radheyBot('✅ Seeker!\n\nStep 2: Aapka poora naam?\nJaise: "Sunita Devi"');
@@ -652,6 +652,9 @@ window.radheyLocalAnswer = function(quehry) {
                   radheyBot('\u2705 Mobile: ' + nums + '\n\nStep ' + (window._radheyRegStep + 1) + ': Category chunein:\n\n' + catList + '\n\nNumber ya naam bolein.');
                 };
                 fetchAndShowCats();
+                // NOTE: autoMic is triggered by radheyBot's u.onend after TTS completes
+                // No extra setTimeout needed for provider path
+                return;
             } else {
                 radheyBot('✅ Mobile: ' + nums + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bhasha chunein (number bolein):\n1. Hindi\n2. English\n3. Bengali\n4. Gujarati\n5. Marathi\n6. Kannada\n7. Telugu\n8. Malayalam\n9. Tamil\n10. Punjabi\n\nEk ya zyada number bolein.');
             }
@@ -799,7 +802,7 @@ window.radheyLocalAnswer = function(quehry) {
             // Charges is OPTIONAL - allow skip, negotiable, or a number
             const wmap = { 'ek sau': 100, 'do sau': 200, 'teen sau': 300, 'char sau': 400, 'paanch sau': 500, 'panch sau': 500, 'chhe sau': 600, 'saat sau': 700, 'aath sau': 800, 'nau sau': 900, 'ek hazaar': 1000, 'das sau': 1000 };
             let rate = 0;
-            if (a.includes('skip') || a.includes('nahi') || a.includes('negotiable') || a.includes('mutual') || a.includes('baad') || a.includes('तय करेंगे')) {
+            if (a.includes('skip') || a.includes('स्किप') || a.includes('nahi') || a.includes('नहीं') || a.includes('नही') || a.includes('negotiable') || a.includes('mutual') || a.includes('baad') || a.includes('बाद') || a.includes('छोड़') || a.includes('तय करेंगे')) {
                 d.rate = 0; d.rateLabel = 'Negotiable';
             } else {
                 for (const [k, v] of Object.entries(wmap)) { if (a.includes(k)) { rate = v; break; } }
@@ -814,7 +817,7 @@ window.radheyLocalAnswer = function(quehry) {
         }
 
         if (field === 'bio') {
-            if (!a.includes('skip') && !a.includes('nahi') && answer.trim().length > 3) d.bio = answer.trim();
+            if (!a.includes('skip') && !a.includes('स्किप') && !a.includes('nahi') && !a.includes('नहीं') && !a.includes('नही') && !a.includes('छोड़') && answer.trim().length > 3) d.bio = answer.trim();
             window._radheyRegStep++;
             window._radheySetProgress(window._radheyRegStep, total);
             radheyBot((d.bio ? '✅ Bio save hua!' : 'Bio skip kiya.') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Profile Photo 📸\n\nApni photo lein!\n"Photo lo" ya "camera" bolein\n"gallery" — gallery se chunein\n"skip" — baad mein add karein');
@@ -822,12 +825,12 @@ window.radheyLocalAnswer = function(quehry) {
         }
 
         if (field === 'photo') {
-            if (a.includes('skip') || a.includes('nahi') || a.includes('baad') || a.includes('bad mein') || a.includes('later')) {
+            if (a.includes('skip') || a.includes('nahi') || a.includes('नहीं') || a.includes('नही') || a.includes('baad') || a.includes('bad mein') || a.includes('बाद') || a.includes('later') || a.includes('स्किप') || a.includes('छोड़')) {
                 window._radheyRegStep++;
                 window._radheySetProgress(window._radheyRegStep, total);
                 radheyBot('Photo skip kiya.\n\nStep ' + (window._radheyRegStep + 1) + ': GPS location detect karein?\n1. Haan — GPS se auto\n2. Nahi — address use hogi');
                 setTimeout(radheyAutoMic, 4500);
-            } else if (a.includes('camera') || a.includes('photo') || a.includes('gallery') || a.includes('selfie') || a.includes('lo') || a.includes('lelo')) {
+            } else if (a.includes('camera') || a.includes('कैमरा') || a.includes('photo') || a.includes('फोटो') || a.includes('gallery') || a.includes('गैलरी') || a.includes('selfie') || a.includes('lelo') || a === 'lo' || a === 'photo lo') {
                 radheyBot('📸 File picker khul raha hai. Ya "skip" bolein agar abhi nahi chahiye.');
                 radheyOpenCamera();
                 // Auto-skip after 25 seconds if no photo selected (desktop file dialog)
@@ -925,12 +928,14 @@ window.radheyLocalAnswer = function(quehry) {
         picker.capture = 'environment'; // default camera
         picker.onchange = function() {
             if (!picker.files || !picker.files[0]) {
-                radheyBot('Photo nahi mili. Skip kar rahe hain...');
-                window._radheyRegStep++;
-                setTimeout(() => {
-                    radheyBot('Step ' + (window._radheyRegStep + 1) + ': GPS location detect karein?\n"Haan" ya "Nahi" bolein.');
-                    radheyAutoMic();
-                }, 600);
+                // Clear the 25s auto-skip timeout (picker already closed)
+                if (window._photoTimeout) { clearTimeout(window._photoTimeout); window._photoTimeout = null; }
+                if (window._radheySteps && window._radheySteps[window._radheyRegStep] === 'photo') {
+                    radheyBot('Photo nahi mili. Skip kar rahe hain.\n\nGPS location detect karein?\n1. Haan  2. Nahi');
+                    window._radheyRegStep++;
+                    window._radheySetProgress(window._radheyRegStep, (window._radheySteps||[]).length);
+                    setTimeout(radheyAutoMic, 4500);
+                }
                 return;
             }
             const file = picker.files[0];
@@ -1053,7 +1058,7 @@ window.radheyLocalAnswer = function(quehry) {
             const uid = window.firebaseUser?.uid || null;
             const now = new Date().toISOString();
             if (d.type === 'provider' || d.type === 'both') {
-                const p = { id: 'p_' + Date.now(), name: d.name, mobile: d.mobile, religion: d.religion, location: d.location, language: d.language || ['Hindi'], categoryId: d.categoryId || null, subcategoryIdx: d.subcategoryIdx ?? null, subsubcategoryIdx: d.serviceIdx ?? null, service: d.serviceName || d.subcategoryName || 'General Service', services: d.serviceName ? [d.serviceName] : null, workingHours: d.workingHours || 'all-days', serviceArea: d.serviceArea || 'city', rate: d.rate || 200, experience: 0, bio: d.bio || null, photo: d.photo || null, idVerification: d.idType ? { type: d.idType, status: 'pending', submittedAt: now } : null, verified: false, status: 'active', available: true, ownerUid: uid, registered: now, lat: d.lat || 26.9124, lng: d.lng || 75.7873 };
+                const p = { id: 'p_' + Date.now(), name: d.name, mobile: d.mobile, religion: d.religion, location: d.location, language: d.language || ['Hindi'], categoryId: d.categoryId || null, subcategoryIdx: d.subcategoryIdx ?? null, subsubcategoryIdx: d.serviceIdx ?? null, service: d.serviceName || d.subcategoryName || 'General Service', services: d.serviceName ? [d.serviceName] : null, workingHours: d.workingHours || 'all-days', serviceArea: d.serviceArea || 'city', rate: (d.rate !== undefined ? d.rate : 0), experience: 0, bio: d.bio || null, photo: d.photo || null, idVerification: d.idType ? { type: d.idType, status: 'pending', submittedAt: now } : null, verified: false, status: 'active', available: true, ownerUid: uid, registered: now, lat: d.lat || 26.9124, lng: d.lng || 75.7873 };
                 const ref = await fb.push(fb.ref(fb.db, 'providers'), p);
                 await fb.update(ref, { id: ref.key });
             }
