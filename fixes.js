@@ -609,10 +609,23 @@ window.radheyLocalAnswer = function(quehry) {
             d.mobile = nums; window._radheyRegStep++;
             window._radheySetProgress(window._radheyRegStep, total);
             if (d.type === 'provider' || d.type === 'both') {
-                let catList = '';
-                if (typeof categories !== 'undefined') catList = categories.map((c, i) => (i + 1) + '. ' + (c.name?.en || c.name)).join('\n');
-                else catList = '1. Home Services\n2. Beauty & Wellness\n3. Cleaning Services\n4. Event Services\n5. Education\n6. Transport\n7. Business\n8. Pet Services';
-                radheyBot('✅ Mobile: ' + nums + '\n\nStep ' + (window._radheyRegStep + 1) + ': Category chunein:\n\n' + catList + '\n\nNumber ya naam bolein.');
+                // Always fetch categories fresh from Firebase (includes admin-added ones)
+                const fb = window._firebase;
+                const fetchAndShowCats = async function() {
+                  let catList = '';
+                  try {
+                    const snap = await fb.get(fb.ref(fb.db, 'categories'));
+                    if (snap.exists()) {
+                      const cData = snap.val();
+                      const cArr = Array.isArray(cData) ? cData : Object.values(cData);
+                      window._radheyCats = cArr;
+                      catList = cArr.map((c, i) => (i + 1) + '. ' + (c.name?.en || c.name || c.id)).join('\n');
+                    }
+                  } catch(e) {}
+                  if (!catList) catList = '1. Home Services\n2. Beauty & Wellness\n3. Cleaning Services\n4. Event Services\n5. Education\n6. Transport\n7. Business\n8. Pet Services';
+                  radheyBot('\u2705 Mobile: ' + nums + '\n\nStep ' + (window._radheyRegStep + 1) + ': Category chunein:\n\n' + catList + '\n\nNumber ya naam bolein.');
+                };
+                fetchAndShowCats();
             } else {
                 radheyBot('✅ Mobile: ' + nums + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bhasha chunein (number bolein):\n1. Hindi\n2. English\n3. Bengali\n4. Gujarati\n5. Marathi\n6. Kannada\n7. Telugu\n8. Malayalam\n9. Tamil\n10. Punjabi\n\nEk ya zyada number bolein.');
             }
@@ -620,19 +633,35 @@ window.radheyLocalAnswer = function(quehry) {
         }
 
         if (field === 'category') {
+            // If categories not yet loaded, fetch first then re-call
+            if (!window._radheyCats && !(typeof categories !== 'undefined')) {
+              const fb = window._firebase;
+              if (fb) {
+                fb.get(fb.ref(fb.db, 'categories')).then(snap => {
+                  if (snap.exists()) {
+                    const cData = snap.val();
+                    window._radheyCats = Array.isArray(cData) ? cData : Object.values(cData);
+                  }
+                  radheyHandleRegStep(answer);
+                });
+                return; // wait for async fetch
+              }
+            }
             let matched = null;
-            if (typeof categories !== 'undefined') {
+            // Use _radheyCats (loaded from Firebase) or fallback to categories global
+            const catArr = window._radheyCats || (typeof categories !== 'undefined' ? categories : null);
+            if (catArr) {
                 const hindiNums = {'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'chhe':6,'saat':7,'aath':8,'nau':9,'das':10,'gyarah':11,'barah':12,'terah':13,'chaudah':14,'pandrah':15,'solah':16,'satrah':17,'atharah':18,'unnis':19,'bees':20,'एक':1,'दो':2,'तीन':3,'चार':4,'पाँच':5,'छह':6,'सात':7,'आठ':8,'नौ':9,'दस':10,'ग्यारह':11,'बारह':12,'तेरह':13,'चौदह':14,'पंद्रह':15,'सोलह':16,'सत्रह':17,'अठारह':18,'उन्नीस':19,'बीस':20};
                 let num = parseInt(a);
                 if (!(num > 0)) { for (const [w,n] of Object.entries(hindiNums)) { if (a.includes(w)) { num = n; break; } } }
-                if (num > 0 && num <= categories.length) matched = categories[num - 1];
-                if (!matched) matched = categories.find(c => { const n = (c.name?.en || c.name || '').toLowerCase(); return n.includes(a) || a.includes(n.split(' ')[0]); });
+                if (num > 0 && num <= catArr.length) matched = catArr[num - 1];
+                if (!matched) matched = catArr.find(c => { const n = (c.name?.en || c.name || '').toLowerCase(); return n.includes(a) || a.includes(n.split(' ')[0]); });
             }
             if (matched) {
                 d.categoryId = matched.id; d.categoryName = matched.name?.en || matched.name;
                 window._radheyRegStep++;
                 window._radheySetProgress(window._radheyRegStep, total);
-                const subs = (matched.subcategories || []).slice(0, 9).map((s, i) => (i + 1) + '. ' + (s.name?.en || s.name)).join('\n');
+                const subs = (matched.subcategories || []).map((s, i) => (i + 1) + '. ' + (s.name?.en || s.name)).join('\n');
                 radheyBot('✅ Category: ' + d.categoryName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Sub-category:\n\n' + (subs || 'Koi sub-category nahi') + '\n\nNumber ya naam bolein.');
             } else {
                 radheyBot('❓ Category clearly batayein ya number bolein.');
@@ -641,7 +670,7 @@ window.radheyLocalAnswer = function(quehry) {
         }
 
         if (field === 'subcategory') {
-            const cat = typeof categories !== 'undefined' ? categories.find(c => c.id === d.categoryId) : null;
+            const cat = (window._radheyCats || (typeof categories !== 'undefined' ? categories : null) || []).find(c => c.id === d.categoryId) || null;
             const subs = cat ? (cat.subcategories || []) : [];
             let matched = null;
             const num = parseInt(a);
@@ -651,14 +680,14 @@ window.radheyLocalAnswer = function(quehry) {
                 d.subcategoryIdx = subs.indexOf(matched); d.subcategoryName = matched.name?.en || matched.name;
                 window._radheyRegStep++;
                 window._radheySetProgress(window._radheyRegStep, total);
-                const svcs = (matched.subsubcategories || []).slice(0, 9).map((s, i) => (i + 1) + '. ' + (s.name?.en || s.name)).join('\n');
+                const svcs = (matched.subsubcategories || []).map((s, i) => (i + 1) + '. ' + (s.name?.en || s.name)).join('\n');
                 radheyBot('✅ Sub-category: ' + d.subcategoryName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Service type:\n\n' + (svcs || 'Default service') + '\n\nNumber ya naam bolein.');
             } else { radheyBot('❓ Sub-category naam ya number bolein.'); }
             setTimeout(radheyAutoMic, 4500); return;
         }
 
         if (field === 'service') {
-            const cat = typeof categories !== 'undefined' ? categories.find(c => c.id === d.categoryId) : null;
+            const cat = (window._radheyCats || (typeof categories !== 'undefined' ? categories : null) || []).find(c => c.id === d.categoryId) || null;
             const sub = cat ? (cat.subcategories || [])[d.subcategoryIdx] : null;
             const svcs = sub ? (sub.subsubcategories || []) : [];
             let matched = null;
@@ -920,7 +949,7 @@ window.radheyLocalAnswer = function(quehry) {
             s += '🔧 Service: ' + (d.serviceName || '-') + '\n';
             s += '⏰ Hours: ' + (d.workingHours || '-') + '\n';
             s += '🗺️ Area: ' + (d.serviceArea || '-') + '\n';
-            s += '💰 Rate: ₹' + (d.rate || '-') + '/ghanta\n';
+            s += '💰 Charges: ' + (d.rateLabel || (d.rate ? '₹' + d.rate + '/hr' : 'Negotiable')) + '\n';
             if (d.bio) s += '📝 Bio: ' + d.bio.slice(0, 40) + '...\n';
             if (d.photo) s += '📸 Photo: ✅\n';
         if (d.lat && d.lat !== 26.9124) s += '📍 GPS: ' + d.lat.toFixed(4) + ', ' + d.lng.toFixed(4) + '\n';
