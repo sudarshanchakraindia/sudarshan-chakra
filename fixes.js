@@ -735,20 +735,26 @@ window.radheyLocalAnswer = function(quehry) {
             window._radheySetProgress(window._radheyRegStep, total);
             const nextField2 = (window._radheySteps || [])[window._radheyRegStep];
             if (nextField2 === 'rate') {
-                radheyBot('✅ Location: ' + d.location + '\n\nStep ' + (window._radheyRegStep + 1) + ': Rate per ghanta (₹)?\nJaise: "200" ya "paanch sau"');
+                radheyBot('✅ Location: ' + d.location + '\n\nStep ' + (window._radheyRegStep + 1) + ': Charges (Optional)?\nHourly fees bolein. Jaise: "200" ya "paanch sau"\n"skip" ya "negotiable" bolein agar mutual decide karna hai.');
             } else { radheyConfirmReg(); }
             setTimeout(radheyAutoMic, 4500); return;
         }
 
         if (field === 'rate') {
+            // Charges is OPTIONAL - allow skip, negotiable, or a number
             const wmap = { 'ek sau': 100, 'do sau': 200, 'teen sau': 300, 'char sau': 400, 'paanch sau': 500, 'panch sau': 500, 'chhe sau': 600, 'saat sau': 700, 'aath sau': 800, 'nau sau': 900, 'ek hazaar': 1000, 'das sau': 1000 };
             let rate = 0;
-            for (const [k, v] of Object.entries(wmap)) { if (a.includes(k)) { rate = v; break; } }
-            if (!rate) rate = parseInt(answer.replace(/\D/g, '')) || 0;
-            if (rate < 50) { radheyBot('❌ Rate minimum ₹50 hona chahiye. Dobara bolein.'); setTimeout(radheyAutoMic, 4500); return; }
-            d.rate = rate; window._radheyRegStep++;
+            if (a.includes('skip') || a.includes('nahi') || a.includes('negotiable') || a.includes('mutual') || a.includes('baad') || a.includes('तय करेंगे')) {
+                d.rate = 0; d.rateLabel = 'Negotiable';
+            } else {
+                for (const [k, v] of Object.entries(wmap)) { if (a.includes(k)) { rate = v; break; } }
+                if (!rate) rate = parseInt(answer.replace(/\D/g, '')) || 0;
+                if (rate > 0 && rate < 10) { radheyBot('❌ Rate ₹10 se zyada hona chahiye. Ya "skip" / "negotiable" bolein.'); setTimeout(radheyAutoMic, 4500); return; }
+                d.rate = rate; d.rateLabel = rate > 0 ? ('₹' + rate + '/hr') : 'Negotiable';
+            }
+            window._radheyRegStep++;
             window._radheySetProgress(window._radheyRegStep, total);
-            radheyBot('✅ Rate: ₹' + rate + '/ghanta\n\nStep ' + (window._radheyRegStep + 1) + ': Bio (apne baare mein)?\nJaise: "Main 5 saal se kaam kar raha hoon."\n\nYa "skip" bolein.');
+            radheyBot('✅ Charges: ' + (d.rateLabel || (d.rate ? '₹' + d.rate + '/hr' : 'Negotiable')) + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bio (apne baare mein)?\nJaise: "Main 5 saal se kaam kar raha hoon."\n\nYa "skip" bolein.');
             setTimeout(radheyAutoMic, 4500); return;
         }
 
