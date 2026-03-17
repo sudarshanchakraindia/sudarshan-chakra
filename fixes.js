@@ -701,10 +701,12 @@ window.radheyLocalAnswer = function(quehry) {
         if (field === 'subcategory') {
             const cat = (window._radheyCats || (typeof categories !== 'undefined' ? categories : null) || []).find(c => c.id === d.categoryId) || null;
             const subs = cat ? (cat.subcategories || []) : [];
-            let matched = null;
-            const num = parseInt(a);
+                        let matched = null;
+            const hindiNumsSub = {'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'chhe':6,'saat':7,'aath':8,'nau':9,'das':10,'gyarah':11,'barah':12,'terah':13,'chaudah':14,'pandrah':15,'एक':1,'दो':2,'तीन':3,'चार':4,'पाँच':5,'छह':6,'सात':7,'आठ':8,'नौ':9,'दस':10,'ग्यारह':11,'बारह':12,'तेरह':13,'चौदह':14,'पंद्रह':15};
+            let num = parseInt(a);
+            if (!(num > 0)) { for (const [w,n] of Object.entries(hindiNumsSub)) { if (a.includes(w)) { num = n; break; } } }
             if (num > 0 && num <= subs.length) matched = subs[num - 1];
-            if (!matched) matched = subs.find(s => (s.name?.en || s.name || '').toLowerCase().includes(a));
+            if (!matched) matched = subs.find(s => { const n=(s.name?.en||s.name||'').toLowerCase(); return n.includes(a)||a.includes(n.split(' ')[0]); });
             if (matched) {
                 d.subcategoryIdx = subs.indexOf(matched); d.subcategoryName = matched.name?.en || matched.name;
                 window._radheyRegStep++;
@@ -719,10 +721,12 @@ window.radheyLocalAnswer = function(quehry) {
             const cat = (window._radheyCats || (typeof categories !== 'undefined' ? categories : null) || []).find(c => c.id === d.categoryId) || null;
             const sub = cat ? (cat.subcategories || [])[d.subcategoryIdx] : null;
             const svcs = sub ? (sub.subsubcategories || []) : [];
-            let matched = null;
-            const num = parseInt(a);
+                        let matched = null;
+            const hindiNumsSvc = {'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'chhe':6,'saat':7,'aath':8,'nau':9,'das':10,'gyarah':11,'barah':12,'terah':13,'chaudah':14,'pandrah':15,'solah':16,'satrah':17,'atharah':18,'unnis':19,'bees':20,'एक':1,'दो':2,'तीन':3,'चार':4,'पाँच':5,'छह':6,'सात':7,'आठ':8,'नौ':9,'दस':10,'ग्यारह':11,'बारह':12,'तेरह':13,'चौदह':14,'पंद्रह':15,'सोलह':16,'सत्रह':17,'अठारह':18,'उन्नीस':19,'बीस':20};
+            let num = parseInt(a);
+            if (!(num > 0)) { for (const [w,n] of Object.entries(hindiNumsSvc)) { if (a.includes(w)) { num = n; break; } } }
             if (num > 0 && num <= svcs.length) matched = svcs[num - 1];
-            if (!matched && svcs.length) matched = svcs.find(s => (s.name?.en || s.name || '').toLowerCase().includes(a));
+            if (!matched && svcs.length) matched = svcs.find(s => { const n=(s.name?.en||s.name||'').toLowerCase(); return n.includes(a)||a.includes(n.split(' ')[0]); });
             d.serviceName = matched ? (matched.name?.en || matched.name) : (d.subcategoryName || 'General Service');
             d.serviceIdx = matched ? svcs.indexOf(matched) : 0;
             window._radheyRegStep++;
