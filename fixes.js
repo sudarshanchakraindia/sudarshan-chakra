@@ -451,7 +451,29 @@ window.radheyLocalAnswer = function(quehry) {
     const PROVIDER_STEPS = window._PROVIDER_STEPS;
     const SEEKER_STEPS   = window._SEEKER_STEPS;
 
+    // Mobile audio unlock utility (must be called within user gesture)
+    window._unlockAudio = function() {
+        if (window._audioUnlocked) return;
+        try {
+            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            var ctx = new AudioCtx();
+            var buf = ctx.createBuffer(1, 1, 22050);
+            var src = ctx.createBufferSource();
+            src.buffer = buf;
+            src.connect(ctx.destination);
+            src.start(0);
+            ctx.resume && ctx.resume();
+            window._audioUnlocked = true;
+        } catch(e) { window._audioUnlocked = true; }
+    };
+    // iOS detection helper
+    window._isIOS = function() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    };
     window.radheyToggle = function () {
+        // Unlock audio on first user interaction (critical for mobile TTS)
+        if (window._unlockAudio) window._unlockAudio();
         panel.classList.toggle('open');
         if (panel.classList.contains('open') && !document.getElementById('radhey-messages').children.length) radheyGreet();
     };
@@ -486,6 +508,8 @@ window.radheyLocalAnswer = function(quehry) {
         d.className = 'rm-bot'; d.textContent = text;
         msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
         if ('speechSynthesis' in window) {
+            // Unlock audio on mobile (requires prior user gesture)
+            if (window._unlockAudio) window._unlockAudio();
             window.speechSynthesis.cancel();
             // Clean and speak the full Radhey message naturally (strip emojis/decorators)
             const speakText = text
@@ -502,60 +526,66 @@ window.radheyLocalAnswer = function(quehry) {
             // Function to speak once voices are ready (important on mobile)
             const doSpeak = function() {
                 const u = new SpeechSynthesisUtterance(speakText);
-                u.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
-                const voices = window.speechSynthesis.getVoices();
-                // Voice selection: prefer user's language voice, then Indian voices, then any available
                 const langCode = window._getLangCode ? window._getLangCode() : 'hi-IN';
-                const indianVoice = voices.find(v => v.lang === langCode) ||
-                                    voices.find(v => v.lang === 'hi-IN') ||
-                                    voices.find(v => v.lang === 'en-IN') ||
-                                    voices.find(v => v.lang.endsWith('-IN')) ||
-                                    voices.find(v => v.name.toLowerCase().includes('india')) ||
-                                    voices.find(v => v.lang.startsWith('en-')) ||
-                                    (voices.length > 0 ? voices[0] : null);
-                if (indianVoice) { u.voice = indianVoice; u.lang = indianVoice.lang; }
-                u.rate = 0.85;    // Slightly slower for clarity
-                u.volume = 1.0;   // Full volume (important on mobile)
-                u.pitch = 1.1;    // Slightly higher pitch for mobile speakers
-                // Guard: prevent double onend firing (mobile browser bug)
-                let _onEndFired = false;
+                u.lang = langCode;
+                const voices = window.speechSynthesis.getVoices();
+                // Voice selection: exact lang match first, then Indian, then any
+                const chosen = voices.find(v => v.lang === langCode) ||
+                               voices.find(v => v.lang === 'hi-IN') ||
+                               voices.find(v => v.lang === 'en-IN') ||
+                               voices.find(v => v.lang.endsWith('-IN')) ||
+                               voices.find(v => v.name.toLowerCase().includes('india')) ||
+                               voices.find(v => v.lang.startsWith('en-')) ||
+                               (voices.length > 0 ? voices[0] : null);
+                if (chosen) { u.voice = chosen; u.lang = chosen.lang; }
+                u.rate = 0.9;
+                u.volume = 1.0;
+                u.pitch = 1.0;
+                let _fired = false;
                 u.onend = function() {
-                    if (_onEndFired) return;
-                    _onEndFired = true;
+                    if (_fired) return; _fired = true;
+                    if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
                     if (window._radheyRegMode && !window._radheyListening) {
-                        setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 400);
+                        setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 600);
                     }
                 };
                 u.onerror = function(e) {
-                    // On mobile, if speech fails, still trigger autoMic
-                    if (e.error !== 'interrupted' && window._radheyRegMode && !window._radheyListening) {
-                        setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 800);
+                    if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
+                    if (e.error === 'interrupted') return;
+                    if (window._radheyRegMode && !window._radheyListening) {
+                        setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 1000);
                     }
                 };
+                window.speechSynthesis.cancel();
                 window.speechSynthesis.speak(u);
-                // Mobile keep-alive: resume paused TTS every 5s (Chrome mobile pauses after ~15s)
+                // Keep-alive for long texts (Chrome mobile pauses after 15s)
+                // Use onpause instead of interval to avoid iOS issues
                 if (window._ttsKeepAlive) clearInterval(window._ttsKeepAlive);
                 window._ttsKeepAlive = setInterval(function() {
-                    if (window.speechSynthesis.speaking) {
-                        window.speechSynthesis.pause();
-                        window.speechSynthesis.resume();
-                    } else {
+                    if (!window.speechSynthesis.speaking) {
                         clearInterval(window._ttsKeepAlive);
+                        window._ttsKeepAlive = null;
+                    } else if (window.speechSynthesis.paused) {
+                        window.speechSynthesis.resume();
                     }
-                }, 5000);
+                }, 3000);
             };
-            // Wait for voices to load (critical on mobile first load)
-            const loadedVoices = window.speechSynthesis.getVoices();
-            if (loadedVoices.length > 0) {
+            // Load voices — critical on mobile where voices load async
+            var voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
                 doSpeak();
             } else {
+                // First load: voices not ready yet
+                var _voiceTimer = setTimeout(function() {
+                    // Fallback after 1s even without onvoiceschanged
+                    window.speechSynthesis.onvoiceschanged = null;
+                    doSpeak();
+                }, 1000);
                 window.speechSynthesis.onvoiceschanged = function() {
+                    clearTimeout(_voiceTimer);
                     window.speechSynthesis.onvoiceschanged = null;
                     doSpeak();
                 };
-                setTimeout(function() {
-                    if (window.speechSynthesis.getVoices().length > 0) doSpeak();
-                }, 600);
             }
         }
     };
@@ -605,21 +635,39 @@ window.radheyLocalAnswer = function(quehry) {
     };
 
     window.radheyToggleMic = function () {
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         const mic = document.getElementById('radhey-mic-btn');
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { radheyBot('❌ Chrome browser use karein voice ke liye.'); return; }
-        if (window._radheyListening) { window._radheyRec?.stop(); return; }
+        if (isIOS || (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window))) {
+            // iOS or no speech API: focus text input instead
+            var inp = document.getElementById('radhey-inp');
+            if (inp) { inp.focus(); inp.placeholder = 'Type your message...'; }
+            if (mic) mic.classList.remove('listening');
+            return;
+        }
+        if (window._radheyListening) { if (window._radheyRec) window._radheyRec.stop(); return; }
+        // Unlock audio on user gesture
+        if (window._unlockAudio) window._unlockAudio();
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SR();
-        rec.lang = (typeof currentLanguage !== 'undefined' && currentLanguage === 'hi') ? 'hi-IN' : 'en-IN';
-        rec.onresult = e => { const t = e.results[0][0].transcript; const inp = document.getElementById('radhey-inp'); if (inp) inp.value = t; radheyAsk(t); };
-        rec.onend = () => { if (mic) mic.classList.remove('listening'); window._radheyListening = false; };
-        rec.onerror = () => { if (mic) mic.classList.remove('listening'); window._radheyListening = false; };
-        rec.start(); if (mic) mic.classList.add('listening');
-        window._radheyListening = true; window._radheyRec = rec;
+        rec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
+        rec.interimResults = false;
+        rec.maxAlternatives = 1;
+        rec.onresult = function(e) {
+            const t = e.results[0][0].transcript;
+            const inp = document.getElementById('radhey-inp');
+            if (inp) inp.value = t;
+            radheyAsk(t);
+        };
+        rec.onend = function() { if (mic) mic.classList.remove('listening'); window._radheyListening = false; };
+        rec.onerror = function(e) { if (mic) mic.classList.remove('listening'); window._radheyListening = false; };
+        try { rec.start(); if (mic) mic.classList.add('listening'); window._radheyListening = true; window._radheyRec = rec; }
+        catch(err) { window._radheyListening = false; if (mic) mic.classList.remove('listening'); }
     };
 
     // ── Voice Registration ──
     window.radheyStartVoiceReg = function () {
+        // Unlock audio on user gesture (Register button click)
+        if (window._unlockAudio) window._unlockAudio();
         window._radheyRegMode = true; window._radheyRegStep = 0;
         window._radheyRegData = {}; window._radheySteps = null;
         panel.classList.add('open');
@@ -1032,21 +1080,31 @@ window.radheyLocalAnswer = function(quehry) {
 
     window.radheyAutoMic = function () {
         if (!window._radheyRegMode) return;
+        // iOS Safari check — no SpeechRecognition on iOS 14.5+
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            // On iOS: show text input, prompt user to type
+            var inp = document.getElementById('radhey-inp');
+            if (inp) { inp.focus(); inp.placeholder = 'Type your answer here...'; }
+            return;
+        }
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            radheyBot('❌ Is browser mein voice recognition nahi hai. Chrome use karein ya manually type karein.');
+            radheyBot('❌ Voice nahi chal raha. Neeche type karein ya Chrome browser use karein.');
+            var inp2 = document.getElementById('radhey-inp');
+            if (inp2) inp2.focus();
             return;
         }
         if (window._radheyListening) return;
-        // Wait for TTS to finish before listening
+        // Wait for TTS to finish before listening (with timeout guard)
         if (window.speechSynthesis && window.speechSynthesis.speaking) {
-            setTimeout(radheyAutoMic, 300);
+            setTimeout(radheyAutoMic, 500);
             return;
         }
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SR();
         rec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
         rec.interimResults = false;
-        rec.maxAlternatives = 3;
+        rec.maxAlternatives = 1;
         rec.continuous = false;
         rec.onresult = function (e) {
             const txt = e.results[0][0].transcript;
