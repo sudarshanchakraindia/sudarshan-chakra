@@ -457,8 +457,26 @@ window.radheyLocalAnswer = function(quehry) {
     };
 
     window.radheyGreet = function () {
-        const name = (window.firebaseUser && window.userProfile?.name) ? window.userProfile.name.split(' ')[0] : 'दोस्त';
-        radheyBot(`🙏 Namaste ${name}!\n\nMain RADHEY hoon — Sudarshan Chakra ka AI sahayak.\n\n📝 Voice se register karein\n🔍 Koi bhi service dhundhen\n💰 Wallet & points jaanein\n✅ Verification guide\n\nBataiye kya chahiye? 😊`);
+        const name = (window.firebaseUser && window.userProfile?.name) ? window.userProfile.name.split(' ')[0] : (window._T ? window._T('दोस्त', 'friend') : 'दोस्त');
+        const greetHi = `🙏 Namaste ${name}!\n\nMain RADHEY hoon — Sudarshan Chakra ka AI sahayak.\n\n📝 Voice se register karein\n🔍 Koi bhi service dhundhen\n💰 Wallet & points jaanein\n✅ Verification guide\n\nBataiye kya chahiye? 😊`;
+        const greetEn = `🙏 Hello ${name}!\n\nI am RADHEY — Sudarshan Chakra AI Assistant.\n\n📝 Register via voice\n🔍 Find any service\n💰 Wallet & points info\n✅ Verification guide\n\nHow can I help you? 😊`;
+        radheyBot(window._T ? window._T(greetHi, greetEn) : greetHi);
+    };
+
+    // ── Language Helpers ──
+    window._getLang = function() {
+        return localStorage.getItem('language') || 'hi';
+    };
+    window._getLangCode = function() {
+        const l = window._getLang();
+        const codes = { 'en': 'en-IN', 'hi': 'hi-IN', 'bn': 'bn-IN', 'gu': 'gu-IN', 'mr': 'mr-IN', 'ta': 'ta-IN', 'te': 'te-IN', 'ml': 'ml-IN', 'kn': 'kn-IN', 'pa': 'pa-IN' };
+        return codes[l] || 'hi-IN';
+    };
+    // _T(hindi, english) — returns text in user's language (Hindi default)
+    window._T = function(hi, en) {
+        const l = window._getLang();
+        if (l === 'en') return en;
+        return hi;  // default Hindi for all other languages
     };
 
     window.radheyBot = function (text) {
@@ -484,10 +502,12 @@ window.radheyLocalAnswer = function(quehry) {
             // Function to speak once voices are ready (important on mobile)
             const doSpeak = function() {
                 const u = new SpeechSynthesisUtterance(speakText);
-                u.lang = 'hi-IN';
+                u.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
                 const voices = window.speechSynthesis.getVoices();
-                // Voice selection: prefer hi-IN, then en-IN, then any Indian voice, then first available
-                const indianVoice = voices.find(v => v.lang === 'hi-IN') ||
+                // Voice selection: prefer user's language voice, then Indian voices, then any available
+                const langCode = window._getLangCode ? window._getLangCode() : 'hi-IN';
+                const indianVoice = voices.find(v => v.lang === langCode) ||
+                                    voices.find(v => v.lang === 'hi-IN') ||
                                     voices.find(v => v.lang === 'en-IN') ||
                                     voices.find(v => v.lang.endsWith('-IN')) ||
                                     voices.find(v => v.name.toLowerCase().includes('india')) ||
@@ -603,7 +623,7 @@ window.radheyLocalAnswer = function(quehry) {
         window._radheyRegMode = true; window._radheyRegStep = 0;
         window._radheyRegData = {}; window._radheySteps = null;
         panel.classList.add('open');
-        radheyBot('🎤 Voice Registration शुरू!\n\nMain step-by-step guide karunga.\n\nStep 1: Aap kya banna chahte hain?\n\n👷 "Provider" — agar aap kaam dete hain\n🔍 "Seeker" — agar aapko kaam karaana hai\n🤝 "Dono" — agar aap dono hain');
+        radheyBot(window._T ? window._T('🎤 Voice Registration शुरू!\n\nMain step-by-step guide karunga.\n\nStep 1: Aap kya banna chahte hain?\n\n👷 "Provider" — agar aap kaam dete hain\n🔍 "Seeker" — agar aapko kaam karaana hai\n🤝 "Dono" — agar aap dono hain', '🎤 Voice Registration Started!\n\nI will guide you step by step.\n\nStep 1: What do you want to be?\n\n👷 Say "Provider" — if you offer services\n🔍 Say "Seeker" — if you need services\n🤝 Say "Both" — if you are both') : '🎤 Voice Registration शुरू!\n\nMain step-by-step guide karunga.\n\nStep 1: Aap kya banna chahte hain?\n\n👷 "Provider" — agar aap kaam dete hain\n🔍 "Seeker" — agar aapko kaam karaana hai\n🤝 "Dono" — agar aap dono hain');
         window._radheySetProgress(0, 1);
     };
 
@@ -1024,7 +1044,7 @@ window.radheyLocalAnswer = function(quehry) {
         }
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SR();
-        rec.lang = 'hi-IN';
+        rec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
         rec.interimResults = false;
         rec.maxAlternatives = 3;
         rec.continuous = false;
