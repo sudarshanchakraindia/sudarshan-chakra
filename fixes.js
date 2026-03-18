@@ -1121,35 +1121,3 @@ window.radheyLocalAnswer = function(quehry) {
     console.log('✅ RADHEY v2.0 ready — Top-nav chakra, 14-step voice reg, offline KB');
 })();
 
-// ── Category Grid Safety Patch ──
-// Guards loadHomeCategories/loadBrowseCategories against empty categories (Firebase race condition)
-(function() {
-    var _catGuardTimer = null;
-    function patchCategoryLoaders() {
-        var origHome = window.loadHomeCategories;
-        var origBrowse = window.loadBrowseCategories;
-        if (!origHome) { setTimeout(patchCategoryLoaders, 500); return; }
-        window.loadHomeCategories = function() {
-            var cats = window.categories || [];
-            if (cats.length === 0) {
-                // Categories not yet loaded — retry after Firebase loads
-                if (_catGuardTimer) clearTimeout(_catGuardTimer);
-                _catGuardTimer = setTimeout(function() { if (window.loadHomeCategories) window.loadHomeCategories(); }, 1500);
-                return;
-            }
-            origHome.apply(this, arguments);
-        };
-        window.loadBrowseCategories = function() {
-            var cats = window.categories || [];
-            if (cats.length === 0) {
-                if (_catGuardTimer) clearTimeout(_catGuardTimer);
-                _catGuardTimer = setTimeout(function() { if (window.loadBrowseCategories) window.loadBrowseCategories(); }, 1500);
-                return;
-            }
-            origBrowse && origBrowse.apply(this, arguments);
-        };
-    }
-    // Patch after page is fully initialized
-    if (document.readyState === 'complete') { patchCategoryLoaders(); }
-    else { window.addEventListener('load', patchCategoryLoaders); }
-})();
