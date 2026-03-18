@@ -843,6 +843,8 @@ window.radheyLocalAnswer = function(quehry) {
         }
 
         if (field === 'photo') {
+            // Guard: skip empty/noise input, retry mic silently
+            if (!a || a.length < 2) { setTimeout(radheyAutoMic, 1500); return; }
             if (a.includes('skip') || a.includes('nahi') || a.includes('नहीं') || a.includes('नही') || a.includes('baad') || a.includes('bad mein') || a.includes('बाद') || a.includes('later') || a.includes('स्किप') || a.includes('छोड़')) {
                 window._radheyRegStep++;
                 window._radheySetProgress(window._radheyRegStep, total);
@@ -1028,6 +1030,8 @@ window.radheyLocalAnswer = function(quehry) {
         rec.continuous = false;
         rec.onresult = function (e) {
             const txt = e.results[0][0].transcript;
+            // Guard: skip very short/noise transcripts silently
+            if (!txt || txt.trim().length < 2) { window._radheyListening = false; setTimeout(radheyAutoMic, 1500); return; }
             radheyUser(txt);
             window._radheyListening = false;
             const step = window._radheyRegStep;
