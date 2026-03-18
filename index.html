@@ -1047,10 +1047,40 @@
                 <div class="bg-white rounded-xl shadow-md p-6">
                     <input type="password" id="adminPassword" placeholder="Enter admin password" class="w-full px-4 py-2 border rounded-lg mb-4" onkeydown="if(event.key==='Enter') adminLogin()">
                     <button onclick="adminLogin()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">Login</button>
+                    <div class="text-center mt-3">
+                        <button onclick="openAdminForgotPass()" class="text-purple-600 hover:text-purple-800 text-sm font-medium underline">🔑 Forgot Password?</button>
+                    </div>
                 </div>
             </div>
             
-            <div id="adminDashboard" class="hidden">
+                        <!-- Forgot Password Modal -->
+            <div id="adminForgotModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">🔑 Reset Admin Password</h2>
+                        <button onclick="closeAdminForgotPass()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">✕</button>
+                    </div>
+                    <p class="text-gray-500 text-sm mb-4">Enter your recovery code (set by super admin in Settings → Set Recovery Code).</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-gray-600 text-sm mb-1">Recovery Code</label>
+                            <input type="text" id="adminForgotCode" class="w-full px-4 py-2 border rounded-lg" placeholder="Enter recovery code" onkeydown="if(event.key==='Enter') submitAdminPassReset()">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 text-sm mb-1">New Password</label>
+                            <input type="password" id="adminForgotNew" class="w-full px-4 py-2 border rounded-lg" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter') submitAdminPassReset()">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 text-sm mb-1">Confirm New Password</label>
+                            <input type="password" id="adminForgotConfirm" class="w-full px-4 py-2 border rounded-lg" placeholder="Repeat new password" onkeydown="if(event.key==='Enter') submitAdminPassReset()">
+                        </div>
+                        <button onclick="submitAdminPassReset()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">🔓 Reset Password</button>
+                        <div id="adminForgotMsg" class="hidden text-center text-sm py-2"></div>
+                    </div>
+                </div>
+            </div>
+
+<div id="adminDashboard" class="hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
                     <button onclick="adminLogout()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">Logout</button>
@@ -1347,6 +1377,15 @@
                                 🔑 Update Password
                             </button>
                             <div id="passwordChangeMsg" class="hidden text-center font-medium py-2 rounded-lg"></div>
+                            <!-- Recovery Code Setup -->
+                            <h3 class="font-semibold text-gray-700 text-lg border-b pb-2 mt-4">🔐 Set Recovery Code</h3>
+                            <p class="text-gray-500 text-sm">This code is stored securely in Firebase. Use it to reset your admin password if forgotten.</p>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-1">New Recovery Code</label>
+                                <input type="text" id="adminRecoveryCodeInput" class="w-full px-4 py-2 border rounded-lg" placeholder="e.g. MySecret@2024" onkeydown="if(event.key==='Enter') saveAdminRecoveryCode()">
+                            </div>
+                            <button onclick="saveAdminRecoveryCode()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700">🔐 Save Recovery Code</button>
+                            <div id="adminRecoveryMsg" class="hidden text-center text-sm py-2"></div>
                         </div>
                     </div>
                 </div>
@@ -4852,6 +4891,71 @@
             document.getElementById('adminPassword').value = '';
         }
         
+
+        // ── Admin Forgot Password ──
+        function openAdminForgotPass() {
+            document.getElementById('adminForgotModal').classList.remove('hidden');
+            document.getElementById('adminForgotMsg').textContent = '';
+            document.getElementById('adminForgotMsg').className = 'hidden text-center text-sm py-2';
+            document.getElementById('adminForgotCode').value = '';
+            document.getElementById('adminForgotNew').value = '';
+            document.getElementById('adminForgotConfirm').value = '';
+        }
+        function closeAdminForgotPass() {
+            document.getElementById('adminForgotModal').classList.add('hidden');
+        }
+        async function submitAdminPassReset() {
+            const code = document.getElementById('adminForgotCode').value.trim();
+            const newPass = document.getElementById('adminForgotNew').value.trim();
+            const confirm = document.getElementById('adminForgotConfirm').value.trim();
+            const msg = document.getElementById('adminForgotMsg');
+            if (!code) { msg.textContent = '❌ Recovery code required.'; msg.className = 'text-center text-sm py-2 text-red-600'; return; }
+            if (newPass.length < 6) { msg.textContent = '❌ New password must be at least 6 characters.'; msg.className = 'text-center text-sm py-2 text-red-600'; return; }
+            if (newPass !== confirm) { msg.textContent = '❌ Passwords do not match.'; msg.className = 'text-center text-sm py-2 text-red-600'; return; }
+            // Check recovery code against Firebase
+            try {
+                const fb = window._firebase;
+                let storedCode = 'sudarshan2024'; // fallback default
+                if (fb) {
+                    const snap = await fb.get(fb.ref(fb.db, 'adminConfig/recoveryCode'));
+                    if (snap.exists() && snap.val()) storedCode = snap.val();
+                }
+                if (code !== storedCode) {
+                    msg.textContent = '❌ Incorrect recovery code. Please check with the super admin.';
+                    msg.className = 'text-center text-sm py-2 text-red-600';
+                    return;
+                }
+                // Update password
+                localStorage.setItem(ADMIN_PASSWORD_KEY, newPass);
+                ADMIN_PASSWORD = newPass;
+                msg.textContent = '✅ Password reset successfully! You can now login with your new password.';
+                msg.className = 'text-center text-sm py-2 text-green-600';
+                setTimeout(() => { closeAdminForgotPass(); }, 2500);
+            } catch (e) {
+                msg.textContent = '❌ Error: ' + e.message;
+                msg.className = 'text-center text-sm py-2 text-red-600';
+            }
+        }
+        async function saveAdminRecoveryCode() {
+            const newCode = document.getElementById('adminRecoveryCodeInput').value.trim();
+            const msg = document.getElementById('adminRecoveryMsg');
+            if (newCode.length < 4) { msg.textContent = '❌ Recovery code must be at least 4 characters.'; msg.className = 'text-center text-sm py-2 text-red-600 mt-2'; msg.classList.remove('hidden'); return; }
+            try {
+                const fb = window._firebase;
+                if (!fb) { msg.textContent = '❌ Firebase not ready.'; msg.className = 'text-center text-sm py-2 text-red-600 mt-2'; msg.classList.remove('hidden'); return; }
+                await fb.set(fb.ref(fb.db, 'adminConfig/recoveryCode'), newCode);
+                msg.textContent = '✅ Recovery code saved in Firebase!';
+                msg.className = 'text-center text-sm py-2 text-green-600 mt-2';
+                msg.classList.remove('hidden');
+                document.getElementById('adminRecoveryCodeInput').value = '';
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            } catch (e) {
+                msg.textContent = '❌ Error: ' + e.message;
+                msg.className = 'text-center text-sm py-2 text-red-600 mt-2';
+                msg.classList.remove('hidden');
+            }
+        }
+
         function showAdminTab(tabName) {
             ['users','reports','reviews','categories','idverify','subscriptions','hirerequests','settings','accounts'].forEach(t => {
                 document.getElementById('adminTab-' + t).classList.add('hidden');
