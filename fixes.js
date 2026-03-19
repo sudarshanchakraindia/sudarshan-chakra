@@ -534,18 +534,9 @@ window.radheyLocalAnswer = function(quehry) {
                 const u = new SpeechSynthesisUtterance(speakText);
                 const langCode = window._getLangCode ? window._getLangCode() : 'hi-IN';
                 u.lang = langCode;
-                // Use pre-locked voice (prevents Android voice-switch bug between utterances)
-                const chosen = window._radheyVoice || (function() {
-                    const vs = window.speechSynthesis.getVoices();
-                    return vs.find(v => v.lang === langCode) ||
-                           vs.find(v => v.lang === 'hi-IN') ||
-                           vs.find(v => v.lang === 'en-IN') ||
-                           vs.find(v => v.lang.endsWith('-IN')) ||
-                           vs.find(v => v.name.toLowerCase().includes('india')) ||
-                           vs.find(v => v.lang.startsWith('en-')) ||
-                           (vs.length > 0 ? vs[0] : null);
-                })();
-                if (chosen) { window._radheyVoice = chosen; u.voice = chosen; u.lang = chosen.lang; }
+                // Option 2: lang-only — do NOT set u.voice, let Android pick by lang
+                // Setting u.voice after cancel() causes Android TTS to switch voices
+                u.lang = 'hi-IN';
                 u.rate = 0.9;
                 u.volume = 1.0;
                 u.pitch = 1.0;
@@ -564,7 +555,6 @@ window.radheyLocalAnswer = function(quehry) {
                         setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 1000);
                     }
                 };
-                window.speechSynthesis.cancel();
                 window.speechSynthesis.speak(u);
                 // Keep-alive for long texts (Chrome mobile pauses after 15s)
                 // Use onpause instead of interval to avoid iOS issues
