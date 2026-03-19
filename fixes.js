@@ -738,7 +738,7 @@ window.radheyLocalAnswer = function(quehry) {
                 // No extra setTimeout needed for provider path
                 return;
             } else {
-                radheyBot('✅ Mobile: ' + nums.split('').join(' ') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bhasha chunein (number bolein):\n1. Hindi\n2. English\n3. Bengali\n4. Gujarati\n5. Marathi\n6. Kannada\n7. Telugu\n8. Malayalam\n9. Tamil\n10. Punjabi\n\nEk ya zyada number bolein.');
+                radheyBot('✅ Mobile: ' + nums.split('').join(' ') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Bhasha chunein (number bolein):\n1. Hindi\n2. English\n3. Bengali\n4. Gujarati\n5. Marathi\n6. Kannada\n7. Telugu\n8. Malayalam\n9. Tamil\n10. Punjabi\n11. Odia\n12. Assamese\n\nEk ya zyada number bolein.');
             }
             setTimeout(radheyAutoMic, 4500); return;
         }
