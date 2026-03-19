@@ -434,8 +434,10 @@ window.radheyLocalAnswer = function(quehry) {
 
     // Close on outside click
     document.addEventListener('click', function (e) {
-        if (!panel.contains(e.target) && !document.getElementById('radhey-widget')?.contains(e.target))
+        if (!panel.contains(e.target) && !document.getElementById('radhey-widget')?.contains(e.target)) {
+            radheyStop();
             panel.classList.remove('open');
+        }
     });
 
     // State
@@ -472,10 +474,15 @@ window.radheyLocalAnswer = function(quehry) {
         return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     };
     window.radheyToggle = function () {
-        // Unlock audio on first user interaction (critical for mobile TTS)
         if (window._unlockAudio) window._unlockAudio();
-        panel.classList.toggle('open');
-        if (panel.classList.contains('open') && !document.getElementById('radhey-messages').children.length) radheyGreet();
+        const isOpen = panel.classList.contains('open');
+        if (isOpen) {
+            radheyStop();
+            panel.classList.remove('open');
+        } else {
+            panel.classList.add('open');
+            if (!document.getElementById('radhey-messages').children.length) radheyGreet();
+        }
     };
 
     window.radheyGreet = function () {
@@ -510,7 +517,6 @@ window.radheyLocalAnswer = function(quehry) {
         if ('speechSynthesis' in window) {
             // Unlock audio on mobile (requires prior user gesture)
             if (window._unlockAudio) window._unlockAudio();
-            window.speechSynthesis.cancel();
             // Clean and speak the full Radhey message naturally (strip emojis/decorators)
             const speakText = text
                 .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{1F300}-\u{1F9FF}\u{FE00}-\u{FEFF}]/gu, '')
@@ -1096,11 +1102,7 @@ window.radheyLocalAnswer = function(quehry) {
             return;
         }
         if (window._radheyListening) return;
-        // Wait for TTS to finish before listening (with timeout guard)
-        if (window.speechSynthesis && window.speechSynthesis.speaking) {
-            setTimeout(radheyAutoMic, 500);
-            return;
-        }
+        // Mic starts after onend — no speaking-check loop needed
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SR();
         rec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
@@ -1176,30 +1178,17 @@ window.radheyLocalAnswer = function(quehry) {
         }
     };
 
-    // Lock TTS voice at init — prevents Android re-selecting voice between utterances
+    // ── radheyStop: cancel TTS + mic + reset state ──
+    window.radheyStop = function() {
+        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch(e) {}
+        try { if (window._radheyRec) { window._radheyRec.stop(); window._radheyRec = null; } } catch(e) {}
+        if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
+        window._radheyRegMode = false;
+        window._radheyListening = false;
+        window._radheyRegStep = 0;
+        window._radheySetProgress(0, 0);
+    };
     window._radheyVoice = null;
-    (function _lockVoice() {
-        var vs = window.speechSynthesis.getVoices();
-        if (vs && vs.length > 0) {
-            window._radheyVoice = vs.find(v => v.lang === 'hi-IN') ||
-                vs.find(v => v.lang === 'en-IN') ||
-                vs.find(v => v.lang.endsWith('-IN')) ||
-                vs.find(v => v.name.toLowerCase().includes('india')) ||
-                vs.find(v => v.lang.startsWith('en-')) ||
-                vs[0] || null;
-        }
-        if (!window._radheyVoice) {
-            var _t = setTimeout(function() {
-                window.speechSynthesis.onvoiceschanged = null;
-                _lockVoice();
-            }, 1200);
-            window.speechSynthesis.onvoiceschanged = function() {
-                clearTimeout(_t);
-                window.speechSynthesis.onvoiceschanged = null;
-                _lockVoice();
-            };
-        }
-    })();
     injectWidget();
     console.log('✅ RADHEY v2.0 ready — Top-nav chakra, 14-step voice reg, offline KB');
 })();
