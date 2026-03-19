@@ -545,7 +545,7 @@ window.radheyLocalAnswer = function(quehry) {
                     if (_fired) return; _fired = true;
                     if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
                     if (window._radheyRegMode && !window._radheyListening) {
-                        setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 600);
+                        setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 100);
                     }
                 };
                 u.onerror = function(e) {
@@ -683,7 +683,7 @@ window.radheyLocalAnswer = function(quehry) {
         window._radheySetProgress(step, total);
 
         if (step === 0) {
-            if (a.includes('provider') || a.includes('प्रोवाइडर') || a.includes('kaam deta') || a.includes('kaam deti') || a.includes('काम देता') || a.includes('काम देती')) {
+            if (a.includes('provider') || a.includes('प्रोवाइडर') || a.includes('kaam deta') || a.includes('kaam deti') || a.includes('काम देता') || a.includes('काम देती') || a.includes('provid') || a.includes('kaam karta') || a.includes('kaam karti') || a.includes('karigar') || a.includes('kaarigaar') || a === '1' || a.startsWith('1')) {
                 d.type = 'provider'; window._radheySteps = [...(window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])]; window._radheyRegStep = 1;
                 window._radheySetProgress(1, (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"]).length);
                 radheyBot('✅ Provider!\n\nStep 2: Aapka poora naam?\nJaise: "Ramesh Kumar"');
@@ -1046,8 +1046,9 @@ window.radheyLocalAnswer = function(quehry) {
             };
             reader.readAsDataURL(file);
         };
+        // Click picker synchronously — Android requires user-gesture context
+        try { picker.click(); } catch(e) {}
         radheyBot('📸 ' + (useGallery ? 'Gallery khul rahi hai' : 'Camera khul raha hai') + '...\nPhoto chunein ya "skip" bolein.');
-        setTimeout(() => picker.click(), 300);
     };
 
     window.radheyConfirmReg = function () {
