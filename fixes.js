@@ -906,8 +906,7 @@ window.radheyLocalAnswer = function(quehry) {
             if (!a.includes('skip') && !a.includes('स्किप') && !a.includes('nahi') && !a.includes('नहीं') && !a.includes('नही') && !a.includes('छोड़') && answer.trim().length > 3) d.bio = answer.trim();
             window._radheyRegStep++;
             window._radheySetProgress(window._radheyRegStep, total);
-            radheyBot((d.bio ? '✅ Bio save hua!' : 'Bio skip kiya.') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Profile Photo 📸\n\nApni photo lein!\n"Photo lo" ya "camera" bolein\n"gallery" — gallery se chunein\n"skip" — baad mein add karein');
-            setTimeout(radheyAutoMic, 4500); return;
+            radheyBot((d.bio ? '✅ Bio save hua!' : 'Bio skip kiya.') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Profile Photo 📸\n\nApni photo lein!\n"Photo lo" ya "camera" bolein\n"gallery" — gallery se chunein\n"skip" — baad mein add karein'); return;
         }
 
         if (field === 'photo') {
