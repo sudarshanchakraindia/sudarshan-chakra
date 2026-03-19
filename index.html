@@ -3762,6 +3762,7 @@
         
         // ==================== BROWSE PAGE WITH GRID VIEW ====================
         function loadBrowseCategories() {
+            if (!categories || Object.keys(categories).length === 0) return;
             const grid = document.getElementById('browseCategoriesGrid');
             grid.innerHTML = categories.map(cat => `
                 <div class="category-card bg-white p-6 rounded-xl shadow-md text-center" onclick="selectCategory('${cat.id}', this)">
@@ -4581,6 +4582,7 @@
         
         // ==================== HOME PAGE ====================
         function loadHomeCategories() {
+            if (!categories || Object.keys(categories).length === 0) return;
             const grid = document.getElementById('categoriesGridHome');
             grid.innerHTML = categories.map(cat => `
                 <div class="bg-white p-6 rounded-xl shadow-md text-center hover:shadow-lg transition cursor-pointer" onclick="goToBrowse('${cat.id}')">
@@ -5333,7 +5335,7 @@ function toggleAdminCat(id, headerEl) {
             categories.forEach(cat => (cat.subcategories||[]).forEach(sub => totalSvcs += (sub.subsubcategories||[]).filter(s=>!s.paused).length));
             set('homeStatServices', totalSvcs || '0');
             // Categories
-            set('homeStatCategories', categories.length || '0');
+            set('homeStatCategories', Object.keys(categories).length || '0');
             // Reviews
             let totalRevs = 0;
             providers.forEach(p => { if(p.reviews) totalRevs += Object.keys(p.reviews).length; });
