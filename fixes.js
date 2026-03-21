@@ -531,7 +531,7 @@ window.radheyLocalAnswer = function(quehry) {
             if (!speakText) return;
             // Function to speak once voices are ready (important on mobile)
             const doSpeak = function() {
-                const u = new SpeechSynthesisUtterance(speakText);
+                const _spk = (window._radheyBotSpeakOverride || speakText); if (window._radheyBotSpeakOverride) window._radheyBotSpeakOverride = null; const u = new SpeechSynthesisUtterance(_spk);
                 const langCode = window._getLangCode ? window._getLangCode() : 'hi-IN';
                 u.lang = langCode;
                 // Option 2: lang-only — do NOT set u.voice, let Android pick by lang
@@ -741,7 +741,7 @@ window.radheyLocalAnswer = function(quehry) {
                     }
                   } catch(e) {}
                   if (!catList) catList = '1. Home Services\n2. Beauty & Wellness\n3. Cleaning Services\n4. Event Services\n5. Education\n6. Transport\n7. Business\n8. Pet Services';
-                  radheyBot('\u2705 Mobile: ' + nums.split('').join(' ') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Category chunein:\n\n' + catList + '\n\nNumber ya naam bolein.');
+                  window._radheyBotSpeakOverride = 'Category ka number bolein, 1 se ' + (window._radheyCats ? window._radheyCats.length : 20) + ' tak. Jo number chahiye bolein.'; radheyBot('\u2705 Mobile: ' + nums.split('').join(' ') + '\n\nStep ' + (window._radheyRegStep + 1) + ': Category chunein:\n\n' + catList + '\n\nNumber ya naam bolein.');
                 };
                 fetchAndShowCats();
                 // NOTE: autoMic is triggered by radheyBot's u.onend after TTS completes
@@ -772,7 +772,7 @@ window.radheyLocalAnswer = function(quehry) {
             // Use _radheyCats (loaded from Firebase) or fallback to categories global
             const catArr = window._radheyCats || (typeof categories !== 'undefined' ? categories : null);
             if (catArr) {
-                const hindiNums = {'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'chhe':6,'saat':7,'aath':8,'nau':9,'das':10,'gyarah':11,'barah':12,'terah':13,'chaudah':14,'pandrah':15,'solah':16,'satrah':17,'atharah':18,'unnis':19,'bees':20,'एक':1,'दो':2,'तीन':3,'चार':4,'पाँच':5,'छह':6,'सात':7,'आठ':8,'नौ':9,'दस':10,'ग्यारह':11,'बारह':12,'तेरह':13,'चौदह':14,'पंद्रह':15,'सोलह':16,'सत्रह':17,'अठारह':18,'उन्नीस':19,'बीस':20};
+                const hindiNums = {'pehla':1,'pahla':1,'pehli':1,'doosra':2,'dusra':2,'dusri':2,'tisra':3,'teesra':3,'chautha':4,'paanchwa':5,'paanchvan':5,'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'chhe':6,'saat':7,'aath':8,'nau':9,'das':10,'gyarah':11,'barah':12,'terah':13,'chaudah':14,'pandrah':15,'solah':16,'satrah':17,'atharah':18,'unnis':19,'bees':20,'एक':1,'दो':2,'तीन':3,'चार':4,'पाँच':5,'छह':6,'सात':7,'आठ':8,'नौ':9,'दस':10,'ग्यारह':11,'बारह':12,'तेरह':13,'चौदह':14,'पंद्रह':15,'सोलह':16,'सत्रह':17,'अठारह':18,'उन्नीस':19,'बीस':20};
                 let num = parseInt(a);
                 if (!(num > 0)) { for (const [w,n] of Object.entries(hindiNums)) { if (a.includes(w)) { num = n; break; } } }
                 if (num > 0 && num <= catArr.length) matched = catArr[num - 1];
@@ -783,7 +783,7 @@ window.radheyLocalAnswer = function(quehry) {
                 window._radheyRegStep++;
                 window._radheySetProgress(window._radheyRegStep, total);
                 const subs = (matched.subcategories || []).map((s, i) => (i + 1) + '. ' + (s.name?.en || s.name)).join('\n');
-                radheyBot('✅ Category: ' + d.categoryName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Sub-category:\n\n' + (subs || 'Koi sub-category nahi') + '\n\nNumber ya naam bolein.');
+                window._radheyBotSpeakOverride = 'Sub-category ka number bolein.'; radheyBot('✅ Category: ' + d.categoryName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Sub-category:\n\n' + (subs || 'Koi sub-category nahi') + '\n\nNumber ya naam bolein.');
             } else {
                 radheyBot('❓ Category clearly batayein ya number bolein.');
             }
@@ -804,7 +804,7 @@ window.radheyLocalAnswer = function(quehry) {
                 window._radheyRegStep++;
                 window._radheySetProgress(window._radheyRegStep, total);
                 const svcs = (matched.subsubcategories || []).map((s, i) => (i + 1) + '. ' + (s.name?.en || s.name)).join('\n');
-                radheyBot('✅ Sub-category: ' + d.subcategoryName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Service type:\n\n' + (svcs || 'Default service') + '\n\nNumber ya naam bolein.');
+                window._radheyBotSpeakOverride = 'Service ka number bolein.'; radheyBot('✅ Sub-category: ' + d.subcategoryName + '\n\nStep ' + (window._radheyRegStep + 1) + ': Service type:\n\n' + (svcs || 'Default service') + '\n\nNumber ya naam bolein.');
             } else { radheyBot('❓ Sub-category naam ya number bolein.'); }
              return;
         }
@@ -1143,6 +1143,7 @@ window.radheyLocalAnswer = function(quehry) {
             if (!txt || txt.trim().length < 2) { window._radheyListening = false; setTimeout(radheyAutoMic, 1500); return; }
             radheyUser(txt);
             window._radheyListening = false;
+            window._radheyMicFails = 0;
             const step = window._radheyRegStep;
             const total = (window._radheySteps || (window._PROVIDER_STEPS||["type","name","mobile","category","subcategory","service","language","hours","area","religion","location","rate","bio","photo","gps","id"])).length;
             if (step >= total) {
@@ -1154,8 +1155,16 @@ window.radheyLocalAnswer = function(quehry) {
         };
         rec.onnomatch = function() {
             window._radheyListening = false;
-            radheyBot('Samajh nahi aaya. Dobara bolein.');
-            setTimeout(radheyAutoMic, 1500);
+            window._radheyMicFails = (window._radheyMicFails || 0) + 1;
+            if (window._radheyMicFails >= 3) {
+                window._radheyMicFails = 0;
+                radheyBot('Aawaz samajh nahi aayi. Neeche type karein ya number type karein.');
+                var inp3 = document.getElementById('radhey-inp');
+                if (inp3) { inp3.focus(); inp3.placeholder = 'Number ya naam type karein...'; }
+            } else {
+                radheyBot('Samajh nahi aaya. Dobara bolein (' + window._radheyMicFails + '/3).');
+                setTimeout(radheyAutoMic, 1500);
+            }
         };
         rec.onend = function() { window._radheyListening = false; };
         rec.onerror = function(e) {
