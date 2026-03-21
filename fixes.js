@@ -544,47 +544,23 @@ window.radheyLocalAnswer = function(quehry) {
                 u.onend = function() {
                     if (_fired) return; _fired = true;
                     if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
-                    if (window._radheyRegMode && !window._radheyListening) {
+                    // Reset listening flag (may be stale) then start mic
+                    window._radheyListening = false;
+                    if (window._radheyIntRec) { try { window._radheyIntRec.stop(); } catch(e) {} window._radheyIntRec = null; }
+                    if (window._radheyRegMode) {
                         setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 100);
                     }
                 };
                 u.onerror = function(e) {
                     if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
                     if (e.error === 'interrupted') return;
-                    if (window._radheyRegMode && !window._radheyListening) {
+                    window._radheyListening = false;
+                    if (window._radheyIntRec) { try { window._radheyIntRec.stop(); } catch(e) {} window._radheyIntRec = null; }
+                    if (window._radheyRegMode) {
                         setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 1000);
                     }
                 };
                 window.speechSynthesis.speak(u);
-                // C2: Start interrupt-mic simultaneously with TTS (reg mode)
-                if (window._radheyRegMode && !window._radheyListening && !window._isIOS()) {
-                    var _SR2 = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    if (_SR2) {
-                        var _iRec = new _SR2();
-                        _iRec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
-                        _iRec.interimResults = true;
-                        _iRec.maxAlternatives = 3;
-                        _iRec.continuous = false;
-                        window._radheyIntRec = _iRec;
-                        _iRec.onresult = function(ev) {
-                            var best = ev.results[0][0].transcript;
-                            for (var _j=0; _j<ev.results[0].length; _j++) {
-                                var _t = ev.results[0][_j].transcript;
-                                if (/[0-9]|\bone\b|\btwo\b|do|teen|char|paanch|ek/.test(_t.toLowerCase())) { best = _t; break; }
-                            }
-                            if (!ev.results[0].isFinal && best.trim().length < 2) return;
-                            try { window.speechSynthesis.cancel(); } catch(e) {}
-                            try { _iRec.stop(); } catch(e) {}
-                            window._radheyIntRec = null;
-                            window._radheyListening = false;
-                            if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
-                            if (best.trim().length >= 2 && window._radheyRegMode) { radheyUser(best); radheyHandleRegStep(best); }
-                        };
-                        _iRec.onerror = function() { window._radheyIntRec = null; };
-                        _iRec.onend = function() { window._radheyIntRec = null; };
-                        try { _iRec.start(); window._radheyListening = true; } catch(e) { window._radheyListening = false; }
-                    }
-                }
                 // Keep-alive for long texts (Chrome mobile pauses after 15s)
                 // Use onpause instead of interval to avoid iOS issues
                 if (window._ttsKeepAlive) clearInterval(window._ttsKeepAlive);
