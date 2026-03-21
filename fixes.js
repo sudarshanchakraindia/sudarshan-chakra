@@ -1075,6 +1075,8 @@ window.radheyLocalAnswer = function(quehry) {
                 // C4: bring panel to foreground after photo
                 var _rp = document.getElementById('radhey-panel');
                 if (_rp) { _rp.classList.add('open'); _rp.style.zIndex = '99999'; setTimeout(function(){ _rp.style.zIndex=''; }, 3000); }
+                // Fallback: start mic after photo (u.onend unreliable after camera return on Android)
+                setTimeout(function() { if (window._radheyRegMode && !window._radheyListening && typeof radheyAutoMic === 'function') radheyAutoMic(); }, 2500);
                 };
                 img.src = e.target.result;
             };
