@@ -544,19 +544,14 @@ window.radheyLocalAnswer = function(quehry) {
                 u.onend = function() {
                     if (_fired) return; _fired = true;
                     if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
-                    // Reset listening flag (may be stale) then start mic
-                    window._radheyListening = false;
-                    if (window._radheyIntRec) { try { window._radheyIntRec.stop(); } catch(e) {} window._radheyIntRec = null; }
-                    if (window._radheyRegMode) {
-                        setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 100);
+                    if (window._radheyRegMode && !window._radheyListening) {
+                        setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 500);
                     }
                 };
                 u.onerror = function(e) {
                     if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
                     if (e.error === 'interrupted') return;
-                    window._radheyListening = false;
-                    if (window._radheyIntRec) { try { window._radheyIntRec.stop(); } catch(e) {} window._radheyIntRec = null; }
-                    if (window._radheyRegMode) {
+                    if (window._radheyRegMode && !window._radheyListening) {
                         setTimeout(function() { if (typeof radheyAutoMic === 'function') radheyAutoMic(); }, 1000);
                     }
                 };
@@ -671,17 +666,6 @@ window.radheyLocalAnswer = function(quehry) {
     window.radheyStartVoiceReg = function () {
         // Unlock audio on user gesture (Register button click)
         if (window._unlockAudio) window._unlockAudio();
-        // C1: STT priming — unlock mic within gesture
-        if (!window._isIOS() && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-            try {
-                var _primeSR = window.SpeechRecognition || window.webkitSpeechRecognition;
-                var _primeRec = new _primeSR();
-                _primeRec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
-                _primeRec.onresult = function() {}; _primeRec.onerror = function() {}; _primeRec.onend = function() {};
-                _primeRec.start();
-                setTimeout(function() { try { _primeRec.abort(); } catch(e) {} }, 300);
-            } catch(e) {}
-        }
         window._radheyRegMode = true; window._radheyRegStep = 0;
         window._radheyRegData = {}; window._radheySteps = null;
         panel.classList.add('open');
@@ -1147,16 +1131,12 @@ window.radheyLocalAnswer = function(quehry) {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SR();
         rec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
-        rec.interimResults = true;
-        rec.maxAlternatives = 3;
+        rec.interimResults = false;
+        rec.maxAlternatives = 1;
         rec.continuous = false;
         rec.onresult = function (e) {
-            // C3: pick best alt with number
-            let txt = e.results[0][0].transcript;
-            for (let _ai = 0; _ai < e.results[0].length; _ai++) {
-                const _alt = e.results[0][_ai].transcript;
-                if (/[0-9]|\bone\b|\btwo\b|\bthree\b|\bfour\b|\bfive\b|do|teen|char|paanch|chhe|saat|aath|nau|das|ek/.test(_alt.toLowerCase())) { txt = _alt; break; }
-            }
+            if (!e.results[0].isFinal) return;
+            const txt = e.results[0][0].transcript;
             // Guard: skip very short/noise transcripts silently
             if (!txt || txt.trim().length < 2) { window._radheyListening = false; setTimeout(radheyAutoMic, 1500); return; }
             radheyUser(txt);
