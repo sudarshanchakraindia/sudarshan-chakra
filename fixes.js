@@ -556,6 +556,35 @@ window.radheyLocalAnswer = function(quehry) {
                     }
                 };
                 window.speechSynthesis.speak(u);
+                // C2: Start interrupt-mic simultaneously with TTS (reg mode)
+                if (window._radheyRegMode && !window._radheyListening && !window._isIOS()) {
+                    var _SR2 = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (_SR2) {
+                        var _iRec = new _SR2();
+                        _iRec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
+                        _iRec.interimResults = true;
+                        _iRec.maxAlternatives = 3;
+                        _iRec.continuous = false;
+                        window._radheyIntRec = _iRec;
+                        _iRec.onresult = function(ev) {
+                            var best = ev.results[0][0].transcript;
+                            for (var _j=0; _j<ev.results[0].length; _j++) {
+                                var _t = ev.results[0][_j].transcript;
+                                if (/[0-9]|\bone\b|\btwo\b|do|teen|char|paanch|ek/.test(_t.toLowerCase())) { best = _t; break; }
+                            }
+                            if (!ev.results[0].isFinal && best.trim().length < 2) return;
+                            try { window.speechSynthesis.cancel(); } catch(e) {}
+                            try { _iRec.stop(); } catch(e) {}
+                            window._radheyIntRec = null;
+                            window._radheyListening = false;
+                            if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
+                            if (best.trim().length >= 2 && window._radheyRegMode) { radheyUser(best); radheyHandleRegStep(best); }
+                        };
+                        _iRec.onerror = function() { window._radheyIntRec = null; };
+                        _iRec.onend = function() { window._radheyIntRec = null; };
+                        try { _iRec.start(); window._radheyListening = true; } catch(e) { window._radheyListening = false; }
+                    }
+                }
                 // Keep-alive for long texts (Chrome mobile pauses after 15s)
                 // Use onpause instead of interval to avoid iOS issues
                 if (window._ttsKeepAlive) clearInterval(window._ttsKeepAlive);
@@ -666,6 +695,17 @@ window.radheyLocalAnswer = function(quehry) {
     window.radheyStartVoiceReg = function () {
         // Unlock audio on user gesture (Register button click)
         if (window._unlockAudio) window._unlockAudio();
+        // C1: STT priming — unlock mic within gesture
+        if (!window._isIOS() && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            try {
+                var _primeSR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                var _primeRec = new _primeSR();
+                _primeRec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
+                _primeRec.onresult = function() {}; _primeRec.onerror = function() {}; _primeRec.onend = function() {};
+                _primeRec.start();
+                setTimeout(function() { try { _primeRec.abort(); } catch(e) {} }, 300);
+            } catch(e) {}
+        }
         window._radheyRegMode = true; window._radheyRegStep = 0;
         window._radheyRegData = {}; window._radheySteps = null;
         panel.classList.add('open');
@@ -681,6 +721,18 @@ window.radheyLocalAnswer = function(quehry) {
         const field = window._radheySteps ? window._radheySteps[step] : null;
 
         window._radheySetProgress(step, total);
+
+        // C5: Draft save to localStorage
+        try { localStorage.setItem('_radheyDraft', JSON.stringify({step: step, data: window._radheyRegData})); } catch(e) {}
+
+        // C5: Back-correction
+        if (step > 0 && (a.includes('wapas') || a.includes('back') || a.includes('galat') || a.includes('correction') || a.includes('phir se') || a.includes('badle') || a.includes('change') || a === 'no' || a.includes('गलत') || a.includes('वापस') || a.includes('बदलो'))) {
+            window._radheyRegStep = Math.max(0, step - 1);
+            var _prevField = (window._radheySteps || [])[window._radheyRegStep];
+            var _prevPrompts = {'type':'Step 1: Provider / Seeker / Dono?','name':'Step 2: Aapka poora naam?','mobile':'Step 3: 10 digit mobile number?','category':'Category chunein.','subcategory':'Sub-category chunein.','service':'Service chunein.','language':'Bhasha chunein.','hours':'Kab kaam? 1.Mon-Fri 2.Weekends 3.Roz 4.24x7','area':'Service area? 1.10km 2.Poora shehar','religion':'Dharm chunein.','location':'Shehar/Address bolein.','rate':'Charges ya skip/negotiable.','bio':'Bio ya skip.','photo':'Photo - camera/gallery/skip.','gps':'GPS? Haan/Nahi.','id':'ID proof ya skip.'};
+            radheyBot('↩️ Ek kadam wapas!\n\n' + (_prevPrompts[_prevField] || 'Pichla jawab dobara bolein.'));
+            return;
+        }
 
         if (step === 0) {
             if (a.includes('provider') || a.includes('प्रोवाइडर') || a.includes('kaam deta') || a.includes('kaam deti') || a.includes('काम देता') || a.includes('काम देती') || a.includes('provid') || a.includes('kaam karta') || a.includes('kaam karti') || a.includes('karigar') || a.includes('kaarigaar') || a === '1' || a.startsWith('1')) {
@@ -1060,6 +1112,9 @@ window.radheyLocalAnswer = function(quehry) {
                     window._radheyRegStep++;
                     const total = (window._radheySteps || ['type','name','mobile','category','subcategory','service','language','hours','area','religion','location','rate','bio','photo','gps','id']).length;
                     window._radheySetProgress(window._radheyRegStep, total);
+                // C4: bring panel to foreground after photo
+                var _rp = document.getElementById('radhey-panel');
+                if (_rp) { _rp.classList.add('open'); _rp.style.zIndex = '99999'; setTimeout(function(){ _rp.style.zIndex=''; }, 3000); }
                 };
                 img.src = e.target.result;
             };
@@ -1116,11 +1171,16 @@ window.radheyLocalAnswer = function(quehry) {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SR();
         rec.lang = (window._getLangCode ? window._getLangCode() : 'hi-IN');
-        rec.interimResults = false;
-        rec.maxAlternatives = 1;
+        rec.interimResults = true;
+        rec.maxAlternatives = 3;
         rec.continuous = false;
         rec.onresult = function (e) {
-            const txt = e.results[0][0].transcript;
+            // C3: pick best alt with number
+            let txt = e.results[0][0].transcript;
+            for (let _ai = 0; _ai < e.results[0].length; _ai++) {
+                const _alt = e.results[0][_ai].transcript;
+                if (/[0-9]|\bone\b|\btwo\b|\bthree\b|\bfour\b|\bfive\b|do|teen|char|paanch|chhe|saat|aath|nau|das|ek/.test(_alt.toLowerCase())) { txt = _alt; break; }
+            }
             // Guard: skip very short/noise transcripts silently
             if (!txt || txt.trim().length < 2) { window._radheyListening = false; setTimeout(radheyAutoMic, 1500); return; }
             radheyUser(txt);
