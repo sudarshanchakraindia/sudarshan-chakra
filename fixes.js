@@ -742,7 +742,7 @@ window.radheyHandleRegStep = function (answer) {
 // radheyOpenCamera removed - no photo step in simplified 3-step flow
   window.radheyConfirmReg = function () {
     const d = window._radheyRegData;
-    var s = '\uD83D\uDCCB Registration Summary:\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n';
+    var s = '\uD83D\uDCCB Provisional Registration Summary:\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n';
     s += '\uD83D\uDC64 Naam: ' + (d.name || '-') + '\n';
     s += '\uD83D\uDCF1 Mobile: ' + (d.mobile || '-') + '\n';
     s += '\uD83D\uDDE3\uFE0F Bhasha: ' + ((d.language || []).join(', ') || '-') + '\n';
@@ -829,51 +829,83 @@ window.radheyAutoMic = function () {
         }
     };
 
-    window.radheySubmitReg = async function () {
+    window.radheySubmitReg = function () {
     var d = window._radheyRegData;
-    radheyBot('\u23F3 Registration save ho rahi hai...');
+    radheyBot('\u23F3 Provisional Registration save ho rahi hai...');
     window._radheyRegMode = false;
     window._radheySetProgress(1, 1);
-    var fb = window._firebase;
-    if (!fb) { radheyBot('\u274C Database connect nahi hua. Dobara try karein.'); return; }
-    try {
-      var now = new Date().toISOString();
-      var pendingRef = fb.ref(fb.db, 'pendingUsers/' + d.mobile);
-      await fb.set(pendingRef, {
-        name: d.name,
-        mobile: d.mobile,
-        language: d.language || ['Hindi'],
-        status: 'pending_otp',
-        registered: now,
-        uid: window.firebaseUser ? window.firebaseUser.uid : null
-      });
-      window._radheySetProgress(1, 1);
-      radheyBot('\uD83C\uDF89 ' + d.name + ' ji, pre-registration ho gayi!\n\n\u2705 Aapka naam portal par save ho gaya.\n\n\uD83D\uDD11 Ab LOGIN karein:\nApna mobile number se OTP verify karein.\nIsse confirm hoga ki aap hi register kar rahe hain.\n\nNeeche LOGIN button tap karein \uD83D\uDC47');
-      setTimeout(function() {
-        var msgs = document.getElementById('radhey-messages');
-        if (!msgs) return;
-        var oldBtn = document.getElementById('radhey-login-cta');
-        if (oldBtn) oldBtn.remove();
-        var loginBtn = document.createElement('button');
-        loginBtn.id = 'radhey-login-cta';
-        loginBtn.style.cssText = 'background:linear-gradient(135deg,#16a34a,#22c55e);color:white;border:none;border-radius:14px;padding:14px 20px;font-size:15px;font-weight:800;cursor:pointer;width:100%;margin-top:6px;';
-        loginBtn.textContent = '\uD83D\uDD11 LOGIN karein - OTP se Verify';
-        loginBtn.onclick = function() {
-          loginBtn.remove();
-          if (typeof openLoginModal === 'function') openLoginModal();
-          else if (typeof showPage === 'function') showPage('login');
-          else { var el = document.querySelector('[onclick*="login"]'); if (el) el.click(); }
-          radheyBot('\uD83D\uDD11 Login page khul rahi hai...\nApna ' + d.mobile + ' number dalein aur OTP verify karein.\nOTP ke baad aap apna profile complete kar sakte hain!');
-        };
-        msgs.appendChild(loginBtn);
-        msgs.scrollTop = msgs.scrollHeight;
-      }, 1500);
-      setTimeout(function() { window._radheySetProgress(0, 0); }, 4000);
-    } catch (e) {
-      console.error('RADHEY reg error:', e);
-      radheyBot('\u274C Registration mein error. Dobara try karein ya email karein: support@sudarshanchakraindia.com');
-      window._radheySetProgress(0, 0);
-    }
+    var regData = {
+      name: d.name,
+      mobile: d.mobile,
+      language: d.language || ['Hindi'],
+      status: 'provisional',
+      registered: new Date().toISOString()
+    };
+    try { localStorage.setItem('_radheyProvisional', JSON.stringify(regData)); } catch(e) {}
+    window._radheyPendingReg = regData;
+    radheyBot('\uD83C\uDF89 ' + d.name + ' ji, Provisional Registration ho gayi!\n\n\u2705 Aapka data save ho gaya.\n\n\uD83D\uDD11 Ab LOGIN karein:\nApna mobile number se OTP verify karein — yahi confirm karega ki aap khud register kar rahe hain.\n\n\uD83D\uDD14 Login ke baad NOTIFICATIONS mein jaayein:\nWahan baaki zaroori fields bharne honge:\n\u2022 Category aur Service\n\u2022 Profile Photo\n\u2022 Location\n\u2022 Service Area aur Charges\n\nNeeche LOGIN button tap karein \uD83D\uDC47');
+    setTimeout(function() {
+      var msgs = document.getElementById('radhey-messages');
+      if (!msgs) return;
+      var oldBtn = document.getElementById('radhey-login-cta');
+      if (oldBtn) oldBtn.remove();
+      var loginBtn = document.createElement('button');
+      loginBtn.id = 'radhey-login-cta';
+      loginBtn.style.cssText = 'background:linear-gradient(135deg,#16a34a,#22c55e);color:white;border:none;border-radius:14px;padding:14px 20px;font-size:16px;font-weight:800;cursor:pointer;width:100%;margin-top:6px;box-shadow:0 4px 15px rgba(22,163,74,0.4);';
+      loginBtn.textContent = '\uD83D\uDD11 LOGIN karein \u2014 OTP se Verify';
+      loginBtn.onclick = function() {
+        loginBtn.remove();
+        if (typeof openLoginModal === 'function') openLoginModal();
+        else if (typeof showPage === 'function') showPage('login');
+        else { var el = document.querySelector('button.bg-green-600, [onclick*="login"]'); if (el) el.click(); }
+        radheyBot('\uD83D\uDD11 Login page khul rahi hai...\n\n1. Apna mobile number ' + d.mobile + ' dalein\n2. OTP aayega \u2014 woh enter karein\n3. Login hone ke baad NOTIFICATIONS check karein \uD83D\uDD14\n\nWahan baaki profile complete karne ki reminder milegi!');
+      };
+      msgs.appendChild(loginBtn);
+      msgs.scrollTop = msgs.scrollHeight;
+      var _authCheck = setInterval(function() {
+        if (window.firebaseUser && window._radheyPendingReg) {
+          clearInterval(_authCheck);
+          var reg = window._radheyPendingReg;
+          var fb = window._firebase;
+          if (!fb) return;
+          var provData = {
+            id: 'p_' + Date.now(),
+            name: reg.name,
+            mobile: reg.mobile,
+            language: reg.language,
+            status: 'provisional',
+            available: false,
+            verified: false,
+            ownerUid: window.firebaseUser.uid,
+            registered: reg.registered,
+            service: 'TBD',
+            location: 'TBD',
+            lat: 26.9124,
+            lng: 75.7873,
+            experience: 0,
+            rate: 0
+          };
+          fb.push(fb.ref(fb.db, 'providers'), provData)
+            .then(function(ref) {
+              fb.update(ref, { id: ref.key });
+              window._radheyPendingReg = null;
+              try { localStorage.removeItem('_radheyProvisional'); } catch(e) {}
+              console.log('\u2705 RADHEY provisional provider saved:', ref.key);
+              var notifRef = fb.ref(fb.db, 'notifications/' + window.firebaseUser.uid + '/reg_pending');
+              fb.set(notifRef, {
+                type: 'complete_profile',
+                title: 'Profile Complete karein!',
+                message: 'Provisional registration ho gayi. Category, Photo, Location aur Service details add karein apna profile complete karne ke liye.',
+                createdAt: new Date().toISOString(),
+                read: false
+              }).catch(function() {});
+            })
+            .catch(function(e) { console.warn('Post-login save failed:', e.code); });
+        }
+      }, 2000);
+      setTimeout(function() { clearInterval(_authCheck); }, 600000);
+    }, 1500);
+    setTimeout(function() { window._radheySetProgress(0, 0); }, 4000);
   };
 window.radheyStop = function() {
         try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch(e) {}
