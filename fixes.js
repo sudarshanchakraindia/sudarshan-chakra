@@ -1412,3 +1412,244 @@ window.radheyStop = function() {
    console.log('[SC v4.0] Multi-service reg, verified visibility fix, admin sort controls loaded');
 
 })(); // end initNewFeatures
+
+
+// ════════════════════════════════════════════════════════════════
+// FIX v5.0 — PROVIDER BROWSE VISIBILITY (CRITICAL)
+// Root cause: applySortAndFilter uses EXACT service name match which fails
+// because providers store service names in their registration language (Hindi etc.)
+// while the filter compares against the English name from categories array.
+// Also: index-based backward compat requires ALL of cat+sub+svcIdx to match.
+// Fix: Multi-language service name matching + category/subcategory level matching
+// + immediate visibility for new providers (status=active, any category match)
+// ════════════════════════════════════════════════════════════════
+(function fixProviderBrowseVisibility() {
+      'use strict';
+
+   // Helper: get all language variants of a service name from categories data
+   function getAllSvcNames(catId, subIdx, svcIdx) {
+           if (typeof categories === 'undefined') return [];
+           const cat = categories.find(c => c.id === catId);
+           if (!cat || !cat.subcategories) return [];
+           const sub = cat.subcategories[parseInt(subIdx)];
+           if (!sub) return [];
+           const svcs = sub.subsubcategories || sub.services || [];
+           const svc = svcs[parseInt(svcIdx)];
+           if (!svc) return [];
+           if (typeof svc === 'string') return [svc.toLowerCase()];
+           if (svc.name && typeof svc.name === 'object') {
+                     return Object.values(svc.name).filter(Boolean).map(n => n.toLowerCase());
+           }
+           return [];
+   }
+
+   // Helper: get all language variants of a subcategory name
+   function getAllSubNames(catId, subIdx) {
+           if (typeof categories === 'undefined') return [];
+           const cat = categories.find(c => c.id === catId);
+           if (!cat || !cat.subcategories) return [];
+           const sub = cat.subcategories[parseInt(subIdx)];
+           if (!sub) return [];
+           if (typeof sub === 'string') return [sub.toLowerCase()];
+           if (sub.name && typeof sub.name === 'object') {
+                     return Object.values(sub.name).filter(Boolean).map(n => n.toLowerCase());
+           }
+           return [];
+   }
+
+   // Core function: does provider p match the browse filter?
+   function providerMatchesBrowse(p, catId, subIdx, svcIdx) {
+           // Provider must be active (not paused/restricted)
+        const statusOk = !p.status || p.status === 'active' || p.status === 'provisional';
+           if (!statusOk) return false;
+
+        // If no category filter, show all active providers
+        if (!catId) return true;
+
+        // === CATEGORY MATCH ===
+        // Primary: stored categoryId matches
+        const catMatch = p.categoryId === catId;
+
+        // Also check multi-service registrations (sc_multitasker field)
+        const multiMatch = Array.isArray(p.multiServices) &&
+                  p.multiServices.some(ms => ms.categoryId === catId);
+
+        if (!catMatch && !multiMatch) {
+                  // Last resort: check if provider has no category set (new/provisional) -> show them
+             if (!p.categoryId && statusOk) return true;
+                  return false;
+        }
+
+        // If only category selected (no subcategory), show all in category
+        if (subIdx === null || subIdx === undefined || subIdx === '') return true;
+
+        // === SUBCATEGORY MATCH ===
+        const subIdxStr = String(subIdx);
+
+        // Direct index match
+        const subDirectMatch = String(p.subcategoryIdx) === subIdxStr;
+
+        // Multi-service subcategory match
+        const subMultiMatch = Array.isArray(p.multiServices) &&
+                  p.multiServices.some(ms => ms.categoryId === catId && String(ms.subcategoryIdx) === subIdxStr);
+
+        // Array of sub indices match (new multitasker registration)
+        const subArrayMatch = Array.isArray(p.subcategoryIndices) &&
+                  p.subcategoryIndices.some(i => String(i) === subIdxStr);
+
+        if (!subDirectMatch && !subMultiMatch && !subArrayMatch) return false;
+
+        // If only subcategory selected (no service), show all in subcategory
+        if (svcIdx === null || svcIdx === undefined || svcIdx === '') return true;
+
+        // === SERVICE MATCH ===
+        const svcIdxStr = String(svcIdx);
+
+        // 1. Direct service index match
+        if (String(p.subsubcategoryIdx) === svcIdxStr) return true;
+           if (Array.isArray(p.subsubcategoryIndices) && p.subsubcategoryIndices.some(i => String(i) === svcIdxStr)) return true;
+
+        // 2. Multi-language service name match
+        const allTargetNames = getAllSvcNames(catId, subIdx, svcIdx);
+           if (allTargetNames.length > 0) {
+                     // Check provider's primary service name
+             if (p.service && allTargetNames.includes(p.service.toLowerCase())) return true;
+                     // Check provider's services array
+             if (Array.isArray(p.services) && p.services.some(s => allTargetNames.includes(s.toLowerCase()))) return true;
+                     // Check multi-service registrations
+             if (Array.isArray(p.multiServices)) {
+                         for (const ms of p.multiServices) {
+                                       if (ms.categoryId === catId && String(ms.subcategoryIdx) === subIdxStr) {
+                                                       if (Array.isArray(ms.services) && ms.services.some(s => allTargetNames.includes(s.toLowerCase()))) return true;
+                                       }
+                         }
+             }
+           }
+
+        // 3. Fallback: if provider is in matching cat+sub, show them even without svc match
+        //    This ensures newly registered providers are visible immediately
+        //    (they may not have a specific service index stored yet)
+        if (subDirectMatch || subMultiMatch || subArrayMatch) return true;
+
+        return false;
+   }
+
+   // Patch applySortAndFilter to use our new matching logic
+   const patchWait = setInterval(() => {
+           if (typeof applySortAndFilter === 'undefined') return;
+           clearInterval(patchWait);
+
+                                     const origASF = window.applySortAndFilter;
+           window.applySortAndFilter = function() {
+                     // Normalize providers before filtering
+                     if (typeof providers !== 'undefined' && Array.isArray(providers)) {
+                                 providers.forEach(p => {
+                                               if (!p.status) p.status = 'active';
+                                               if (p.available === undefined) p.available = true;
+                                               if (p.isActive === undefined) p.isActive = true;
+                                               if (!p.services || !Array.isArray(p.services)) {
+                                                               p.services = p.service ? [p.service] : [];
+                                               }
+                                 });
+                     }
+
+                     // Get current browse state
+                     const catId = (typeof selectedCategoryId !== 'undefined') ? selectedCategoryId : null;
+                     const subIdx = (typeof selectedSubcategoryIdx !== 'undefined') ? selectedSubcategoryIdx : null;
+                     const svcIdx = (typeof selectedServiceIdx !== 'undefined') ? selectedServiceIdx : null;
+
+                     // Only apply our override when browsing with filters
+                     if (!catId) {
+                                 origASF.apply(this, arguments);
+                                 return;
+                     }
+
+                     // Get all active providers matching browse criteria
+                     const activeProviders = (typeof providers !== 'undefined' && Array.isArray(providers))
+                       ? providers.filter(p => providerMatchesBrowse(p, catId, subIdx, svcIdx))
+                                 : [];
+
+                     console.log('[SC v5.0] Browse filter: cat=' + catId + ' sub=' + subIdx + ' svc=' + svcIdx + ' -> ' + activeProviders.length + ' providers');
+
+                     // Apply secondary filters (language, religion, price, distance)
+                     let finalProviders = activeProviders;
+
+                     // Language filter
+                     const filterLang = document.getElementById('filterLanguage') ? document.getElementById('filterLanguage').value : '';
+                     if (filterLang) {
+                                 finalProviders = finalProviders.filter(p => {
+                                               if (!p.language) return true;
+                                               const langs = Array.isArray(p.language) ? p.language : [p.language];
+                                               return langs.some(l => l.toLowerCase().includes(filterLang.toLowerCase()));
+                                 });
+                     }
+
+                     // Religion filter
+                     const filterReligion = document.getElementById('filterReligion') ? document.getElementById('filterReligion').value : '';
+                     if (filterReligion) {
+                                 finalProviders = finalProviders.filter(p => !p.religion || p.religion === filterReligion);
+                     }
+
+                     // Price filter
+                     const priceMin = document.getElementById('filterPriceMin') ? parseFloat(document.getElementById('filterPriceMin').value) : 0;
+                     const priceMax = document.getElementById('filterPriceMax') ? parseFloat(document.getElementById('filterPriceMax').value) : Infinity;
+                     if (priceMin > 0 || priceMax < Infinity) {
+                                 finalProviders = finalProviders.filter(p => {
+                                               const rate = parseFloat(p.rate) || 0;
+                                               return rate >= priceMin && rate <= priceMax;
+                                 });
+                     }
+
+                     // Sort
+                     const sortEl = document.getElementById('sortSelect');
+                     const sortVal = sortEl ? sortEl.value : 'rating';
+                     if (sortVal === 'rating') {
+                                 finalProviders.sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+                     } else if (sortVal === 'price-low') {
+                                 finalProviders.sort((a, b) => (parseFloat(a.rate) || 0) - (parseFloat(b.rate) || 0));
+                     } else if (sortVal === 'price-high') {
+                                 finalProviders.sort((a, b) => (parseFloat(b.rate) || 0) - (parseFloat(a.rate) || 0));
+                     } else if (sortVal === 'experience') {
+                                 finalProviders.sort((a, b) => (parseInt(b.experience) || 0) - (parseInt(a.experience) || 0));
+                     } else if (sortVal === 'newest') {
+                                 finalProviders.sort((a, b) => new Date(b.registered || 0) - new Date(a.registered || 0));
+                     }
+                     // Verified providers first (as bonus)
+                     finalProviders.sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0));
+
+                     // Render providers
+                     if (typeof renderProviders === 'function') {
+                                 renderProviders(finalProviders);
+                     }
+
+                     // Update results count
+                     const countEl = document.getElementById('resultsCount') || document.getElementById('browseResultsCount');
+                     if (countEl) countEl.textContent = finalProviders.length + ' provider' + (finalProviders.length !== 1 ? 's' : '') + ' found';
+           };
+
+                                     console.log('[SC v5.0] applySortAndFilter patched with multi-language + immediate visibility fix');
+   }, 300);
+
+   // Also patch renderProviders to ensure active providers aren't incorrectly filtered
+   const rvWait2 = setInterval(() => {
+           if (typeof renderProviders === 'undefined') return;
+           clearInterval(rvWait2);
+           const origRender2 = window.renderProviders;
+           window.renderProviders = function(list) {
+                     // Show active providers regardless of verification status
+                     // Verified providers get a badge but unverified are still shown
+                     const toShow = (list || []).filter(p => {
+                                 const s = p.status || 'active';
+                                 return s === 'active' || s === 'provisional';
+                     });
+                     // Show count even if 0 (so user knows result)
+                     const countEl = document.getElementById('resultsCount') || document.getElementById('browseResultsCount');
+                     if (countEl) countEl.textContent = toShow.length + ' provider' + (toShow.length !== 1 ? 's' : '') + ' found';
+
+                     origRender2.call(this, toShow);
+           };
+           console.log('[SC v5.0] renderProviders patched - unverified providers now visible');
+   }, 300);
+
+   console.log('[SC v5.0] Provider browse visibility fix initializing...');
+})(); // end fixProviderBrowseVisibility
