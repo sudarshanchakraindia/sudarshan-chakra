@@ -1653,3 +1653,219 @@ window.radheyStop = function() {
 
    console.log('[SC v5.0] Provider browse visibility fix initializing...');
 })(); // end fixProviderBrowseVisibility
+
+
+// ════════════════════════════════════════════════════════════════
+// FIX v5.1 — CASCADING FALLBACK + OVERRIDE applySortAndFilter DIRECTLY
+// The v5.0 fix runs but existing DB has no providers under some sub-categories.
+// This adds: if no exact matches found, fall back to broader category match.
+// Also: force-override applySortAndFilter even if v4.0 already patched it.
+// ════════════════════════════════════════════════════════════════
+(function fixBrowseCascade() {
+      'use strict';
+
+   function doInstallCascadeFix() {
+           // Get all language variants of a service/subcategory name from categories data
+        function getAllNames(catId, subIdx, svcIdx) {
+                  if (typeof categories === 'undefined') return [];
+                  const cat = categories.find(c => c.id === catId);
+                  if (!cat || !cat.subcategories) return [];
+                  const sub = cat.subcategories[parseInt(subIdx)];
+                  if (!sub) return [];
+                  const allNames = [];
+                  // Add subcategory names
+             if (sub.name && typeof sub.name === 'object') {
+                         Object.values(sub.name).forEach(n => n && allNames.push(n.toLowerCase()));
+             }
+                  if (typeof sub.name === 'string') allNames.push(sub.name.toLowerCase());
+                  if (svcIdx === null || svcIdx === undefined) return allNames;
+                  // Add service names
+             const svcs = sub.subsubcategories || sub.services || [];
+                  const svc = svcs[parseInt(svcIdx)];
+                  if (!svc) return allNames;
+                  if (typeof svc === 'string') { allNames.push(svc.toLowerCase()); return allNames; }
+                  if (svc.name && typeof svc.name === 'object') {
+                              Object.values(svc.name).forEach(n => n && allNames.push(n.toLowerCase()));
+                  }
+                  return allNames;
+        }
+
+        // Check if provider matches at a given specificity level
+        function matchLevel(p, catId, subIdx, svcIdx) {
+                  const statusOk = p.status === 'active' || p.status === 'provisional' || !p.status;
+                  if (!statusOk) return 0;
+
+             // Level 0: no category
+             if (!catId) return 4;
+
+             const catMatch = p.categoryId === catId ||
+                         (Array.isArray(p.multiServices) && p.multiServices.some(ms => ms.categoryId === catId));
+
+             // Allow providers with no category set (provisional/new) to show at category level
+             const noCategory = !p.categoryId;
+
+             if (!catMatch && !noCategory) return 0;
+                  if (noCategory) return 1; // level 1: just active, no category
+
+             // Level 2: category match only
+             if (subIdx === null || subIdx === undefined) return 4;
+
+             const subIdxStr = String(subIdx);
+                  const subMatch = String(p.subcategoryIdx) === subIdxStr ||
+                              (Array.isArray(p.subcategoryIndices) && p.subcategoryIndices.some(i => String(i) === subIdxStr)) ||
+                              (Array.isArray(p.multiServices) && p.multiServices.some(ms => ms.categoryId === catId && String(ms.subcategoryIdx) === subIdxStr));
+
+             if (!subMatch) return 2; // level 2: category match, no sub match
+
+             // Level 3: category + subcategory match
+             if (svcIdx === null || svcIdx === undefined) return 5;
+
+             // Level 4: try service index match
+             const svcIdxStr = String(svcIdx);
+                  if (String(p.subsubcategoryIdx) === svcIdxStr) return 6;
+                  if (Array.isArray(p.subsubcategoryIndices) && p.subsubcategoryIndices.some(i => String(i) === svcIdxStr)) return 6;
+
+             // Level 5: try multilingual service name match
+             const targetNames = getAllNames(catId, subIdx, svcIdx);
+                  if (targetNames.length > 0) {
+                              const svcStr = (p.service || '').toLowerCase();
+                              if (svcStr && targetNames.some(n => n === svcStr || n.includes(svcStr) || svcStr.includes(n))) return 6;
+                              if (Array.isArray(p.services) && p.services.some(s => targetNames.some(n => n === s.toLowerCase() || n.includes(s.toLowerCase())))) return 6;
+                              if (Array.isArray(p.multiServices)) {
+                                            for (const ms of p.multiServices) {
+                                                            if (ms.categoryId === catId && String(ms.subcategoryIdx) === subIdxStr && Array.isArray(ms.services)) {
+                                                                              if (ms.services.some(s => targetNames.some(n => n === s.toLowerCase()))) return 6;
+                                                            }
+                                            }
+                              }
+                  }
+
+             // Sub match but no service match - still show (level 3)
+             return 3;
+        }
+
+        // THE MAIN OVERRIDE - replace applySortAndFilter completely
+        const origASF_cascade = window.applySortAndFilter;
+           window.applySortAndFilter = function() {
+                     // Normalize all providers
+                     if (typeof providers !== 'undefined' && Array.isArray(providers)) {
+                                 providers.forEach(p => {
+                                               if (!p.status) p.status = 'active';
+                                               if (p.available === undefined) p.available = true;
+                                               if (p.isActive === undefined) p.isActive = true;
+                                               if (!p.services || !Array.isArray(p.services)) p.services = p.service ? [p.service] : [];
+                                 });
+                     }
+
+                     const catId = (typeof selectedCategoryId !== 'undefined') ? selectedCategoryId : null;
+                     const subIdx = (typeof selectedSubcategoryIdx !== 'undefined') ? selectedSubcategoryIdx : null;
+                     const svcIdx = (typeof selectedServiceIdx !== 'undefined') ? selectedServiceIdx : null;
+
+                     if (!catId) { origASF_cascade.apply(this, arguments); return; }
+
+                     const allProviders = (typeof providers !== 'undefined' && Array.isArray(providers)) ? providers : [];
+
+                     // Score each provider
+                     const scored = allProviders
+                       .map(p => ({ p, score: matchLevel(p, catId, subIdx, svcIdx) }))
+                       .filter(x => x.score > 0);
+
+                     // Find best match level
+                     const bestLevel = scored.reduce((max, x) => Math.max(max, x.score), 0);
+
+                     let finalProviders;
+                     if (bestLevel >= 3) {
+                                 // Use exact or near-exact matches
+                       finalProviders = scored.filter(x => x.score >= 3).map(x => x.p);
+                     } else if (bestLevel === 2) {
+                                 // Fallback: show all providers in this category (different subcategory)
+                       finalProviders = scored.filter(x => x.score >= 2).map(x => x.p);
+                                 // Show a message if falling back
+                       console.log('[SC v5.1] No exact sub match, showing all cat providers:', finalProviders.length);
+                     } else {
+                                 // Final fallback: show any active provider in the category
+                       finalProviders = scored.filter(x => x.score >= 1).map(x => x.p);
+                                 console.log('[SC v5.1] No cat match, fallback to active providers:', finalProviders.length);
+                     }
+
+                     // Deduplicate by provider ID (multitasker has multiple entries)
+                     const seen = new Set();
+                     finalProviders = finalProviders.filter(p => {
+                                 const key = p.ownerUid || p.mobile || p.id;
+                                 if (seen.has(key)) return false;
+                                 seen.add(key);
+                                 return true;
+                     });
+
+                     console.log('[SC v5.1] Browse: cat=' + catId + ' sub=' + subIdx + ' svc=' + svcIdx + ' bestLevel=' + bestLevel + ' -> ' + finalProviders.length + ' providers');
+
+                     // Apply secondary filters
+                     const filterLang = document.getElementById('filterLanguage') ? document.getElementById('filterLanguage').value : '';
+                     if (filterLang) finalProviders = finalProviders.filter(p => { const l = Array.isArray(p.language) ? p.language : [p.language || '']; return l.some(x => x.toLowerCase().includes(filterLang.toLowerCase())); });
+
+                     const filterReligion = document.getElementById('filterReligion') ? document.getElementById('filterReligion').value : '';
+                     if (filterReligion) finalProviders = finalProviders.filter(p => !p.religion || p.religion === filterReligion);
+
+                     const priceMin = parseFloat((document.getElementById('filterPriceMin') || {}).value) || 0;
+                     const priceMax = parseFloat((document.getElementById('filterPriceMax') || {}).value) || Infinity;
+                     if (priceMin > 0 || priceMax < Infinity) finalProviders = finalProviders.filter(p => { const r = parseFloat(p.rate) || 0; return r >= priceMin && r <= priceMax; });
+
+                     // Sort
+                     const sortVal = (document.getElementById('sortSelect') || {}).value || 'rating';
+                     if (sortVal === 'rating') finalProviders.sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+                     else if (sortVal === 'price-low') finalProviders.sort((a, b) => (parseFloat(a.rate) || 0) - (parseFloat(b.rate) || 0));
+                     else if (sortVal === 'price-high') finalProviders.sort((a, b) => (parseFloat(b.rate) || 0) - (parseFloat(a.rate) || 0));
+                     else if (sortVal === 'experience') finalProviders.sort((a, b) => (parseInt(b.experience) || 0) - (parseInt(a.experience) || 0));
+                     else if (sortVal === 'newest') finalProviders.sort((a, b) => new Date(b.registered || 0) - new Date(a.registered || 0));
+
+                     // Verified first
+                     finalProviders.sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0));
+
+                     // Render
+                     const countEl = document.getElementById('resultsCount') || document.getElementById('browseResultsCount');
+                     if (countEl) countEl.textContent = finalProviders.length + ' provider' + (finalProviders.length !== 1 ? 's' : '') + ' found';
+
+                     if (typeof renderProviders === 'function') renderProviders(finalProviders);
+           };
+
+        console.log('[SC v5.1] Cascade browse fix installed successfully');
+   }
+
+   // Install immediately if applySortAndFilter is ready, otherwise wait
+   if (typeof applySortAndFilter !== 'undefined') {
+           doInstallCascadeFix();
+   } else {
+           const waitForASF = setInterval(() => {
+                     if (typeof applySortAndFilter !== 'undefined') {
+                                 clearInterval(waitForASF);
+                                 doInstallCascadeFix();
+                     }
+           }, 200);
+   }
+
+   // Also patch renderProviders to always show active/provisional providers
+   function patchRenderProviders() {
+           const origRP = window.renderProviders;
+           window.renderProviders = function(list) {
+                     const toShow = (list || []).filter(p => {
+                                 const s = p.status || 'active';
+                                 return s === 'active' || s === 'provisional';
+                     });
+                     origRP.call(this, toShow);
+           };
+           console.log('[SC v5.1] renderProviders cascade patch applied');
+   }
+
+   if (typeof renderProviders !== 'undefined') {
+           patchRenderProviders();
+   } else {
+           const waitForRP = setInterval(() => {
+                     if (typeof renderProviders !== 'undefined') {
+                                 clearInterval(waitForRP);
+                                 patchRenderProviders();
+                     }
+           }, 200);
+   }
+
+   console.log('[SC v5.1] Cascade fallback fix loaded');
+})(); // end fixBrowseCascade
