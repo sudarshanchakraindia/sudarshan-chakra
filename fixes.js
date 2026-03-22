@@ -921,3 +921,494 @@ window.radheyStop = function() {
     console.log('✅ RADHEY v2.0 ready — Top-nav chakra, 14-step voice reg, offline KB');
 })();
 
+// ════════════════════════════════════════════════════════════════
+// NEW FEATURES v4.0
+// 1. Multi-Service Registration for Multitasker Providers
+// 2. Fix: Admin-verified providers visible on portal
+// 3. Admin: Category sort + Provider verified/unverified sort
+// ════════════════════════════════════════════════════════════════
+
+
+
+
+(function initNewFeatures() {
+      'use strict';
+
+   // ── FEATURE 1: Multi-Service Registration (Multitasker Provider) ──
+   // Replace single category/subcategory dropdowns with a multi-select builder
+   function initMultiServiceReg() {
+           const catSel = document.getElementById('providerCategory');
+           const subSel = document.getElementById('providerSubcategory');
+           const svcSection = document.getElementById('serviceTypeSection');
+           if (!catSel || !subSel) return;
+
+        // Build the multitasker UI by inserting a new section after the serviceTypeSection
+        const existing = document.getElementById('sc-multitasker-section');
+           if (existing) return;
+
+        // Hide the old single-select category/subcategory fields
+        const catParent = catSel.closest('div');
+           const subParent = subSel.closest('div');
+
+        // Build multitasker section
+        const section = document.createElement('div');
+           section.id = 'sc-multitasker-section';
+           section.className = 'md:col-span-2';
+           section.innerHTML = `
+                 <div class="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-2">
+                         <div class="flex items-center justify-between mb-3">
+                                   <h3 class="text-base font-bold text-orange-800">🎯 Services You Offer <span class="text-xs font-normal text-orange-600">(Add all categories you work in)</span></h3>
+                                             <span id="sc-mt-count" class="text-xs bg-orange-600 text-white px-2 py-0.5 rounded-full font-bold">0 selected</span>
+                                                     </div>
+                                                             <div id="sc-mt-builder" class="space-y-2 mb-3">
+                                                                       <!-- Dynamic rows added here -->
+                                                                               </div>
+                                                                                       <button type="button" id="sc-mt-add-btn" onclick="scAddServiceRow()"
+                                                                                                 class="w-full py-2 border-2 border-dashed border-orange-400 text-orange-600 rounded-lg text-sm font-semibold hover:bg-orange-50 transition">
+                                                                                                           ➕ Add Another Category / Service
+                                                                                                                   </button>
+                                                                                                                           <input type="hidden" id="sc_multitasker_data" name="sc_multitasker_data" value="[]">
+                                                                                                                                 </div>`;
+
+        // Insert before religion field (after service section)
+        if (svcSection && svcSection.parentNode) {
+                  svcSection.parentNode.insertBefore(section, svcSection.nextSibling);
+        } else if (subParent && subParent.parentNode) {
+                  subParent.parentNode.insertBefore(section, subParent.nextSibling);
+        }
+
+        // Hide old single-select fields (keep them for backward compat but hidden)
+        if (catParent) catParent.style.display = 'none';
+           if (subParent) subParent.style.display = 'none';
+           if (svcSection) svcSection.style.display = 'none';
+
+        // Add first row automatically
+        scAddServiceRow();
+
+        // Hook into form submit to pack multitasker data
+        const form = document.getElementById('providerForm');
+           if (form && !form.dataset.mtHooked) {
+                     form.dataset.mtHooked = '1';
+                     form.addEventListener('submit', function(e) {
+                                 const rows = document.querySelectorAll('.sc-mt-row');
+                                 const entries = [];
+                                 rows.forEach(row => {
+                                               const cat = row.querySelector('.sc-mt-cat');
+                                               const sub = row.querySelector('.sc-mt-sub');
+                                               const svcs = Array.from(row.querySelectorAll('.sc-mt-svc-chip.selected')).map(c => c.dataset.svc);
+                                               if (cat && cat.value) {
+                                                               entries.push({
+                                                                                 categoryId: cat.value,
+                                                                                 categoryName: cat.options[cat.selectedIndex]?.text || cat.value,
+                                                                                 subcategoryIdx: sub ? sub.value : '',
+                                                                                 subcategoryName: sub && sub.value !== '' ? (sub.options[sub.selectedIndex]?.text || '') : '',
+                                                                                 services: svcs
+                                                               });
+                                               }
+                                 });
+                                 document.getElementById('sc_multitasker_data').value = JSON.stringify(entries);
+                                 // Populate legacy fields with first entry for backward compat
+                                                   if (entries.length > 0) {
+                                                                 const first = entries[0];
+                                                                 const legacyCat = document.getElementById('providerCategory');
+                                                                 const legacySub = document.getElementById('providerSubcategory');
+                                                                 if (legacyCat) legacyCat.value = first.categoryId;
+                                                                 if (legacySub) legacySub.value = first.subcategoryIdx;
+                                                   }
+                     });
+           }
+   }
+
+   window.scAddServiceRow = function() {
+           const builder = document.getElementById('sc-mt-builder');
+           if (!builder) return;
+           const idx = builder.querySelectorAll('.sc-mt-row').length;
+           const row = document.createElement('div');
+           row.className = 'sc-mt-row bg-white border border-orange-200 rounded-xl p-3 relative';
+           row.dataset.idx = idx;
+
+           // Build category options from global categories
+           const cats = (typeof categories !== 'undefined' ? categories : []);
+           let catOpts = '<option value="">— Select Category —</option>';
+           cats.forEach(c => {
+                     const name = c.name && (c.name.en || c.name) || c.id;
+                     catOpts += `<option value="${c.id}">${name}</option>`;
+           });
+
+           row.innerHTML = `
+                 <button type="button" class="absolute top-2 right-2 text-red-400 hover:text-red-600 text-xs font-bold"
+                         onclick="scRemoveServiceRow(this)">✕ Remove</button>
+                               <div class="grid sm:grid-cols-2 gap-2 mb-2">
+                                       <div>
+                                                 <label class="block text-xs font-semibold text-gray-600 mb-1">📂 Category</label>
+                                                           <select class="sc-mt-cat w-full text-sm border rounded-lg px-2 py-1.5" onchange="scUpdateSubcatRow(this)">
+                                                                       ${catOpts}
+                                                                                 </select>
+                                                                                         </div>
+                                                                                                 <div>
+                                                                                                           <label class="block text-xs font-semibold text-gray-600 mb-1">📁 Subcategory</label>
+                                                                                                                     <select class="sc-mt-sub w-full text-sm border rounded-lg px-2 py-1.5" onchange="scUpdateSvcsRow(this)">
+                                                                                                                                 <option value="">— Select Subcategory —</option>
+                                                                                                                                           </select>
+                                                                                                                                                   </div>
+                                                                                                                                                         </div>
+                                                                                                                                                               <div class="sc-mt-svcs-area" style="display:none">
+                                                                                                                                                                       <label class="block text-xs font-semibold text-gray-600 mb-1">🔧 Service Types <span class="font-normal text-gray-400">(tap to select)</span></label>
+                                                                                                                                                                               <div class="sc-mt-svc-chips flex flex-wrap gap-1.5 mt-1"></div>
+                                                                                                                                                                                     </div>`;
+
+           builder.appendChild(row);
+           scUpdateMultitaskerCount();
+   };
+
+   window.scRemoveServiceRow = function(btn) {
+           const row = btn.closest('.sc-mt-row');
+           const builder = document.getElementById('sc-mt-builder');
+           if (builder && builder.querySelectorAll('.sc-mt-row').length > 1) {
+                     row.remove();
+                     scUpdateMultitaskerCount();
+           } else {
+                     // Reset instead of remove if last
+             const cat = row.querySelector('.sc-mt-cat');
+                     const sub = row.querySelector('.sc-mt-sub');
+                     if (cat) cat.value = '';
+                     if (sub) { sub.innerHTML = '<option value="">— Select Subcategory —</option>'; }
+                     const svcsArea = row.querySelector('.sc-mt-svcs-area');
+                     if (svcsArea) { svcsArea.style.display = 'none'; svcsArea.querySelector('.sc-mt-svc-chips').innerHTML = ''; }
+                     scUpdateMultitaskerCount();
+           }
+   };
+
+   window.scUpdateSubcatRow = function(catEl) {
+           const row = catEl.closest('.sc-mt-row');
+           const subSel = row.querySelector('.sc-mt-sub');
+           const svcsArea = row.querySelector('.sc-mt-svcs-area');
+           const catId = catEl.value;
+
+           subSel.innerHTML = '<option value="">— Select Subcategory —</option>';
+           if (svcsArea) { svcsArea.style.display = 'none'; svcsArea.querySelector('.sc-mt-svc-chips').innerHTML = ''; }
+
+           if (!catId || typeof categories === 'undefined') return;
+           const cat = categories.find(c => c.id === catId);
+           if (!cat || !cat.subcategories) return;
+
+           cat.subcategories.forEach((sub, idx) => {
+                     const name = sub.name && (sub.name.en || sub.name) || ('Sub ' + idx);
+                     const opt = document.createElement('option');
+                     opt.value = idx;
+                     opt.textContent = name;
+                     subSel.appendChild(opt);
+           });
+           scUpdateMultitaskerCount();
+   };
+
+   window.scUpdateSvcsRow = function(subEl) {
+           const row = subEl.closest('.sc-mt-row');
+           const catEl = row.querySelector('.sc-mt-cat');
+           const svcsArea = row.querySelector('.sc-mt-svcs-area');
+           const chipsContainer = svcsArea ? svcsArea.querySelector('.sc-mt-svc-chips') : null;
+           if (!svcsArea || !chipsContainer) return;
+
+           const catId = catEl ? catEl.value : '';
+           const subIdx = parseInt(subEl.value);
+
+           svcsArea.style.display = 'none';
+           chipsContainer.innerHTML = '';
+
+           if (!catId || isNaN(subIdx) || typeof categories === 'undefined') return;
+           const cat = categories.find(c => c.id === catId);
+           if (!cat || !cat.subcategories || !cat.subcategories[subIdx]) return;
+           const sub = cat.subcategories[subIdx];
+           const svcs = sub.subsubcategories || sub.services || [];
+           if (!svcs.length) return;
+
+           svcs.forEach((svc, vi) => {
+                     const svcName = (typeof svc === 'string') ? svc : (svc.name && (svc.name.en || svc.name) || ('Service ' + vi));
+                     const chip = document.createElement('span');
+                     chip.className = 'sc-mt-svc-chip cursor-pointer text-xs px-2.5 py-1 rounded-full border border-orange-300 bg-white text-gray-700 hover:border-orange-500 transition select-none';
+                     chip.textContent = svcName;
+                     chip.dataset.svc = svcName;
+                     chip.dataset.vi = vi;
+                     chip.onclick = function() {
+                                 this.classList.toggle('selected');
+                                 if (this.classList.contains('selected')) {
+                                               this.className = this.className.replace('bg-white text-gray-700 border-orange-300', 'bg-orange-600 text-white border-orange-600');
+                                 } else {
+                                               this.className = this.className.replace('bg-orange-600 text-white border-orange-600', 'bg-white text-gray-700 border-orange-300');
+                                 }
+                                 scUpdateMultitaskerCount();
+                     };
+                     chipsContainer.appendChild(chip);
+           });
+           svcsArea.style.display = 'block';
+           scUpdateMultitaskerCount();
+   };
+
+   window.scUpdateMultitaskerCount = function() {
+           const countEl = document.getElementById('sc-mt-count');
+           if (!countEl) return;
+           const rows = document.querySelectorAll('.sc-mt-row');
+           let total = 0;
+           rows.forEach(row => {
+                     const cat = row.querySelector('.sc-mt-cat');
+                     if (cat && cat.value) total++;
+           });
+           countEl.textContent = total + ' selected';
+   };
+
+   // Run after page loads
+   const mtWait = setInterval(() => {
+           if (document.getElementById('providerCategory')) {
+                     clearInterval(mtWait);
+                     // Hook into showPage to init when register page shown
+             const origShowPage = window.showPage;
+                     if (origShowPage && !window._mtShowHooked) {
+                                 window._mtShowHooked = true;
+                                 window.showPage = function(pageName) {
+                                               origShowPage.apply(this, arguments);
+                                               if (pageName === 'register') {
+                                                               setTimeout(initMultiServiceReg, 300);
+                                               }
+                                 };
+                     }
+                     // Also init now if already on register page
+             const regPage = document.getElementById('page-register');
+                     if (regPage && (regPage.style.display !== 'none' && !regPage.classList.contains('hidden'))) {
+                                 setTimeout(initMultiServiceReg, 300);
+                     }
+           }
+   }, 800);
+
+   // ── FEATURE 2: Fix Admin-Verified Providers Visibility on Portal ──
+   // Problem: providers registered via admin or RADHEY provisional may have
+   // status='active' but are not visible in browse because applySortAndFilter
+   // may filter them out for various reasons (ownerUid mismatch, missing fields, etc.)
+   function fixVerifiedProviderVisibility() {
+           const wait = setInterval(() => {
+                     if (typeof applySortAndFilter === 'undefined' || typeof renderProviders === 'undefined') return;
+                     clearInterval(wait);
+
+                                          // Patch applySortAndFilter to ensure verified+active providers always pass
+                                          const origFilter = window.applySortAndFilter;
+                     window.applySortAndFilter = function() {
+                                 // Normalize all providers first
+                                 if (typeof providers !== 'undefined' && Array.isArray(providers)) {
+                                               providers.forEach(p => {
+                                                               // Ensure active verified providers have correct flags
+                                                                             if (p.verified === true && !p.status) p.status = 'active';
+                                                               if (p.verified === true && p.status === 'active' && p.available === undefined) p.available = true;
+                                                               if (p.verified === true && p.status === 'active' && p.isActive === undefined) p.isActive = true;
+                                                               // Ensure services array exists
+                                                                             if (!p.services || !Array.isArray(p.services)) {
+                                                                                               p.services = p.service ? [p.service] : [];
+                                                                             }
+                                                               // Ensure categoryId exists
+                                                                             if (!p.categoryId && p.service) p.categoryId = 'cat1';
+                                               });
+                                 }
+                                 origFilter.apply(this, arguments);
+                     };
+                     console.log('SC Fix: Verified provider visibility patch applied');
+           }, 600);
+   }
+      fixVerifiedProviderVisibility();
+
+   // Also patch renderProviders to show verified providers regardless
+   const rvWait = setInterval(() => {
+           if (typeof renderProviders === 'undefined') return;
+           clearInterval(rvWait);
+           const origRender = window.renderProviders;
+           window.renderProviders = function(list) {
+                     // Filter: show if status active OR (verified and no explicit pause/restrict)
+                     const filtered = (list || []).filter(p =>
+                                 p.status === 'active' ||
+                                 (p.verified === true && p.status !== 'paused' && p.status !== 'restricted')
+                                                                );
+                     origRender.call(this, filtered);
+           };
+           console.log('SC Fix: renderProviders patched for verified visibility');
+   }, 600);
+
+   // ── FEATURE 3: Admin Sorting – Categories & Provider Verification ──
+   function injectAdminSortControls() {
+           // 3a: Category sort controls
+        const catTab = document.getElementById('adminTab-categories');
+           if (catTab && !document.getElementById('sc-cat-sort-bar')) {
+                     const catHeader = catTab.querySelector('.flex.justify-between.items-center');
+                     if (catHeader) {
+                                 const sortBar = document.createElement('div');
+                                 sortBar.id = 'sc-cat-sort-bar';
+                                 sortBar.className = 'flex items-center gap-2 flex-wrap mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200';
+                                 sortBar.innerHTML = `
+                                           <span class="text-sm font-bold text-gray-700">🔢 Sort Categories:</span>
+                                                     <button onclick="scSortCategories('default')" class="text-xs px-3 py-1.5 rounded-lg bg-orange-600 text-white font-semibold hover:bg-orange-700 transition" id="sc-cat-sort-default">Default Order</button>
+                                                               <button onclick="scSortCategories('az')" class="text-xs px-3 py-1.5 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" id="sc-cat-sort-az">A → Z</button>
+                                                                         <button onclick="scSortCategories('za')" class="text-xs px-3 py-1.5 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" id="sc-cat-sort-za">Z → A</button>
+                                                                                   <button onclick="scSortCategories('most-providers')" class="text-xs px-3 py-1.5 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" id="sc-cat-sort-most">Most Providers</button>
+                                                                                             <button onclick="scSortCategories('most-sub')" class="text-xs px-3 py-1.5 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" id="sc-cat-sort-sub">Most Subcategories</button>
+                                                                                                       <span class="text-xs text-gray-400 ml-2">Drag rows to reorder →</span>`;
+                                 catHeader.insertAdjacentElement('afterend', sortBar);
+                     }
+           }
+
+        // 3b: Provider sort/filter controls
+        const provSection = document.getElementById('providersListAdmin');
+           if (provSection && !document.getElementById('sc-prov-sort-bar')) {
+                     const header = provSection.previousElementSibling;
+                     if (header) {
+                                 const sortBar = document.createElement('div');
+                                 sortBar.id = 'sc-prov-sort-bar';
+                                 sortBar.className = 'flex flex-wrap items-center gap-2 mb-3 p-3 bg-gray-50 rounded-xl border border-gray-200';
+                                 sortBar.innerHTML = `
+                                           <span class="text-sm font-bold text-gray-700">🔍 Filter Providers:</span>
+                                                     <button onclick="scFilterProviders('all')" id="sc-pf-all" class="text-xs px-3 py-1.5 rounded-full bg-orange-600 text-white font-semibold hover:bg-orange-700 transition">All</button>
+                                                               <button onclick="scFilterProviders('verified')" id="sc-pf-verified" class="text-xs px-3 py-1.5 rounded-full bg-green-100 text-green-800 font-semibold hover:bg-green-200 transition">✅ Verified</button>
+                                                                         <button onclick="scFilterProviders('unverified')" id="sc-pf-unverified" class="text-xs px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-800 font-semibold hover:bg-yellow-200 transition">⏳ Not Verified</button>
+                                                                                   <button onclick="scFilterProviders('pending')" id="sc-pf-pending" class="text-xs px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 font-semibold hover:bg-blue-200 transition">🆔 ID Pending</button>
+                                                                                             <button onclick="scFilterProviders('active')" id="sc-pf-active" class="text-xs px-3 py-1.5 rounded-full bg-green-100 text-green-800 font-semibold hover:bg-green-200 transition">🟢 Active</button>
+                                                                                                       <button onclick="scFilterProviders('paused')" id="sc-pf-paused" class="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition">⏸ Paused</button>
+                                                                                                                 <span class="flex-1"></span>
+                                                                                                                           <span class="text-sm font-bold text-gray-700">↕ Sort:</span>
+                                                                                                                                     <button onclick="scSortProviders('name-az')" class="text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Name A→Z</button>
+                                                                                                                                               <button onclick="scSortProviders('name-za')" class="text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Name Z→A</button>
+                                                                                                                                                         <button onclick="scSortProviders('newest')" class="text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Newest First</button>
+                                                                                                                                                                   <button onclick="scSortProviders('oldest')" class="text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition">Oldest First</button>
+                                                                                                                                                                             <button onclick="scSortProviders('verified-first')" class="text-xs px-3 py-1.5 rounded-full bg-green-600 text-white font-semibold hover:bg-green-700 transition">✅ Verified First</button>`;
+                                 header.insertAdjacentElement('afterend', sortBar);
+                     }
+           }
+   }
+
+   // Category sort function
+   window.scSortCategories = function(mode) {
+           const list = document.getElementById('categoriesListAdmin');
+           if (!list || typeof categories === 'undefined') return;
+           // Update active button
+           ['default','az','za','most-providers','most-sub'].forEach(m => {
+                     const btn = document.getElementById('sc-cat-sort-' + m.replace('-',''));
+                     if (btn) btn.className = btn.className.replace('bg-orange-600 text-white', 'bg-gray-200 text-gray-700');
+           });
+           const activeBtn = document.getElementById('sc-cat-sort-' + mode.replace(/-/g,''));
+           if (activeBtn) activeBtn.className = activeBtn.className.replace('bg-gray-200 text-gray-700', 'bg-orange-600 text-white');
+
+           let sorted = [...categories];
+           const getName = c => (c.name && (c.name.en || c.name)) || c.id;
+           const getProvCount = c => (typeof providers !== 'undefined' ? providers.filter(p => p.categoryId === c.id).length : 0);
+
+           if (mode === 'az') sorted.sort((a, b) => getName(a).localeCompare(getName(b)));
+           else if (mode === 'za') sorted.sort((a, b) => getName(b).localeCompare(getName(a)));
+           else if (mode === 'most-providers') sorted.sort((a, b) => getProvCount(b) - getProvCount(a));
+           else if (mode === 'most-sub') sorted.sort((a, b) => (b.subcategories || []).length - (a.subcategories || []).length);
+           else sorted = [...categories]; // default
+
+           window._scSortedCategories = sorted;
+           if (typeof loadAdminCategories === 'function') {
+                     // Temporarily swap categories order
+             const orig = [...categories];
+                     categories.length = 0;
+                     sorted.forEach(c => categories.push(c));
+                     loadAdminCategories();
+                     // Restore original order reference
+             categories.length = 0;
+                     orig.forEach(c => categories.push(c));
+                     window._scSortedCategories = sorted;
+           }
+   };
+
+   // Provider filter + sort functions
+   window._scProvFilterMode = 'all';
+      window._scProvSortMode = 'default';
+      window._scAdminProviders = null;
+
+   window.scFilterProviders = function(mode) {
+           window._scProvFilterMode = mode;
+           ['all','verified','unverified','pending','active','paused'].forEach(m => {
+                     const btn = document.getElementById('sc-pf-' + m);
+                     if (btn) {
+                                 btn.className = btn.className.replace('bg-orange-600 text-white', 'bg-gray-100 text-gray-700');
+                                 btn.className = btn.className.replace('bg-green-600 text-white', 'bg-green-100 text-green-800');
+                     }
+           });
+           const activeBtn = document.getElementById('sc-pf-' + mode);
+           if (activeBtn) activeBtn.className = activeBtn.className.replace('bg-gray-100 text-gray-700', 'bg-orange-600 text-white').replace('bg-green-100 text-green-800', 'bg-orange-600 text-white').replace('bg-yellow-100 text-yellow-800', 'bg-orange-600 text-white').replace('bg-blue-100 text-blue-800', 'bg-orange-600 text-white');
+           scApplyAdminProviderView();
+   };
+
+   window.scSortProviders = function(mode) {
+           window._scProvSortMode = mode;
+           scApplyAdminProviderView();
+   };
+
+   window.scApplyAdminProviderView = function() {
+           const list = document.getElementById('providersListAdmin');
+           if (!list) return;
+           // Get all provider rows from the list
+           const rows = Array.from(list.querySelectorAll('[data-provider-id], .provider-admin-row'));
+           if (!rows.length) {
+                     // If no rows yet, call renderProvidersList
+             if (typeof renderProvidersList === 'function') renderProvidersList();
+                     return;
+           }
+           const mode = window._scProvFilterMode || 'all';
+           const sort = window._scProvSortMode || 'default';
+
+           rows.forEach(row => {
+                     const pid = row.dataset.providerId || row.dataset.id;
+                     const prov = (typeof providers !== 'undefined') ? providers.find(p => p.id === pid) : null;
+                     let show = true;
+                     if (prov) {
+                                 if (mode === 'verified') show = prov.verified === true;
+                                 else if (mode === 'unverified') show = !prov.verified;
+                                 else if (mode === 'pending') show = !!(prov.idVerification && prov.idVerification.status === 'pending');
+                                 else if (mode === 'active') show = prov.status === 'active';
+                                 else if (mode === 'paused') show = prov.status === 'paused';
+                     }
+                     row.style.display = show ? '' : 'none';
+           });
+   };
+
+   // Patch renderProvidersList to inject our sort/filter bar
+   const rpWait = setInterval(() => {
+           if (typeof renderProvidersList === 'undefined') return;
+           clearInterval(rpWait);
+           const origRPL = window.renderProvidersList;
+           window.renderProvidersList = function() {
+                     origRPL.apply(this, arguments);
+                     setTimeout(() => {
+                                 injectAdminSortControls();
+                                 // Re-apply any active filter
+                                        if (window._scProvFilterMode && window._scProvFilterMode !== 'all') {
+                                                      scApplyAdminProviderView();
+                                        }
+                     }, 200);
+           };
+   }, 600);
+
+   // Also patch loadAdminCategories to inject sort bar
+   const lacWait = setInterval(() => {
+           if (typeof loadAdminCategories === 'undefined') return;
+           clearInterval(lacWait);
+           const origLAC = window.loadAdminCategories;
+           window.loadAdminCategories = function() {
+                     origLAC.apply(this, arguments);
+                     setTimeout(injectAdminSortControls, 300);
+           };
+   }, 600);
+
+   // Also patch showAdminTab to inject controls after tab switch
+   const satWait = setInterval(() => {
+           if (typeof showAdminTab === 'undefined') return;
+           clearInterval(satWait);
+           const origSAT = window.showAdminTab;
+           window.showAdminTab = function(tab) {
+                     origSAT.apply(this, arguments);
+                     setTimeout(injectAdminSortControls, 400);
+           };
+   }, 600);
+
+   // Run inject on DOMContentLoaded / now
+   setTimeout(injectAdminSortControls, 2000);
+
+   console.log('[SC v4.0] Multi-service reg, verified visibility fix, admin sort controls loaded');
+
+})(); // end initNewFeatures
