@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Sudarshan Chakra - Find Service Providers Near You</title>
 
-    <!-- ===== PWA META TAGS ===== -->hhh
+    <!-- ===== PWA META TAGS ===== -->hhhh
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ea580c">
     <meta name="mobile-web-app-capable" content="yes">
@@ -4714,7 +4714,7 @@
         }
         
         // ==================== FORM SUBMISSIONS ====================
-        document.getElementById('providerForm').addEventListener('submit', function(e) {
+        document.getElementById('providerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const catId = document.getElementById('providerCategory').value;
@@ -4796,7 +4796,7 @@
             const submitBtn = document.getElementById('providerForm').querySelector('button[type="submit"]');
             if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Saving...'; }
             
-            saveProviderToFirebase(provider).then(success => {
+            if (!window._firebaseUser) { try { const { signInAnonymously } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"); await signInAnonymously(window._auth.auth); } catch(authErr) { if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = t('registerNow') || 'Register Now'; } alert('Authentication failed. Please check your connection and try again.'); return; } } saveProviderToFirebase(provider).then(success => {
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = t('registerNow') || 'Register Now'; }
                 
                 if (success) {
@@ -4821,7 +4821,7 @@
             });
         });
         
-        document.getElementById('seekerForm').addEventListener('submit', function(e) {
+        document.getElementById('seekerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             // Validate at least one language selected
@@ -4848,7 +4848,7 @@
             const submitBtnS = document.getElementById('seekerForm').querySelector('button[type="submit"]');
             if (submitBtnS) { submitBtnS.disabled = true; submitBtnS.textContent = '⏳ Saving...'; }
             
-            saveSeekerToFirebase(seeker).then(success => {
+            if (!window._firebaseUser) { try { const { signInAnonymously } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"); await signInAnonymously(window._auth.auth); } catch(authErr) { if (submitBtnS) { submitBtnS.disabled = false; submitBtnS.textContent = t('registerNow') || 'Register Now'; } alert('Authentication failed. Please check your connection and try again.'); return; } } saveSeekerToFirebase(seeker).then(success => {
                 if (submitBtnS) { submitBtnS.disabled = false; submitBtnS.textContent = t('registerNow') || 'Register Now'; }
                 
                 if (success) {
@@ -9557,7 +9557,7 @@ function addInfoMsg(text, type) {
     });
   }
 </script>
-<script src="fixes.js?v=20260322c"></script>
+<script src="fixes.js?v=20260324a"></script>
 </body>
 </html>
 
