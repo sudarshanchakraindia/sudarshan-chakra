@@ -6,7 +6,7 @@
     <title>Sudarshan Chakra - Find Service Providers Near You</title>
 
     <!-- ===== PWA META TAGS ===== -->hhhh
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">h
     <meta name="theme-color" content="#ea580c">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5346,7 +5346,7 @@ function toggleAdminCat(id, headerEl) {
         async function saveCategoriesToFirebase() {
             try {
                 await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
-            } catch(e) { console.warn('Categories save error:', e); alert('❌ Could not save. Check internet connection.'); }
+            } catch(e) { console.warn('Categories save error:', e); alert('❌ Could not save categories. ' + (e && e.message && e.message.includes('PERMISSION_DENIED') ? 'Admin login required.' : 'Check internet connection and try again.') + ''); }
         }
 
         function resetToDefaults() {
