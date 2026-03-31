@@ -5,7 +5,7 @@
  */
 
 // ── Local Knowledge Base for RADHEY (works offline, no CORS) ──
-window.radheyLocalAnswer = function(quehry) {
+window.radheyLocalAnswer = function(quehry) {hh
     const q = (query || '').toLowerCase().trim();
     if (q.includes('register') || q.includes('registr') || q.includes('join') || q.includes('provider banna') || q.includes('seeker banna') || q.includes('kaise banein') || q.includes('registration') || q.includes('पंजीकरण') || q.includes('ragistration') || q.includes('ragister') || q.includes('karna hai') || q.includes('banana hai') || q.includes('banna hai') || q.includes('member') || q.includes('account'))
         return '📝 RADHEY se voice register karein!\n"🎤 Register" button tap karein — main step-by-step guide karunga.\n\nYa nav mein "Register Provider" button tap karein 🙏';
@@ -890,6 +890,9 @@ window.radheyAutoMic = function () {
               fb.update(ref, { id: ref.key });
               window._radheyPendingReg = null;
               try { localStorage.removeItem('_radheyProvisional'); } catch(e) {}
+              // —— Gratitude redirect after registration ——
+              var _regLang = localStorage.getItem('language') || 'hi';
+              setTimeout(function() { window.location.replace('gratitude.html?lang=' + _regLang + '&type=portal'); }, 2500);
               console.log('\u2705 RADHEY provisional provider saved:', ref.key);
               var notifRef = fb.ref(fb.db, 'notifications/' + window.firebaseUser.uid + '/reg_pending');
               fb.set(notifRef, {
