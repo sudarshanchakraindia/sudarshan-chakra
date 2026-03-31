@@ -556,7 +556,7 @@ function closeQROutside(e) {
 
 function paymentDone() {
   closeQR();
-  const lang = new URLSearchParams(window.location.search).get('lang') || 'hi';
+  const lang = localStorage.getItem('language') || new URLSearchParams(window.location.search).get('lang') || 'hi';
   // Determine gratitude type based on what seeker paid for
   let gratType = 'portal'; // default — convenience fee only
   if (tipAmt > 0 && charityAmt > 0) {
