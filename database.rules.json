@@ -3,9 +3,8 @@
 
                 "providers": {
                                   ".read": true,
-                                  ".write": false,
                                   "$providerId": {
-                                                      ".write": "auth != null && (root.child('providers').child($providerId).child('ownerUid').val() === auth.uid || root.child('admins').child(auth.uid).exists())",
+                                                      ".write": "auth != null && (!data.exists() || root.child('providers').child($providerId).child('ownerUid').val() === auth.uid || root.child('admins').child(auth.uid).exists())",
                                                       "reviews": {
                                                                             ".write": "auth != null"
                                                       },
