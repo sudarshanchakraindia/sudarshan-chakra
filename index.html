@@ -3518,7 +3518,10 @@
                 // Force reseed if empty or old format
                 if (!existing || !Array.isArray(existing) || existing.length < 5) {
                     categories = ITI_CATEGORIES;
-                    await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
+                    // Only write to Firebase if logged in as admin
+                    if (!document.getElementById('adminDashboard')?.classList.contains('hidden')) {
+                        await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
+                    }
                     console.log('✅ ITI categories seeded to Firebase:', categories.length);
                 } else {
                     // Merge multilingual names into existing categories
@@ -3533,10 +3536,12 @@
                             added++;
                         }
                     });
-                    // Save upgraded data back to Firebase silently
+                    // Save upgraded data back to Firebase (admin only)
+                if (!document.getElementById('adminDashboard')?.classList.contains('hidden')) {
                     _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories)
                         .then(() => console.log('✅ Multilingual names saved to Firebase'))
                         .catch(e => console.warn('Save error:', e));
+                }
                     console.log('✅ Categories loaded & upgraded:', categories.length, '| ITI added:', added);
                 }
                 // Refresh all UI that depends on categories
