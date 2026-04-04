@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Sudarshan Chakra - Find Service Providers Near You</title>
 
-    <!-- ===== PWA META TAGS ===== -->hhhhh
+    <!-- ===== PWA META TAGS ===== -->hhhhhh
     <link rel="manifest" href="manifest.json">h
     <meta name="theme-color" content="#ea580c">
     <meta name="mobile-web-app-capable" content="yes">
@@ -70,7 +70,7 @@
         // ==================== FIREBASE SETUP ====================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getDatabase, ref, set, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -91,7 +91,7 @@
 
         // Expose to global scope
         window._firebase = { db, ref, set, push, onValue, update, remove, get };
-        window._auth = { auth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged };
+        window._auth = { auth, RecaptchaVerifier, signInWithPhoneNumber, signInWithEmailAndPassword, signOut, onAuthStateChanged };
         window._firebaseReady = true;
 
         // Auth state listener — fires whenever user logs in or out
@@ -2132,6 +2132,7 @@
         
         const ADMIN_PASSWORD_KEY = 'sc_admin_password';
         let ADMIN_PASSWORD = localStorage.getItem(ADMIN_PASSWORD_KEY) || 'admin123';
+        const ADMIN_EMAIL = 'sudarshanchakraindia@gmail.com'; // Firebase admin email for DB auth
 
         // ==================== FIX A: CATEGORY TRANSLATIONS ====================
         // Add multilingual translations for all default categories
@@ -4887,15 +4888,18 @@
                 document.getElementById('adminDashboard').classList.remove('hidden');
                 updateAdminStats();
                 showAdminTab('categories'); // Default tab
+                // Sign in to Firebase so DB rules (auth != null && admins/uid.exists()) pass
+                _auth.signInWithEmailAndPassword(_auth.auth, ADMIN_EMAIL, password)
+                    .then(() => console.log('✅ Admin Firebase sign-in OK'))
+                    .catch(e => console.warn('⚠️ Admin Firebase sign-in failed:', e.message));
             } else {
                 alert('Incorrect password!');
             }
         }
-        
         function adminLogout() {
             document.getElementById('adminLogin').classList.remove('hidden');
             document.getElementById('adminDashboard').classList.add('hidden');
-            document.getElementById('adminPassword').value = '';
+            _auth.signOut(_auth.auth).catch(e => console.warn('Admin signout error:', e));
         }
         
 
