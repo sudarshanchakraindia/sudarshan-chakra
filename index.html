@@ -1962,10 +1962,11 @@
         async function saveProviderToFirebase(provider) {
             try {
                 if (!_db) throw new Error('Firebase not ready');
-                // Use Firebase push() — server generates a unique, ordered key (no collisions)
-                const newRef = await _push(fbRef('providers'), provider);
-                // Also store the Firebase key as the provider's id (overwrite the temp id)
-                await _update(newRef, { id: newRef.key });
+                // Pre-generate the push key so we can include it in the initial write
+                // This avoids a second update() call which would fail for unauthenticated users
+                const newRef = _push(fbRef('providers'));
+                provider.id = newRef.key; // include id in the initial push data
+                await _set(newRef, provider);
                 return true;
             } catch (err) {
                 console.error('Firebase save provider error:', err);
