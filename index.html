@@ -796,15 +796,15 @@
                         <p class="text-xs text-gray-400 mt-1">Leave blank to use mobile number for WhatsApp</p>
                     </div>
                     <div>
-                        <label class="block text-gray-700 font-medium mb-2">Category (Optional)</label>
+                        <label class="block text-gray-700 font-medium mb-2" data-i18n="category">Category (Optional)</label>
                         <select id="providerCategory" class="w-full px-4 py-2 border rounded-lg" onchange="updateProviderSubcategories()"></select>
                     </div>
                     <div>
-                        <label class="block text-gray-700 font-medium mb-2">Subcategory (Optional)</label>
+                        <label class="block text-gray-700 font-medium mb-2" data-i18n="subcategory">Subcategory (Optional)</label>
                         <select id="providerSubcategory" class="w-full px-4 py-2 border rounded-lg" onchange="updateProviderSubSubcategories()"></select>
                     </div>
                     <div class="md:col-span-2" id="serviceTypeSection" style="display:none">
-                        <label class="block text-gray-700 font-medium mb-2">🔧 Services Offered <span class="text-sm text-gray-400 font-normal">(select all that apply)</span></label>
+                        <label class="block text-gray-700 font-medium mb-2" data-i18n="serviceType">🔧 Services Offered <span class="text-sm text-gray-400 font-normal">(select all that apply)</span></label>
                         <div id="providerServiceChips" class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2"></div>
                         <p class="text-xs text-gray-400 mt-1">You can offer multiple service types</p>
                     </div>
@@ -4673,7 +4673,7 @@
         function updateProviderCategorySelects() {
             const select = document.getElementById('providerCategory');
             if (select) {
-                select.innerHTML = '<option value="">Select Category</option>' + 
+                select.innerHTML = `<option value="">${t('selectCategory')}</option>` + 
                     categories.map(cat => `<option value="${cat.id}">${getTranslated(cat.name)}</option>`).join('');
             }
         }
@@ -4684,10 +4684,10 @@
             const category = categories.find(c => c.id === catId);
             
             if (category && category.subcategories) {
-                subSelect.innerHTML = '<option value="">Select Subcategory</option>' + 
+                subSelect.innerHTML = `<option value="">${t('selectSubcategory')}</option>` + 
                     category.subcategories.map((sub, idx) => `<option value="${idx}">${getTranslated(sub.name)}</option>`).join('');
             } else {
-                subSelect.innerHTML = '<option value="">Select Subcategory</option>';
+                subSelect.innerHTML = `<option value="">${t('selectSubcategory')}</option>`;
             }
             const chips = document.getElementById('providerServiceChips');
             if (chips) chips.innerHTML = '';
