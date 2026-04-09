@@ -728,6 +728,18 @@
                     </div>
                 </div>
                 <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Full Name *</label>
+                    <input type="text" id="editName" maxlength="60" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="Your full name">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Primary Service</label>
+                    <input type="text" id="editService" maxlength="80" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="e.g. Plumber, Electrician, Cook...">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Location / Area</label>
+                    <input type="text" id="editLocation" maxlength="120" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="Your locality or area">
+                </div>
+                <div>
                     <label class="block text-gray-700 text-sm font-medium mb-1">About / Bio</label>
                     <textarea id="editBio" rows="3" maxlength="250" class="w-full border rounded-xl px-4 py-2 resize-none outline-none focus:ring-2 focus:ring-orange-400" placeholder="Tell customers about yourself..."></textarea>
                 </div>
@@ -2481,9 +2493,16 @@
 
                   ${docHtml}
 
+                  <!-- Inline Portfolio Strip -->
+                  <div class="mb-3">
+                    <p class="text-xs text-gray-500 font-semibold mb-1 uppercase tracking-wide">📸 Work Portfolio</p>
+                    <div id="inlinePortGrid_${p.id}" class="flex gap-2 overflow-x-auto pb-1 min-h-16">
+                      <div class="text-xs text-gray-300 italic">Loading...</div>
+                    </div>
+                  </div>
                   <!-- Portfolio & Dashboard Buttons -->
                   <div class="flex gap-2 mb-3">
-                      <button onclick="openPortfolioView('${p.id}')" class="flex-1 bg-purple-100 text-purple-700 py-2 rounded-xl text-sm font-semibold hover:bg-purple-200">📸 Portfolio</button>
+                      <button onclick="openPortfolioView('${p.id}')" class="flex-1 bg-purple-100 text-purple-700 py-2 rounded-xl text-sm font-semibold hover:bg-purple-200">📸 All Photos</button>
                       <button onclick="openChatModal('${p.id}')" class="flex-1 bg-blue-100 text-blue-700 py-2 rounded-xl text-sm font-semibold hover:bg-blue-200">💬 Chat</button>
                       <button onclick="openBookingModal('${p.id}')" class="flex-1 bg-green-100 text-green-700 py-2 rounded-xl text-sm font-semibold hover:bg-green-200">📅 Book</button>
                   </div>
@@ -6611,6 +6630,9 @@ function toggleAdminCat(id, headerEl) {
         function openEditProviderModal() {
             const myProvider = providers.find(p => p.ownerUid === firebaseUser?.uid);
             if (!myProvider) return;
+            document.getElementById('editName').value        = myProvider.name || '';
+            document.getElementById('editService').value     = myProvider.service || '';
+            document.getElementById('editLocation').value    = myProvider.location || '';
             document.getElementById('editBio').value         = myProvider.bio || '';
             document.getElementById('editRate').value        = myProvider.rate || '';
             document.getElementById('editWhatsapp').value    = myProvider.whatsapp || '';
@@ -6641,7 +6663,12 @@ function toggleAdminCat(id, headerEl) {
         async function saveProviderEdits() {
             const myProvider = providers.find(p => p.ownerUid === firebaseUser?.uid);
             if (!myProvider) return;
+            const newName = document.getElementById('editName').value.trim();
+            if (!newName) { showFirebaseStatus('Name cannot be empty', 'error'); return; }
             const updates = {
+                name:         newName,
+                service:      document.getElementById('editService').value.trim() || myProvider.service,
+                location:     document.getElementById('editLocation').value.trim() || myProvider.location,
                 bio:          document.getElementById('editBio').value.trim() || null,
                 rate:         parseInt(document.getElementById('editRate').value) || myProvider.rate,
                 whatsapp:     document.getElementById('editWhatsapp').value || null,
@@ -7021,6 +7048,8 @@ function toggleAdminCat(id, headerEl) {
                 </div>
             `;
             document.getElementById('profileModal').classList.remove('hidden');
+            // Load inline portfolio strip after modal renders
+            setTimeout(() => loadInlinePortfolio(providerId), 400);
         }
 
         // ==================== PHASE E: ADMIN VERIFIED BADGE ====================
@@ -7808,10 +7837,14 @@ function hmConfirmPayment() {
             </div>
             <div class="p-5">
                 <div id="portfolioUploadSection" class="hidden mb-4 p-4 bg-purple-50 rounded-xl border-2 border-dashed border-purple-300">
-                    <p class="text-sm text-purple-700 font-semibold mb-2">📤 Add Work Photos (URLs)</p>
-                    <input type="url" id="portfolioImageUrl" placeholder="Paste image URL (e.g. from Google Drive, Imgur...)" class="w-full border rounded-lg px-3 py-2 text-sm mb-2 focus:ring-2 focus:ring-purple-400 outline-none">
+                    <p class="text-sm text-purple-700 font-semibold mb-2">📤 Add Work Photos / Videos</p>
+                    <label for="portfolioFileInput" class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-purple-400 rounded-xl cursor-pointer bg-white hover:bg-purple-50 mb-2 transition">
+                        <span class="text-3xl">📷</span>
+                        <span class="text-xs text-purple-600 font-medium mt-1">Tap to select photo/video from device</span>
+                        <input type="file" id="portfolioFileInput" accept="image/*,video/*" multiple class="hidden" onchange="addPortfolioFiles(this)">
+                    </label>
                     <input type="text" id="portfolioCaption" placeholder="Caption (e.g. 'AC installation at Jaipur client')" class="w-full border rounded-lg px-3 py-2 text-sm mb-2 focus:ring-2 focus:ring-purple-400 outline-none">
-                    <button onclick="addPortfolioItem()" class="w-full bg-purple-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-purple-700">+ Add to Portfolio</button>
+                    <div id="portfolioUploadProgress" class="hidden text-xs text-purple-600 text-center py-1 mb-1">Uploading... please wait ⏳</div>
                 </div>
                 <div id="portfolioGrid" class="grid grid-cols-2 gap-3">
                     <div class="text-center col-span-2 text-gray-400 py-8">Loading portfolio... 📸</div>
@@ -8604,6 +8637,27 @@ async function openPortfolioView(providerId) {
     // Track profile view
     trackProfileView(providerId);
 }
+async function loadInlinePortfolio(providerId) {
+    const inlineGrid = document.getElementById('inlinePortGrid_' + providerId);
+    if (!inlineGrid || !_firebase) return;
+    try {
+        const snap = await _firebase.get(_firebase.ref(_firebase.db, `providers/${providerId}/portfolio`));
+        const items = snap.exists() ? Object.entries(snap.val()).map(([id,v])=>({...v,id})) : [];
+        if (!items.length) {
+            inlineGrid.innerHTML = '<span class="text-xs text-gray-400 italic py-4 px-2">No portfolio photos yet</span>';
+            return;
+        }
+        inlineGrid.innerHTML = items.slice(0,5).map(item => {
+            const isVid = item.type === 'video' || (item.url && item.url.startsWith('data:video'));
+            return isVid
+                ? `<video src="${item.url}" class="h-16 w-24 flex-shrink-0 rounded-lg object-cover border" controls playsinline preload="none"></video>`
+                : `<img src="${item.url}" class="h-16 w-24 flex-shrink-0 rounded-lg object-cover border cursor-pointer" onclick="openPortfolioView('${providerId}')" alt="work">`;
+        }).join('');
+        if (items.length > 5) {
+            inlineGrid.innerHTML += `<div class="h-16 w-16 flex-shrink-0 rounded-lg bg-purple-100 flex items-center justify-center text-xs text-purple-700 font-bold cursor-pointer" onclick="openPortfolioView('${providerId}')">+${items.length-5}<br>more</div>`;
+        }
+    } catch(e) { inlineGrid.innerHTML = ''; }
+}
 async function openMyPortfolioModal() {
     const myProvider = providers.find(p=>p.ownerUid===firebaseUser?.uid);
     if (!myProvider) { showFirebaseStatus('Register as provider first','info'); return; }
@@ -8624,37 +8678,94 @@ async function loadPortfolio(providerId) {
             grid.innerHTML = `<div class="col-span-2 text-center text-gray-400 py-8">📸 No portfolio photos yet${isMyPortfolio?' — add your work above':''}</div>`;
             return;
         }
-        grid.innerHTML = items.map(item=>`
-            <div class="relative group rounded-xl overflow-hidden border shadow-sm">
-                <img src="${item.url}" alt="${item.caption||''}" class="w-full h-32 object-cover bg-gray-100"
-                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                <div style="display:none" class="w-full h-32 bg-gray-100 items-center justify-center text-gray-400 text-3xl">📷</div>
-                <div class="p-2 bg-white"><p class="text-xs text-gray-600 truncate">${item.caption||'Work photo'}</p></div>
-                ${isMyPortfolio?`<button onclick="deletePortfolioItem('${item.id}')" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition">✕</button>`:''}
-            </div>
-        `).join('');
+        grid.innerHTML = items.map(item => {
+            const isVid = item.type === 'video' || (item.url && item.url.startsWith('data:video'));
+            const media = isVid
+                ? `<video src="${item.url}" class="w-full h-32 object-cover bg-gray-100" controls playsinline preload="none"></video>`
+                : `<img src="${item.url}" alt="${item.caption||''}" class="w-full h-32 object-cover bg-gray-100 cursor-pointer" onclick="window.open(this.src,'_blank')" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div style="display:none" class="w-full h-32 bg-gray-100 flex items-center justify-center text-gray-400 text-3xl">📷</div>`;
+            return `<div class="relative group rounded-xl overflow-hidden border shadow-sm">
+                ${media}
+                <div class="p-2 bg-white flex items-center justify-between gap-1">
+                  <p class="text-xs text-gray-600 truncate flex-1">${item.caption||'Work photo'}</p>
+                  ${isVid ? '<span class="text-xs text-blue-400 flex-shrink-0">▶ video</span>' : ''}
+                </div>
+                ${isMyPortfolio ? `<button onclick="deletePortfolioItem('${item.id}')" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition">✕</button>` : ''}
+            </div>`;
+        }).join('');
+        // Update inline strip in open profile modal
+        const inlineGrid = document.getElementById('inlinePortGrid_' + providerId);
+        if (inlineGrid) {
+            inlineGrid.innerHTML = items.slice(0,5).map(item => {
+                const isVid2 = item.type === 'video' || (item.url && item.url.startsWith('data:video'));
+                return isVid2
+                    ? `<video src="${item.url}" class="h-16 w-24 flex-shrink-0 rounded-lg object-cover border" controls playsinline preload="none"></video>`
+                    : `<img src="${item.url}" class="h-16 w-24 flex-shrink-0 rounded-lg object-cover border cursor-pointer" onclick="openPortfolioView('${providerId}')" alt="work">`;
+            }).join('') || '<span class="text-xs text-gray-400 italic py-4">No portfolio photos yet</span>';
+        }
     } catch(e) { grid.innerHTML='<div class="col-span-2 text-center text-red-400 py-4 text-sm">Error loading portfolio</div>'; }
 }
-async function addPortfolioItem() {
-    const url = document.getElementById('portfolioImageUrl').value.trim();
-    const caption = document.getElementById('portfolioCaption').value.trim();
-    if (!url) { showFirebaseStatus('Please enter an image URL','error'); return; }
+async function addPortfolioFiles(input) {
     if (!portfolioProviderId) return;
+    const caption = document.getElementById('portfolioCaption').value.trim();
+    const files = Array.from(input.files);
+    if (!files.length) return;
+    const progress = document.getElementById('portfolioUploadProgress');
+    if (progress) progress.classList.remove('hidden');
     try {
         const snap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/portfolio`));
         const count = snap.exists() ? Object.keys(snap.val()).length : 0;
         const memSnap = await _firebase.get(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/membership`));
         const plan = memSnap.exists() ? (memSnap.val()?.plan||'free') : 'free';
         const limits = {free:5, silver:15, gold:999};
-        if (count>=(limits[plan]||5)) {
-            showFirebaseStatus(`Portfolio full for ${plan} plan! Upgrade to add more.`,'error'); return;
+        const limit = limits[plan] || 5;
+        if (count >= limit) {
+            showFirebaseStatus(`Portfolio full (${limit} items for ${plan} plan). Upgrade to add more.`,'error');
+            if (progress) progress.classList.add('hidden'); return;
         }
-        await _firebase.set(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/portfolio/${Date.now()}`), {url, caption, addedAt:Date.now()});
-        document.getElementById('portfolioImageUrl').value='';
-        document.getElementById('portfolioCaption').value='';
-        showFirebaseStatus('✅ Photo added!','success');
+        let added = 0;
+        for (const file of files) {
+            if (count + added >= limit) break;
+            const isVideo = file.type.startsWith('video/');
+            const maxSizeMB = isVideo ? 5 : 2;
+            if (file.size > maxSizeMB * 1024 * 1024) {
+                showFirebaseStatus(`${file.name} too large (max ${maxSizeMB}MB)`,'error'); continue;
+            }
+            const dataUrl = await new Promise((resolve, reject) => {
+                if (isVideo) {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const max = 800; let w = img.width, h = img.height;
+                            if (w > h) { if (w > max) { h = h*max/w; w = max; } }
+                            else { if (h > max) { w = w*max/h; h = max; } }
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/jpeg', 0.75));
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                }
+            });
+            await _firebase.set(_firebase.ref(_firebase.db,`providers/${portfolioProviderId}/portfolio/${Date.now()+added}`), {
+                url: dataUrl, caption: caption || file.name.replace(/\.[^.]+$/, ''), addedAt: Date.now(), type: isVideo ? 'video' : 'image'
+            });
+            added++;
+        }
+        document.getElementById('portfolioCaption').value = '';
+        input.value = '';
+        if (progress) progress.classList.add('hidden');
+        showFirebaseStatus(`✅ ${added} item(s) added to portfolio!`,'success');
         loadPortfolio(portfolioProviderId);
-    } catch(e) { showFirebaseStatus('Failed: '+e.message,'error'); }
+    } catch(e) { if (progress) progress.classList.add('hidden'); showFirebaseStatus('Upload failed: '+e.message,'error'); }
 }
 async function deletePortfolioItem(itemId) {
     if (!portfolioProviderId||!confirm('Delete this photo?')) return;
