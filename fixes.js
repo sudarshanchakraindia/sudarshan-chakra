@@ -1032,9 +1032,9 @@ window.radheyStop = function() {
 
            // Build category options from global categories
            const cats = (typeof categories !== 'undefined' ? categories : []);
-           let catOpts = '<option value="">— Select Category —</option>';
+           let catOpts = `<option value="">— ${(typeof t === 'function' ? t('selectCategory') : 'Select Category')} —</option>`;
            cats.forEach(c => {
-                     const name = c.name && (c.name.en || c.name) || c.id;
+                     const name = (typeof getTranslated === 'function') ? getTranslated(c.name) : (c.name && (c.name[(typeof currentLanguage !== 'undefined' ? currentLanguage : 'en')] || c.name.en || c.name) || c.id);
                      catOpts += `<option value="${c.id}">${name}</option>`;
            });
 
@@ -1075,7 +1075,7 @@ window.radheyStop = function() {
              const cat = row.querySelector('.sc-mt-cat');
                      const sub = row.querySelector('.sc-mt-sub');
                      if (cat) cat.value = '';
-                     if (sub) { sub.innerHTML = '<option value="">— Select Subcategory —</option>'; }
+                     if (sub) { sub.innerHTML = `<option value="">— ${(typeof t === 'function' ? t('selectSubcategory') : 'Select Subcategory')} —</option>`; }
                      const svcsArea = row.querySelector('.sc-mt-svcs-area');
                      if (svcsArea) { svcsArea.style.display = 'none'; svcsArea.querySelector('.sc-mt-svc-chips').innerHTML = ''; }
                      scUpdateMultitaskerCount();
@@ -1088,7 +1088,7 @@ window.radheyStop = function() {
            const svcsArea = row.querySelector('.sc-mt-svcs-area');
            const catId = catEl.value;
 
-           subSel.innerHTML = '<option value="">— Select Subcategory —</option>';
+           subSel.innerHTML = `<option value="">— ${(typeof t === 'function' ? t('selectSubcategory') : 'Select Subcategory')} —</option>`;
            if (svcsArea) { svcsArea.style.display = 'none'; svcsArea.querySelector('.sc-mt-svc-chips').innerHTML = ''; }
 
            if (!catId || typeof categories === 'undefined') return;
@@ -1096,7 +1096,7 @@ window.radheyStop = function() {
            if (!cat || !cat.subcategories) return;
 
            cat.subcategories.forEach((sub, idx) => {
-                     const name = sub.name && (sub.name.en || sub.name) || ('Sub ' + idx);
+                     const name = (typeof getTranslated === 'function') ? getTranslated(sub.name) : (sub.name && (sub.name[(typeof currentLanguage !== 'undefined' ? currentLanguage : 'en')] || sub.name.en || sub.name) || ('Sub ' + idx));
                      const opt = document.createElement('option');
                      opt.value = idx;
                      opt.textContent = name;
@@ -1126,7 +1126,7 @@ window.radheyStop = function() {
            if (!svcs.length) return;
 
            svcs.forEach((svc, vi) => {
-                     const svcName = (typeof svc === 'string') ? svc : (svc.name && (svc.name.en || svc.name) || ('Service ' + vi));
+                     const svcName = (typeof svc === 'string') ? svc : (typeof getTranslated === 'function' ? getTranslated(svc.name) : (svc.name && (svc.name[(typeof currentLanguage !== 'undefined' ? currentLanguage : 'en')] || svc.name.en || svc.name) || ('Service ' + vi)));
                      const chip = document.createElement('span');
                      chip.className = 'sc-mt-svc-chip cursor-pointer text-xs px-2.5 py-1 rounded-full border border-orange-300 bg-white text-gray-700 hover:border-orange-500 transition select-none';
                      chip.textContent = svcName;
