@@ -51,7 +51,7 @@ window.radheyLocalAnswer = function(quehry) {hh
 
     function applyAllFixes() {
         fixBug1_WalletTab();
-        fixBug2_ProviderDashBtn();
+        // fixBug2_ProviderDashBtn(); // FIXED: Button now exists in index.html
         fixBug3_HomeStats();
         fixBug4_WalletDeduction();
         fixBug5_InfoChatbot();
@@ -259,7 +259,7 @@ window.radheyLocalAnswer = function(quehry) {hh
                         if (isP) {
                             const card = document.getElementById('myProviderCard');
                             if (card) card.classList.remove('hidden');
-                            fixBug2_ProviderDashBtn();
+                            // fixBug2_ProviderDashBtn(); // FIXED: Button now exists in index.html
                         }
                         // Add "Become a Provider/Seeker" buttons
                         const header = roleEl.closest('.bg-gradient-to-br');
