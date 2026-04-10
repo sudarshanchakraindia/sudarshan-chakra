@@ -1872,3 +1872,523 @@ window.radheyStop = function() {
 
    console.log('[SC v5.1] Cascade fallback fix loaded');
 })(); // end fixBrowseCascade
+
+
+// ============================================================
+// SC PATCH v4.1 — 10 Apr 2026
+// Fixes: Translation issues, Wallet actions, Donation security
+// ============================================================
+(function scPatchV41() {
+
+    // ── TRANSLATION HELPERS ──────────────────────────────────────
+    const T = {
+            hi: {
+                        myProviderProfile: '🛠️ मेरी प्रदाता प्रोफ़ाइल',
+                        editMyProfile: '✏️ प्रोफ़ाइल संपादित करें',
+                        myWorkPortfolio: '📸 मेरा कार्य पोर्टफ़ोलियो',
+                        myProviderDash: '📊 मेरा प्रदाता डैशबोर्ड',
+                        manageMembership: '🏅 सदस्यता योजना प्रबंधित करें',
+                        available: 'उपलब्ध',
+                        makePayment: '💳 भुगतान करें',
+                        writeReview: '⭐ समीक्षा लिखें',
+                        sendGratitude: '🙏 कृतज्ञता संदेश भेजें',
+                        referFriend: '📤 मित्र को रेफर करें',
+                        referProvider: '🤝 प्रदाता को रेफर करें',
+                        donateCharity: '🌱 दान करें',
+                        selectProviderReview: 'किस प्रदाता की समीक्षा लिखनी है?',
+                        donateWarning: '⚠️ दान तभी मान्य होगा जब UTR नंबर दर्ज किया जाए।',
+            },
+            en: {
+                        myProviderProfile: '🛠️ My Provider Profile',
+                        editMyProfile: '✏️ Edit My Profile',
+                        myWorkPortfolio: '📸 My Work Portfolio',
+                        myProviderDash: '📊 My Provider Dashboard',
+                        manageMembership: '🏅 Manage Membership Plan',
+                        available: 'Available',
+                        makePayment: '💳 Make a Payment',
+                        writeReview: '⭐ Write a Review',
+                        sendGratitude: '🙏 Send Gratitude',
+                        referFriend: '📤 Refer a Friend',
+                        referProvider: '🤝 Refer a Provider',
+                        donateCharity: '🌱 Donate to Charity',
+                        selectProviderReview: 'Select provider to review:',
+                        donateWarning: '⚠️ Donation is confirmed only after entering the UTR number.',
+            }
+    };
+
+    function _lang() {
+            return localStorage.getItem('language') || 'en';
+    }
+
+    function _t(key) {
+            const l = _lang();
+            return (T[l] && T[l][key]) || T['en'][key] || key;
+    }
+
+    // ── FIX A: INFO/ABOUT PAGE — Apply translations when opened ──
+    (function patchInfoPage() {
+            const origShowPage = window.showPage;
+            if (typeof origShowPage !== 'function') return;
+            window.showPage = function(pageName) {
+                        origShowPage.call(this, pageName);
+                        if (pageName === 'info') {
+                                        setTimeout(() => {
+                                                            if (typeof updateAllUIText === 'function') updateAllUIText();
+                                                            // Translate info page section headings that are hardcoded
+                                                            const lang = _lang();
+                                                            if (lang !== 'en') {
+                                                                                    const infoPage = document.getElementById('page-info');
+                                                                                    if (!infoPage) return;
+                                                                                    // Mark key info headings for translation if not already done
+                                                                                    infoPage.querySelectorAll('h2, h3, h4').forEach(el => {
+                                                                                                                if (!el.getAttribute('data-i18n')) {
+                                                                                                                                                el.setAttribute('data-i18n-info', el.textContent.trim());
+                                                                                                                    }
+                                                                                        });
+                                                            }
+                                        }, 100);
+                        }
+            };
+            console.log('[SC v4.1] Info page translation patch applied');
+    })();
+
+    // ── FIX B: PROFILE CARD — Translate hardcoded English strings ──
+    (function patchProfileTranslations() {
+            const origRenderProfilePage = window.renderProfilePage;
+            if (typeof origRenderProfilePage !== 'function') {
+                        // Watch for function to appear
+                        const w = setInterval(() => {
+                                        if (typeof window.renderProfilePage === 'function') {
+                                                            clearInterval(w);
+                                                            applyProfilePatch();
+                                        }
+                        }, 300);
+                        return;
+            }
+            applyProfilePatch();
+
+            function applyProfilePatch() {
+                        const origFn = window.renderProfilePage;
+                        window.renderProfilePage = function() {
+                                        origFn.apply(this, arguments);
+                                        setTimeout(translateProfileCard, 150);
+                        };
+                        console.log('[SC v4.1] Profile translation patch applied');
+            }
+    })();
+
+    function translateProfileCard() {
+            const lang = _lang();
+            if (lang === 'en') return; // English is default, no change needed
+
+            // Translate "My Provider Profile" heading
+            const card = document.getElementById('myProviderCard');
+            if (card) {
+                        const h3 = card.querySelector('h3');
+                        if (h3 && h3.textContent.includes('My Provider Profile')) {
+                                        h3.textContent = _t('myProviderProfile');
+                        }
+                        // Translate Available label
+                        card.querySelectorAll('span').forEach(span => {
+                                        if (span.textContent.trim() === 'Available') span.textContent = _t('available');
+                        });
+            }
+
+            // Translate button texts in myProviderCard
+            document.querySelectorAll('#myProviderCard button').forEach(btn => {
+                        const txt = btn.textContent.trim();
+                        if (txt.includes('Edit My Profile')) btn.textContent = _t('editMyProfile');
+                        else if (txt.includes('My Work Portfolio')) btn.textContent = _t('myWorkPortfolio');
+                        else if (txt.includes('My Provider Dashboard')) btn.textContent = _t('myProviderDash');
+                        else if (txt.includes('Manage Membership') || txt.includes('सदस्यता')) { /* already translated */ }
+            });
+
+            // Translate wallet action buttons
+            document.querySelectorAll('.wallet-action-btn, [data-wallet-action]').forEach(btn => {
+                        const txt = btn.textContent.trim();
+                        if (txt.includes('Make a Payment') || txt.includes('Make Payment')) btn.querySelector('.font-semibold') && (btn.querySelector('.font-semibold').textContent = _t('makePayment'));
+                        if (txt.includes('Write a Review')) btn.querySelector('.font-semibold') && (btn.querySelector('.font-semibold').textContent = _t('writeReview'));
+                        if (txt.includes('Send') && txt.includes('gratitude')) btn.querySelector('.font-semibold') && (btn.querySelector('.font-semibold').textContent = _t('sendGratitude'));
+                        if (txt.includes('Refer a Friend')) btn.querySelector('.font-semibold') && (btn.querySelector('.font-semibold').textContent = _t('referFriend'));
+                        if (txt.includes('Refer a Provider')) btn.querySelector('.font-semibold') && (btn.querySelector('.font-semibold').textContent = _t('referProvider'));
+                        if (txt.includes('Donate to Charity')) btn.querySelector('.font-semibold') && (btn.querySelector('.font-semibold').textContent = _t('donateCharity'));
+            });
+    }
+
+    // Also run translation whenever language changes
+    const origSelectLanguage = window.selectLanguage;
+    if (typeof origSelectLanguage === 'function') {
+            window.selectLanguage = function(lang) {
+                        origSelectLanguage.call(this, lang);
+                        setTimeout(translateProfileCard, 200);
+            };
+    }
+
+    // ── FIX C: REFER A PROVIDER — Use share.html link ────────────
+    (function patchReferProvider() {
+            const origFn = window.showReferProviderModal;
+            if (typeof origFn !== 'function') {
+                        const w = setInterval(() => {
+                                        if (typeof window.showReferProviderModal === 'function') {
+                                                            clearInterval(w);
+                                                            patchIt();
+                                        }
+                        }, 300);
+                        return;
+            }
+            patchIt();
+
+            function patchIt() {
+                        const orig = window.showReferProviderModal;
+                        window.showReferProviderModal = function() {
+                                        orig.apply(this, arguments);
+                                        // After modal renders, fix the referral URL to use share.html
+                                        setTimeout(() => {
+                                                            const modal = document.getElementById('referProviderModal');
+                                                            if (!modal) return;
+                                                            const shareBase = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/share.html';
+                                                            const uid = (window.firebaseUser && window.firebaseUser.uid) ? '?ref=' + window.firebaseUser.uid : '';
+                                                            const shareUrl = shareBase + uid;
+
+                                                            // Fix all text showing the old URL
+                                                            const urlSpan = modal.querySelector('#referUrlText');
+                                                            if (urlSpan) urlSpan.textContent = shareUrl;
+
+                                                            // Fix copy button
+                                                            modal.querySelectorAll('button').forEach(btn => {
+                                                                                    if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('clipboard')) {
+                                                                                                                btn.setAttribute('onclick', `navigator.clipboard.writeText('${shareUrl}').then(()=>showFirebaseStatus('Link copied!','success'))`);
+                                                                                        }
+                                                                                    // Fix WhatsApp share button
+                                                                                    if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('wa.me')) {
+                                                                                                                const currentOnclick = btn.getAttribute('onclick');
+                                                                                                                const fixedOnclick = currentOnclick.replace(/https[^'"]+(sudarshan-chakra[^'"]*)/g, shareUrl);
+                                                                                                                btn.setAttribute('onclick', fixedOnclick);
+                                                                                        }
+                                                            });
+
+                                                            // Fix all anchor tags
+                                                            modal.querySelectorAll('a').forEach(a => {
+                                                                                    if (a.href && a.href.includes('sudarshan-chakra')) {
+                                                                                                                a.href = shareUrl;
+                                                                                        }
+                                                            });
+
+                                                            // Fix the message text shown in the modal
+                                                            const msgDiv = modal.querySelector('.bg-blue-50');
+                                                            if (msgDiv) {
+                                                                                    msgDiv.innerHTML = msgDiv.innerHTML.replace(/https[^<\s]*(page-register|register)[^<\s]*/g, shareUrl);
+                                                            }
+                                        }, 200);
+                        };
+                        console.log('[SC v4.1] Refer Provider share.html patch applied');
+            }
+    })();
+
+    // ── FIX D: WRITE A REVIEW — Provider selection flow ──────────
+    window.openWriteReviewFlow = function() {
+            if (!window.firebaseUser) {
+                        if (typeof openLoginModal === 'function') openLoginModal();
+                        return;
+            }
+            // Remove old modal if exists
+            const old = document.getElementById('scWriteReviewModal');
+            if (old) old.remove();
+
+            // Build provider list from global providers variable
+            const providers = window.providers || [];
+            const provList = providers.length > 0
+                ? providers.filter(p => p && p.name).slice(0, 50).map(p =>
+                                `<div onclick="scSelectProviderForReview('${p.id}','${(p.name||'').replace(/'/g,"\\'")}')"
+                                                class="flex items-center gap-3 p-3 bg-gray-50 hover:bg-orange-50 rounded-xl cursor-pointer border border-transparent hover:border-orange-200 transition">
+                                                                <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-lg font-bold text-orange-600">${(p.name||'?')[0].toUpperCase()}</div>
+                                                                                <div><div class="font-semibold text-sm text-gray-800">${p.name||''}</div><div class="text-xs text-gray-400">${p.category||''} · ${p.location||''}</div></div>
+                                                                                            </div>`).join('')
+                        : '<p class="text-center text-gray-400 text-sm py-4">No providers found. Please browse first.</p>';
+
+            const modal = document.createElement('div');
+            modal.id = 'scWriteReviewModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[80vh] flex flex-col">
+                                <div class="bg-gradient-to-r from-yellow-500 to-orange-500 text-white p-5 rounded-t-2xl flex justify-between items-center">
+                                                <h2 class="text-lg font-bold">⭐ Write a Review</h2>
+                                                                <button onclick="document.getElementById('scWriteReviewModal').remove()" class="text-white text-2xl font-bold">✕</button>
+                                                                            </div>
+                                                                                        <div class="p-4 overflow-y-auto flex-1">
+                                                                                                        <p class="text-sm text-gray-500 mb-3">${_t('selectProviderReview')}</p>
+                                                                                                                        <div class="space-y-2">${provList}</div>
+                                                                                                                                    </div>
+                                                                                                                                            </div>`;
+            document.body.appendChild(modal);
+    };
+
+    window.scSelectProviderForReview = function(providerId, providerName) {
+            const old = document.getElementById('scWriteReviewModal');
+            if (old) old.remove();
+            // Open the existing review modal if available
+            if (typeof openReviewModal === 'function') {
+                        openReviewModal(providerId, providerName);
+            } else {
+                        alert('Review modal not found. Please open provider profile to leave a review.');
+            }
+    };
+
+    // Patch the wallet "Write a Review" button to use the new flow
+    (function patchWriteReviewBtn() {
+            function fixBtn() {
+                        document.querySelectorAll('button').forEach(btn => {
+                                        const inner = btn.querySelector('.font-semibold');
+                                        const label = inner ? inner.textContent.trim() : btn.textContent.trim();
+                                        if ((label.includes('Write a review') || label.includes('Write a Review')) &&
+                                                            btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('showPage')) {
+                                                            btn.setAttribute('onclick', "openWriteReviewFlow()");
+                                        }
+                        });
+            }
+            setTimeout(fixBtn, 1500);
+            // Also run after profile renders
+            const origRP = window.renderProfilePage;
+            if (typeof origRP === 'function') {
+                        window.renderProfilePage = function() {
+                                        origRP.apply(this, arguments);
+                                        setTimeout(fixBtn, 300);
+                        };
+            }
+            console.log('[SC v4.1] Write Review button patch applied');
+    })();
+
+    // ── FIX E: MAKE A PAYMENT — Open payment gateway ─────────────
+    window.openMakePaymentFlow = function() {
+            if (!window.firebaseUser) {
+                        if (typeof openLoginModal === 'function') openLoginModal();
+                        return;
+            }
+            // Open the SC payment modal if it exists, else show instructions
+            const modal = document.getElementById('scPayModal');
+            if (modal) {
+                        // Set title and amount for generic payment
+                        const title = document.getElementById('scpay-title');
+                        const amtDisp = document.getElementById('scpay-amount-display');
+                        const descDisp = document.getElementById('scpay-desc-display');
+                        if (title) title.textContent = 'Make a Payment';
+                        if (amtDisp) amtDisp.textContent = '₹0';
+                        if (descDisp) descDisp.textContent = 'Enter amount in UPI app';
+                        modal.classList.remove('hidden');
+                        if (typeof scPayInit === 'function') scPayInit(0, 'Payment', null);
+            } else {
+                        alert('Payment gateway opening. Please use UPI ID: 9414055013@ybl');
+            }
+    };
+
+    (function patchMakePaymentBtn() {
+            function fixBtn() {
+                        document.querySelectorAll('button').forEach(btn => {
+                                        const inner = btn.querySelector('.font-semibold');
+                                        const label = inner ? inner.textContent.trim() : btn.textContent.trim();
+                                        if ((label.includes('Make a payment') || label.includes('Make a Payment')) &&
+                                                            btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('showPage')) {
+                                                            btn.setAttribute('onclick', "openMakePaymentFlow()");
+                                        }
+                        });
+            }
+            setTimeout(fixBtn, 1500);
+            const origRP = window.renderProfilePage;
+            if (typeof origRP === 'function') {
+                        window.renderProfilePage = function() {
+                                        origRP.apply(this, arguments);
+                                        setTimeout(fixBtn, 300);
+                        };
+            }
+            console.log('[SC v4.1] Make Payment button patch applied');
+    })();
+
+    // ── FIX F: DONATION — CRITICAL: Require UTR before awarding points ──
+    (function patchDonationSecurity() {
+            const origProceed = window.proceedCharityPayment;
+            if (typeof origProceed !== 'function') {
+                        const w = setInterval(() => {
+                                        if (typeof window.proceedCharityPayment === 'function') {
+                                                            clearInterval(w);
+                                                            applyDonationPatch();
+                                        }
+                        }, 300);
+                        return;
+            }
+            applyDonationPatch();
+
+            function applyDonationPatch() {
+                        // Override proceedCharityPayment to use scPayModal instead
+                        window.proceedCharityPayment = function() {
+                                        // Get charity amount
+                                        const charityAmt = window.charityAmt || 10;
+                                        if (charityAmt < 10) {
+                                                            alert('Minimum donation is ₹10');
+                                                            return;
+                                        }
+                                        // Close charity modal
+                                        if (typeof closeCharityModal === 'function') closeCharityModal();
+
+                                        // Open the SC payment gateway with charity context
+                                        const modal = document.getElementById('scPayModal');
+                                        if (modal) {
+                                                            modal.classList.remove('hidden');
+                                                            if (typeof scPayInit === 'function') {
+                                                                                    scPayInit(charityAmt, 'Charity Donation', 'charity');
+                                                            } else {
+                                                                                    // Fallback: manually set up the modal
+                                                                                    const title = document.getElementById('scpay-title');
+                                                                                    const amtDisp = document.getElementById('scpay-amount-display');
+                                                                                    const descDisp = document.getElementById('scpay-desc-display');
+                                                                                    if (title) title.textContent = '🌱 Charity Donation';
+                                                                                    if (amtDisp) amtDisp.textContent = '₹' + charityAmt;
+                                                                                    if (descDisp) descDisp.textContent = '100% goes to charity';
+                                                            }
+                                                            // CRITICAL: Override the "I have paid" / confirm button to require UTR
+                                                            setTimeout(overrideDonationConfirm, 300);
+                                        } else {
+                                                            // Fallback if scPayModal not found
+                                                            showDonationUTRPrompt(charityAmt);
+                                        }
+                        };
+
+                        // Override scPayConfirm to require UTR for charity payments
+                        const origConfirm = window.scPayConfirm;
+                        window.scPayConfirm = function() {
+                                        const ctx = window._scPayContext;
+                                        if (ctx === 'charity') {
+                                                            const utrInput = document.getElementById('scpay-utr-input') || document.querySelector('[id*="utr"]');
+                                                            const utr = utrInput ? utrInput.value.trim() : '';
+                                                            if (!utr || utr.length < 8) {
+                                                                                    alert('⚠️ Please enter a valid UTR/transaction number from your UPI app to confirm the donation. No UTR = No award points.');
+                                                                                    return;
+                                                            }
+                                                            // UTR provided — now save charity donation WITH UTR to Firebase
+                                                            completeDonationWithUTR(window.charityAmt || 10, utr);
+                                        } else {
+                                                            if (typeof origConfirm === 'function') origConfirm.apply(this, arguments);
+                                        }
+                        };
+
+                        console.log('[SC v4.1] CRITICAL: Donation security patch applied — UTR required');
+            }
+
+            function overrideDonationConfirm() {
+                        // Mark context as charity in the payment modal
+                        window._scPayContext = 'charity';
+
+                        // Add warning banner to the payment modal
+                        const modal = document.getElementById('scPayModal');
+                        if (!modal) return;
+                        if (modal.querySelector('.sc-charity-warning')) return;
+                        const warning = document.createElement('div');
+                        warning.className = 'sc-charity-warning bg-red-50 border border-red-200 rounded-xl p-3 mx-4 text-xs text-red-700 font-semibold';
+                        warning.innerHTML = '⚠️ <strong>Important:</strong> Points will ONLY be awarded after you enter your UTR/transaction number from UPI app. Entering a fake UTR is considered fraud.';
+                        const firstSection = modal.querySelector('.p-4');
+                        if (firstSection) firstSection.insertBefore(warning, firstSection.firstChild);
+            }
+
+            function showDonationUTRPrompt(amt) {
+                        const old = document.getElementById('scDonationUTRModal');
+                        if (old) old.remove();
+                        const modal = document.createElement('div');
+                        modal.id = 'scDonationUTRModal';
+                        modal.className = 'fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4';
+                        modal.innerHTML = `
+                                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
+                                                    <h2 class="text-lg font-bold text-teal-700 mb-2">🌱 Confirm Donation of ₹${amt}</h2>
+                                                                    <p class="text-sm text-gray-600 mb-3">Pay <strong>₹${amt}</strong> to UPI ID: <strong class="text-orange-600">9414055013@ybl</strong></p>
+                                                                                    <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 mb-3">
+                                                                                                        ⚠️ <strong>Required:</strong> Enter the UTR/Reference number from your UPI app after payment. Points awarded ONLY after UTR verification.
+                                                                                                                        </div>
+                                                                                                                                        <input id="scDonationUTRInput" type="text" placeholder="Enter 12-digit UTR from UPI app"
+                                                                                                                                                            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm mb-3 focus:border-teal-500 focus:outline-none">
+                                                                                                                                                                            <div class="flex gap-2">
+                                                                                                                                                                                                <button onclick="document.getElementById('scDonationUTRModal').remove()" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-bold">Cancel</button>
+                                                                                                                                                                                                                    <button onclick="scConfirmDonationUTR(${amt})" class="flex-1 bg-teal-600 text-white py-2.5 rounded-xl text-sm font-bold">Confirm Donation</button>
+                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                </div>`;
+                        document.body.appendChild(modal);
+            }
+    })();
+
+    window.scConfirmDonationUTR = async function(amt) {
+            const input = document.getElementById('scDonationUTRInput');
+            const utr = input ? input.value.trim() : '';
+            if (!utr || utr.length < 6) {
+                        alert('Please enter a valid UTR/transaction number from your UPI app.');
+                        return;
+            }
+            await completeDonationWithUTR(amt, utr);
+            const modal = document.getElementById('scDonationUTRModal');
+            if (modal) modal.remove();
+    };
+
+    async function completeDonationWithUTR(amt, utr) {
+            if (!window.firebaseUser || !window._firebase) {
+                        alert('Please login to complete donation.');
+                        return;
+            }
+            const fb = window._firebase;
+            const uid = window.firebaseUser.uid;
+            const txnId = 'charity_' + Date.now();
+            try {
+                        await fb.set(fb.ref(fb.db, `users/${uid}/transactions/${txnId}`), {
+                                        type: 'charity',
+                                        amount: amt,
+                                        utr: utr,
+                                        fee: 0,
+                                        points: 5,
+                                        timestamp: txnId,
+                                        date: new Date().toLocaleDateString('en-IN'),
+                                        status: 'pending_verification'
+                        });
+                        // Award 5 points for donation (only after UTR submitted)
+                        if (typeof awardWalletPoints === 'function') {
+                                        await awardWalletPoints(5, 'charity_donation', 'Donated ₹' + amt + ' to charity (UTR: ' + utr + ')');
+                        }
+                        alert('🙏 Thank you for your donation of ₹' + amt + '!\nYour UTR ' + utr + ' has been recorded.\n5 wallet points will be credited after admin verification.');
+                        if (typeof loadWallet === 'function') loadWallet();
+                        window._scPayContext = null;
+                        const scModal = document.getElementById('scPayModal');
+                        if (scModal) scModal.classList.add('hidden');
+            } catch(e) {
+                        alert('Error saving donation: ' + e.message);
+            }
+    }
+
+    // ── FIX G: CATEGORIES from Firebase — Translation fallback ───
+    // Admin-added categories may only have English text stored as plain string
+    // Patch getTranslated to handle plain strings gracefully
+    (function patchGetTranslated() {
+            const origFn = window.getTranslated;
+            if (typeof origFn !== 'function') {
+                        const w = setInterval(() => {
+                                        if (typeof window.getTranslated === 'function') {
+                                                            clearInterval(w);
+                                                            applyPatch();
+                                        }
+                        }, 300);
+                        return;
+            }
+            applyPatch();
+            function applyPatch() {
+                        const orig = window.getTranslated;
+                        window.getTranslated = function(obj, defaultText) {
+                                        if (!obj) return defaultText || '';
+                                        // If obj is a plain string, return as-is (admin-added category with no translation)
+                                        if (typeof obj === 'string') return obj;
+                                        // If obj is an object with language keys, use current lang with en fallback
+                                        if (typeof obj === 'object') {
+                                                            const lang = localStorage.getItem('language') || 'en';
+                                                            return obj[lang] || obj['en'] || obj['hi'] || Object.values(obj)[0] || defaultText || '';
+                                        }
+                                        return orig.call(this, obj, defaultText);
+                        };
+                        console.log('[SC v4.1] getTranslated enhanced for admin-added categories');
+            }
+    })();
+
+    console.log('[SC v4.1] All patches loaded: Info translation, Profile card translation, Refer Provider share.html, Write Review flow, Make Payment flow, Donation UTR security, Category translation fallback');
+})(); // end scPatchV41
+
