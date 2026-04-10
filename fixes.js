@@ -2389,6 +2389,415 @@ window.radheyStop = function() {
             }
     })();
 
+
+    // ============================================================
+    // SC PATCH v4.2 — 10 Apr 2026
+    // Fixes: Info page translation, Admin category translation,
+    //        Share/Gratitude points security, Payment points security
+    // ============================================================
+    (function scPatchV42() {
+
+        // ── FIX 1: INFO/ABOUT PAGE — Full translation via JS overlay ──
+        // The info page is entirely hardcoded HTML. We inject translated content
+        // via a JS-driven overlay when language is not English.
+
+        const INFO_TRANSLATIONS = {
+                hi: {
+                            backToHome: '← होम पर वापस',
+                            aboutTitle: '🔱 सुदर्शन चक्र इंडिया',
+                            aboutSubtitle: 'भारत के कुशल हाथों को हर घर से जोड़ना',
+                            aboutDesc1: 'सुदर्शन चक्र इंडिया भारत के दिल — उसके कुशल, मेहनती लोगों के लिए बना एक हाइपरलोकल सर्विस मार्केटप्लेस है।',
+                            aboutDesc2: 'हम सेवा खोजने वालों और सेवा देने वालों के बीच सेतु बनाते हैं — प्लम्बर, इलेक्ट्रीशियन, टीचर, ब्यूटीशियन, रसोइए और अनगिनत अन्य कुशल कारीगर।',
+                            aboutDesc3: '12 भाषाओं में निर्मित: वॉयस सर्च, सत्यापित प्रोफ़ाइल, असली समीक्षाएं, वॉलेट रिवॉर्ड, इन-ऐप चैट, चैरिटी प्रोग्राम और सामुदायिक रेफरल।',
+                            forSeekers: 'सेवा खोजने वालों के लिए',
+                            seekersDesc: 'अपने घर के लिए भरोसेमंद मदद खोजें — तेज़, विश्वसनीय, किफ़ायती।',
+                            forProviders: 'सेवा देने वालों के लिए',
+                            providersDesc: 'अपनी प्रोफ़ाइल बनाएं, खोजे जाएं, कमाएं — कोई बिचौलिया नहीं।',
+                            keyFeatures: '✨ हमारी विशेषताएं',
+                            ourVision: '🌱 हमारा विज़न — कौशल। सम्मान। सबके लिए आजीविका।',
+                            howToUse: '📖 ऐप कैसे उपयोग करें',
+                            faq: '❓ अक्सर पूछे जाने वाले प्रश्न',
+                            aboutUs: '👥 हमारे बारे में',
+                            corporateOffice: '🏢 कॉर्पोरेट कार्यालय',
+                            getInTouch: '📞 संपर्क करें',
+                            helpGuide: '🆘 सहायता मार्गदर्शिका',
+                            stayConnected: '📲 जुड़े रहें',
+                            aiGuide: '🤖 AI गाइड — कुछ भी पूछें',
+                            aiSubtitle: 'आपका 24x7 AI सहायक। किसी भी भाषा में ऐप के बारे में कुछ भी पूछें।',
+                            forSeekersStep: '👤 सेवा खोजने वाले — चरण दर चरण',
+                            forProvidersStep: '⚙️ सेवा देने वाले — चरण दर चरण',
+                }
+        };
+
+        function applyInfoTranslation() {
+                const lang = localStorage.getItem('language') || 'en';
+                if (lang === 'en') return;
+                const t = INFO_TRANSLATIONS[lang];
+                if (!t) return; // No translation for this language yet
+
+                const infoPage = document.getElementById('page-info');
+                if (!infoPage) return;
+
+                // Translate "Back to Home" button
+                infoPage.querySelectorAll('button').forEach(btn => {
+                            if (btn.textContent.includes('Back to Home')) btn.textContent = t.backToHome;
+                });
+
+                // Translate section headings
+                infoPage.querySelectorAll('h2, h3, h4').forEach(el => {
+                            const txt = el.textContent.trim();
+                            if (txt.includes('Sudarshan Chakra India') && !txt.includes('Pvt')) el.textContent = t.aboutTitle;
+                            else if (txt.includes('Key Features')) el.textContent = t.keyFeatures;
+                            else if (txt.includes('Our Vision')) el.textContent = t.ourVision;
+                            else if (txt.includes('How to Use')) el.textContent = t.howToUse;
+                            else if (txt.includes('Frequently Asked')) el.textContent = t.faq;
+                            else if (txt.includes('About Us')) el.textContent = t.aboutUs;
+                            else if (txt.includes('AI Guide')) el.textContent = t.aiGuide;
+                            else if (txt.includes('Corporate Office')) el.textContent = t.corporateOffice;
+                            else if (txt.includes('Get in Touch')) el.textContent = t.getInTouch;
+                            else if (txt.includes('Help Guide')) el.textContent = t.helpGuide;
+                            else if (txt.includes('Stay Connected')) el.textContent = t.stayConnected;
+                            else if (txt.includes('For Seekers') && txt.includes('Step')) el.textContent = t.forSeekersStep;
+                            else if (txt.includes('For Providers') && txt.includes('Step')) el.textContent = t.forProvidersStep;
+                });
+
+                // Translate subtitle "Connecting India's Skilled Hands..."
+                infoPage.querySelectorAll('p').forEach(p => {
+                            const txt = p.textContent.trim();
+                            if (txt.includes("Connecting India's Skilled Hands")) p.textContent = t.aboutSubtitle;
+                });
+
+                // Translate For Seekers / For Providers headings in cards
+                infoPage.querySelectorAll('h3').forEach(el => {
+                            const txt = el.textContent.trim();
+                            if (txt === 'For Service Seekers') el.textContent = t.forSeekers;
+                            else if (txt === 'For Service Providers') el.textContent = t.forProviders;
+                });
+
+                // Translate paragraph descriptions in the about section
+                infoPage.querySelectorAll('p').forEach(p => {
+                            const txt = p.textContent.trim();
+                            if (txt.includes('hyperlocal service marketplace')) p.textContent = t.aboutDesc1;
+                            else if (txt.includes('bridge the gap between service seekers')) p.textContent = t.aboutDesc2;
+                            else if (txt.includes('12 regional languages') && txt.includes('voice search')) p.textContent = t.aboutDesc3;
+                            else if (txt.includes('Find trusted help for your home')) p.textContent = t.seekersDesc;
+                            else if (txt.includes('Build your profile, get discovered')) p.textContent = t.providersDesc;
+                            else if (txt.includes('24x7 AI assistant')) p.textContent = t.aiSubtitle;
+                });
+
+                console.log('[SC v4.2] Info page translated to', lang);
+        }
+
+        // Hook into showPage to apply translation
+        (function hookInfoTranslation() {
+                const orig = window.showPage;
+                if (typeof orig !== 'function') { setTimeout(hookInfoTranslation, 400); return; }
+                window.showPage = function(pageName) {
+                            orig.call(this, pageName);
+                            if (pageName === 'info') setTimeout(applyInfoTranslation, 150);
+                };
+                // Also hook selectLanguage
+                const origSL = window.selectLanguage;
+                if (typeof origSL === 'function') {
+                            window.selectLanguage = function(lang) {
+                                            origSL.call(this, lang);
+                                            // Re-apply if currently on info page
+                                            const infoPage = document.getElementById('page-info');
+                                            if (infoPage && !infoPage.classList.contains('hidden')) {
+                                                                setTimeout(applyInfoTranslation, 200);
+                                            }
+                            };
+                }
+                console.log('[SC v4.2] Info page translation hook applied');
+        })();
+
+        // ── FIX 2: ADMIN CATEGORIES — Translate plain-string names ───
+        // Admin adds categories as plain strings. We need to either:
+        // a) Look up a translation from a known map, or
+        // b) Keep English as-is (already done in v4.1)
+        // But the real fix: patch renderProfilePage & category rendering to
+        // use getTranslated properly, and also add common translations.
+
+        const ADMIN_CAT_TRANSLATIONS = {
+                hi: {
+                            'Legal Advisor': 'कानूनी सलाहकार',
+                            'Property Dealer': 'संपत्ति डीलर',
+                            'Rental Listing': 'किराया लिस्टिंग',
+                            'Packers and Movers': 'पैकर्स और मूवर्स',
+                            'Real Estate & Property': 'रियल एस्टेट और संपत्ति',
+                            'Notary': 'नोटरी',
+                            'Document Writer': 'दस्तावेज़ लेखक',
+                            'Tax Consultant': 'कर सलाहकार',
+                            'CA / Accountant': 'सीए / अकाउंटेंट',
+                            'Insurance Agent': 'बीमा एजेंट',
+                            'Home Loan Advisor': 'गृह ऋण सलाहकार',
+                            'Architect': 'वास्तुकार',
+                            'Interior Designer': 'इंटीरियर डिज़ाइनर',
+                            'Marriage Bureau': 'विवाह ब्यूरो',
+                            'Event Planner': 'इवेंट प्लानर',
+                            'Photographer': 'फोटोग्राफर',
+                            'Videographer': 'वीडियोग्राफर',
+                            'Caterer': 'खान-पान सेवा',
+                            'DJ / Sound': 'डीजे / साउंड',
+                            'Tent & Decoration': 'टेंट और सजावट',
+                            'Pandit / Purohit': 'पंडित / पुरोहित',
+                            'Maulana': 'मौलाना',
+                            'Pastor': 'पादरी',
+                            'Astrologer': 'ज्योतिषी',
+                            'Vastu Expert': 'वास्तु विशेषज्ञ',
+                            'Security Guard': 'सुरक्षा गार्ड',
+                            'Driver': 'ड्राइवर',
+                            'Personal Trainer': 'व्यक्तिगत प्रशिक्षक',
+                            'Yoga Teacher': 'योग शिक्षक',
+                            'Tutor': 'ट्यूटर',
+                            'Music Teacher': 'संगीत शिक्षक',
+                            'Dance Teacher': 'नृत्य शिक्षक',
+                            'Computer Teacher': 'कंप्यूटर शिक्षक',
+                            'Spoken English Teacher': 'अंग्रेजी शिक्षक',
+                            'Baby Sitter': 'बेबी सिटर',
+                            'Old Age Care': 'वृद्ध सेवा',
+                            'Nurse / Caretaker': 'नर्स / देखभालकर्ता',
+                            'Doctor (Home Visit)': 'डॉक्टर (घर पर)',
+                            'Physiotherapist': 'फिजियोथेरेपिस्ट',
+                            'Mehendi Artist': 'मेहंदी कलाकार',
+                            'Tattoo Artist': 'टैटू कलाकार',
+                            'Laundry Service': 'लॉन्ड्री सेवा',
+                            'AC Repair': 'एसी मरम्मत',
+                            'Refrigerator Repair': 'फ्रिज मरम्मत',
+                            'Washing Machine Repair': 'वॉशिंग मशीन मरम्मत',
+                            'Microwave Repair': 'माइक्रोवेव मरम्मत',
+                            'Water Purifier Service': 'वॉटर प्यूरीफायर सेवा',
+                            'CCTV Installation': 'सीसीटीवी स्थापना',
+                            'Solar Panel': 'सोलर पैनल',
+                            'Pest Control': 'कीट नियंत्रण',
+                            'Gardener': 'माली',
+                            'Car Wash': 'कार धुलाई',
+                            'Mechanic': 'मैकेनिक',
+                            'Tyre Puncture': 'टायर पंक्चर',
+                            'Painter': 'पेंटर',
+                            'Mason': 'राजमिस्त्री',
+                            'Carpenter': 'बढ़ई',
+                            'Welder': 'वेल्डर',
+                            'Glass Work': 'कांच का काम',
+                            'Tile Work': 'टाइल का काम',
+                            'Plumber': 'प्लम्बर',
+                            'Electrician': 'इलेक्ट्रीशियन',
+                            'Cleaning': 'सफाई',
+                            'Cook / Chef': 'रसोइया / शेफ',
+                            'Beautician': 'ब्यूटीशियन',
+                            'Tailor': 'दर्जी',
+                }
+        };
+
+        // Enhanced getTranslated that also checks ADMIN_CAT_TRANSLATIONS
+        (function enhanceGetTranslated() {
+                function applyEnhancement() {
+                            const orig = window.getTranslated;
+                            window.getTranslated = function(obj, defaultText) {
+                                            if (!obj) return defaultText || '';
+                                            const lang = localStorage.getItem('language') || 'en';
+
+                                            // If obj is a plain string
+                                            if (typeof obj === 'string') {
+                                                                if (lang !== 'en') {
+                                                                                        const map = ADMIN_CAT_TRANSLATIONS[lang];
+                                                                                        if (map && map[obj]) return map[obj];
+                                                                }
+                                                                return obj;
+                                            }
+
+                                            // If obj is an object with language keys
+                                            if (typeof obj === 'object') {
+                                                                return obj[lang] || obj['en'] || obj['hi'] || Object.values(obj)[0] || defaultText || '';
+                                            }
+
+                                            return (orig ? orig.call(this, obj, defaultText) : (defaultText || ''));
+                            };
+                            console.log('[SC v4.2] getTranslated enhanced with admin category translations');
+                }
+
+                if (typeof window.getTranslated === 'function') {
+                            applyEnhancement();
+                } else {
+                            const w = setInterval(() => {
+                                            if (typeof window.getTranslated === 'function') {
+                                                                clearInterval(w);
+                                                                applyEnhancement();
+                                            }
+                            }, 200);
+                }
+        })();
+
+        // ── FIX 3: SHARE BONUS — Only award ONCE per 24 hours, not per click ──
+        // Block points from being awarded for just copying a link (no actual share)
+        (function patchShareBonus() {
+                function applySharePatch() {
+                            // Patch fallbackCopyReferral — REMOVE the award from copy action
+                            const origFallback = window.fallbackCopyReferral;
+                            if (typeof origFallback === 'function') {
+                                            window.fallbackCopyReferral = function(url, msg) {
+                                                                // Open WhatsApp — but DON'T award points just for copying
+                                                                const waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
+                                                                const choice = confirm('Share via WhatsApp?\n\nClick OK to open WhatsApp.\nPoints awarded only after actual WhatsApp share (not just copy).');
+                                                                if (choice) {
+                                                                                        window.open(waUrl, '_blank');
+                                                                                        // Award only once per day
+                                                                                        const lastShare = localStorage.getItem('sc_last_share_pts');
+                                                                                        const today = new Date().toDateString();
+                                                                                        if (lastShare !== today) {
+                                                                                                                    localStorage.setItem('sc_last_share_pts', today);
+                                                                                                                    if (typeof awardWalletPoints === 'function') {
+                                                                                                                                                    awardWalletPoints(5, 'share_referral', 'Shared via WhatsApp');
+                                                                                                                        }
+                                                                                            } else {
+                                                                                                                    showFirebaseStatus && showFirebaseStatus('Share bonus already claimed today!', 'info');
+                                                                                            }
+                                                                } else {
+                                                                                        // Copy link — no points, just confirm copy
+                                                                                        navigator.clipboard.writeText(url).then(() => {
+                                                                                                                    if (typeof showFirebaseStatus === 'function') showFirebaseStatus('✅ Link copied! Share it manually for bonus points.', 'success');
+                                                                                            }).catch(() => {
+                                                                                                                    if (typeof showFirebaseStatus === 'function') showFirebaseStatus('Your link: ' + url, 'info');
+                                                                                            });
+                                                                                        // NO points for just copying
+                                                                }
+                                            };
+                                            console.log('[SC v4.2] fallbackCopyReferral patched — no points for copy-only');
+                            }
+
+                            // Also patch shareReferralLink for navigator.share — once per day only
+                            const origShare = window.shareReferralLink;
+                            if (typeof origShare === 'function') {
+                                            window.shareReferralLink = function() {
+                                                                // Before calling original, wrap the awardWalletPoints in a rate limiter
+                                                                const origAward = window.awardWalletPoints;
+                                                                window.awardWalletPoints = function(pts, type, reason) {
+                                                                                        if (type === 'share_referral') {
+                                                                                                                    const lastShare = localStorage.getItem('sc_last_share_pts');
+                                                                                                                    const today = new Date().toDateString();
+                                                                                                                    if (lastShare === today) {
+                                                                                                                                                    console.log('[SC v4.2] Share bonus already claimed today, skipping');
+                                                                                                                                                    window.awardWalletPoints = origAward; // restore
+                                                                                                                                                    return Promise.resolve();
+                                                                                                                        }
+                                                                                                                    localStorage.setItem('sc_last_share_pts', today);
+                                                                                            }
+                                                                                        window.awardWalletPoints = origAward; // restore
+                                                                                        return origAward ? origAward.call(this, pts, type, reason) : Promise.resolve();
+                                                                };
+                                                                return origShare.apply(this, arguments);
+                                            };
+                                            console.log('[SC v4.2] shareReferralLink patched — once per day only');
+                            }
+                }
+
+                setTimeout(applySharePatch, 1000);
+                // Also apply after DOM is ready
+                if (document.readyState === 'complete') {
+                            applySharePatch();
+                } else {
+                            document.addEventListener('DOMContentLoaded', applySharePatch);
+                }
+        })();
+
+        // ── FIX 4: GRATITUDE — Only award once per 24 hours, not per action ──
+        (function patchGratitudeBonus() {
+                function applyGratitudePatch() {
+                            const origSendWA = window.sendGratitudeWhatsApp;
+                            const origCopy = window.copyGratitudeMessage;
+
+                            function checkAndAwardGratitude() {
+                                            const lastGrat = localStorage.getItem('sc_last_gratitude_pts');
+                                            const today = new Date().toDateString();
+                                            if (lastGrat === today) {
+                                                                if (typeof showFirebaseStatus === 'function') showFirebaseStatus('Gratitude bonus already claimed today!', 'info');
+                                                                return false;
+                                            }
+                                            localStorage.setItem('sc_last_gratitude_pts', today);
+                                            return true;
+                            }
+
+                            if (typeof origSendWA === 'function') {
+                                            window.sendGratitudeWhatsApp = function() {
+                                                                // Temporarily intercept awardWalletPoints
+                                                                const origAward = window.awardWalletPoints;
+                                                                window.awardWalletPoints = function(pts, type, reason) {
+                                                                                        window.awardWalletPoints = origAward;
+                                                                                        if (type === 'gratitude_share') {
+                                                                                                                    if (!checkAndAwardGratitude()) return Promise.resolve();
+                                                                                            }
+                                                                                        return origAward ? origAward.call(this, pts, type, reason) : Promise.resolve();
+                                                                };
+                                                                return origSendWA.apply(this, arguments);
+                                            };
+                            }
+
+                            if (typeof origCopy === 'function') {
+                                            window.copyGratitudeMessage = function() {
+                                                                const origAward = window.awardWalletPoints;
+                                                                window.awardWalletPoints = function(pts, type, reason) {
+                                                                                        window.awardWalletPoints = origAward;
+                                                                                        if (type === 'gratitude_share') {
+                                                                                                                    if (!checkAndAwardGratitude()) return Promise.resolve();
+                                                                                            }
+                                                                                        return origAward ? origAward.call(this, pts, type, reason) : Promise.resolve();
+                                                                };
+                                                                return origCopy.apply(this, arguments);
+                                            };
+                            }
+                            console.log('[SC v4.2] Gratitude bonus patched — once per day only');
+                }
+
+                setTimeout(applyGratitudePatch, 1000);
+        })();
+
+        // ── FIX 5: MAKE PAYMENT — No fake payments, open scPayOpen properly ──
+        // Override openMakePaymentFlow (from v4.1) to use scPayOpen with proper onSuccess
+        window.openMakePaymentFlow = function() {
+                if (!window.firebaseUser) {
+                            if (typeof openLoginModal === 'function') openLoginModal();
+                            return;
+                }
+                // Use scPayOpen which requires UTR verification before any action
+                if (typeof scPayOpen === 'function') {
+                            scPayOpen({
+                                            title: 'Make a Payment',
+                                            amount: 0,
+                                            desc: 'Enter amount in your UPI app',
+                                            summary: [{ label: 'Payment', value: '₹ (as per UPI app)' }],
+                                            onSuccess: async function(utr, screenshot) {
+                                                                // Record the payment in Firebase — admin verifies
+                                                                const fb = window._firebase;
+                                                                const uid = window.firebaseUser && window.firebaseUser.uid;
+                                                                if (fb && uid) {
+                                                                                        const txnId = 'payment_' + Date.now();
+                                                                                        try {
+                                                                                                                    await fb.set(fb.ref(fb.db, `users/${uid}/transactions/${txnId}`), {
+                                                                                                                                                    type: 'payment',
+                                                                                                                                                    amount: 0,
+                                                                                                                                                    utr: utr,
+                                                                                                                                                    fee: 0,
+                                                                                                                                                    points: 0,
+                                                                                                                                                    timestamp: txnId,
+                                                                                                                                                    date: new Date().toLocaleDateString('en-IN'),
+                                                                                                                                                    status: 'pending_verification'
+                                                                                                                        });
+                                                                                                                    if (typeof showFirebaseStatus === 'function') showFirebaseStatus('Payment recorded. Admin will verify.', 'success');
+                                                                                            } catch(e) { console.warn('Payment save error:', e); }
+                                                                }
+                                                                // NO automatic points for "Make a Payment"
+                                            }
+                            });
+                } else {
+                            // Fallback
+                            const modal = document.getElementById('scPayModal');
+                            if (modal) modal.classList.remove('hidden');
+                }
+        };
+
+        console.log('[SC v4.2] Patches loaded: Info translation, Admin categories, Share/Gratitude rate-limit, Payment security');
+    })(); // end scPatchV42
+
     console.log('[SC v4.1] All patches loaded: Info translation, Profile card translation, Refer Provider share.html, Write Review flow, Make Payment flow, Donation UTR security, Category translation fallback');
 })(); // end scPatchV41
 
