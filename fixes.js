@@ -136,7 +136,7 @@ window.radheyLocalAnswer = function(quehry) {hh
             window.applySortAndFilter = function() {
                 // Before running filter, normalize any providers missing status
                 if (typeof providers !== 'undefined') {
-                    providers.forEach(p => {
+                    providers.filter(p => p && typeof p === 'object').forEach(p => {
                         if (!p.status) p.status = 'active';
                         if (p.available === undefined) p.available = true;
                     });
@@ -1196,7 +1196,7 @@ window.radheyStop = function() {
                      window.applySortAndFilter = function() {
                                  // Normalize all providers first
                                  if (typeof providers !== 'undefined' && Array.isArray(providers)) {
-                                               providers.forEach(p => {
+                                               providers.filter(p => p && typeof p === 'object').forEach(p => {
                                                                // Ensure active verified providers have correct flags
                                                                              if (p.verified === true && !p.status) p.status = 'active';
                                                                if (p.verified === true && p.status === 'active' && p.available === undefined) p.available = true;
