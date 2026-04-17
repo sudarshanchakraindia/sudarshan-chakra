@@ -4143,7 +4143,7 @@
                         <div class="flex items-center gap-1"><span>💰</span><span class="font-semibold text-gray-800">${p.rate ? '₹'+p.rate+'/'+hrLabel : 'Negotiable'}</span></div>
                     </div>
                     <div class="px-4 pb-4 grid grid-cols-2 gap-2">
-                        <a href="tel:+91${p.mobile.replace(/^\+91/,'')}"  class="bg-green-600 text-white text-center py-2.5 rounded-xl hover:bg-green-700 font-medium text-sm transition" style="text-decoration:none;">${t('callBtn')}</a>
+                        <a href="tel:+91${(p.mobile||'').replace(/^\+91/,'')}"  class="bg-green-600 text-white text-center py-2.5 rounded-xl hover:bg-green-700 font-medium text-sm transition" style="text-decoration:none;">${t('callBtn')}</a>
                         <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-2.5 rounded-xl hover:bg-green-600 font-medium text-sm transition" style="text-decoration:none;">${t('whatsappBtn')}</a>
                         ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-2.5 rounded-xl hover:bg-blue-700 font-medium text-sm transition" style="text-decoration:none;">${t('directionsBtn')}</a>` : '<div></div>'}
                         <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">${t('reviewBtn')}</button>
@@ -7027,7 +7027,7 @@ function toggleAdminCat(id, headerEl) {
 
                     <!-- Action buttons -->
                     <div class="grid grid-cols-2 gap-3">
-                        <a href="tel:+91${p.mobile.replace(/^\+91/,'')}"  class="bg-green-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-700 transition" style="text-decoration:none;">${t('callBtn')}</a>
+                        <a href="tel:+91${(p.mobile||'').replace(/^\+91/,'')}"  class="bg-green-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-700 transition" style="text-decoration:none;">${t('callBtn')}</a>
                         <a href="https://wa.me/91${waNum}?text=${waMsg}" target="_blank" class="bg-green-500 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-600 transition" style="text-decoration:none;">${t('whatsappBtn')}</a>
                         ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-blue-700 transition" style="text-decoration:none;">🗺️ Get Directions</a>` : '<div></div>'}
                         <button onclick="document.getElementById('profileModal').classList.add('hidden'); openReviewModal('${p.id}')" class="bg-orange-100 text-orange-700 py-3 rounded-xl font-semibold hover:bg-orange-200 transition border border-orange-200">⭐ Write Review</button>
