@@ -4073,9 +4073,9 @@
         // ==================== PHASE E: PROVIDER CARD RENDERER ====================
         function getProviderAvatar(p) {
             if (p.photo) return `<img src="${p.photo}" alt="${p.name}" class="w-full h-full object-cover">`;
-            const initials = p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+            const initials = (p.name||'Provider').split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
             const colors = ['#ea580c','#2563eb','#16a34a','#9333ea','#dc2626','#0891b2'];
-            const color = colors[p.name.charCodeAt(0) % colors.length];
+            const color = colors[(p.name||'Provider').charCodeAt(0) % colors.length];
             return `<div class="w-full h-full flex items-center justify-center text-white text-xl font-bold" style="background:${color}">${initials}</div>`;
         }
 
