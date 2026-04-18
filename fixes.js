@@ -1,3 +1,54 @@
+
+/* =====================================================================
+ * PHASE 1 (defense v2): Re-assert the Provisional Registration gate
+ * Other scripts reassign window.showPage after initial load. Use a
+ * property setter so every new assignment is automatically re-wrapped.
+ * ===================================================================== */
+(function scProvGateSetterV1(){
+    'use strict';
+    try {
+        const desc = Object.getOwnPropertyDescriptor(window, 'showPage');
+        // If already a getter/setter we installed, skip
+        if (desc && desc.get && desc.get.__scProvGateSetter) return;
+
+        let _inner = (typeof window.showPage === 'function') ? window.showPage : null;
+
+        function wrap(fn){
+            if (!fn || typeof fn !== 'function') return fn;
+            if (fn.__scGated) return fn;
+            const gated = function(pageName){
+                const loggedIn = !!(window.firebaseUser && window.firebaseUser.uid);
+                if ((pageName === 'register' || pageName === 'seeker') && !loggedIn) {
+                    try {
+                        if (typeof window.scOpenProvisionalReg === 'function') {
+                            window.scOpenProvisionalReg(pageName === 'seeker' ? 'seeker' : 'provider');
+                            return;
+                        }
+                    } catch(e){ console.warn('[SC gate]', e); }
+                }
+                return fn.apply(this, arguments);
+            };
+            gated.__scGated = true;
+            gated.__scInner = fn;
+            return gated;
+        }
+
+        _inner = wrap(_inner);
+
+        const getter = function(){ return _inner; };
+        getter.__scProvGateSetter = true;
+
+        Object.defineProperty(window, 'showPage', {
+            configurable: true,
+            get: getter,
+            set: function(v){ _inner = wrap(v); }
+        });
+
+        console.log('[SC Phase1 v2] Property-setter gate installed');
+    } catch(e){
+        console.warn('[SC Phase1 v2] Setter install failed:', e);
+    }
+})();
 /**
  * Sudarshan Chakra — fixes.js v3.0
  * All bug fixes + RADHEY AI Assistant (fully offline, no API needed)
