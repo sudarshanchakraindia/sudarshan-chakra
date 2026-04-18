@@ -6239,6 +6239,7 @@ function toggleAdminCat(id, headerEl) {
                 let msg = 'Failed to send OTP. ';
                 if (err.code === 'auth/too-many-requests') msg += 'Too many attempts. Please try again later.';
                 else if (err.code === 'auth/invalid-phone-number') msg += 'Invalid phone number.';
+                else if (err.code === 'auth/invalid-app-credential') msg += 'reCAPTCHA verification failed. Please complete the security check and try again.';
                 else msg += err.message;
                 alert(msg);
                 btn.disabled = false; btn.textContent = 'Send OTP';
