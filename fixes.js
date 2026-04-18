@@ -2801,3 +2801,274 @@ window.radheyStop = function() {
     console.log('[SC v4.1] All patches loaded: Info translation, Profile card translation, Refer Provider share.html, Write Review flow, Make Payment flow, Donation UTR security, Category translation fallback');
 })(); // end scPatchV41
 
+
+/* =====================================================================
+ * PHASE 1: Provisional Registration + OTP Login Gate
+ * ---------------------------------------------------------------------
+ * Ensures no one can register someone else for any category without
+ * first proving ownership of the mobile number via OTP.
+ *
+ * Flow:
+ *   1. User clicks any of the 5 Register buttons (Provider x3, Seeker x2)
+ *   2. If already logged in -> go to full registration page as before.
+ *   3. If NOT logged in -> open Provisional Registration modal that asks
+ *      only 3 fields (same as Radhey voice register):
+ *          - Naam (Name)
+ *          - Mobile Number
+ *          - Bhasha (Language)
+ *   4. On submit -> pre-fill existing OTP login modal with phone and
+ *      trigger sendOTP(). Role + name are remembered.
+ *   5. After OTP verified, user is routed to the full Register/Seeker
+ *      form to fill the remaining fields. Name is pre-filled.
+ * ===================================================================== */
+(function scProvisionalRegV1(){
+    'use strict';
+
+    // Pending provisional data (set when user submits provisional form)
+    window._scProvisional = window._scProvisional || null;
+
+    // Helper: user is logged in only if Firebase auth user exists
+    function scIsLoggedIn(){
+        try {
+            return !!(window.firebaseUser && window.firebaseUser.uid);
+        } catch(e){ return false; }
+    }
+
+    // Build provisional modal once
+    function scBuildProvisionalModal(){
+        if (document.getElementById('scProvRegModal')) return;
+        const modal = document.createElement('div');
+        modal.id = 'scProvRegModal';
+        modal.className = 'hidden fixed inset-0 bg-black bg-opacity-70 z-[60] flex items-center justify-center p-4';
+        modal.innerHTML = [
+            '<div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">',
+              '<div class="bg-gradient-to-br from-orange-500 to-orange-600 p-5 text-white text-center relative">',
+                '<button type="button" onclick="scCloseProvReg()" aria-label="Close" class="absolute top-2 right-3 text-white/80 hover:text-white text-xl">&times;</button>',
+                '<div class="text-3xl mb-1">📝</div>',
+                '<h2 class="text-lg font-bold" id="scProvRegTitle">Quick Registration</h2>',
+                '<p class="text-orange-100 text-xs mt-1">Verify your mobile to continue</p>',
+              '</div>',
+              '<form id="scProvRegForm" class="p-5 space-y-4" onsubmit="return scSubmitProvReg(event)">',
+                '<div>',
+                  '<label class="block text-gray-700 text-sm font-medium mb-1">Your Name / आपका नाम *</label>',
+                  '<input type="text" id="scProvName" required minlength="2" placeholder="e.g. Ramesh Kumar" class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-400 outline-none">',
+                '</div>',
+                '<div>',
+                  '<label class="block text-gray-700 text-sm font-medium mb-1">Mobile Number / मोबाइल नंबर *</label>',
+                  '<div class="flex gap-2">',
+                    '<div class="bg-gray-100 border rounded-xl px-3 py-3 text-gray-600 font-medium flex-shrink-0">+91</div>',
+                    '<input type="tel" id="scProvPhone" required maxlength="10" pattern="[0-9]{10}" placeholder="10 digit number" class="flex-1 border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-400 outline-none">',
+                  '</div>',
+                '</div>',
+                '<div>',
+                  '<label class="block text-gray-700 text-sm font-medium mb-1">Language / भाषा *</label>',
+                  '<select id="scProvLang" required class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-400 outline-none bg-white">',
+                    '<option value="">-- Select --</option>',
+                    '<option value="hi">Hindi / हिन्दी</option>',
+                    '<option value="en">English</option>',
+                    '<option value="bn">Bengali / বাংলা</option>',
+                    '<option value="mr">Marathi / मराठी</option>',
+                    '<option value="gu">Gujarati / ગુજરાતી</option>',
+                    '<option value="ta">Tamil / தமிழ்</option>',
+                    '<option value="te">Telugu / తెలుగు</option>',
+                    '<option value="kn">Kannada / ಕನ್ನಡ</option>',
+                    '<option value="ml">Malayalam / മലയാളം</option>',
+                    '<option value="pa">Punjabi / ਪੰਜਾਬੀ</option>',
+                    '<option value="or">Odia / ଓଡ଼ିଆ</option>',
+                    '<option value="as">Assamese / অসমীয়া</option>',
+                  '</select>',
+                '</div>',
+                '<div id="scProvRoleBadge" class="text-xs text-center text-gray-500 pt-1"></div>',
+                '<button type="submit" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition">Continue &amp; Verify via OTP →</button>',
+                '<p class="text-[11px] text-gray-400 text-center leading-snug">By continuing, you confirm the mobile number is yours. You will verify via OTP before the full form opens.</p>',
+              '</form>',
+            '</div>'
+        ].join('');
+        document.body.appendChild(modal);
+    }
+
+    window.scCloseProvReg = function(){
+        const m = document.getElementById('scProvRegModal');
+        if (m) m.classList.add('hidden');
+    };
+
+    window.scOpenProvisionalReg = function(targetRole){
+        scBuildProvisionalModal();
+        const role = (targetRole === 'seeker') ? 'seeker' : 'provider';
+        window._scProvisional = { role: role, targetPage: (role === 'seeker' ? 'seeker' : 'register') };
+        const title = document.getElementById('scProvRegTitle');
+        const badge = document.getElementById('scProvRoleBadge');
+        if (title) title.textContent = (role === 'seeker') ? 'Register as Seeker' : 'Register as Provider';
+        if (badge) badge.innerHTML = 'Registering as <strong class="text-orange-600">' + (role === 'seeker' ? 'Service Seeker' : 'Service Provider') + '</strong>';
+        const modal = document.getElementById('scProvRegModal');
+        modal.classList.remove('hidden');
+        setTimeout(function(){ const n = document.getElementById('scProvName'); if (n) n.focus(); }, 100);
+    };
+
+    window.scSubmitProvReg = function(ev){
+        if (ev && ev.preventDefault) ev.preventDefault();
+        const name  = (document.getElementById('scProvName').value || '').trim();
+        const phone = (document.getElementById('scProvPhone').value || '').trim();
+        const lang  = (document.getElementById('scProvLang').value || '').trim();
+        if (name.length < 2) { alert('Please enter your full name'); return false; }
+        if (!/^[0-9]{10}$/.test(phone)) { alert('Please enter a valid 10-digit mobile number'); return false; }
+        if (!lang) { alert('Please select your language'); return false; }
+        const p = window._scProvisional || {};
+        p.name = name; p.phone = phone; p.lang = lang;
+        window._scProvisional = p;
+        // Close provisional modal
+        scCloseProvReg();
+        // Open existing Login modal and pre-fill phone, then trigger OTP
+        try {
+            if (typeof window.openLoginModal === 'function') window.openLoginModal();
+            else { const lm = document.getElementById('loginModal'); if (lm) lm.classList.remove('hidden'); }
+        } catch(e){}
+        setTimeout(function(){
+            const pEl = document.getElementById('loginPhone');
+            if (pEl) { pEl.value = phone; }
+            // Ensure we are at step 1
+            const s1 = document.getElementById('loginStep1');
+            const s2 = document.getElementById('loginStep2');
+            const s3 = document.getElementById('loginStep3');
+            if (s1) s1.classList.remove('hidden');
+            if (s2) s2.classList.add('hidden');
+            if (s3) s3.classList.add('hidden');
+            // Auto-trigger OTP send
+            try { if (typeof window.sendOTP === 'function') window.sendOTP(); } catch(e){ console.warn('sendOTP trigger failed', e); }
+        }, 200);
+        return false;
+    };
+
+    // -----------------------------------------------------------------
+    // Wrap showPage so that 'register' / 'seeker' require login first.
+    // -----------------------------------------------------------------
+    function scInstallShowPageGate(){
+        if (typeof window.showPage !== 'function') return false;
+        if (window.showPage.__scGated) return true;
+        const orig = window.showPage;
+        const gated = function(pageName){
+            if ((pageName === 'register' || pageName === 'seeker') && !scIsLoggedIn()) {
+                try { scOpenProvisionalReg(pageName === 'seeker' ? 'seeker' : 'provider'); } catch(e){ console.warn(e); return orig.apply(this, arguments); }
+                return;
+            }
+            return orig.apply(this, arguments);
+        };
+        gated.__scGated = true;
+        window.showPage = gated;
+        console.log('[SC Phase1] showPage gate installed');
+        return true;
+    }
+
+    // -----------------------------------------------------------------
+    // After successful OTP verify for a NEW user, auto-fill name + role
+    // from provisional data and skip the generic loginStep3 (since we
+    // already collected name + role). Then route to full register form.
+    // -----------------------------------------------------------------
+    function scPatchLoginStep3(){
+        // Poll for loginStep3 appearance to prefill and auto-submit
+        const loginModal = document.getElementById('loginModal');
+        if (!loginModal) return;
+        const obs = new MutationObserver(function(){
+            const s3 = document.getElementById('loginStep3');
+            if (!s3 || s3.classList.contains('hidden')) return;
+            const prov = window._scProvisional;
+            if (!prov || !prov.name || !prov.role) return;
+            if (s3.__scHandled) return;
+            s3.__scHandled = true;
+            // Prefill name
+            const nameEl = document.getElementById('newUserName');
+            if (nameEl) nameEl.value = prov.name;
+            // Select role radio
+            const roleRadio = document.querySelector('input[name="userRole"][value="' + prov.role + '"]');
+            if (roleRadio) roleRadio.checked = true;
+            // Call completeNewUserSetup, then redirect to full form
+            const finish = function(){
+                try {
+                    // Navigate to full register / seeker form
+                    if (typeof window.showPage === 'function') {
+                        // Use the original (ungated) call via direct id logic
+                        const targetPage = (prov.role === 'seeker') ? 'seeker' : 'register';
+                        // Since gate checks login state and we are now logged in, this is safe
+                        window.showPage(targetPage);
+                    }
+                    // Prefill full form name field
+                    setTimeout(function(){
+                        const prNameCandidates = ['providerName','seekerName','regName','fullName'];
+                        prNameCandidates.forEach(function(id){
+                            const el = document.getElementById(id);
+                            if (el && !el.value) el.value = prov.name;
+                        });
+                        // Clear provisional state
+                        window._scProvisional = null;
+                    }, 400);
+                } catch(e){ console.warn('post-OTP routing failed', e); }
+            };
+            if (typeof window.completeNewUserSetup === 'function') {
+                // Intercept close modal so we can redirect after
+                const origClose = window.closeLoginModal;
+                window.closeLoginModal = function(){
+                    try { if (typeof origClose === 'function') origClose.apply(this, arguments); } catch(e){}
+                    window.closeLoginModal = origClose || window.closeLoginModal;
+                    finish();
+                };
+                try { window.completeNewUserSetup(); }
+                catch(e){ console.warn('completeNewUserSetup failed', e); finish(); }
+            } else {
+                finish();
+            }
+        });
+        obs.observe(loginModal, { attributes: true, subtree: true, attributeFilter: ['class'] });
+    }
+
+    // Also cover returning users: if they verify OTP and modal closes,
+    // and there's a pending provisional intent, route them to the form.
+    function scPatchVerifyOTP(){
+        if (typeof window.verifyOTP !== 'function') return false;
+        if (window.verifyOTP.__scWrapped) return true;
+        const origVerify = window.verifyOTP;
+        window.verifyOTP = async function(){
+            const result = await origVerify.apply(this, arguments);
+            try {
+                const prov = window._scProvisional;
+                if (prov && scIsLoggedIn()) {
+                    // Existing user path: modal already closed
+                    const lm = document.getElementById('loginModal');
+                    const s3 = document.getElementById('loginStep3');
+                    const s3Visible = s3 && !s3.classList.contains('hidden');
+                    if (lm && lm.classList.contains('hidden') && !s3Visible) {
+                        const targetPage = (prov.role === 'seeker') ? 'seeker' : 'register';
+                        setTimeout(function(){
+                            try { window.showPage(targetPage); } catch(e){}
+                            window._scProvisional = null;
+                        }, 300);
+                    }
+                }
+            } catch(e){ console.warn('verifyOTP wrap error', e); }
+            return result;
+        };
+        window.verifyOTP.__scWrapped = true;
+        return true;
+    }
+
+    function scInit(){
+        const ok1 = scInstallShowPageGate();
+        const ok2 = scPatchVerifyOTP();
+        scPatchLoginStep3();
+        return ok1 && ok2;
+    }
+
+    // Try init now, then retry until main script is fully loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scInit);
+    } else {
+        scInit();
+    }
+    let tries = 0;
+    const iv = setInterval(function(){
+        tries++;
+        const done = scInit();
+        if (done || tries > 40) clearInterval(iv);
+    }, 250);
+
+    console.log('[SC Phase1] Provisional registration gate loaded');
+})();
