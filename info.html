@@ -96,7 +96,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);line
 .faq-q .ico{font-size:18px;transition:transform .25s;flex-shrink:0}
 .faq-q.open .ico{transform:rotate(45deg)}
 .faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease;font-size:13px;color:var(--muted);padding:0 20px}
-.faq-a.open{max-height:300px;padding:0 20px 16px}
+.faq-a.open{max-height:400px;padding:0 20px 16px}
 .team-g{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
 @media(max-width:700px){.team-g{grid-template-columns:1fr}}
 .team-card{text-align:center;padding:30px 20px;background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:var(--sh)}
@@ -123,21 +123,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);line
 .ch-dot{width:9px;height:9px;border-radius:50%;background:#4AE48A;box-shadow:0 0 8px #4AE48A;flex-shrink:0}
 .ch-hdr span{font-size:13px;font-weight:600;color:#fff}
 .ch-hdr small{font-size:11px;opacity:.45;margin-left:auto;color:#fff}
-#cm{height:300px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent}
-.msg{max-width:84%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;animation:fadeUp .2s ease}
-@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+#cm{height:300px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:84%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5}
 .msg.bot{background:rgba(255,255,255,.1);border-radius:4px 14px 14px 14px;align-self:flex-start;color:rgba(255,255,255,.9)}
 .msg.user{background:var(--saffron);border-radius:14px 14px 4px 14px;align-self:flex-end;color:#fff}
 .qbtns{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px}
-.qbtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:20px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,.78);cursor:pointer;transition:.15s;font-family:'DM Sans',sans-serif}
+.qbtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:20px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,.78);cursor:pointer;font-family:'DM Sans',sans-serif}
 .qbtn:hover{background:var(--saffron);border-color:var(--saffron);color:#fff}
 .ci-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid rgba(255,255,255,.08)}
-#ci{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 13px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:.2s}
-#ci:focus{border-color:var(--saffron)}
-#ci::placeholder{color:rgba(255,255,255,.32)}
-#cs{background:var(--saffron);border:none;border-radius:10px;color:#fff;font-size:17px;cursor:pointer;padding:8px 13px;transition:.2s;flex-shrink:0}
-#cs:hover{background:var(--saffron-d)}
-#cs:disabled{opacity:.45;cursor:not-allowed}
+#ci{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 13px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+#cs{background:var(--saffron);border:none;border-radius:10px;color:#fff;font-size:17px;cursor:pointer;padding:8px 13px;flex-shrink:0}
 .promise{max-width:660px;margin:40px auto 0;text-align:center;padding:30px;background:var(--saffron-l);border:1px solid var(--border);border-radius:20px}
 footer{background:var(--ink);color:rgba(255,255,255,.45);padding:40px 20px;text-align:center}
 .ft-logo{font-family:'Playfair Display',serif;font-size:21px;color:var(--gold);margin-bottom:10px}
@@ -147,7 +142,6 @@ footer a{color:var(--saffron);text-decoration:none}
 </head>
 <body>
 
-<!-- NAV -->
 <nav class="nav">
   <div class="nav-i">
     <a href="index.html" class="logo"><span class="logo-icon">🔱</span><strong class="logo-text">Sudarshan Chakra India</strong></a>
@@ -161,7 +155,7 @@ footer a{color:var(--saffron);text-decoration:none}
       <li><a href="#contact" data-i18n="nav.contact">Contact</a></li>
       <li><a href="#chatbot" data-i18n="nav.ai">AI Guide</a></li>
     </ul>
-    <select id="langSel" class="lang-sel" onchange="setLang(this.value)" aria-label="Language">
+    <select id="langSel" class="lang-sel" aria-label="Language">
       <option value="en">🌐 English</option>
       <option value="hi">हिन्दी</option>
       <option value="bn">বাংলা</option>
@@ -179,7 +173,6 @@ footer a{color:var(--saffron);text-decoration:none}
   </div>
 </nav>
 
-<!-- HERO -->
 <section class="hero">
   <div class="hero-badge" data-i18n="hero.badge">🇮🇳 Made for Bharat · 12 Languages · Community First</div>
   <h1 data-i18n-html="hero.title">Connecting India's<br><em>Skilled Hands</em><br>with Every Home</h1>
@@ -192,7 +185,6 @@ footer a{color:var(--saffron);text-decoration:none}
   </div>
 </section>
 
-<!-- ABOUT -->
 <section class="sec" id="about">
   <div class="sec-i">
     <div class="sec-label" data-i18n="about.label">Our Story</div>
@@ -223,7 +215,6 @@ footer a{color:var(--saffron);text-decoration:none}
   </div>
 </section>
 
-<!-- SEEKER / PROVIDER -->
 <section class="sec alt" id="users">
   <div class="sec-i">
     <div class="sec-label" data-i18n="users.label">Who is this for?</div>
@@ -265,7 +256,6 @@ footer a{color:var(--saffron);text-decoration:none}
   </div>
 </section>
 
-<!-- FEATURES -->
 <section class="sec feat-bg" id="features">
   <div class="sec-i">
     <div class="sec-label" data-i18n="feat.label">Key Features</div>
@@ -273,4 +263,6 @@ footer a{color:var(--saffron);text-decoration:none}
     <h2 class="sec-title" data-i18n="feat.title">What Makes Us Different</h2>
     <p class="sec-sub" data-i18n="feat.sub">Every feature is crafted with one goal: making finding and providing services simpler, safer and more dignified for everyone across India.</p>
     <div class="feat-grid">
-      <div class="feat-card"><span class="feat-icon">🌏</span><h4 data-i18n="feat.f1t">12 Indian Langu
+      <div class="feat-card"><span class="feat-icon">🌏</span><h4 data-i18n="feat.f1t">12 Indian Languages</h4><p data-i18n="feat.f1p">Entire app in Hindi, Bengali, Gujarati, Marathi, Kannada, Telugu, Malayalam, Tamil, Punjabi, Odia, Assamese and English — switch any time.</p></div>
+      <div class="feat-card"><span class="feat-icon">🎙️</span><h4 data-i18n="feat.f2t">Voice Search</h4><p data-i18n="feat.f2p">Speak your service need in any Indian language — no typing required, making the app accessible to everyone.</p></div>
+      <div class="feat-card"><span class="feat-icon">✅</span><h4 data-i18n="feat.f3t">Verified Provider Badges</h4><p data-i18n="feat.f3p">Government ID-verified providers ear
