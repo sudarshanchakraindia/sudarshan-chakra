@@ -331,7 +331,7 @@
                     <div class="text-sm font-semibold mt-1 opacity-90"><span data-i18n="statProviders">👷 Skilled Providers</span></div>
                     <div class="text-xs mt-1 opacity-75" data-i18n="statReadyToServe">Ready to serve you</div>
                 </div>
-                <div id="statCardHappyClients" class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
                     <div class="text-4xl font-black" id="homeStatServices">...</div>
                     <div class="text-sm font-semibold mt-1 opacity-90"><span data-i18n="statServices">🛠️ Services Listed</span></div>
                     <div class="text-xs mt-1 opacity-75" data-i18n="statAcrossAll">Across all categories</div>
@@ -341,7 +341,7 @@
                     <div class="text-sm font-semibold mt-1 opacity-90"><span data-i18n="statCategories">📋 Categories</span></div>
                     <div class="text-xs mt-1 opacity-75" data-i18n="statFindWhat">Find what you need</div>
                 </div>
-                <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
+                <div id="statCardHappyClients" class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-2xl p-5 text-center shadow-lg transform hover:scale-105 transition">
                     <div class="text-4xl font-black" id="homeStatReviews">...</div>
                     <div class="text-sm font-semibold mt-1 opacity-90"><span data-i18n="statClients">⭐ Happy Clients</span></div>
                     <div class="text-xs mt-1 opacity-75" data-i18n="statVerified">Verified reviews</div>
@@ -1102,6 +1102,18 @@
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
                     <button onclick="adminLogout()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">Logout</button>
+                </div><!-- Home Page Section Visibility (Admin-controlled) -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-6 border-l-4 border-purple-500">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">🏠 Home Page Sections</h3>
+                    <p class="text-sm text-gray-500 mb-4">Show or hide stat cards on the public home page.</p>
+                    <label class="flex items-center justify-between py-3 border-b">
+                        <span class="font-medium text-gray-700">👷 Show "Skilled Providers" card</span>
+                        <input type="checkbox" id="admShowProviders" onchange="saveHomeStatsVisibility()" class="w-5 h-5 accent-purple-600">
+                    </label>
+                    <label class="flex items-center justify-between py-3">
+                        <span class="font-medium text-gray-700">⭐ Show "Happy Clients" card</span>
+                        <input type="checkbox" id="admShowHappyClients" onchange="saveHomeStatsVisibility()" class="w-5 h-5 accent-purple-600">
+                    </label>
                 </div>
                 
                 <!-- Stats Cards Row 1 -->
@@ -4910,11 +4922,12 @@
         
         function adminLogin() {
             const password = document.getElementById('adminPassword').value;
-            if (password === ADMIN_PASSWORD) {
+           if (password === ADMIN_PASSWORD) { 
                 document.getElementById('adminLogin').classList.add('hidden');
                 document.getElementById('adminDashboard').classList.remove('hidden');
                 updateAdminStats();
                 showAdminTab('categories'); // Default tab
+                 loadAdminHomeStatsToggles();
                 // Sign in to Firebase so DB rules (auth != null && admins/uid.exists()) pass
                 _auth.signInWithEmailAndPassword(_auth.auth, ADMIN_EMAIL, ADMIN_FIREBASE_PASSWORD)
                     .then(() => console.log('✅ Admin Firebase sign-in OK'))
@@ -4927,6 +4940,49 @@
             document.getElementById('adminLogin').classList.remove('hidden');
             document.getElementById('adminDashboard').classList.add('hidden');
             _auth.signOut(_auth.auth).catch(e => console.warn('Admin signout error:', e));
+        }// ── Home Page Section Visibility (admin-controlled) ──
+        async function applyHomeStatsVisibility() {
+            try {
+                const fb = window._firebase;
+                if (!fb) return;
+                const snap = await fb.get(fb.ref(fb.db, 'adminSettings/homeStats'));
+                const s = snap.exists() ? snap.val() : {};
+                const showProviders = s.showProviders !== false;    // default: show
+                const showHappy     = s.showHappyClients !== false; // default: show
+                const provEl  = document.getElementById('statCardProviders');
+                const happyEl = document.getElementById('statCardHappyClients');
+                if (provEl)  provEl.classList.toggle('hidden', !showProviders);
+                if (happyEl) happyEl.classList.toggle('hidden', !showHappy);
+            } catch (e) { console.warn('applyHomeStatsVisibility error:', e); }
+        }
+
+        async function loadAdminHomeStatsToggles() {
+            try {
+                const fb = window._firebase;
+                if (!fb) return;
+                const snap = await fb.get(fb.ref(fb.db, 'adminSettings/homeStats'));
+                const s = snap.exists() ? snap.val() : {};
+                const p = document.getElementById('admShowProviders');
+                const h = document.getElementById('admShowHappyClients');
+                if (p) p.checked = s.showProviders !== false;
+                if (h) h.checked = s.showHappyClients !== false;
+            } catch (e) { console.warn('loadAdminHomeStatsToggles error:', e); }
+        }
+
+        async function saveHomeStatsVisibility() {
+            try {
+                const fb = window._firebase;
+                if (!fb) { alert('Firebase not ready'); return; }
+                const payload = {
+                    showProviders:    document.getElementById('admShowProviders').checked,
+                    showHappyClients: document.getElementById('admShowHappyClients').checked
+                };
+                await fb.set(fb.ref(fb.db, 'adminSettings/homeStats'), payload);
+                applyHomeStatsVisibility(); // reflect immediately if user is also viewing home
+                console.log('✅ Home stats visibility saved');
+            } catch (e) {
+                alert('❌ Failed to save: ' + e.message);
+            }
         }
         
 
@@ -5376,6 +5432,8 @@ function toggleAdminCat(id, headerEl) {
             let totalRevs = 0;
             providers.forEach(p => { if(p.reviews) totalRevs += Object.keys(p.reviews).length; });
             set('homeStatReviews', totalRevs || '0');
+            // Apply admin-controlled visibility for home stat cards
+            applyHomeStatsVisibility();
         }
 
         // Save categories to Firebase so ALL users see changes
