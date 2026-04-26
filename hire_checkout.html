@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sudarshan Chakra — Hire Provider</title>h
+<title>Sudarshan Chakra — Hire Provider</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet">
-<style>h
+<style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 :root {
   --saffron:#EA580C; --saffron-lt:#FED7AA;
@@ -263,7 +263,155 @@ input:checked + .slider::before { transform:translateX(20px); }
 </head>
 <body>
 
-<img src="sudarshan dynamic idbi.png" alt="Scan to pay via UPI" class="qr-img">
+<!-- TOP NAV -->
+<div class="topnav">
+  <button class="back-btn" onclick="window.location.href='index.html'">←</button>
+  <h1>Hire Provider</h1>
+  <span class="sc-badge">🔱 SC</span>
+</div>
+
+<div class="page">
+
+  <!-- PROVIDER INFO -->
+  <p class="section-label">Selected Provider</p>
+  <div class="provider-card">
+    <div class="provider-avatar">🔧</div>
+    <div class="provider-info">
+      <h2 id="prov-name">Ramesh Kumar</h2>
+      <span class="service-tag" id="prov-service">🔧 Plumber</span>
+      <div class="rating">
+        <span class="stars">★★★★★</span>
+        <span id="prov-rating">4.8 (124 reviews)</span>
+      </div>
+      <div class="location">📍 <span id="prov-location">Vaishali Nagar, Jaipur</span></div>
+    </div>
+    <div class="verified-badge">
+      <div class="vico">✅</div>
+      <p>VERIFIED</p>
+    </div>
+  </div>
+
+  <!-- SERVICE DETAILS -->
+  <p class="section-label">Service Details</p>
+  <div class="service-card">
+    <div class="service-row">
+      <div class="srv-icon">📋</div>
+      <div style="flex:1">
+        <div class="srv-label">Describe your requirement</div>
+        <textarea class="srv-input" rows="2" placeholder="e.g. Fix leaking tap in kitchen, install new pipe..."></textarea>
+      </div>
+    </div>
+    <div class="service-row">
+      <div class="srv-icon">📅</div>
+      <div style="flex:1">
+        <div class="srv-label">Preferred date & time</div>
+        <input type="datetime-local" class="srv-input">
+      </div>
+    </div>
+    <div class="service-row">
+      <div class="srv-icon">📍</div>
+      <div style="flex:1">
+        <div class="srv-label">Your address</div>
+        <input type="text" class="srv-input" placeholder="Enter your full address">
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTIONAL: TIP + CHARITY -->
+  <p class="section-label">Optional Add-ons</p>
+  <div class="optional-card">
+    <div class="opt-row">
+      <div class="opt-label">
+        <p>🙏 Tip to Provider</p>
+        <span>Show your appreciation (100% to provider)</span>
+      </div>
+      <div class="amount-ctrl">
+        <button class="amt-btn" onclick="changeAmt('tip',-10)">−</button>
+        <span class="amt-display" id="tip-display">₹0</span>
+        <button class="amt-btn" onclick="changeAmt('tip',10)">+</button>
+      </div>
+    </div>
+    <div class="opt-row">
+      <div class="opt-label">
+        <p>🌱 Charity Donation</p>
+        <span>100% goes to social welfare</span>
+      </div>
+      <div class="amount-ctrl">
+        <button class="amt-btn" onclick="changeAmt('charity',-10)">−</button>
+        <span class="amt-display" id="charity-display">₹0</span>
+        <button class="amt-btn" onclick="changeAmt('charity',10)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BILL BREAKDOWN -->
+  <p class="section-label">Bill Summary</p>
+  <div class="bill-card">
+    <div class="bill-title">💰 Payment Breakdown</div>
+
+    <div class="bill-row">
+      <span class="bl">🔱 Provider Contact Fee</span>
+      <span class="br free">FREE ✓</span>
+    </div>
+    <div class="bill-row">
+      <span class="bl">🙏 Tip to Provider</span>
+      <span class="br" id="bill-tip">₹0</span>
+    </div>
+    <div class="bill-row">
+      <span class="bl">🌱 Charity Donation</span>
+      <span class="br" id="bill-charity">₹0</span>
+    </div>
+
+    <div class="bill-divider"></div>
+
+    <!-- CONVENIENCE FEE — HIGHLIGHTED -->
+    <div class="conv-row">
+      <div class="cl">
+        <span>⚡</span>
+        <div>
+          Platform Convenience Fee
+          <span class="conv-info">Keeps Sudarshan Chakra running · Providers stay FREE forever</span>
+        </div>
+      </div>
+      <span class="cr">₹10</span>
+    </div>
+
+    <div class="bill-divider"></div>
+
+    <div class="total-row">
+      <span class="tl">Total Payable</span>
+      <span class="tr" id="bill-total">₹10</span>
+    </div>
+  </div>
+
+  <!-- PAY BUTTON -->
+  <button class="pay-btn" onclick="openQR()">
+    <span class="phonepe-logo">💜</span>
+    Pay with PhonePe / UPI
+  </button>
+
+  <p class="free-note">
+    🔱 Provider registration is <span>always FREE</span> · No commission charged
+  </p>
+
+  <div class="trust-strip">
+    <span class="trust-chip">🔒 Secure Payment</span>
+    <span class="trust-chip">✅ Verified Provider</span>
+    <span class="trust-chip">🇮🇳 Made in India</span>
+    <span class="trust-chip">💚 Transparent Fees</span>
+  </div>
+</div>
+
+<!-- ── QR PAYMENT SHEET ── -->
+<div class="qr-overlay" id="qr-overlay" onclick="closeQROutside(event)">
+  <div class="qr-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Scan & Pay</div>
+    <p class="sheet-sub" id="sheet-sub">Pay ₹10 via PhonePe / any UPI app</p>
+
+    <div class="qr-wrap">
+      <div class="qr-box">
+        <img src="sudarshan dynamic idbi.png" alt="Scan to pay via UPI" class="qr-img">
       </div>
       <div class="qr-amount-badge" id="qr-amount">₹10</div>
       <div class="upi-id">UPI ID: <span>sudarshanchakra@idbi</span></div>
