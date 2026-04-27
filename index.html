@@ -3557,7 +3557,7 @@
                 const existing = snap.exists() ? snap.val() : null;
                 // Force reseed if empty or old format
                 if (!existing || !Array.isArray(existing) || existing.length < 5) {
-                    categories = ITI_CATEGORIES;
+                    categories = [...(DEFAULT_CATEGORIES || []), ...ITI_CATEGORIES];
                     // Only write to Firebase if logged in as admin
                     if (!document.getElementById('adminDashboard')?.classList.contains('hidden')) {
                         await _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories);
