@@ -7515,7 +7515,7 @@ function toggleAdminCat(id, headerEl) {
       <div style="background:linear-gradient(135deg,#F8FAFC,#EFF6FF);border-radius:20px;padding:20px;text-align:center;margin-bottom:16px;border:2px solid #E2E8F0;overflow:visible;">
         <div id="hm-qr-real" style="width:160px;margin:0 auto 10px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.1);min-height:160px;overflow:visible;"></div>
         <div style="background:linear-gradient(135deg,#EA580C,#D97706);color:white;border-radius:50px;padding:8px 20px;font-size:20px;font-weight:900;font-family:'Playfair Display',serif;display:inline-block;margin-bottom:8px" id="hm-qr-amount">₹10</div>
-        <div style="font-size:11px;color:#64748B">UPI ID: <span style="font-weight:700;color:#1E3A5F">9414055013@ybl</span></div>
+        <div style="font-size:11px;color:#64748B">UPI ID: <span style="font-weight:700;color:#1E3A5F">sudarshanchakra@idbi</span></div>
       </div>
       <div style="background:#F8FAFC;border-radius:14px;padding:14px 16px;margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Provider Contact Fee</span><span style="color:#059669;font-weight:600">FREE</span></div>
@@ -7684,7 +7684,7 @@ function hmOpenQR() {
   const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
   const fee   = hasTipOrCharity ? 0 : HM_CONV_FEE;
   const total = fee + hmTipAmt + hmCharityAmt;
-  const UPI_ID    = '9414055013@ybl';
+  const UPI_ID    = 'sudarshanchakra@idbi';
   const noteText  = hmTipAmt > 0 ? 'SC Tip to Provider' : hmCharityAmt > 0 ? 'SC Charity Donation' : 'Sudarshan Chakra - Platform Fee';
   const upiUrl    = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${total}&cu=INR&tn=${encodeURIComponent(noteText)}`;
   const qrWrap    = document.getElementById('hm-qr-real');
@@ -7705,10 +7705,10 @@ function hmOpenQR() {
           if (img) { img.style.display = 'block'; img.style.borderRadius = '8px'; }
         }, 50);
       } catch(e) {
-        qrWrap.innerHTML = '<p style="font-size:11px;color:#64748B;padding:8px;text-align:center">Scan UPI ID:<br><strong>9414055013@ybl</strong></p>';
+        qrWrap.innerHTML = '<p style="font-size:11px;color:#64748B;padding:8px;text-align:center">Scan UPI ID:<br><strong>sudarshanchakra@idbi</strong></p>';
       }
     } else {
-      qrWrap.innerHTML = '<p style="font-size:11px;color:#64748B;padding:8px;text-align:center">UPI ID:<br><strong>9414055013@ybl</strong></p>';
+      qrWrap.innerHTML = '<p style="font-size:11px;color:#64748B;padding:8px;text-align:center">UPI ID:<br><strong>sudarshanchakra@idbi</strong></p>';
     }
   }
   document.getElementById('hireQrOverlay').classList.add('open');
@@ -7723,7 +7723,7 @@ function hmOpenUPI(app) {
   const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
   const fee = hasTipOrCharity ? 0 : HM_CONV_FEE;
   const total = fee + hmTipAmt + hmCharityAmt;
-  const UPI_ID = '9414055013@ybl';
+  const UPI_ID = 'sudarshanchakra@idbi';
   const noteText = hmTipAmt > 0 ? 'SC Tip to Provider' : hmCharityAmt > 0 ? 'SC Charity Donation' : 'Sudarshan Chakra - Platform Fee';
   const note = encodeURIComponent(noteText);
   const upiUrl = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${total}&cu=INR&tn=${note}`;
@@ -8072,7 +8072,7 @@ function hmConfirmPayment() {
         <div id="scpay-qr-container" class="w-44 h-44 mx-auto bg-white rounded-2xl shadow-md flex items-center justify-center overflow-hidden border border-orange-100"></div>
         <div class="mt-3 flex items-center justify-center gap-2">
           <span class="text-xs text-gray-500">UPI ID:</span>
-          <span class="font-bold text-orange-700 text-sm" id="scpay-upi-display">9414055013@ybl</span>
+          <span class="font-bold text-orange-700 text-sm" id="scpay-upi-display">sudarshanchakra@idbi</span>
           <button onclick="scPayCopyUPI()" class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold hover:bg-orange-200">Copy</button>
         </div>
       </div>
@@ -8149,7 +8149,7 @@ function hmConfirmPayment() {
         <span class="text-lg">🔐</span>
         <div class="text-xs text-blue-700">
           <p class="font-semibold mb-0.5">Safe & Secure</p>
-          <p>Your payment goes directly to <strong>9414055013@ybl</strong>. We never ask for PIN, OTP, or passwords. Questions? Email <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3d4e484d4d524f497d4e48595c4f4e555c535e555c564f5c545359545c135e5250">[email&#160;protected]</a></p>
+          <p>Your payment goes directly to <strong>sudarshanchakra@idbi</strong>. We never ask for PIN, OTP, or passwords. Questions? Email <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3d4e484d4d524f497d4e48595c4f4e555c535e555c564f5c545359545c135e5250">[email&#160;protected]</a></p>
         </div>
       </div>
 
@@ -9127,7 +9127,7 @@ function setCharityAmt(amt) {
     if (inp) inp.value = charityAmt;
 }
 async function proceedCharityPayment() {
-    const UPI_ID = '9414055013@ybl';
+    const UPI_ID = 'sudarshanchakra@idbi';
     const note = encodeURIComponent('SC Charity Donation');
     const upiUrl = `upi://pay?pa=${UPI_ID}&pn=Sudarshan%20Chakra&am=${charityAmt}&cu=INR&tn=${note}`;
     
@@ -9439,7 +9439,7 @@ function toggleFAQ(i) {
 // SC PAYMENT GATEWAY — works on GitHub Pages, no backend needed
 // ══════════════════════════════════════════════════════════════
 
-const SC_UPI_ID   = '9414055013@ybl';
+const SC_UPI_ID   = 'sudarshanchakra@idbi';
 const SC_UPI_NAME = 'Sudarshan%20Chakra%20India';
 
 // Internal state
@@ -9482,7 +9482,7 @@ function scPayOpen({ title, amount, desc, summary, onSuccess }) {
             });
         } catch(e) { qrWrap.innerHTML = '<p class="text-xs text-gray-400 p-4">QR unavailable<br>Use UPI ID below</p>'; }
     } else {
-        qrWrap.innerHTML = '<p class="text-xs text-gray-400 p-4">Scan UPI ID:<br><strong>9414055013@ybl</strong></p>';
+        qrWrap.innerHTML = '<p class="text-xs text-gray-400 p-4">Scan UPI ID:<br><strong>sudarshanchakra@idbi</strong></p>';
     }
 
     document.getElementById('scPayModal').classList.remove('hidden');
