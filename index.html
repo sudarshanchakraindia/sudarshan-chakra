@@ -1,12 +1,12 @@
  <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8">h
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Sudarshan Chakra - Find Service Providers Near You</title>
 
     <!-- ===== PWA META TAGS ===== -->h
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">h
     <meta name="theme-color" content="#ea580c">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1063,7 +1063,7 @@
             <div id="adminLogin" class="max-w-md mx-auto">
                 <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">🔐 Admin Login</h1>
                 <div class="bg-white rounded-xl shadow-md p-6">
-                    <input type="password" id="adminPassword" placeholder="Enter admin password" class="w-full px-4 py-2 border rounded-lg mb-4" onkeydown="if(event.key==='Enter') adminLogin()">
+                    <input type="password" autocomplete="new-password" id="adminPassword" placeholder="Enter admin password" class="w-full px-4 py-2 border rounded-lg mb-4" onkeydown="if(event.key==='Enter') adminLogin()">
                     <button onclick="adminLogin()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">Login</button>
                     <div class="text-center mt-3">
                         <button onclick="openAdminForgotPass()" class="text-purple-600 hover:text-purple-800 text-sm font-medium underline">🔑 Forgot Password?</button>
@@ -4939,7 +4939,7 @@
         function adminLogout() {
             document.getElementById('adminLogin').classList.remove('hidden');
             document.getElementById('adminDashboard').classList.add('hidden');
-            _auth.signOut(_auth.auth).catch(e => console.warn('Admin signout error:', e));
+                    _auth.signOut(_auth.auth).then(() => { localStorage.removeItem(window.ADMIN_PASSWORD_KEY || 'ADMIN_PASSWORD'); }).catch(e => console.warn('Admin signout error:', e));
         }// ── Home Page Section Visibility (admin-controlled) ──
         async function applyHomeStatsVisibility() {
             try {
@@ -6405,7 +6405,7 @@ function toggleAdminCat(id, headerEl) {
             firebaseUser = null; userProfile = null;
             if (notifUnsubscribe) { notifUnsubscribe(); notifUnsubscribe = null; }
             updateNavForLoggedOut();
-            showPage('home');
+            localStorage.removeItem('sc_auth_uid'); localStorage.removeItem('sc_auth_name'); localStorage.removeItem(window.ADMIN_PASSWORD_KEY || 'ADMIN_PASSWORD'); showPage('home');
             showFirebaseStatus('👋 Logged out. See you tomorrow for your daily bonus! 🌟', 'info');
         }
 
