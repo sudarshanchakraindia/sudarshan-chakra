@@ -1086,11 +1086,11 @@
                         </div>
                         <div>
                             <label class="block text-gray-600 text-sm mb-1">New Password</label>
-                            <input type="password" id="adminForgotNew" class="w-full px-4 py-2 border rounded-lg" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter') submitAdminPassReset()">
+                            <input type="password" id="adminForgotNew" autocomplete="new-password" class="w-full px-4 py-2 border rounded-lg" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter') submitAdminPassReset()">
                         </div>
                         <div>
                             <label class="block text-gray-600 text-sm mb-1">Confirm New Password</label>
-                            <input type="password" id="adminForgotConfirm" class="w-full px-4 py-2 border rounded-lg" placeholder="Repeat new password" onkeydown="if(event.key==='Enter') submitAdminPassReset()">
+                            <input type="password" id="adminForgotConfirm" autocomplete="new-password" class="w-full px-4 py-2 border rounded-lg" placeholder="Repeat new password" onkeydown="if(event.key==='Enter') submitAdminPassReset()">
                         </div>
                         <button onclick="submitAdminPassReset()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">🔓 Reset Password</button>
                         <div id="adminForgotMsg" class="hidden text-center text-sm py-2"></div>
@@ -1393,15 +1393,15 @@
                             <h3 class="font-semibold text-gray-700 text-lg border-b pb-2">🔑 Change Password</h3>
                             <div>
                                 <label class="block text-gray-600 text-sm mb-1">Current Password</label>
-                                <input type="password" id="settingsCurrentPass" class="w-full px-4 py-2 border rounded-lg" onkeydown="if(event.key==='Enter') changeAdminPassword()">
+                                <input type="password" id="settingsCurrentPass" autocomplete="current-password" class="w-full px-4 py-2 border rounded-lg" onkeydown="if(event.key==='Enter') changeAdminPassword()">
                             </div>
                             <div>
                                 <label class="block text-gray-600 text-sm mb-1">New Password</label>
-                                <input type="password" id="settingsNewPass" class="w-full px-4 py-2 border rounded-lg" onkeydown="if(event.key==='Enter') changeAdminPassword()">
+                                <input type="password" id="settingsNewPass" autocomplete="new-password" class="w-full px-4 py-2 border rounded-lg" onkeydown="if(event.key==='Enter') changeAdminPassword()">
                             </div>
                             <div>
                                 <label class="block text-gray-600 text-sm mb-1">Confirm New Password</label>
-                                <input type="password" id="settingsConfirmPass" class="w-full px-4 py-2 border rounded-lg" onkeydown="if(event.key==='Enter') changeAdminPassword()">
+                                <input type="password" id="settingsConfirmPass" autocomplete="new-password" class="w-full px-4 py-2 border rounded-lg" onkeydown="if(event.key==='Enter') changeAdminPassword()">
                             </div>
                             <button onclick="changeAdminPassword()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">
                                 🔑 Update Password
@@ -1550,7 +1550,7 @@
                 <label class="block text-gray-700 font-medium mb-3">📱 Mobile Number</label>
                 <div class="flex gap-2 mb-4">
                     <div class="bg-gray-100 border rounded-xl px-3 py-3 text-gray-600 font-medium flex-shrink-0">🇮🇳 +91</div>
-                    <input type="tel" id="loginPhone" maxlength="10" pattern="[0-9]{10}" placeholder="10-digit number"
+                    <input type="tel" id="loginPhone" maxlength="10" autocomplete="off" pattern="[0-9]{10}" placeholder="10-digit number"
                         class="flex-1 border rounded-xl px-4 py-3 text-lg focus:ring-2 focus:ring-orange-400 outline-none"
                         oninput="this.value=this.value.replace(/\D/g,'').substring(0,10)">
                 </div>
@@ -1572,7 +1572,7 @@
                     <p class="text-sm text-gray-500 mt-1">Enter the 6-digit code</p>
                 </div>
                 <div class="flex gap-2 justify-center mb-5">
-                    <input type="tel" id="otpInput" maxlength="6" placeholder="— — — — — —"
+                    <input type="tel" id="otpInput" maxlength="6" autocomplete="one-time-code" placeholder="— — — — — —"
                         class="w-full text-center border-2 rounded-xl px-4 py-4 text-2xl font-bold tracking-widest focus:ring-2 focus:ring-orange-400 outline-none"
                         oninput="this.value=this.value.replace(/\D/g,'').substring(0,6)">
                 </div>
@@ -6412,7 +6412,13 @@ function toggleAdminCat(id, headerEl) {
             firebaseUser = null; userProfile = null;
             if (notifUnsubscribe) { notifUnsubscribe(); notifUnsubscribe = null; }
             updateNavForLoggedOut();
-            localStorage.removeItem('sc_auth_uid'); localStorage.removeItem('sc_auth_name'); localStorage.removeItem(window.ADMIN_PASSWORD_KEY || 'ADMIN_PASSWORD'); showPage('home');
+            localStorage.removeItem('sc_auth_uid');
+            localStorage.removeItem('sc_auth_name');
+            localStorage.removeItem('sc_auth_phone');
+            localStorage.removeItem('sc_otp_date');
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem(window.ADMIN_PASSWORD_KEY || 'ADMIN_PASSWORD');
+            showPage('home');
             showFirebaseStatus('👋 Logged out. See you tomorrow for your daily bonus! 🌟', 'info');
         }
 
