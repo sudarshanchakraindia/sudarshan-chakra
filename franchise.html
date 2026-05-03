@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Franchise Portal – Sudarshan Chakra</title>
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .chakra-gradient { background: linear-gradient(135deg, #ea580c, #f59e0b); }
+    .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.15); }
+    .badge-gold { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .badge-silver { background: linear-gradient(135deg, #9ca3af, #6b7280); }
+    .badge-bronze { background: linear-gradient(135deg, #d97706, #92400e); }
+    @keyframes spin-slow { to { transform: rotate(360deg); } }
+    .spin-slow { animation: spin-slow 8s linear infinite; }
+    .progress-bar { transition: width 1s ease-in-out; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+  <!-- TOP NAV -->
+  <nav class="chakra-gradient text-white px-4 py-3 flex items-center justify-between shadow-lg sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl spin-slow">🌟</span>
+      <div>
+        <div class="font-bold text-lg leading-none">Sudarshan Chakra</div>
+        <div class="text-xs opacity-80">Franchise Partner Portal</div>
+      </div>
+    </div>
+    <a href="index.html" class="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full">← Main App</a>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <section class="chakra-gradient text-white py-10 px-4 text-center">
+    <h1 class="text-3xl font-extrabold mb-2">🏢 Own Your City's Franchise</h1>
+    <p class="text-sm opacity-90 max-w-md mx-auto">Earn commissions, manage local providers, and grow with Sudarshan Chakra. Be the bridge between seekers and providers in your region.</p>
+    <div class="flex justify-center gap-3 mt-5 flex-wrap">
+      <div class="bg-white/20 rounded-xl px-5 py-3 text-center">
+        <div class="text-2xl font-bold" id="stat-franchises">42</div>
+        <div class="text-xs opacity-80">Active Franchises</div>
+      </div>
+      <div class="bg-white/20 rounded-xl px-5 py-3 text-center">
+        <div class="text-2xl font-bold" id="stat-providers">1,280</div>
+        <div class="text-xs opacity-80">Providers Network</div>
+      </div>
+      <div class="bg-white/20 rounded-xl px-5 py-3 text-center">
+        <div class="text-2xl font-bold" id="stat-bookings">9,400+</div>
+        <div class="text-xs opacity-80">Bookings This Month</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB NAVIGATION -->
+  <div class="bg-white border-b sticky top-[60px] z-40 overflow-x-auto">
+    <div class="flex min-w-max px-2">
+      <button onclick="showTab('dashboard')" id="tab-dashboard" class="tab-btn active-tab px-4 py-3 text-sm font-medium border-b-2 border-orange-500 text-orange-600">📊 Dashboard</button>
+      <button onclick="showTab('register')" id="tab-register" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-orange-500">📝 Register</button>
+      <button onclick="showTab('providers')" id="tab-providers" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-orange-500">👥 My Providers</button>
+      <button onclick="showTab('earnings')" id="tab-earnings" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-orange-500">💰 Earnings</button>
+      <button onclick="showTab('leaderboard')" id="tab-leaderboard" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-orange-500">🏆 Leaderboard</button>
+      <button onclick="showTab('training')" id="tab-training" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-orange-500">🎓 Training</button>
+    </div>
+  </div>
+
+  <main class="max-w-2xl mx-auto px-4 py-5">
+
+    <!-- ===== DASHBOARD TAB ===== -->
+    <div id="tab-content-dashboard" class="tab-content">
+      <div id="not-registered-msg" class="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4 text-center">
+        <p class="text-orange-700 text-sm">👋 You haven't registered yet. <button onclick="showTab('register')" class="underline font-semibold">Become a Franchise Partner →</button></p>
+      </div>
+
+      <div id="franchise-dashboard" class="hidden">
+        <!-- Franchise Identity Card -->
+        <div class="chakra-gradient text-white rounded-2xl p-5 mb-4 relative overflow-hidden">
+          <div class="absolute -right-6 -top-6 text-8xl opacity-10">🏢</div>
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-12 h-12 bg-white/30 rounded-full flex items-center justify-center text-2xl" id="franchise-avatar">🏙️</div>
+            <div>
+              <div class="font-bold text-lg" id="franchise-name-display">Delhi Central Franchise</div>
+              <div class="text-xs opacity-80" id="franchise-zone-display">Zone: Central Delhi</div>
+            </div>
+            <span id="franchise-tier-badge" class="ml-auto text-xs px-3 py-1 rounded-full font-bold badge-gold text-white">⭐ GOLD</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-white/20 rounded-lg py-2">
+              <div class="font-bold text-lg" id="dash-providers">8</div>
+              <div class="text-xs opacity-80">Providers</div>
+            </div>
+            <div class="bg-white/20 rounded-lg py-2">
+              <div class="font-bold text-lg" id="dash-bookings">124</div>
+              <div class="text-xs opacity-80">Bookings</div>
+            </div>
+            <div class="bg-white/20 rounded-lg py-2">
+              <div class="font-bold text-lg" id="dash-earnings">₹3,240</div>
+              <div class="text-xs opacity-80">Earned</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress to Next Tier -->
+        <div class="bg-white rounded-xl p-4 mb-4 shadow-sm">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm font-semibold text-gray-700">📈 Progress to Platinum</span>
+            <span class="text-xs text-gray-500" id="tier-progress-label">124 / 300 bookings</span>
+          </div>
+          <div class="bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div id="tier-progress-bar" class="bg-gradient-to-r from-orange-400 to-yellow-400 h-3 rounded-full progress-bar" style="width:41%"></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">176 more bookings to unlock Platinum tier 🚀</p>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <button onclick="showTab('providers')" class="bg-white rounded-xl p-4 shadow-sm card-hover flex items-center gap-3 border border-gray-100">
+            <span class="text-2xl">👥</span>
+            <div class="text-left"><div class="font-semibold text-sm">Add Provider</div><div class="text-xs text-gray-400">Grow your team</div></div>
+          </button>
+          <button onclick="showTab('earnings')" class="bg-white rounded-xl p-4 shadow-sm card-hover flex items-center gap-3 border border-gray-100">
+            <span class="text-2xl">💸</span>
+            <div class="text-left"><div class="font-semibold text-sm">View Earnings</div><div class="text-xs text-gray-400">This month's income</div></div>
+          </button>
+          <button onclick="showTab('training')" class="bg-white rounded-xl p-4 shadow-sm card-hover flex items-center gap-3 border border-gray-100">
+            <span class="text-2xl">🎓</span>
+            <div class="text-left"><div class="font-semibold text-sm">Training Hub</div><div class="text-xs text-gray-400">Level up skills</div></div>
+          </button>
+          <button onclick="showTab('leaderboard')" class="bg-white rounded-xl p-4 shadow-sm card-hover flex items-center gap-3 border border-gray-100">
+            <span class="text-2xl">🏆</span>
+            <div class="text-left"><div class="font-semibold text-sm">Leaderboard</div><div class="text-xs text-gray-400">See your rank</div></div>
+          </button>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white rounded-xl p-4 shadow-sm">
+          <h3 class="font-semibold text-gray-800 mb-3">🕒 Recent Activity</h3>
+          <div id="activity-feed" class="space-y-2 text-sm text-gray-600"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== REGISTER TAB ===== -->
+    <div id="tab-content-register" class="tab-content hidden">
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h2 class="text-xl font-bold text-gray-800 mb-1">📝 Franchise Registration</h2>
+        <p class="text-xs text-gray-500 mb-4">Join 42+ franchise partners earning with Sudarshan Chakra</p>
+
+        <!-- Benefits Row -->
+        <div class="grid grid-cols-3 gap-2 mb-5">
+          <div class="bg-orange-50 rounded-xl p-2 text-center text-xs">
+            <div class="text-lg">💰</div><div class="font-medium text-orange-700">10% Commission</div>
+          </div>
+          <div class="bg-orange-50 rounded-xl p-2 text-center text-xs">
+            <div class="text-lg">📱</div><div class="font-medium text-orange-700">Own Dashboard</div>
+          </div>
+          <div class="bg-orange-50 rounded-xl p-2 text-center text-xs">
+            <div class="text-lg">🏆</div><div class="font-medium text-orange-700">Tier Rewards</div>
+          </div>
+        </div>
+
+        <form id="franchise-form" onsubmit="registerFranchise(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Full Name *</label>
+            <input type="text" id="f-name" required placeholder="Your full name" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Mobile Number *</label>
+            <input type="tel" id="f-phone" required placeholder="+91 XXXXX XXXXX" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">City / Zone *</label>
+            <input type="text" id="f-city" required placeholder="e.g., Delhi Central, Mumbai West" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Franchise Name *</label>
+            <input type="text" id="f-franchise-name" required placeholder="e.g., Delhi Central Franchise" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Languages Covered</label>
+            <div class="flex flex-wrap gap-2" id="lang-checkboxes">
+              <!-- dynamically added -->
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Service Categories You'll Manage</label>
+            <input type="text" id="f-categories" placeholder="e.g., Plumbing, Electrical, Cleaning" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          </div>
+          <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+            ⚠️ By registering, you agree to onboard at least 5 service providers within 30 days and maintain quality standards.
+          </div>
+          <button type="submit" class="w-full chakra-gradient text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 transition">
+            🚀 Register as Franchise Partner
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== PROVIDERS TAB ===== -->
+    <div id="tab-content-providers" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-gray-800">👥 My Providers</h2>
+        <button onclick="addProviderPrompt()" class="bg-orange-500 text-white text-xs px-3 py-2 rounded-xl font-semibold">+ Add Provider</button>
+      </div>
+      <div id="providers-list" class="space-y-3">
+        <!-- dynamically populated -->
+      </div>
+      <div id="no-providers-msg" class="text-center text-gray-400 py-10 hidden">
+        <div class="text-4xl mb-2">👤</div>
+        <p class="text-sm">No providers yet. Add your first provider!</p>
+      </div>
+    </div>
+
+    <!-- ===== EARNINGS TAB ===== -->
+    <div id="tab-content-earnings" class="tab-content hidden">
+      <h2 class="font-bold text-gray-800 mb-3">💰 Earnings Overview</h2>
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-green-400 to-emerald-500 text-white rounded-2xl p-4">
+          <div class="text-xs opacity-80">This Month</div>
+          <div class="text-2xl font-extrabold" id="earn-month">₹3,240</div>
+          <div class="text-xs opacity-80 mt-1">↑ 12% vs last month</div>
+        </div>
+        <div class="bg-gradient-to-br from-blue-400 to-indigo-500 text-white rounded-2xl p-4">
+          <div class="text-xs opacity-80">Total Earned</div>
+          <div class="text-2xl font-extrabold" id="earn-total">₹18,750</div>
+          <div class="text-xs opacity-80 mt-1">Since joining</div>
+        </div>
+        <div class="bg-gradient-to-br from-purple-400 to-pink-500 text-white rounded-2xl p-4">
+          <div class="text-xs opacity-80">Pending Payout</div>
+          <div class="text-2xl font-extrabold" id="earn-pending">₹1,200</div>
+          <div class="text-xs opacity-80 mt-1">Paid on 1st of month</div>
+        </div>
+        <div class="bg-gradient-to-br from-orange-400 to-red-400 text-white rounded-2xl p-4">
+          <div class="text-xs opacity-80">Commission Rate</div>
+          <div class="text-2xl font-extrabold">10%</div>
+          <div class="text-xs opacity-80 mt-1">Per booking</div>
+        </div>
+      </div>
+
+      <!-- Transaction Log -->
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <h3 class="font-semibold text-gray-700 mb-3 text-sm">📋 Recent Transactions</h3>
+        <div id="transactions-list" class="space-y-2 text-sm"></div>
+      </div>
+    </div>
+
+    <!-- ===== LEADERBOARD TAB ===== -->
+    <div id="tab-content-leaderboard" class="tab-content hidden">
+      <h2 class="font-bold text-gray-800 mb-3">🏆 Franchise Leaderboard</h2>
+
+      <!-- Filter -->
+      <div class="flex gap-2 mb-4">
+        <button onclick="filterLeaderboard('monthly')" class="lb-filter active-lb text-xs bg-orange-500 text-white px-3 py-2 rounded-xl font-semibold">Monthly</button>
+        <button onclick="filterLeaderboard('alltime')" class="lb-filter text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-semibold">All Time</button>
+      </div>
+
+      <div id="leaderboard-list" class="space-y-2"></div>
+    </div>
+
+    <!-- ===== TRAINING TAB ===== -->
+    <div id="tab-content-training" class="tab-content hidden">
+      <h2 class="font-bold text-gray-800 mb-3">🎓 Franchise Training Hub</h2>
+      <p class="text-xs text-gray-500 mb-4">Complete modules to unlock higher commissions and tier upgrades.</p>
+      <div id="training-modules" class="space-y-3"></div>
+    </div>
+
+  </main>
+
+  <!-- FLOATING WHATSAPP SUPPORT -->
+  <a href="https://wa.me/918888888888?text=Hi,%20I%27m%20interested%20in%20a%20Franchise%20with%20Sudarshan%20Chakra"
+     target="_blank"
+     class="fixed bottom-5 right-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl text-2xl z-50 hover:bg-green-600 transition">
+    💬
+  </a>
+
+<script>
+// ===================== DATA =====================
+const LANGUAGES = ['English','Hindi','Bengali','Gujarati','Marathi','Kannada','Telugu','Tamil','Malayalam','Punjabi'];
+
+const LEADERBOARD_DATA = {
+  monthly: [
+    { rank:1, name:'Mumbai North Hub', zone:'Mumbai North', bookings:312, earned:'₹8,200', tier:'platinum' },
+    { rank:2, name:'Bangalore Tech Zone', zone:'Bangalore East', bookings:280, earned:'₹7,100', tier:'platinum' },
+    { rank:3, name:'Delhi Central Franchise', zone:'Central Delhi', bookings:124, earned:'₹3,240', tier:'gold', isYou:true },
+    { rank:4, name:'Hyderabad Connect', zone:'Hyderabad West', bookings:98, earned:'₹2,600', tier:'gold' },
+    { rank:5, name:'Chennai Plus', zone:'Chennai North', bookings:75, earned:'₹1,950', tier:'silver' },
+    { rank:6, name:'Kolkata Seva', zone:'Kolkata Central', bookings:61, earned:'₹1,580', tier:'silver' },
+    { rank:7, name:'Pune Services Hub', zone:'Pune East', bookings:44, earned:'₹1,140', tier:'bronze' },
+  ],
+  alltime: [
+    { rank:1, name:'Mumbai North Hub', zone:'Mumbai North', bookings:3120, earned:'₹82,000', tier:'platinum' },
+    { rank:2, name:'Bangalore Tech Zone', zone:'Bangalore East', bookings:2800, earned:'₹71,000', tier:'platinum' },
+    { rank:3, name:'Delhi Central Franchise', zone:'Central Delhi', bookings:980, earned:'₹18,750', tier:'gold', isYou:true },
+    { rank:4, name:'Hyderabad Connect', zone:'Hyderabad West', bookings:740, earned:'₹19,600', tier:'gold' },
+    { rank:5, name:'Chennai Plus', zone:'Chennai North', bookings:610, earned:'₹15,800', tier:'silver' },
+  ]
+};
+
+const TRAINING_MODULES = [
+  { id:'m1', emoji:'📱', title:'Platform Onboarding', desc:'Learn the Sudarshan Chakra platform and provider management tools.', xp:50, duration:'15 min', completed:true },
+  { id:'m2', emoji:'🤝', title:'Provider Recruitment', desc:'How to find, verify, and onboard quality service providers in your area.', xp:80, duration:'20 min', completed:true },
+  { id:'m3', emoji:'⭐', title:'Quality & Ratings', desc:'Maintain high service standards and manage provider ratings.', xp:60, duration:'12 min', completed:false },
+  { id:'m4', emoji:'💬', title:'Customer Communication', desc:'Handling complaints, escalations, and delighting customers.', xp:70, duration:'18 min', completed:false },
+  { id:'m5', emoji:'💰', title:'Earnings Maximization', desc:'Advanced strategies to grow bookings and commission income.', xp:100, duration:'25 min', completed:false },
+  { id:'m6', emoji:'📊', title:'Analytics & Reporting', desc:'Use your dashboard to make data-driven decisions.', xp:90, duration:'20 min', completed:false },
+];
+
+const ACTIVITIES = [
+  { icon:'✅', text:'Rajesh Kumar completed a plumbing job', time:'2h ago' },
+  { icon:'⭐', text:'New 5-star rating received in your zone', time:'3h ago' },
+  { icon:'📞', text:'2 new booking requests in your area', time:'5h ago' },
+  { icon:'💰', text:'Commission of ₹240 credited', time:'Yesterday' },
+  { icon:'👤', text:'Provider Meena Sharma joined your franchise', time:'2 days ago' },
+];
+
+const PROVIDERS_SAMPLE = [
+  { name:'Rajesh Kumar', category:'Plumber', rating:4.8, bookings:32, status:'active' },
+  { name:'Meena Sharma', category:'Electrician', rating:4.6, bookings:18, status:'active' },
+  { name:'Ali Hassan', category:'Carpenter', rating:4.9, bookings:27, status:'active' },
+];
+
+const TRANSACTIONS_SAMPLE = [
+  { date:'Today', desc:'Plumbing – Rajesh Kumar', amount:'+₹120', type:'credit' },
+  { date:'Today', desc:'Electrical – Meena Sharma', amount:'+₹80', type:'credit' },
+  { date:'Yesterday', desc:'Carpentry – Ali Hassan', amount:'+₹200', type:'credit' },
+  { date:'May 1', desc:'Monthly payout processed', amount:'-₹2,800', type:'debit' },
+  { date:'Apr 30', desc:'Cleaning – Priya Nair', amount:'+₹60', type:'credit' },
+];
+
+// ===================== STATE =====================
+let franchiseData = JSON.parse(localStorage.getItem('sc_franchise') || 'null');
+let myProviders = JSON.parse(localStorage.getItem('sc_franchise_providers') || 'null') || PROVIDERS_SAMPLE;
+
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded', () => {
+  buildLangCheckboxes();
+  renderLeaderboard('monthly');
+  renderTrainingModules();
+  renderTransactions();
+  renderActivityFeed();
+  renderProviders();
+  if (franchiseData) {
+    showRegisteredDashboard();
+  }
+});
+
+// ===================== TABS =====================
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el => {
+    el.classList.remove('active-tab','border-orange-500','text-orange-600');
+    el.classList.add('border-transparent','text-gray-500');
+  });
+  document.getElementById('tab-content-' + name).classList.remove('hidden');
+  const btn = document.getElementById('tab-' + name);
+  btn.classList.add('active-tab','border-orange-500','text-orange-600');
+  btn.classList.remove('border-transparent','text-gray-500');
+}
+
+// ===================== REGISTRATION =====================
+function buildLangCheckboxes() {
+  const container = document.getElementById('lang-checkboxes');
+  LANGUAGES.forEach(lang => {
+    const label = document.createElement('label');
+    label.className = 'flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1 text-xs cursor-pointer hover:bg-orange-50';
+    label.innerHTML = `<input type="checkbox" name="lang" value="${lang}" class="accent-orange-500"> ${lang}`;
+    container.appendChild(label);
+  });
+}
+
+function registerFranchise(e) {
+  e.preventDefault();
+  const name = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const city = document.getElementById('f-city').value.trim();
+  const fname = document.getElementById('f-franchise-name').value.trim();
+  const categories = document.getElementById('f-categories').value.trim();
+  const langs = [...document.querySelectorAll('input[name=lang]:checked')].map(i => i.value);
+
+  franchiseData = { name, phone, city, fname, categories, langs,
+    registeredOn: new Date().toLocaleDateString('en-IN'),
+    tier: 'Bronze', bookings: 0, earned: '₹0', providers: 0
+  };
+  localStorage.setItem('sc_franchise', JSON.stringify(franchiseData));
+
+  // Show success toast
+  showToast('🎉 Welcome! Franchise registered successfully!', 'success');
+  showRegisteredDashboard();
+  setTimeout(() => showTab('dashboard'), 1500);
+}
+
+function showRegisteredDashboard() {
+  document.getElementById('not-registered-msg').classList.add('hidden');
+  document.getElementById('franchise-dashboard').classList.remove('hidden');
+  if (franchiseData) {
+    document.getElementById('franchise-name-display').textContent = franchiseData.fname || 'My Franchise';
+    document.getElementById('franchise-zone-display').textContent = 'Zone: ' + (franchiseData.city || '');
+  }
+}
+
+// ===================== PROVIDERS =====================
+function renderProviders() {
+  const list = document.getElementById('providers-list');
+  const empty = document.getElementById('no-providers-msg');
+  list.innerHTML = '';
+  if (!myProviders || myProviders.length === 0) {
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  myProviders.forEach((p, i) => {
+    const stars = '⭐'.repeat(Math.round(p.rating));
+    list.innerHTML += `
+      <div class="bg-white rounded-xl p-4 shadow-sm card-hover flex items-center gap-3 border border-gray-100">
+        <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-lg font-bold text-orange-600">${p.name[0]}</div>
+        <div class="flex-1">
+          <div class="font-semibold text-sm text-gray-800">${p.name}</div>
+          <div class="text-xs text-gray-500">${p.category} • ${p.bookings} bookings</div>
+          <div class="text-xs text-yellow-500">${stars} ${p.rating}</div>
+        </div>
+        <span class="text-xs px-2 py-1 rounded-full font-medium ${p.status==='active'?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}">${p.status}</span>
+      </div>`;
+  });
+}
+
+function addProviderPrompt() {
+  const name = prompt('Provider name:');
+  if (!name) return;
+  const category = prompt('Service category (e.g., Plumber):');
+  if (!category) return;
+  myProviders.push({ name, category, rating: 4.5, bookings: 0, status: 'active' });
+  localStorage.setItem('sc_franchise_providers', JSON.stringify(myProviders));
+  renderProviders();
+  showToast('✅ Provider added to your franchise!', 'success');
+}
+
+// ===================== LEADERBOARD =====================
+function renderLeaderboard(filter) {
+  const data = LEADERBOARD_DATA[filter];
+  const container = document.getElementById('leaderboard-list');
+  container.innerHTML = '';
+  const tierColor = { platinum:'from-cyan-400 to-blue-500', gold:'from-yellow-400 to-amber-500', silver:'from-gray-300 to-gray-400', bronze:'from-orange-300 to-amber-700' };
+  const rankEmoji = ['🥇','🥈','🥉'];
+  data.forEach(item => {
+    container.innerHTML += `
+      <div class="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 ${item.isYou ? 'ring-2 ring-orange-400' : ''} border border-gray-100">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br ${tierColor[item.tier]} flex items-center justify-center text-lg font-bold text-white">
+          ${item.rank <= 3 ? rankEmoji[item.rank-1] : item.rank}
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-sm text-gray-800">${item.name} ${item.isYou ? '<span class="text-xs text-orange-500">(You)</span>' : ''}</div>
+          <div class="text-xs text-gray-500">${item.zone} • ${item.bookings} bookings</div>
+        </div>
+        <div class="text-right">
+          <div class="font-bold text-sm text-green-600">${item.earned}</div>
+          <div class="text-xs capitalize text-gray-400">${item.tier}</div>
+        </div>
+      </div>`;
+  });
+}
+
+function filterLeaderboard(type) {
+  document.querySelectorAll('.lb-filter').forEach(b => {
+    b.className = 'lb-filter text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-semibold';
+  });
+  event.target.className = 'lb-filter active-lb text-xs bg-orange-500 text-white px-3 py-2 rounded-xl font-semibold';
+  renderLeaderboard(type);
+}
+
+// ===================== TRAINING =====================
+function renderTrainingModules() {
+  const container = document.getElementById('training-modules');
+  let totalXP = 0, earnedXP = 0;
+  TRAINING_MODULES.forEach(m => {
+    totalXP += m.xp;
+    if (m.completed) earnedXP += m.xp;
+  });
+  container.innerHTML = `
+    <div class="bg-white rounded-xl p-4 shadow-sm mb-2">
+      <div class="flex justify-between text-xs text-gray-600 mb-1"><span>⚡ XP Progress</span><span>${earnedXP}/${totalXP} XP</span></div>
+      <div class="bg-gray-200 rounded-full h-2"><div class="bg-gradient-to-r from-orange-400 to-yellow-400 h-2 rounded-full" style="width:${Math.round(earnedXP/totalXP*100)}%"></div></div>
+    </div>`;
+  TRAINING_MODULES.forEach(m => {
+    container.innerHTML += `
+      <div class="bg-white rounded-xl p-4 shadow-sm card-hover flex items-center gap-3 border border-gray-100 ${m.completed ? 'opacity-70' : ''}">
+        <div class="text-3xl">${m.emoji}</div>
+        <div class="flex-1">
+          <div class="font-semibold text-sm text-gray-800">${m.title}</div>
+          <div class="text-xs text-gray-500">${m.desc}</div>
+          <div class="flex gap-2 mt-1 text-xs text-gray-400"><span>⏱ ${m.duration}</span><span>⚡ +${m.xp} XP</span></div>
+        </div>
+        <button onclick="completeModule('${m.id}')" class="text-xs px-3 py-2 rounded-xl font-semibold ${m.completed ? 'bg-green-100 text-green-700' : 'bg-orange-500 text-white hover:bg-orange-600'}">
+          ${m.completed ? '✅ Done' : 'Start →'}
+        </button>
+      </div>`;
+  });
+}
+
+function completeModule(id) {
+  const m = TRAINING_MODULES.find(x => x.id === id);
+  if (!m || m.completed) return;
+  m.completed = true;
+  renderTrainingModules();
+  showToast(`🎉 Module "${m.title}" completed! +${m.xp} XP`, 'success');
+}
+
+// ===================== EARNINGS =====================
+function renderTransactions() {
+  const list = document.getElementById('transactions-list');
+  TRANSACTIONS_SAMPLE.forEach(t => {
+    list.innerHTML += `
+      <div class="flex items-center justify-between py-2 border-b border-gray-50">
+        <div>
+          <div class="font-medium text-gray-700 text-xs">${t.desc}</div>
+          <div class="text-gray-400 text-xs">${t.date}</div>
+        </div>
+        <span class="font-bold text-sm ${t.type === 'credit' ? 'text-green-600' : 'text-red-500'}">${t.amount}</span>
+      </div>`;
+  });
+}
+
+// ===================== ACTIVITY FEED =====================
+function renderActivityFeed() {
+  const feed = document.getElementById('activity-feed');
+  ACTIVITIES.forEach(a => {
+    feed.innerHTML += `
+      <div class="flex items-start gap-2 py-2 border-b border-gray-50">
+        <span class="text-base">${a.icon}</span>
+        <div class="flex-1"><div class="text-xs text-gray-700">${a.text}</div><div class="text-xs text-gray-400">${a.time}</div></div>
+      </div>`;
+  });
+}
+
+// ===================== TOAST =====================
+function showToast(message, type
