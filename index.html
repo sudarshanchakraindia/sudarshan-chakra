@@ -4930,7 +4930,14 @@
                  loadAdminHomeStatsToggles();
                 // Sign in to Firebase so DB rules (auth != null && admins/uid.exists()) pass
                 _auth.signInWithEmailAndPassword(_auth.auth, ADMIN_EMAIL, ADMIN_FIREBASE_PASSWORD)
-                    .then(() => console.log('✅ Admin Firebase sign-in OK'))
+                    .then(async (cred) => {
+            console.log('✅ Admin Firebase sign-in OK');
+            // Self-seed /admins/<uid> so DB rules pass (one-time bootstrap)
+            try {
+                const fb = window._firebase;
+                if (fb) await fb.set(fb.ref(fb.db, 'admins/' + cred.user.uid), true);
+            } catch(e) { console.warn('Admin seed error:', e.message); }
+        })
                     .catch(e => console.warn('⚠️ Admin Firebase sign-in failed:', e.message));
             } else {
                 alert('Incorrect password!');
