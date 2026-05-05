@@ -213,137 +213,36 @@
 
     <!-- ===== EARNINGS TAB ===== -->
     <div id="tab-content-earnings" class="tab-content hidden">
-      <h2 class="font-bold text-gray-800 mb-1">💰 Commission Structure</h2>
-      <p class="text-xs text-gray-500 mb-4">Your earnings depend on your City CEO monthly sales tier. All amounts in INR.</p>
+      <h2 class="font-bold text-gray-800 mb-3">💰 Earnings Overview</h2>
 
-      <!-- TIER SELECTOR -->
-      <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
-        <button onclick="showTier('tier1')" id="btn-tier1" class="tier-btn text-xs bg-orange-500 text-white px-3 py-2 rounded-xl font-bold whitespace-nowrap">Bronze 500-4999 Sales</button>
-        <button onclick="showTier('tier2')" id="btn-tier2" class="tier-btn text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-bold whitespace-nowrap">Silver 5000-99999 Sales</button>
-        <button onclick="showTier('tier3')" id="btn-tier3" class="tier-btn text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-bold whitespace-nowrap">Gold 10000+ Sales</button>
-      </div>
-
-      <!-- TIER 1 -->
-      <div id="tier1" class="tier-content">
-        <div class="bg-gradient-to-r from-orange-400 to-amber-400 text-white rounded-2xl p-4 mb-3">
-          <div class="font-extrabold text-base mb-1">Bronze Tier - City CEO: 500 to 4,999 Monthly Sales</div>
-          <div class="text-xs opacity-90">Portal Fee per sale: Rs.10 | Total Monthly Pool: Rs.10,00,000</div>
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-green-400 to-emerald-500 text-white rounded-2xl p-4">
+          <div class="text-xs opacity-80">This Month</div>
+          <div class="text-2xl font-extrabold" id="earn-month">₹3,240</div>
+          <div class="text-xs opacity-80 mt-1">↑ 12% vs last month</div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
-          <table class="w-full text-xs">
-            <thead class="bg-gray-50 text-gray-600"><tr>
-              <th class="text-left px-3 py-2">Count</th><th class="text-left px-3 py-2">Level</th>
-              <th class="text-right px-3 py-2">Share %</th><th class="text-right px-3 py-2">Total Pool</th><th class="text-right px-3 py-2">Per Unit</th>
-            </tr></thead>
-            <tbody class="divide-y divide-gray-50">
-              <tr class="bg-yellow-50"><td class="px-3 py-2 font-bold">1</td><td class="px-3 py-2 font-bold text-yellow-700">Central</td><td class="px-3 py-2 text-right font-bold">27.50%</td><td class="px-3 py-2 text-right">Rs.2,75,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.2,75,000</td></tr>
-              <tr><td class="px-3 py-2 font-bold">8</td><td class="px-3 py-2 font-bold text-blue-700">Zone</td><td class="px-3 py-2 text-right">5.00%</td><td class="px-3 py-2 text-right">Rs.50,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.6,250</td></tr>
-              <tr class="bg-gray-50"><td class="px-3 py-2 font-bold">120</td><td class="px-3 py-2 font-bold text-purple-700">Division</td><td class="px-3 py-2 text-right">7.50%</td><td class="px-3 py-2 text-right">Rs.75,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.625</td></tr>
-              <tr class="bg-orange-50"><td class="px-3 py-2 font-bold">200</td><td class="px-3 py-2 font-bold text-orange-700">City CEO</td><td class="px-3 py-2 text-right">60.00%</td><td class="px-3 py-2 text-right">Rs.6,00,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.3,000</td></tr>
-            </tbody>
-          </table>
+        <div class="bg-gradient-to-br from-blue-400 to-indigo-500 text-white rounded-2xl p-4">
+          <div class="text-xs opacity-80">Total Earned</div>
+          <div class="text-2xl font-extrabold" id="earn-total">₹18,750</div>
+          <div class="text-xs opacity-80 mt-1">Since joining</div>
         </div>
-        <div class="bg-orange-50 border border-orange-200 rounded-xl p-3 text-xs text-orange-800 mb-2">
-          <strong>City CEO:</strong> Min 500 sales/month. Portal fee Rs.10/sale. Your share: <strong>60% = Rs.3,000/month</strong>
+        <div class="bg-gradient-to-br from-purple-400 to-pink-500 text-white rounded-2xl p-4">
+          <div class="text-xs opacity-80">Pending Payout</div>
+          <div class="text-2xl font-extrabold" id="earn-pending">₹1,200</div>
+          <div class="text-xs opacity-80 mt-1">Paid on 1st of month</div>
+        </div>
+        <div class="bg-gradient-to-br from-orange-400 to-red-400 text-white rounded-2xl p-4">
+          <div class="text-xs opacity-80">Commission Rate</div>
+          <div class="text-2xl font-extrabold">10%</div>
+          <div class="text-xs opacity-80 mt-1">Per booking</div>
         </div>
       </div>
 
-      <!-- TIER 2 -->
-      <div id="tier2" class="tier-content hidden">
-        <div class="bg-gradient-to-r from-gray-400 to-slate-500 text-white rounded-2xl p-4 mb-3">
-          <div class="font-extrabold text-base mb-1">Silver Tier - City CEO: 5,000 to 99,999 Monthly Sales</div>
-          <div class="text-xs opacity-90">Portal Fee per sale: Rs.10 | Total Monthly Pool: Rs.1,00,00,000</div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
-          <table class="w-full text-xs">
-            <thead class="bg-gray-50 text-gray-600"><tr>
-              <th class="text-left px-3 py-2">Count</th><th class="text-left px-3 py-2">Level</th>
-              <th class="text-right px-3 py-2">Share %</th><th class="text-right px-3 py-2">Total Pool</th><th class="text-right px-3 py-2">Per Unit</th>
-            </tr></thead>
-            <tbody class="divide-y divide-gray-50">
-              <tr class="bg-yellow-50"><td class="px-3 py-2 font-bold">1</td><td class="px-3 py-2 font-bold text-yellow-700">Central</td><td class="px-3 py-2 text-right font-bold">23.00%</td><td class="px-3 py-2 text-right">Rs.23,00,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.23,00,000</td></tr>
-              <tr><td class="px-3 py-2 font-bold">8</td><td class="px-3 py-2 font-bold text-blue-700">Zone</td><td class="px-3 py-2 text-right">5.75%</td><td class="px-3 py-2 text-right">Rs.5,75,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.71,875</td></tr>
-              <tr class="bg-gray-50"><td class="px-3 py-2 font-bold">120</td><td class="px-3 py-2 font-bold text-purple-700">Division</td><td class="px-3 py-2 text-right">8.75%</td><td class="px-3 py-2 text-right">Rs.8,75,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.7,292</td></tr>
-              <tr class="bg-orange-50"><td class="px-3 py-2 font-bold">200</td><td class="px-3 py-2 font-bold text-orange-700">City CEO</td><td class="px-3 py-2 text-right">62.50%</td><td class="px-3 py-2 text-right">Rs.62,50,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.31,250</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 mb-2">
-          <strong>City CEO:</strong> Min 5,000 sales/month. Portal fee Rs.10/sale. Your share: <strong>62.50% = Rs.31,250/month</strong>
-        </div>
-      </div>
-
-      <!-- TIER 3 -->
-      <div id="tier3" class="tier-content hidden">
-        <div class="bg-gradient-to-r from-yellow-500 to-amber-600 text-white rounded-2xl p-4 mb-3">
-          <div class="font-extrabold text-base mb-1">Gold Tier - City CEO: 10,000+ Monthly Sales</div>
-          <div class="text-xs opacity-90">Portal Fee per sale: Rs.10 | Total Monthly Pool: Rs.2,00,00,000</div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
-          <table class="w-full text-xs">
-            <thead class="bg-gray-50 text-gray-600"><tr>
-              <th class="text-left px-3 py-2">Count</th><th class="text-left px-3 py-2">Level</th>
-              <th class="text-right px-3 py-2">Share %</th><th class="text-right px-3 py-2">Total Pool</th><th class="text-right px-3 py-2">Per Unit</th>
-            </tr></thead>
-            <tbody class="divide-y divide-gray-50">
-              <tr class="bg-yellow-50"><td class="px-3 py-2 font-bold">1</td><td class="px-3 py-2 font-bold text-yellow-700">Central</td><td class="px-3 py-2 text-right font-bold">15.00%</td><td class="px-3 py-2 text-right">Rs.30,00,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.30,00,000</td></tr>
-              <tr><td class="px-3 py-2 font-bold">8</td><td class="px-3 py-2 font-bold text-blue-700">Zone</td><td class="px-3 py-2 text-right">7.13%</td><td class="px-3 py-2 text-right">Rs.14,25,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.1,78,125</td></tr>
-              <tr class="bg-gray-50"><td class="px-3 py-2 font-bold">120</td><td class="px-3 py-2 font-bold text-purple-700">Division</td><td class="px-3 py-2 text-right">10.13%</td><td class="px-3 py-2 text-right">Rs.20,25,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.16,875</td></tr>
-              <tr class="bg-orange-50"><td class="px-3 py-2 font-bold">200</td><td class="px-3 py-2 font-bold text-orange-700">City CEO</td><td class="px-3 py-2 text-right">67.75%</td><td class="px-3 py-2 text-right">Rs.1,35,50,000</td><td class="px-3 py-2 text-right font-bold text-green-700">Rs.67,750</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-3 text-xs text-yellow-900 mb-2">
-          <strong>City CEO:</strong> Min 10,000 sales/month. Portal fee Rs.10/sale. Your share: <strong>67.75% = Rs.67,750/month</strong>
-        </div>
-      </div>
-
-      <!-- CALCULATOR -->
-      <div class="bg-white rounded-2xl shadow-sm p-4 mt-3 border border-orange-100">
-        <h3 class="font-bold text-gray-800 mb-1 text-sm">Calculator - Estimate Your Monthly Earnings</h3>
-        <p class="text-xs text-gray-500 mb-3">Enter City CEO monthly sales to see earnings at every level.</p>
-        <div class="mb-3">
-          <label class="block text-xs font-medium text-gray-600 mb-1">City CEO Monthly Sales Count</label>
-          <div class="flex gap-2">
-            <input type="number" id="calc-sales" placeholder="e.g. 1000" min="0"
-              class="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              oninput="calcCommission()">
-            <button onclick="calcCommission()" class="chakra-gradient text-white px-4 py-2 rounded-xl text-sm font-bold">Go</button>
-          </div>
-        </div>
-        <div id="calc-tier-badge" class="hidden text-center mb-3">
-          <span id="calc-tier-label" class="text-xs font-bold px-4 py-1 rounded-full bg-orange-500 text-white"></span>
-        </div>
-        <div id="calc-results" class="hidden space-y-2">
-          <div class="grid grid-cols-2 gap-2">
-            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
-              <div class="text-xs text-yellow-700 font-semibold mb-1">Central (1 total)</div>
-              <div class="text-lg font-extrabold text-yellow-800" id="calc-central">-</div>
-              <div class="text-xs text-gray-500">per month</div>
-            </div>
-            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
-              <div class="text-xs text-blue-700 font-semibold mb-1">Zone (8 total)</div>
-              <div class="text-lg font-extrabold text-blue-800" id="calc-zone">-</div>
-              <div class="text-xs text-gray-500">per Zone head</div>
-            </div>
-            <div class="bg-purple-50 border border-purple-200 rounded-xl p-3 text-center">
-              <div class="text-xs text-purple-700 font-semibold mb-1">Division (120 total)</div>
-              <div class="text-lg font-extrabold text-purple-800" id="calc-division">-</div>
-              <div class="text-xs text-gray-500">per Division head</div>
-            </div>
-            <div class="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
-              <div class="text-xs text-orange-700 font-semibold mb-1">City CEO (200 total)</div>
-              <div class="text-lg font-extrabold text-orange-800" id="calc-city">-</div>
-              <div class="text-xs text-gray-500">per City CEO</div>
-            </div>
-          </div>
-          <div class="bg-gray-50 rounded-xl p-3 text-xs text-gray-600 text-center">
-            Total Monthly Pool: <span id="calc-total-pool" class="font-bold text-gray-800"></span> at Rs.10 per sale
-          </div>
-        </div>
-        <div id="calc-warning" class="hidden bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 text-center">
-          Minimum 500 sales required for City CEO tier eligibility.
-        </div>
+      <!-- Transaction Log -->
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <h3 class="font-semibold text-gray-700 mb-3 text-sm">📋 Recent Transactions</h3>
+        <div id="transactions-list" class="space-y-2 text-sm"></div>
       </div>
     </div>
 
@@ -632,76 +531,6 @@ function renderActivityFeed() {
         <div class="flex-1"><div class="text-xs text-gray-700">${a.text}</div><div class="text-xs text-gray-400">${a.time}</div></div>
       </div>`;
   });
-}
-
-// ===================== COMMISSION STRUCTURE =====================
-const COMMISSION_TIERS = [
-  { label: 'Bronze Tier - 500 to 4,999 Sales', minSales: 500, maxSales: 4999, portalFee: 10,
-    levels: [
-      { name: 'Central',  count: 1,   pct: 0.275,  },
-      { name: 'Zone',     count: 8,   pct: 0.05,   },
-      { name: 'Division', count: 120, pct: 0.075,  },
-      { name: 'City CEO', count: 200, pct: 0.60,   },
-    ]
-  },
-  { label: 'Silver Tier - 5,000 to 99,999 Sales', minSales: 5000, maxSales: 99999, portalFee: 10,
-    levels: [
-      { name: 'Central',  count: 1,   pct: 0.23,   },
-      { name: 'Zone',     count: 8,   pct: 0.0575, },
-      { name: 'Division', count: 120, pct: 0.0875, },
-      { name: 'City CEO', count: 200, pct: 0.625,  },
-    ]
-  },
-  { label: 'Gold Tier - 10,000+ Sales', minSales: 10000, maxSales: Infinity, portalFee: 10,
-    levels: [
-      { name: 'Central',  count: 1,   pct: 0.15,   },
-      { name: 'Zone',     count: 8,   pct: 0.0713, },
-      { name: 'Division', count: 120, pct: 0.1013, },
-      { name: 'City CEO', count: 200, pct: 0.6775, },
-    ]
-  }
-];
-
-function showTier(tierId) {
-  document.querySelectorAll('.tier-content').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.tier-btn').forEach(b => {
-    b.className = 'tier-btn text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-bold whitespace-nowrap';
-  });
-  document.getElementById(tierId).classList.remove('hidden');
-  const btn = document.getElementById('btn-' + tierId);
-  if (btn) btn.className = 'tier-btn text-xs bg-orange-500 text-white px-3 py-2 rounded-xl font-bold whitespace-nowrap';
-}
-
-function fmtINR(n) {
-  if (n >= 10000000) return 'Rs.' + (n/10000000).toFixed(2) + ' Cr';
-  if (n >= 100000)   return 'Rs.' + (n/100000).toFixed(2) + ' L';
-  return 'Rs.' + Math.round(n).toLocaleString('en-IN');
-}
-
-function calcCommission() {
-  const sales = parseInt(document.getElementById('calc-sales').value) || 0;
-  const results = document.getElementById('calc-results');
-  const warning = document.getElementById('calc-warning');
-  const badge   = document.getElementById('calc-tier-badge');
-  const tierLbl = document.getElementById('calc-tier-label');
-  if (sales < 500) {
-    results.classList.add('hidden');
-    badge.classList.add('hidden');
-    warning.classList.remove('hidden');
-    return;
-  }
-  warning.classList.add('hidden');
-  const tier = COMMISSION_TIERS.find(t => sales >= t.minSales && sales <= t.maxSales) || COMMISSION_TIERS[2];
-  const pool = sales * tier.portalFee;
-  const L = tier.levels;
-  document.getElementById('calc-central').textContent  = fmtINR(pool * L[0].pct);
-  document.getElementById('calc-zone').textContent     = fmtINR((pool * L[1].pct) / L[1].count);
-  document.getElementById('calc-division').textContent = fmtINR((pool * L[2].pct) / L[2].count);
-  document.getElementById('calc-city').textContent     = fmtINR((pool * L[3].pct) / L[3].count);
-  document.getElementById('calc-total-pool').textContent = fmtINR(pool);
-  tierLbl.textContent = tier.label;
-  badge.classList.remove('hidden');
-  results.classList.remove('hidden');
 }
 
 // ===================== TOAST =====================
