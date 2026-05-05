@@ -4,7 +4,7 @@
     <meta charset="UTF-8">h
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Sudarshan Chakra - Find Service Providers Near You</title>
-
+h
     <!-- ===== PWA META TAGS ===== -->h
     <link rel="manifest" href="manifest.json">h
     <meta name="theme-color" content="#ea580c">
@@ -274,6 +274,7 @@
                     <button data-i18n="registerProvider" onclick="showPage('register')" class="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">Register Provider</button>
                     <button data-i18n="registerSeeker" onclick="showPage('seeker')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Register Seeker</button>
                     <button data-i18n="admin" onclick="showPage('admin')" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">🔐 Admin</button>
+                    <a href="franchise.html" style="text-decoration:none;"><button class="px-3 py-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded-lg hover:opacity-90 text-sm font-semibold">🏢 Franchise</button></a>
                 </div>
                 <!-- Wallet button — shown only when logged in -->
                 <button id="walletNavBtn" onclick="showPage('myProfile'); setTimeout(()=>showProfileTab('wallet'),300)" class="hidden px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-semibold border border-green-300">💰 Wallet</button>
@@ -311,6 +312,7 @@
                     <button data-i18n="voiceSearch" onclick="startVoiceSearch()" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 text-lg">
                         🎤 Voice Search
                     </button>
+                    <a href="franchise.html" style="text-decoration:none;"><button class="bg-gradient-to-r from-orange-500 to-yellow-400 text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 text-lg">🏢 Own a Franchise</button></a>
                 </div>
                 
                 <!-- Voice Search Status -->
@@ -355,6 +357,18 @@
                 <div class="flex gap-3 justify-center flex-wrap">
                     <button onclick="showPage('register')" class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition">👷 Register as Provider</button>
                     <button onclick="showPage('seeker')" class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition">🙋 Register as Seeker</button>
+                    <a href="franchise.html" style="text-decoration:none;"><button class="bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition border-2 border-white/60">🏢 Own a Franchise</button></a>
+                </div>
+                <div style="margin-top:16px;background:rgba(255,255,255,0.15);border-radius:16px;padding:16px;border:2px solid rgba(255,255,255,0.3);">
+                    <div style="font-size:22px;margin-bottom:4px;">🏢</div>
+                    <div style="font-size:15px;font-weight:800;margin-bottom:4px;color:white;">Own a City Franchise</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-bottom:12px;">Manage local providers · Earn 10% commission · Build your region's network</div>
+                    <div style="display:flex;justify-content:center;gap:12px;font-size:11px;color:rgba(255,255,255,0.85);margin-bottom:12px;flex-wrap:wrap;">
+                        <span>✅ Gold / Platinum Tiers</span><span>✅ Monthly Payouts</span><span>✅ Training Hub</span>
+                    </div>
+                    <a href="franchise.html" style="text-decoration:none;display:block;">
+                        <button style="background:white;color:#ea580c;border:none;border-radius:10px;padding:10px 24px;font-weight:800;font-size:13px;cursor:pointer;width:100%;">🚀 Become a Franchise Partner →</button>
+                    </a>
                 </div>
             </div>
 
@@ -1926,6 +1940,7 @@
               <ul class="space-y-1.5 text-xs text-gray-600">
                 <li class="flex gap-2 items-start"><span class="flex-shrink-0">🏗️</span>New cities, categories and features added every month</li>
                 <li class="flex gap-2 items-start"><span class="flex-shrink-0">📱</span>Install PWA: Chrome menu → Add to Home Screen (Android) or Safari Share → Add to Home Screen (iPhone)</li>
+                <li class="flex gap-2 items-start"><span class="flex-shrink-0">🏢</span><a href="franchise.html" style="color:#ea580c;font-weight:600;text-decoration:none;">Franchise Portal — Own your city's network</a></li>
                 <li class="flex gap-2 items-start"><span class="flex-shrink-0">🙏</span>Thank you for being part of this journey — every review, referral and booking builds something meaningful for India</li>
               </ul>
             </div>
