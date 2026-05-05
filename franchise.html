@@ -219,7 +219,7 @@
       <!-- TIER SELECTOR -->
       <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
         <button onclick="showTier('tier1')" id="btn-tier1" class="tier-btn text-xs bg-orange-500 text-white px-3 py-2 rounded-xl font-bold whitespace-nowrap">🥉 Bronze 500–4,999 Sales</button>
-        <button onclick="showTier('tier2')" id="btn-tier2" class="tier-btn text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-bold whitespace-nowrap">🥈 Silver 5,000–99,999 Sales</button>
+        <button onclick="showTier('tier2')" id="btn-tier2" class="tier-btn text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-bold whitespace-nowrap">🥈 Silver 5,000–9,999 Sales</button>
         <button onclick="showTier('tier3')" id="btn-tier3" class="tier-btn text-xs bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-bold whitespace-nowrap">🥇 Gold 10,000+ Sales</button>
       </div>
 
@@ -251,7 +251,7 @@
       <!-- TIER 2: SILVER -->
       <div id="tier2" class="tier-content hidden">
         <div class="bg-gradient-to-r from-gray-400 to-slate-500 text-white rounded-2xl p-4 mb-3">
-          <div class="font-extrabold text-base mb-1">🥈 Silver — City CEO: 5,000 to 99,999 Monthly Sales</div>
+          <div class="font-extrabold text-base mb-1">🥈 Silver — City CEO: 5,000 to 9,999 Monthly Sales</div>
           <div class="text-xs opacity-90">Portal Fee: ₹10/sale &nbsp;|&nbsp; Total Monthly Pool: ₹1,00,00,000</div>
         </div>
         <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-3">
@@ -644,7 +644,7 @@ const COMMISSION_TIERS = [
       { name:'City CEO', count:200, pct:0.60   },
     ]
   },
-  { label: '🥈 Silver — 5,000 to 99,999 Sales', minSales: 5000, maxSales: 99999,
+  { label: '🥈 Silver — 5,000 to 9,999 Sales', minSales: 5000, maxSales: 9999,
     levels: [
       { name:'Central',  count:1,   pct:0.23   },
       { name:'Zone',     count:8,   pct:0.0575 },
