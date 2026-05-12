@@ -45,7 +45,7 @@
     "admins": {
       ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
       "$adminUid": {
-        ".write": "auth != null && auth.uid === $adminUid && auth.uid === 'zGO0bKaEoHYuA7ClTLKh5irfU2C3'"
+        ".write": "auth != null && auth.uid === $adminUid && auth.uid === 'zGO0bKaEoHYuA7C1TLKh5irfU2C3'"
       }
     },
     "admin": {
