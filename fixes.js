@@ -1393,7 +1393,22 @@ window.radheyStop = function() {
            scApplyAdminProviderView();
    };
 
-   // ── ADMIN: Delete Provider ─────────────────────────────────────────        window.scAdminDeleteProvider = function(providerId, buttonEl) {
+      window.scAdminDeleteProvider = function(providerId, buttonEl) {
+                 if (!providerId) return;
+                 if (!confirm('Delete this provider permanently?')) return;
+                 if (buttonEl) { buttonEl.disabled = true; buttonEl.innerText = 'Deleting...'; }
+                 var db = (window.firebase && typeof firebase.database === 'function') ? firebase.database() : null;
+                 if (!db) { alert('Firebase not available'); if (buttonEl) { buttonEl.disabled=false; buttonEl.innerText='Delete'; } return; }
+                 db.ref('providers/' + providerId).remove().then(function() {
+                                var row = document.querySelector('[data-provider-id="' + providerId + '"]');
+                                if (row) row.remove();
+                                alert('Provider deleted successfully.');
+                 }).catch(function(err) {
+                                alert('Delete failed: ' + err.message);
+                                if (buttonEl) { buttonEl.disabled = false; buttonEl.innerText = 'Delete'; }
+                 });
+      };
+       window.scApplyAdminProviderView = function() {
            const list = document.getElementById('providersListAdmin');
            if (!list) return;
            // Get all provider rows from the list
@@ -1417,7 +1432,16 @@ window.radheyStop = function() {
                                  else if (mode === 'active') show = prov.status === 'active';
                                  else if (mode === 'paused') show = prov.status === 'paused';
                      }
-                     row.style.display = show ? '' : 'none';                // Inject delete button if not already present                if (show && !row.querySelector('.sc-admin-del-btn')) {                    var pid = row.dataset.providerId || row.dataset.id;                    if (pid) {                        var delBtn = document.createElement('button');                        delBtn.className = 'sc-admin-del-btn ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded cursor-pointer';                        delBtn.innerText = 'Delete';                        delBtn.onclick = function(e) {                            e.stopPropagation();                            window.scAdminDeleteProvider(pid, delBtn);                        };                        row.appendChild(delBtn);                    }                }                // Inject delete button if not already present                if (show && !row.querySelector('.sc-admin-del-btn')) {                    var pid = row.dataset.providerId || row.dataset.id;                    if (pid) {                        var delBtn = document.createElement('button');                        delBtn.className = 'sc-admin-del-btn ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded cursor-pointer';                        delBtn.innerText = 'Delete';                        delBtn.onclick = function(e) {                            e.stopPropagation();                            window.scAdminDeleteProvider(pid, delBtn);                        };                        row.appendChild(delBtn);                    }                // Inject delete button if not already present                if (show && !row.querySelector('.sc-admin-del-btn')) {                    var pid = row.dataset.providerId || row.dataset.id;                    if (pid) {                        var delBtn = document.createElement('button');                        delBtn.className = 'sc-admin-del-btn ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded cursor-pointer';                        delBtn.innerText = 'Delete';                        delBtn.onclick = function(e) {                            e.stopPropagation();                            window.scAdminDeleteProvider(pid, delBtn);                        };                // Inject delete button if not already present                if (show && !row.querySelector('.sc-admin-del-btn')) {                    var pid = row.dataset.providerId || row.dataset.id;                    if (pid) {                        var delBtn = document.createElement('button');                        delBtn.className = 'sc-admin-del-btn ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded cursor-pointer';                        delBtn.innerText = 'Delete';                        delBtn.onclick = function(e) {                            e.stopPropagation();                // Inject delete button if not already present                if (show && !row.querySelector('.sc-admin-del-btn')) {                    var pid = row.dataset.providerId || row.dataset.id;                    if (pid) {                        var delBtn = document.createElement('button');                        delBtn.className = 'sc-admin-del-btn ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded cursor-pointer';                        delBtn.innerText = 'Delete';                // Inject delete button if not already present                if (show && !row.querySelector('.sc-admin-del-btn')) {                    var pid = row.dataset.providerId || row.dataset.id;                    if (pid) {                        var delBtn = document.createElement('button');                // Inject delete button if not already present                if (show && !row.querySelector('.sc-admin-del-btn')) {                    var pid = row.dataset.providerId || row.dataset.id;                // Inject delete button if not already present
+                                          row.style.display = show ? '' : 'none';
+                                    if (show && !row.querySelector('.sc-admin-del-btn')) {
+                                                                 if (pid) {
+                                                                                                  var delBtn = document.createElement('button');
+                                                                                                  delBtn.className = 'sc-admin-del-btn ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded cursor-pointer';
+                                                                                                  delBtn.innerText = 'Delete';
+                                                                                                  delBtn.onclick = function(e) { e.stopPropagation(); window.scAdminDeleteProvider(pid, delBtn); };
+                                                                                                  row.appendChild(delBtn);
+                                                                 }
+                                    }
            });
    };
 
