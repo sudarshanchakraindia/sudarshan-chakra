@@ -1456,7 +1456,8 @@ window.radheyStop = function() {
            const origSAT = window.showAdminTab;
            window.showAdminTab = function(tab) {
                      origSAT.apply(this, arguments);
-                     setTimeout(injectAdminSortControls, 800);                    setTimeout(injectAdminSortControls, 1600);
+                                         setTimeout(injectAdminSortControls, 800);
+                                   setTimeout(injectAdminSortControls, 1600);
            };
    }, 600);
 
