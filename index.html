@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">h
@@ -1199,9 +1199,21 @@ h
                 <!-- USER MANAGEMENT TAB -->
                 <div id="adminTab-users" class="hidden">
                     <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
                             <h2 class="text-2xl font-bold text-gray-800">👥 Providers Management</h2>
-                            <input type="text" id="searchProviders" placeholder="Search providers..." class="px-4 py-2 border rounded-lg" onkeyup="filterProvidersList()">
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <span id="fakeProvidersCount" class="text-sm text-gray-500"></span>
+                                <button onclick="deleteAllFakeProviders()" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm font-semibold" title="Bulk-delete seeded/test providers">🗑️ Delete All Fake Providers</button>
+                                <select id="sortProvidersAdmin" class="px-3 py-2 border rounded-lg text-sm" onchange="filterProvidersList()">
+                                    <option value="registered_desc">Newest First</option>
+                                    <option value="registered_asc">Oldest First</option>
+                                    <option value="name_asc">Name (A–Z)</option>
+                                    <option value="rating_desc">Rating (High to Low)</option>
+                                    <option value="experience_desc">Experience (High to Low)</option>
+                                    <option value="status">Status</option>
+                                </select>
+                                <input type="text" id="searchProviders" placeholder="Search providers..." class="px-4 py-2 border rounded-lg" onkeyup="filterProvidersList()">
+                            </div>
                         </div>
                         <div id="providersListAdmin" class="space-y-3"></div>
                     </div>
@@ -2082,7 +2094,10 @@ h
                 if (data) {
                     // Map each entry with its Firebase key as id (handles both push() and old set() records)
                     providers = Object.entries(data).map(([key, val]) => {
-                        if (!val.id) val.id = key; // ensure id field is always set
+                        // ALWAYS use the real Firebase key as id — some legacy/seeded
+                        // records carry their own mismatched "id" field, which broke
+                        // delete/update (they targeted a path that doesn't exist).
+                        val.id = key;
                         return val;
                     });
                 } else {
@@ -5144,16 +5159,33 @@ h
         }
         
         // ==================== PROVIDER MANAGEMENT ====================
+        // Detects bulk-imported/seeded test providers, which used numeric-only
+        // Firebase keys ("1","2","3"...) and a different field schema
+        // (phone/city/experience_years/category_id) than genuinely-registered
+        // providers (mobile/location/experience/ownerUid).
+        function isFakeSeededProvider(p) {
+            return /^\d+$/.test(String(p.id)) && (p.category_id !== undefined || p.phone !== undefined || p.experience_years !== undefined);
+        }
+
+        function providerField(p, real, seeded, fallback) {
+            const v = p[real] !== undefined ? p[real] : p[seeded];
+            return (v === undefined || v === null || v === '') ? fallback : v;
+        }
+
         function loadProvidersList() {
             const list = document.getElementById('providersListAdmin');
             if (!list) return;
-            
+
+            const fakeCount = providers.filter(isFakeSeededProvider).length;
+            const countEl = document.getElementById('fakeProvidersCount');
+            if (countEl) countEl.textContent = fakeCount > 0 ? `⚠️ ${fakeCount} look like seeded/test data` : '';
+
             if (providers.length === 0) {
                 list.innerHTML = '<div class="text-center py-8 text-gray-500">No providers registered yet</div>';
                 return;
             }
-            
-            renderProvidersList(providers);
+
+            filterProvidersList();
         }
         
         function renderProvidersList(providersList) {
@@ -5163,25 +5195,35 @@ h
                 const statusColor = {
                     'active': 'bg-green-100 text-green-800',
                     'paused': 'bg-yellow-100 text-yellow-800',
-                    'restricted': 'bg-red-100 text-red-800'
+                    'restricted': 'bg-red-100 text-red-800',
+                    'provisional': 'bg-blue-100 text-blue-800'
                 };
                 const status = p.status || 'active';
+                const mobile = providerField(p, 'mobile', 'phone', '—');
+                const location = providerField(p, 'location', 'city', '—');
+                const experience = providerField(p, 'experience', 'experience_years', '—');
+                const rate = providerField(p, 'rate', 'rate_per_hour_inr', '—');
+                const service = providerField(p, 'service', 'service_name', '—');
+                const registeredRaw = p.registered;
+                const registeredDisplay = registeredRaw && !isNaN(new Date(registeredRaw)) ? new Date(registeredRaw).toLocaleDateString() : '—';
+                const seededTag = isFakeSeededProvider(p) ? '<span class="px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">SEEDED/TEST</span>' : '';
                 
                 return `
                     <div class="border rounded-lg p-4 ${status === 'restricted' ? 'bg-red-50 border-red-200' : status === 'paused' ? 'bg-yellow-50 border-yellow-200' : 'bg-white'}">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <h3 class="font-bold text-lg">${p.name}</h3>
-                                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${statusColor[status]}">${status.toUpperCase()}</span>
+                                <div class="flex items-center gap-3 mb-2 flex-wrap">
+                                    <h3 class="font-bold text-lg">${p.name || 'Unnamed'}</h3>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${statusColor[status] || statusColor['active']}">${status.toUpperCase()}</span>
+                                    ${seededTag}
                                 </div>
                                 <div class="grid md:grid-cols-2 gap-2 text-sm text-gray-600">
-                                    <div>📞 ${p.mobile}</div>
-                                    <div>🔧 ${p.service}</div>
-                                    <div>📍 ${p.location}</div>
-                                    <div>⭐ ${(p.rating || 4.0).toFixed(1)} | 🕐 ${p.experience} yrs | 💰 ₹${p.rate}/hr</div>
-                                    <div>${religionIcons[p.religion] || '🙏'} ${p.religion}</div>
-                                    <div>📅 ${new Date(p.registered).toLocaleDateString()}</div>
+                                    <div>📞 ${mobile}</div>
+                                    <div>🔧 ${service}</div>
+                                    <div>📍 ${location}</div>
+                                    <div>⭐ ${(p.rating || 4.0).toFixed(1)} | 🕐 ${experience} yrs | 💰 ₹${rate}/hr</div>
+                                    <div>${religionIcons[p.religion] || '🙏'} ${p.religion || '—'}</div>
+                                    <div>📅 ${registeredDisplay}</div>
                                 </div>
                             </div>
                             <div class="flex gap-2 ml-4">
@@ -5206,14 +5248,62 @@ h
         }
         
         function filterProvidersList() {
-            const search = document.getElementById('searchProviders').value.toLowerCase();
-            const filtered = providers.filter(p => 
-                p.name.toLowerCase().includes(search) ||
-                p.mobile.includes(search) ||
-                p.service.toLowerCase().includes(search) ||
-                p.location.toLowerCase().includes(search)
-            );
+            const searchEl = document.getElementById('searchProviders');
+            const sortEl = document.getElementById('sortProvidersAdmin');
+            const search = searchEl ? searchEl.value.toLowerCase() : '';
+            const sortBy = sortEl ? sortEl.value : 'registered_desc';
+
+            let filtered = providers.filter(p => {
+                const name = (p.name || '').toLowerCase();
+                const mobile = String(providerField(p, 'mobile', 'phone', '')).toLowerCase();
+                const service = String(providerField(p, 'service', 'service_name', '')).toLowerCase();
+                const location = String(providerField(p, 'location', 'city', '')).toLowerCase();
+                return name.includes(search) || mobile.includes(search) || service.includes(search) || location.includes(search);
+            });
+
+            filtered = filtered.slice().sort((a, b) => {
+                switch (sortBy) {
+                    case 'registered_asc':
+                        return new Date(a.registered || 0) - new Date(b.registered || 0);
+                    case 'name_asc':
+                        return (a.name || '').localeCompare(b.name || '');
+                    case 'rating_desc':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'experience_desc':
+                        return (providerField(b, 'experience', 'experience_years', 0) - providerField(a, 'experience', 'experience_years', 0));
+                    case 'status':
+                        return (a.status || 'active').localeCompare(b.status || 'active');
+                    case 'registered_desc':
+                    default:
+                        return new Date(b.registered || 0) - new Date(a.registered || 0);
+                }
+            });
+
             renderProvidersList(filtered);
+        }
+
+        // Bulk-delete every provider identified as seeded/test data (see
+        // isFakeSeededProvider). Uses a single atomic multi-path update instead
+        // of thousands of individual delete calls.
+        async function deleteAllFakeProviders() {
+            const fakeOnes = providers.filter(isFakeSeededProvider);
+            if (fakeOnes.length === 0) {
+                alert('✅ No seeded/test providers detected — nothing to delete.');
+                return;
+            }
+            const confirmMsg = `🗑️ PERMANENTLY DELETE ${fakeOnes.length} seeded/test providers?\n\nThis will NOT touch your genuinely-registered providers. This cannot be undone.\n\nType-check sample: "${fakeOnes[0].name}" (${fakeOnes[0].service_name || fakeOnes[0].service || 'no service'})`;
+            if (!confirm(confirmMsg)) return;
+            try {
+                if (!_db) throw new Error('Firebase not ready');
+                const updates = {};
+                fakeOnes.forEach(p => { updates['providers/' + p.id] = null; });
+                await _update(_ref(_db), updates);
+                showFirebaseStatus(`✅ Deleted ${fakeOnes.length} seeded/test providers`, 'success');
+            } catch (err) {
+                console.error('Bulk delete fake providers error:', err);
+                showFirebaseStatus('❌ Error deleting: ' + err.message, 'error');
+                alert('❌ Delete failed: ' + err.message + '\n\nIf this says permission_denied, your admin Firebase session/rules need fixing first — see the chat.');
+            }
         }
         
         function pauseProvider(providerId) {
@@ -9760,5 +9850,3 @@ function addInfoMsg(text, type) {
 <script src="fixes.js?v=20260418a"></script>
 </body>
 </html>
-
-
