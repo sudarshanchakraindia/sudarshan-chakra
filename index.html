@@ -9042,6 +9042,14 @@ function openSubscriptionModal() {
 function closeSubscriptionModal() { document.getElementById('subscriptionModal').classList.add('hidden'); }
 function initiateSubscription(plan, amount) {
     if (!firebaseUser) { openLoginModal(); return; }
+    // Resolve the provider's REAL Firebase key (push-id), not their auth UID —
+    // providers are stored keyed by push-id, and ownerUid is just a field on
+    // that record. Writing to providers/{uid}/... instead of providers/{real
+    // key}/... silently created a phantom node and meant approved plans never
+    // showed up for the provider (the app reads membership from the real key).
+    const myProvider = providers.find(p => p.ownerUid === firebaseUser.uid);
+    if (!myProvider) { alert('⚠️ Could not find your provider profile. Please complete provider registration first.'); return; }
+    const provId    = myProvider.id;
     const planNames = { free: '🆓 Basic', silver: '🥈 Professional', gold: '🥇 Elite' };
     const planName  = planNames[plan] || plan;
     const summary   = `<div class="flex justify-between"><span>Plan</span><span class="font-semibold">${planName}</span></div>
@@ -9055,7 +9063,8 @@ function initiateSubscription(plan, amount) {
         onSuccess:  async (utr, screenshotB64) => {
             const reqTs = Date.now();
             const payload = {
-                providerId: firebaseUser.uid,
+                providerId: provId,
+                ownerUid: firebaseUser.uid,
                 providerName: window.userProfile?.name || '',
                 plan, amount: Number(amount),
                 requestedAt: new Date().toISOString(),
@@ -9068,7 +9077,7 @@ function initiateSubscription(plan, amount) {
             };
             if (window._firebase) {
                 await _firebase.set(_firebase.ref(_firebase.db, `admin/subscriptionRequests/${reqTs}`), payload);
-                await _firebase.set(_firebase.ref(_firebase.db, `providers/${firebaseUser.uid}/membership`), {
+                await _firebase.set(_firebase.ref(_firebase.db, `providers/${provId}/membership`), {
                     plan, amount: Number(amount), status: 'pending', planName,
                     requestedAt: new Date().toISOString(), utr
                 });
