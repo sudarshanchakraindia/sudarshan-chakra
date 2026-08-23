@@ -1,4 +1,3 @@
-
 /* =====================================================================
  * PHASE 1 (defense v2): Re-assert the Provisional Registration gate
  * Other scripts reassign window.showPage after initial load. Use a
@@ -1306,6 +1305,15 @@ window.radheyStop = function() {
            }
 
         // 3b: Provider sort/filter controls
+        // DISABLED (2026-08-23): this bar duplicated/shadowed the sort, search
+        // and bulk-delete controls now built directly into index.html's admin
+        // Providers Management panel. It also never worked correctly — it
+        // targeted firebase.database() (old namespaced SDK, unused by this app)
+        // for its per-row delete button, and its filter/sort relied on rows
+        // carrying a data-provider-id attribute that renderProvidersList never
+        // set, so clicking these pills silently did nothing. Left disabled
+        // rather than deleted so it's easy to revert if ever needed.
+        /*
         const provSection = document.getElementById('providersListAdmin');
            if (provSection && !document.getElementById('sc-prov-sort-bar')) {
                      const header = provSection.previousElementSibling;
@@ -1331,6 +1339,7 @@ window.radheyStop = function() {
                                  header.insertAdjacentElement('afterend', sortBar);
                      }
            }
+        */
    }
 
    // Category sort function
