@@ -4052,22 +4052,30 @@ h
                     // Merge multilingual names into existing categories
                     // Pass all local category definitions so ALL cats get upgraded
                     const allLocalCats = [...(DEFAULT_CATEGORIES || []), ...ITI_CATEGORIES];
-                    categories = mergeMultilingualNames(existing, allLocalCats);
-                    // Check if any ITI cat is missing — add it
-                    let added = 0;
-                    ITI_CATEGORIES.forEach(itiCat => {
-                        if (!categories.find(c => c.id === itiCat.id)) {
-                            categories.push(itiCat);
-                            added++;
-                        }
-                    });
+                    let merged = mergeMultilingualNames(existing, allLocalCats);
+                    const beforeCount = merged.length;
+                    // Deep-merge: add any category/subcategory/service that
+                    // exists in the source code but not yet in this saved
+                    // Firebase snapshot. Without this, anything added to
+                    // DEFAULT_CATEGORIES or ITI_CATEGORIES in code never
+                    // actually reaches the live homepage/browse cards once
+                    // Firebase already has data — it would just sit unused
+                    // in the source file forever.
+                    merged = mergeCategories(merged, allLocalCats);
+                    // Re-apply known structural fixes (duplicate removal,
+                    // mis-filed subcategory relocation) directly to the live
+                    // Firebase data, since those issues may already be
+                    // baked into whatever was saved previously.
+                    merged = applyV4StructuralFixes(merged);
+                    categories = merged;
+                    const added = categories.length - beforeCount;
                     // Save upgraded data back to Firebase (admin only)
                 if (!document.getElementById('adminDashboard')?.classList.contains('hidden')) {
                     _firebase.set(_firebase.ref(_firebase.db, 'categories'), categories)
-                        .then(() => console.log('✅ Multilingual names saved to Firebase'))
+                        .then(() => console.log('✅ Categories synced to Firebase'))
                         .catch(e => console.warn('Save error:', e));
                 }
-                    console.log('✅ Categories loaded & upgraded:', categories.length, '| ITI added:', added);
+                    console.log('✅ Categories loaded & merged:', categories.length, '| new top-level categories added:', added);
                 }
                 // Refresh all UI that depends on categories
                 updateProviderCategorySelects();
@@ -6103,6 +6111,7 @@ function toggleAdminCat(id, headerEl) {
             loadAdminCategories();
             updateAdminStats();
             updateProviderCategorySelects();
+            loadHomeCategories();
             closeCategoryModal();
         }
         
@@ -6117,6 +6126,7 @@ function toggleAdminCat(id, headerEl) {
                 loadAdminCategories();
                 updateAdminStats();
                 updateProviderCategorySelects();
+                loadHomeCategories();
             }
         }
         
@@ -6177,6 +6187,7 @@ function toggleAdminCat(id, headerEl) {
             saveCategoriesToFirebase();
             loadAdminCategories();
             updateProviderCategorySelects();
+            loadHomeCategories();
             closeSubcategoryModal();
         }
         
@@ -6190,6 +6201,7 @@ function toggleAdminCat(id, headerEl) {
                 saveCategoriesToFirebase();
                 loadAdminCategories();
                 updateProviderCategorySelects();
+                loadHomeCategories();
             }
         }
         
@@ -6247,6 +6259,7 @@ function toggleAdminCat(id, headerEl) {
             saveCategoriesToFirebase();
             loadAdminCategories();
             updateProviderCategorySelects();
+            loadHomeCategories();
             closeServiceModal();
         }
         
@@ -6374,6 +6387,7 @@ function toggleAdminCat(id, headerEl) {
                 saveCategoriesToFirebase();
                 loadAdminCategories();
                 updateProviderCategorySelects();
+                loadHomeCategories();
             }
         }
         
