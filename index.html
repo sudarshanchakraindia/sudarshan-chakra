@@ -2857,7 +2857,7 @@ h
         // Increment CATEGORY_VERSION each time you add new default categories.
         // The merge logic will ADD new categories/subcategories/services to saved data
         // without removing anything the admin has added or customised.
-        const CATEGORY_VERSION = 4; // <-- bump this number when adding new defaults
+        const CATEGORY_VERSION = 5; // <-- bump this number when adding new defaults
 
         // These are the MASTER default categories. They are only ever ADDED, never removed.
         const DEFAULT_CATEGORIES = [
@@ -3219,6 +3219,14 @@ h
                             { name: {"en": "Folk Music Group", "hi": "लोक संगीत समूह", "bn": "লোকসংগীত দল", "or": "ଲୋକ ସଂଗୀତ ଦଳ", "as": "লোক সংগীত দল"}, icon: '🎶' },
                             { name: {"en": "Fire Show Artist", "hi": "फायर शो कलाकार", "bn": "ফায়ার শো শিল্পী", "or": "ଫାୟର ଶୋ କଳାକାର", "as": "জুই শ্বো শিল্পী"}, icon: '🔥' }
                         ]
+                    },
+                    {
+                        name: {"en": "Marriage Bureau / Matchmaker", "hi": "विवाह ब्यूरो/मैचमेकर"}, icon: '💑',
+                        subsubcategories: [
+                            { name: {"en": "Matchmaking Service", "hi": "मैचमेकिंग सेवा"}, icon: '💑' },
+                            { name: {"en": "Profile Registration", "hi": "प्रोफाइल पंजीकरण"}, icon: '📝' },
+                            { name: {"en": "Family Introduction", "hi": "पारिवारिक परिचय"}, icon: '👨‍👩‍👧' }
+                        ]
                     }
                 ]
             },
@@ -3281,6 +3289,14 @@ h
                             { name: {"en": "Personal Driver", "hi": "पर्सनल ड्राइवर", "bn": "ব্যক্তিগত ড্রাইভার", "or": "ବ୍ୟକ୍ତିଗତ ଡ୍ରାଇଭର", "as": "ব্যক্তিগত ড্ৰাইভাৰ"}, icon: '🧑‍✈️' },
                             { name: {"en": "Corporate Driver", "hi": "कॉर्पोरेट ड्राइवर", "bn": "কর্পোরেট ড্রাইভার", "or": "କର୍ପୋରେଟ ଡ୍ରାଇଭର", "as": "কৰ্পোৰেট ড্ৰাইভাৰ"}, icon: '💼' },
                             { name: {"en": "Night Driver", "hi": "नाइट ड्राइवर", "bn": "রাতের ড্রাইভার", "or": "ରାତ ଡ୍ରାଇଭର", "as": "ৰাতিৰ ড্ৰাইভাৰ"}, icon: '🌙' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Courier / Local Parcel Delivery", "hi": "कूरियर/स्थानीय पार्सल डिलीवरी"}, icon: '📦',
+                        subsubcategories: [
+                            { name: {"en": "Local Courier", "hi": "स्थानीय कूरियर"}, icon: '📦' },
+                            { name: {"en": "Document Delivery", "hi": "दस्तावेज़ डिलीवरी"}, icon: '📄' },
+                            { name: {"en": "Same-day Delivery", "hi": "उसी दिन डिलीवरी"}, icon: '⚡' }
                         ]
                     }
                 ]
@@ -3422,6 +3438,22 @@ h
                             { name: {"en": "Printed Card Design", "hi": "प्रिंटेड कार्ड डिजाइन", "bn": "প্রিন্টেড কার্ড ডিজাইন", "or": "ପ୍ରିଣ୍ଟ କାର୍ଡ ଡିଜାଇନ", "as": "প্ৰিণ্টেড কাৰ্ড ডিজাইন"}, icon: '🖨️' },
                             { name: {"en": "Video Invitations", "hi": "वीडियो निमंत्रण", "bn": "ভিডিও আমন্ত্রণ", "or": "ଭିଡ଼ିଓ ନିମନ୍ତ୍ରଣ", "as": "ভিডিঅ নিমন্ত্ৰণ"}, icon: '🎥' }
                         ]
+                    },
+                    {
+                        name: {"en": "Insurance Agent", "hi": "बीमा एजेंट"}, icon: '🛡️',
+                        subsubcategories: [
+                            { name: {"en": "Life Insurance", "hi": "जीवन बीमा"}, icon: '🛡️' },
+                            { name: {"en": "Health Insurance", "hi": "स्वास्थ्य बीमा"}, icon: '🏥' },
+                            { name: {"en": "Vehicle Insurance", "hi": "वाहन बीमा"}, icon: '🚗' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Loan / EMI Advisor", "hi": "ऋण/ईएमआई सलाहकार"}, icon: '💳',
+                        subsubcategories: [
+                            { name: {"en": "Home Loan", "hi": "गृह ऋण"}, icon: '🏠' },
+                            { name: {"en": "Personal Loan", "hi": "व्यक्तिगत ऋण"}, icon: '💳' },
+                            { name: {"en": "Loan Against Property", "hi": "संपत्ति के बदले ऋण"}, icon: '🏢' }
+                        ]
                     }
                 ]
             },
@@ -3460,6 +3492,364 @@ h
                             { name: {"en": "Home Visit Vet", "hi": "घर पर पशु चिकित्सक", "bn": "বাড়িতে পশু চিকিৎসক", "or": "ଘରୋଇ ଭେଟ", "as": "ঘৰত পশু চিকিৎসক"}, icon: '🏥' },
                             { name: {"en": "Vaccination at Home", "hi": "घर पर टीकाकरण", "bn": "বাড়িতে টিকাদান", "or": "ଘରୋଇ ଟୀକାକରଣ", "as": "ঘৰত টিকাদান"}, icon: '💉' },
                             { name: {"en": "Online Vet Consultation", "hi": "ऑनलाइन पशु परामर्श", "bn": "অনলাইন পশু পরামর্শ", "or": "ଅନଲାଇନ ଭେଟ", "as": "অনলাইন পশু পৰামৰ্শ"}, icon: '💻' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat10',
+                name: {"en": "Automobile & Vehicle Services", "hi": "वाहन एवं ऑटोमोबाइल सेवाएं"},
+                icon: '🚙',
+                subcategories: [
+                    {
+                        name: {"en": "Two-Wheeler Mechanic", "hi": "दोपहिया मैकेनिक"}, icon: '🏍️',
+                        subsubcategories: [
+                            { name: {"en": "Bike Repair", "hi": "बाइक मरम्मत"}, icon: '🔧' },
+                            { name: {"en": "Bike Servicing", "hi": "बाइक सर्विसिंग"}, icon: '🛠️' },
+                            { name: {"en": "Puncture Repair", "hi": "पंचर मरम्मत"}, icon: '🛞' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Car Mechanic", "hi": "कार मैकेनिक"}, icon: '🚗',
+                        subsubcategories: [
+                            { name: {"en": "Car Repair", "hi": "कार मरम्मत"}, icon: '🔧' },
+                            { name: {"en": "Car Servicing", "hi": "कार सर्विसिंग"}, icon: '🛠️' },
+                            { name: {"en": "Engine Diagnostics", "hi": "इंजन डायग्नोस्टिक्स"}, icon: '🔍' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Car Wash & Detailing", "hi": "कार वॉश और डिटेलिंग"}, icon: '🧼',
+                        subsubcategories: [
+                            { name: {"en": "Car Wash", "hi": "कार वॉश"}, icon: '🚿' },
+                            { name: {"en": "Interior Detailing", "hi": "इंटीरियर डिटेलिंग"}, icon: '✨' },
+                            { name: {"en": "Ceramic Coating", "hi": "सेरामिक कोटिंग"}, icon: '🛡️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Denting-Painting", "hi": "डेंटिंग-पेंटिंग"}, icon: '🎨',
+                        subsubcategories: [
+                            { name: {"en": "Dent Removal", "hi": "डेंट रिमूवल"}, icon: '🔨' },
+                            { name: {"en": "Car Painting", "hi": "कार पेंटिंग"}, icon: '🎨' },
+                            { name: {"en": "Scratch Repair", "hi": "खरोंच मरम्मत"}, icon: '✏️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Battery/Jump-start Service", "hi": "बैटरी/जंप-स्टार्ट सेवा"}, icon: '🔋',
+                        subsubcategories: [
+                            { name: {"en": "Battery Replacement", "hi": "बैटरी बदलना"}, icon: '🔋' },
+                            { name: {"en": "Jump Start", "hi": "जंप स्टार्ट"}, icon: '⚡' },
+                            { name: {"en": "Battery Testing", "hi": "बैटरी जांच"}, icon: '🔍' }
+                        ]
+                    },
+                    {
+                        name: {"en": "RTO Agent/Documentation", "hi": "आरटीओ एजेंट/दस्तावेज़"}, icon: '📄',
+                        subsubcategories: [
+                            { name: {"en": "RC Transfer", "hi": "आरसी ट्रांसफर"}, icon: '📄' },
+                            { name: {"en": "License Renewal", "hi": "लाइसेंस नवीनीकरण"}, icon: '🪪' },
+                            { name: {"en": "Vehicle Registration", "hi": "वाहन पंजीकरण"}, icon: '📋' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat11',
+                name: {"en": "Astrology, Pooja & Spiritual Services", "hi": "ज्योतिष, पूजा और आध्यात्मिक सेवाएं"},
+                icon: '🙏',
+                subcategories: [
+                    {
+                        name: {"en": "Pandit for Pooja", "hi": "पूजा हेतु पंडित"}, icon: '🕉️',
+                        subsubcategories: [
+                            { name: {"en": "Griha Pravesh Pooja", "hi": "गृह प्रवेश पूजा"}, icon: '🏠' },
+                            { name: {"en": "Satyanarayan Pooja", "hi": "सत्यनारायण पूजा"}, icon: '🪔' },
+                            { name: {"en": "Wedding Rituals", "hi": "विवाह अनुष्ठान"}, icon: '💍' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Astrologer/Jyotish", "hi": "ज्योतिषी"}, icon: '🔮',
+                        subsubcategories: [
+                            { name: {"en": "Kundali Reading", "hi": "कुंडली पठन"}, icon: '📜' },
+                            { name: {"en": "Horoscope Matching", "hi": "कुंडली मिलान"}, icon: '💞' },
+                            { name: {"en": "Career Astrology", "hi": "करियर ज्योतिष"}, icon: '💼' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Vastu Consultant", "hi": "वास्तु सलाहकार"}, icon: '🧭',
+                        subsubcategories: [
+                            { name: {"en": "Home Vastu", "hi": "गृह वास्तु"}, icon: '🏠' },
+                            { name: {"en": "Office Vastu", "hi": "कार्यालय वास्तु"}, icon: '🏢' },
+                            { name: {"en": "Vastu Remedies", "hi": "वास्तु उपाय"}, icon: '🪄' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Numerologist", "hi": "अंक ज्योतिषी"}, icon: '🔢',
+                        subsubcategories: [
+                            { name: {"en": "Name Correction", "hi": "नाम सुधार"}, icon: '✍️' },
+                            { name: {"en": "Number Analysis", "hi": "अंक विश्लेषण"}, icon: '🔢' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Katha / Satsang Organizer", "hi": "कथा/सत्संग आयोजक"}, icon: '📿',
+                        subsubcategories: [
+                            { name: {"en": "Bhagwat Katha", "hi": "भागवत कथा"}, icon: '📖' },
+                            { name: {"en": "Satsang Booking", "hi": "सत्संग बुकिंग"}, icon: '📿' },
+                            { name: {"en": "Kirtan Group", "hi": "कीर्तन समूह"}, icon: '🎶' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat12',
+                name: {"en": "Home Healthcare & Caregiving", "hi": "गृह स्वास्थ्य सेवा एवं देखभाल"},
+                icon: '🏥',
+                subcategories: [
+                    {
+                        name: {"en": "Home Nurse", "hi": "होम नर्स"}, icon: '👩‍⚕️',
+                        subsubcategories: [
+                            { name: {"en": "Post-surgery Care", "hi": "सर्जरी के बाद देखभाल"}, icon: '🩺' },
+                            { name: {"en": "Injection at Home", "hi": "घर पर इंजेक्शन"}, icon: '💉' },
+                            { name: {"en": "Wound Dressing", "hi": "घाव की ड्रेसिंग"}, icon: '🩹' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Elderly Attendant / Caretaker", "hi": "वृद्ध देखभालकर्ता"}, icon: '🧓',
+                        subsubcategories: [
+                            { name: {"en": "Elderly Care", "hi": "वृद्ध देखभाल"}, icon: '🧓' },
+                            { name: {"en": "Companionship Care", "hi": "साथी देखभाल"}, icon: '🤝' },
+                            { name: {"en": "Bedridden Patient Care", "hi": "बिस्तर रोगी देखभाल"}, icon: '🛏️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Baby Care / Nanny", "hi": "शिशु देखभाल/नैनी"}, icon: '👶',
+                        subsubcategories: [
+                            { name: {"en": "Newborn Care", "hi": "नवजात देखभाल"}, icon: '👶' },
+                            { name: {"en": "Nanny Service", "hi": "नैनी सेवा"}, icon: '🍼' },
+                            { name: {"en": "Babysitting", "hi": "बेबीसिटिंग"}, icon: '🧸' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Lab Sample Collection at Home", "hi": "घर पर लैब सैंपल संग्रह"}, icon: '🧪',
+                        subsubcategories: [
+                            { name: {"en": "Blood Test at Home", "hi": "घर पर रक्त परीक्षण"}, icon: '🩸' },
+                            { name: {"en": "Full Body Checkup", "hi": "पूर्ण शरीर जांच"}, icon: '🩺' },
+                            { name: {"en": "COVID Test", "hi": "कोविड टेस्ट"}, icon: '😷' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Ambulance on Call", "hi": "कॉल पर एम्बुलेंस"}, icon: '🚑',
+                        subsubcategories: [
+                            { name: {"en": "Emergency Ambulance", "hi": "आपातकालीन एम्बुलेंस"}, icon: '🚨' },
+                            { name: {"en": "Non-emergency Transport", "hi": "गैर-आपातकालीन परिवहन"}, icon: '🚐' },
+                            { name: {"en": "ICU Ambulance", "hi": "आईसीयू एम्बुलेंस"}, icon: '🏥' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat13',
+                name: {"en": "Government & Documentation Help", "hi": "सरकारी एवं दस्तावेज़ सहायता"},
+                icon: '📋',
+                subcategories: [
+                    {
+                        name: {"en": "Aadhaar / PAN Card Services", "hi": "आधार/पैन कार्ड सेवाएं"}, icon: '🪪',
+                        subsubcategories: [
+                            { name: {"en": "Aadhaar Update", "hi": "आधार अपडेट"}, icon: '🪪' },
+                            { name: {"en": "PAN Card Apply", "hi": "पैन कार्ड आवेदन"}, icon: '📇' },
+                            { name: {"en": "Aadhaar-PAN Link", "hi": "आधार-पैन लिंक"}, icon: '🔗' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Passport Agent", "hi": "पासपोर्ट एजेंट"}, icon: '📘',
+                        subsubcategories: [
+                            { name: {"en": "New Passport", "hi": "नया पासपोर्ट"}, icon: '📘' },
+                            { name: {"en": "Passport Renewal", "hi": "पासपोर्ट नवीनीकरण"}, icon: '🔄' },
+                            { name: {"en": "Tatkal Passport", "hi": "तत्काल पासपोर्ट"}, icon: '⚡' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Certificate Services", "hi": "प्रमाण पत्र सेवाएं"}, icon: '📜',
+                        subsubcategories: [
+                            { name: {"en": "Income Certificate", "hi": "आय प्रमाण पत्र"}, icon: '💰' },
+                            { name: {"en": "Caste Certificate", "hi": "जाति प्रमाण पत्र"}, icon: '📜' },
+                            { name: {"en": "Domicile Certificate", "hi": "निवास प्रमाण पत्र"}, icon: '🏠' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Notary Services", "hi": "नोटरी सेवाएं"}, icon: '🖋️',
+                        subsubcategories: [
+                            { name: {"en": "Affidavit Notary", "hi": "शपथ पत्र नोटरी"}, icon: '🖋️' },
+                            { name: {"en": "Document Attestation", "hi": "दस्तावेज़ सत्यापन"}, icon: '✅' },
+                            { name: {"en": "Stamp Paper", "hi": "स्टाम्प पेपर"}, icon: '📄' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Ration Card Help", "hi": "राशन कार्ड सहायता"}, icon: '🎫',
+                        subsubcategories: [
+                            { name: {"en": "New Ration Card", "hi": "नया राशन कार्ड"}, icon: '🎫' },
+                            { name: {"en": "Ration Card Update", "hi": "राशन कार्ड अपडेट"}, icon: '🔄' },
+                            { name: {"en": "Ration Card Correction", "hi": "राशन कार्ड सुधार"}, icon: '✏️' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat14',
+                name: {"en": "Gadget & Electronics Repair", "hi": "गैजेट एवं इलेक्ट्रॉनिक्स मरम्मत"},
+                icon: '📱',
+                subcategories: [
+                    {
+                        name: {"en": "Mobile Phone Repair", "hi": "मोबाइल फोन मरम्मत"}, icon: '📱',
+                        subsubcategories: [
+                            { name: {"en": "Screen Replacement", "hi": "स्क्रीन बदलना"}, icon: '📱' },
+                            { name: {"en": "Battery Replacement", "hi": "बैटरी बदलना"}, icon: '🔋' },
+                            { name: {"en": "Water Damage Repair", "hi": "पानी से खराबी मरम्मत"}, icon: '💧' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Laptop / Computer Repair", "hi": "लैपटॉप/कंप्यूटर मरम्मत"}, icon: '💻',
+                        subsubcategories: [
+                            { name: {"en": "Laptop Repair", "hi": "लैपटॉप मरम्मत"}, icon: '💻' },
+                            { name: {"en": "Virus Removal", "hi": "वायरस हटाना"}, icon: '🛡️' },
+                            { name: {"en": "Data Recovery", "hi": "डेटा रिकवरी"}, icon: '💾' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Printer Repair", "hi": "प्रिंटर मरम्मत"}, icon: '🖨️',
+                        subsubcategories: [
+                            { name: {"en": "Printer Repair", "hi": "प्रिंटर मरम्मत"}, icon: '🖨️' },
+                            { name: {"en": "Cartridge Refill", "hi": "कार्ट्रिज रिफिल"}, icon: '🖋️' },
+                            { name: {"en": "Printer Setup", "hi": "प्रिंटर सेटअप"}, icon: '⚙️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "TV / Appliance Repair", "hi": "टीवी/उपकरण मरम्मत"}, icon: '📺',
+                        subsubcategories: [
+                            { name: {"en": "TV Repair", "hi": "टीवी मरम्मत"}, icon: '📺' },
+                            { name: {"en": "Washing Machine Repair", "hi": "वॉशिंग मशीन मरम्मत"}, icon: '🌀' },
+                            { name: {"en": "Microwave Repair", "hi": "माइक्रोवेव मरम्मत"}, icon: '📦' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat15',
+                name: {"en": "Construction & Labour (Mistri Services)", "hi": "निर्माण एवं मिस्त्री सेवाएं"},
+                icon: '🧱',
+                subcategories: [
+                    {
+                        name: {"en": "Mason (Rajmistri)", "hi": "राजमिस्त्री"}, icon: '🧱',
+                        subsubcategories: [
+                            { name: {"en": "Brick Work", "hi": "ईंट का काम"}, icon: '🧱' },
+                            { name: {"en": "Plastering", "hi": "पलस्तर"}, icon: '🏗️' },
+                            { name: {"en": "Foundation Work", "hi": "नींव का काम"}, icon: '🏛️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Tile / Marble Fitting Labour", "hi": "टाइल/मार्बल फिटिंग मजदूर"}, icon: '🔲',
+                        subsubcategories: [
+                            { name: {"en": "Tile Fitting", "hi": "टाइल फिटिंग"}, icon: '🔲' },
+                            { name: {"en": "Marble Fitting", "hi": "मार्बल फिटिंग"}, icon: '🪨' },
+                            { name: {"en": "Flooring Labour", "hi": "फ्लोरिंग मजदूर"}, icon: '🏠' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Welder / Fabricator", "hi": "वेल्डर/फैब्रिकेटर"}, icon: '🔥',
+                        subsubcategories: [
+                            { name: {"en": "Gate Fabrication", "hi": "गेट निर्माण"}, icon: '🚪' },
+                            { name: {"en": "Grill Welding", "hi": "ग्रिल वेल्डिंग"}, icon: '🔥' },
+                            { name: {"en": "Steel Fabrication", "hi": "स्टील फैब्रिकेशन"}, icon: '⚙️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "False Ceiling Work", "hi": "फॉल्स सीलिंग कार्य"}, icon: '🏠',
+                        subsubcategories: [
+                            { name: {"en": "POP Ceiling", "hi": "पीओपी सीलिंग"}, icon: '🏠' },
+                            { name: {"en": "Gypsum Ceiling", "hi": "जिप्सम सीलिंग"}, icon: '🏠' },
+                            { name: {"en": "Ceiling Design", "hi": "सीलिंग डिज़ाइन"}, icon: '🎨' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Borewell Drilling", "hi": "बोरवेल ड्रिलिंग"}, icon: '⛏️',
+                        subsubcategories: [
+                            { name: {"en": "New Borewell", "hi": "नया बोरवेल"}, icon: '⛏️' },
+                            { name: {"en": "Borewell Repair", "hi": "बोरवेल मरम्मत"}, icon: '🔧' },
+                            { name: {"en": "Water Level Survey", "hi": "जल स्तर सर्वेक्षण"}, icon: '📏' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat16',
+                name: {"en": "Agriculture & Rural Services", "hi": "कृषि एवं ग्रामीण सेवाएं"},
+                icon: '🌾',
+                subcategories: [
+                    {
+                        name: {"en": "Tractor & Farm Equipment Rental", "hi": "ट्रैक्टर एवं कृषि उपकरण किराया"}, icon: '🚜',
+                        subsubcategories: [
+                            { name: {"en": "Tractor Rental", "hi": "ट्रैक्टर किराया"}, icon: '🚜' },
+                            { name: {"en": "Harvester Rental", "hi": "हार्वेस्टर किराया"}, icon: '🌾' },
+                            { name: {"en": "Rotavator Rental", "hi": "रोटावेटर किराया"}, icon: '⚙️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Crop Spraying", "hi": "फसल छिड़काव"}, icon: '🚁',
+                        subsubcategories: [
+                            { name: {"en": "Drone Spraying", "hi": "ड्रोन छिड़काव"}, icon: '🚁' },
+                            { name: {"en": "Pesticide Spraying", "hi": "कीटनाशक छिड़काव"}, icon: '🧴' },
+                            { name: {"en": "Fertilizer Spraying", "hi": "उर्वरक छिड़काव"}, icon: '🌱' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Borewell / Tubewell Service", "hi": "बोरवेल/नलकूप सेवा"}, icon: '💧',
+                        subsubcategories: [
+                            { name: {"en": "Tubewell Installation", "hi": "नलकूप स्थापना"}, icon: '💧' },
+                            { name: {"en": "Tubewell Repair", "hi": "नलकूप मरम्मत"}, icon: '🔧' },
+                            { name: {"en": "Pump Repair", "hi": "पंप मरम्मत"}, icon: '⚙️' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Veterinary for Livestock", "hi": "पशुधन हेतु पशु चिकित्सा"}, icon: '🐄',
+                        subsubcategories: [
+                            { name: {"en": "Cattle Vet", "hi": "पशु चिकित्सक"}, icon: '🐄' },
+                            { name: {"en": "Livestock Vaccination", "hi": "पशुधन टीकाकरण"}, icon: '💉' },
+                            { name: {"en": "Farm Animal Treatment", "hi": "खेत पशु उपचार"}, icon: '🐖' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'cat17',
+                name: {"en": "Laundry & Dry Cleaning", "hi": "लॉन्ड्री एवं ड्राई क्लीनिंग"},
+                icon: '👔',
+                subcategories: [
+                    {
+                        name: {"en": "Wash & Fold", "hi": "वॉश एंड फोल्ड"}, icon: '🧺',
+                        subsubcategories: [
+                            { name: {"en": "Regular Laundry", "hi": "नियमित लॉन्ड्री"}, icon: '🧺' },
+                            { name: {"en": "Bulk Laundry", "hi": "थोक लॉन्ड्री"}, icon: '📦' },
+                            { name: {"en": "Express Wash", "hi": "एक्सप्रेस वॉश"}, icon: '⚡' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Dry Cleaning", "hi": "ड्राई क्लीनिंग"}, icon: '👔',
+                        subsubcategories: [
+                            { name: {"en": "Suit Dry Clean", "hi": "सूट ड्राई क्लीन"}, icon: '🤵' },
+                            { name: {"en": "Saree Dry Clean", "hi": "साड़ी ड्राई क्लीन"}, icon: '🥻' },
+                            { name: {"en": "Curtain Dry Clean", "hi": "पर्दा ड्राई क्लीन"}, icon: '🪟' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Ironing Service", "hi": "इस्त्री सेवा"}, icon: '👕',
+                        subsubcategories: [
+                            { name: {"en": "Daily Ironing", "hi": "दैनिक इस्त्री"}, icon: '👕' },
+                            { name: {"en": "Bulk Ironing", "hi": "थोक इस्त्री"}, icon: '📦' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Shoe Cleaning", "hi": "जूता सफाई"}, icon: '👞',
+                        subsubcategories: [
+                            { name: {"en": "Shoe Cleaning", "hi": "जूता सफाई"}, icon: '👞' },
+                            { name: {"en": "Shoe Repair", "hi": "जूता मरम्मत"}, icon: '🔨' },
+                            { name: {"en": "Leather Care", "hi": "चमड़ा देखभाल"}, icon: '🧴' }
                         ]
                     }
                 ]
