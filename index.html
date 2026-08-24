@@ -4214,7 +4214,7 @@ h
                         <button onclick="openReviewModal('${p.id}')" class="bg-orange-50 text-orange-700 text-center py-2.5 rounded-xl hover:bg-orange-100 font-medium text-sm transition border border-orange-200">${t('reviewBtn')}</button>
                         <button onclick="toggleFavourite('${p.id}')" id="fav-${p.id}" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-500 border-gray-200 hover:bg-red-50 hover:text-red-500">🤍</button>
                         <button onclick="openReportModal('${p.id}','provider','${p.name}')" class="py-2.5 px-2 rounded-xl text-sm transition border bg-gray-50 text-gray-400 border-gray-200 hover:bg-red-50 hover:text-red-500" title="Report">🚨</button>
-                        <button onclick="hireWithVerificationCheck('${p.id}','${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.ownerUid||""}',${!!p.verified})" class="col-span-2 flex items-center justify-center gap-2 ${p.verified ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700' : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'} text-white py-2.5 rounded-xl font-bold text-sm transition shadow-md">${t('hireNow')} &nbsp;<span class="text-xs font-normal opacity-80">${p.verified ? '(₹10 fee)' : '⚠️ Unverified'}</span></button>
+                        <button onclick="hireWithVerificationCheck('${p.id}','${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.ownerUid||""}',${!!p.verified})" class="col-span-2 flex items-center justify-center gap-2 ${p.verified ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700' : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'} text-white py-2.5 rounded-xl font-bold text-sm transition shadow-md">${t('hireNow')} &nbsp;<span class="text-xs font-normal opacity-80">${p.verified ? '(₹51 fee)' : '⚠️ Unverified'}</span></button>
                     </div>
                 </div>`;
             }).join('');
@@ -7232,7 +7232,7 @@ function toggleAdminCat(id, headerEl) {
                         ${p.lat && p.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" class="bg-blue-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-blue-700 transition" style="text-decoration:none;">🗺️ Get Directions</a>` : '<div></div>'}
                         <button onclick="document.getElementById('profileModal').classList.add('hidden'); openReviewModal('${p.id}')" class="bg-orange-100 text-orange-700 py-3 rounded-xl font-semibold hover:bg-orange-200 transition border border-orange-200">⭐ Write Review</button>
                         <button onclick="document.getElementById('profileModal').classList.add('hidden'); openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}','tip')" class="bg-pink-100 text-pink-700 py-3 rounded-xl font-semibold hover:bg-pink-200 transition border border-pink-200">🙏 Send Tip</button>
-                        <button onclick="openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}')" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-base transition hover:from-purple-700 hover:to-indigo-700 shadow-lg">⚡ Hire Now &nbsp;<span class="text-sm font-normal opacity-80">(₹10 convenience fee)</span></button>
+                        <button onclick="openHireModal('${encodeURIComponent(p.name)}','${encodeURIComponent(p.service)}','${encodeURIComponent(p.location)}','${encodeURIComponent(avg.toFixed(1) + ' (' + count + ' reviews)')}','${currentLanguage || 'hi'}','${p.id}','${p.ownerUid||''}')" class="col-span-2 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-base transition hover:from-purple-700 hover:to-indigo-700 shadow-lg">⚡ Hire Now &nbsp;<span class="text-sm font-normal opacity-80">(₹51 convenience fee)</span></button>
                     </div>
 
                     <!-- Reviews section -->
@@ -7609,10 +7609,10 @@ function toggleAdminCat(id, headerEl) {
       <div class="bdiv"></div>
       <div class="crow">
         <div class="cl"><span>⚡</span><div>Platform Convenience Fee<span style="font-size:9px;color:rgba(253,230,138,.45);margin-top:3px;display:block">Keeps Sudarshan Chakra running</span></div></div>
-        <span class="cr">₹10</span>
+        <span class="cr">₹51</span>
       </div>
       <div class="bdiv"></div>
-      <div class="trow"><span class="tl">Total Payable</span><span class="tr" id="hm-total">₹10</span></div>
+      <div class="trow"><span class="tl">Total Payable</span><span class="tr" id="hm-total">₹51</span></div>
     </div>
 
     <!-- Wallet Points Redemption -->
@@ -7652,18 +7652,18 @@ function toggleAdminCat(id, headerEl) {
     <div id="hireQrSheet">
       <div style="width:44px;height:4px;background:#E2E8F0;border-radius:2px;margin:0 auto 20px"></div>
       <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:#1E3A5F;text-align:center;margin-bottom:4px">Scan & Pay</div>
-      <p style="font-size:12px;color:#64748B;text-align:center;margin-bottom:20px" id="hm-sheet-sub">Pay ₹10 via PhonePe / any UPI app</p>
+      <p style="font-size:12px;color:#64748B;text-align:center;margin-bottom:20px" id="hm-sheet-sub">Pay ₹51 via PhonePe / any UPI app</p>
       <div style="background:linear-gradient(135deg,#F8FAFC,#EFF6FF);border-radius:20px;padding:20px;text-align:center;margin-bottom:16px;border:2px solid #E2E8F0;overflow:visible;">
         <div id="hm-qr-real" style="width:160px;margin:0 auto 10px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.1);min-height:160px;overflow:visible;"></div>
-        <div style="background:linear-gradient(135deg,#EA580C,#D97706);color:white;border-radius:50px;padding:8px 20px;font-size:20px;font-weight:900;font-family:'Playfair Display',serif;display:inline-block;margin-bottom:8px" id="hm-qr-amount">₹10</div>
+        <div style="background:linear-gradient(135deg,#EA580C,#D97706);color:white;border-radius:50px;padding:8px 20px;font-size:20px;font-weight:900;font-family:'Playfair Display',serif;display:inline-block;margin-bottom:8px" id="hm-qr-amount">₹51</div>
         <div style="font-size:11px;color:#64748B">UPI ID: <span style="font-weight:700;color:#1E3A5F">sudarshanchakra@idbi</span></div>
       </div>
       <div style="background:#F8FAFC;border-radius:14px;padding:14px 16px;margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Provider Contact Fee</span><span style="color:#059669;font-weight:600">FREE</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Tip to Provider</span><span id="hm-mb-tip">₹0</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:6px"><span>Charity Donation</span><span id="hm-mb-charity">₹0</span></div>
-        <div id="hm-fee-row" style="display:flex;justify-content:space-between;font-size:12px;color:#EA580C;font-weight:600;margin-bottom:6px"><span>⚡ Platform Fee</span><span>₹10</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;color:#1E3A5F;border-top:1px solid #E2E8F0;padding-top:8px;margin-top:4px"><span>Total</span><span id="hm-mb-total">₹10</span></div>
+        <div id="hm-fee-row" style="display:flex;justify-content:space-between;font-size:12px;color:#EA580C;font-weight:600;margin-bottom:6px"><span>⚡ Platform Fee</span><span>₹51</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;color:#1E3A5F;border-top:1px solid #E2E8F0;padding-top:8px;margin-top:4px"><span>Total</span><span id="hm-mb-total">₹51</span></div>
       </div>
       <div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px">
         <div style="display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer" onclick="hmOpenUPI('phonepe')"><div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;border:1.5px solid #E2E8F0;background:white">💜</div><p style="font-size:9px;color:#64748B;font-weight:600">PhonePe</p></div>
@@ -7688,7 +7688,7 @@ function toggleAdminCat(id, headerEl) {
 <script>
 // ══ HIRE MODAL LOGIC ══
 let hmTipAmt = 0, hmCharityAmt = 0;
-const HM_CONV_FEE = 10;
+const HM_CONV_FEE = 51;
 let hmLang = 'hi';
 let hmProviderId = null;
 let hmProviderOwnerUid = null;
@@ -7806,7 +7806,7 @@ function hmSetAmt(type, val) {
 }
 
 function hmUpdateTotal() {
-  // Portal fee (₹10) is ONLY charged when there is no tip and no charity.
+  // Portal fee (₹51) is ONLY charged when there is no tip and no charity.
   // If user adds a tip or charity, they pay that amount only — no platform fee on top.
   const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
   const fee = hasTipOrCharity ? 0 : HM_CONV_FEE;
@@ -8422,14 +8422,14 @@ function hmConfirmPayment() {
                 </div>
               </div>
               <div class="text-right">
-                <div class="text-2xl font-extrabold text-white">₹99</div>
+                <div class="text-2xl font-extrabold text-white">₹151</div>
                 <div class="text-xs text-blue-200">per quarter (3 months)</div>
               </div>
             </div>
             <div class="px-4 py-3 bg-blue-50">
               <div class="flex flex-wrap gap-2 mb-3">
                 <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">📋 Type: Professional</span>
-                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹99/Quarter</span>
+                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹151/Quarter</span>
                 <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-semibold">📅 90-day (Quarter) validity</span>
               </div>
               <ul class="space-y-1.5 text-sm text-gray-700">
@@ -8447,8 +8447,8 @@ function hmConfirmPayment() {
               </div>
               <span id="planBadgeSilver" class="hidden mt-3 w-full bg-blue-100 text-blue-700 py-2 rounded-xl text-sm font-semibold text-center block">✅ Your Current Plan</span>
               <div class="mt-3 flex gap-2">
-                <button onclick="redeemPointsForUpgrade('silver',99)" class="flex-1 bg-amber-400 text-amber-900 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500 transition">🌟 Use Points</button>
-                <button onclick="initiateSubscription('silver','99')" class="flex-2 flex-grow bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow">Pay ₹99 via UPI →</button>
+                <button onclick="redeemPointsForUpgrade('silver',151)" class="flex-1 bg-amber-400 text-amber-900 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500 transition">🌟 Use Points</button>
+                <button onclick="initiateSubscription('silver','151')" class="flex-2 flex-grow bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow">Pay ₹151 via UPI →</button>
               </div>
             </div>
           </div>
@@ -8465,16 +8465,16 @@ function hmConfirmPayment() {
                 </div>
               </div>
               <div class="text-right">
-                <div class="text-2xl font-extrabold text-white">₹199</div>
+                <div class="text-2xl font-extrabold text-white">₹251</div>
                 <div class="text-xs text-yellow-100">per quarter</div>
               </div>
             </div>
             <div class="px-4 py-3 bg-yellow-50">
               <div class="flex flex-wrap gap-2 mb-3">
                 <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">📋 Type: Elite</span>
-                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹199/Quarter</span>
+                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">💰 Rate: ₹251/Quarter</span>
                 <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-semibold">📅 90-day (Quarter) validity</span>
-                <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full font-semibold">🔥 Save ₹99 vs Pro×2</span>
+                <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full font-semibold">🔥 Save ₹51 vs Pro×2</span>
               </div>
               <ul class="space-y-1.5 text-sm text-gray-700">
                 <li class="flex items-center gap-2"><span class="text-yellow-600 font-bold">✓</span> Everything in Professional</li>
@@ -8492,8 +8492,8 @@ function hmConfirmPayment() {
               </div>
               <span id="planBadgeGold" class="hidden mt-3 w-full bg-yellow-100 text-yellow-700 py-2 rounded-xl text-sm font-semibold text-center block">✅ Your Current Plan</span>
               <div class="mt-3 flex gap-2">
-                <button onclick="redeemPointsForUpgrade('gold',199)" class="flex-1 bg-amber-400 text-amber-900 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500 transition">🌟 Use Points</button>
-                <button onclick="initiateSubscription('gold','199')" class="flex-2 flex-grow bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 rounded-xl text-sm font-bold hover:from-yellow-600 hover:to-orange-600 transition shadow-lg">Pay ₹199 via UPI →</button>
+                <button onclick="redeemPointsForUpgrade('gold',251)" class="flex-1 bg-amber-400 text-amber-900 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-500 transition">🌟 Use Points</button>
+                <button onclick="initiateSubscription('gold','251')" class="flex-2 flex-grow bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 rounded-xl text-sm font-bold hover:from-yellow-600 hover:to-orange-600 transition shadow-lg">Pay ₹251 via UPI →</button>
               </div>
             </div>
           </div>
@@ -9445,7 +9445,7 @@ function hmUpdateTotalWithWallet() {
     // Recalculate total applying wallet discount
     const cb = document.getElementById('hm-use-wallet');
     const useWallet = cb && cb.checked;
-    const HM_CONV_FEE = 10;
+    const HM_CONV_FEE = 51;
     const hasTipOrCharity = hmTipAmt > 0 || hmCharityAmt > 0;
     const baseFee = hasTipOrCharity ? 0 : HM_CONV_FEE;
     const subtotal = baseFee + hmTipAmt + hmCharityAmt;
