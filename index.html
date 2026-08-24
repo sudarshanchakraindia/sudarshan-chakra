@@ -2857,7 +2857,7 @@ h
         // Increment CATEGORY_VERSION each time you add new default categories.
         // The merge logic will ADD new categories/subcategories/services to saved data
         // without removing anything the admin has added or customised.
-        const CATEGORY_VERSION = 3; // <-- bump this number when adding new defaults
+        const CATEGORY_VERSION = 4; // <-- bump this number when adding new defaults
 
         // These are the MASTER default categories. They are only ever ADDED, never removed.
         const DEFAULT_CATEGORIES = [
@@ -2977,6 +2977,14 @@ h
                             { name: {"en": "Modular Kitchen Design", "hi": "मॉड्यूलर किचन डिजाइन", "bn": "মডুলার কিচেন ডিজাইন", "or": "ମଡ୍ୟୁଲାର ରୋଷେଇ ଡିଜାଇନ", "as": "মডুলাৰ পাকঘৰ ডিজাইন", "ta": "மட்டு சமையலறை வடிவமைப்பு"}, icon: '🍳' },
                             { name: {"en": "Kitchen Installation", "hi": "किचन इंस्टॉलेशन", "bn": "কিচেন ইনস্টলেশন", "or": "ରୋଷେଇ ସ୍ଥାପନ", "as": "পাকঘৰ স্থাপন", "ta": "சமையலறை நிறுவல்"}, icon: '🔩' },
                             { name: {"en": "Kitchen Repair", "hi": "किचन मरम्मत", "bn": "কিচেন মেরামত", "or": "ରୋଷେଇ ମରାମତ", "as": "পাকঘৰ মেৰামতি"}, icon: '🔧' }
+                        ]
+                    },
+                    {
+                        name: {"en": "Marble/Stone Contractor", "hi": "मार्बल ठेकेदार", "bn": "মার্বেল ঠিকাদার", "or": "ମାର୍ବଲ ଠିକାଦାର", "as": "মাৰ্বেল ঠিকাদাৰ"}, icon: '🪨',
+                        subsubcategories: [
+                            { name: {"en": "Marble Flooring", "hi": "मार्बल फ्लोरिंग", "bn": "মার্বেল ফ্লোরিং", "or": "ମାର୍ବଲ ଫ୍ଲୋରିଂ", "as": "মাৰ্বেল ফ্লোৰিং"}, icon: '🪨' },
+                            { name: {"en": "Granite Work", "hi": "ग्रेनाइट काम", "bn": "গ্রানাইট কাজ", "or": "ଗ୍ରାନାଇଟ କାମ", "as": "গ্ৰেনাইট কাম", "ta": "கிரானைட் வேலை"}, icon: '🏗️' },
+                            { name: {"en": "Stone Cladding", "hi": "पत्थर क्लैडिंग", "bn": "পাথরের ক্লাডিং", "or": "ପଥର ଆବରଣ", "as": "শিল ক্লেডিং"}, icon: '🧱' }
                         ]
                     }
                 ]
@@ -3208,7 +3216,6 @@ h
                         name: {"en": "Folk Artists Booking", "hi": "लोक कलाकार बुकिंग", "bn": "লোক শিল্পী বুকিং", "or": "ଲୋକ କଳାକାର ବୁକିଂ", "as": "লোক শিল্পী বুকিং"}, icon: '🎭',
                         subsubcategories: [
                             { name: {"en": "Kalbelia Dancers", "hi": "कालबेलिया नर्तक", "bn": "কালবেলিয়া নৃত্যশিল্পী", "or": "କାଲ୍ବେଲିଆ ନର୍ତ୍ତକ", "as": "কালবেলিয়া নৃত্যশিল্পী"}, icon: '💃' },
-                            { name: {"en": "Kalbeliya Performers", "hi": "कालबेलिया कलाकार", "bn": "কালবেলিয়া শিল্পী", "or": "କାଲ୍ବେଲିଆ କଳାକାର", "as": "কালবেলিয়া শিল্পী"}, icon: '🎭' },
                             { name: {"en": "Folk Music Group", "hi": "लोक संगीत समूह", "bn": "লোকসংগীত দল", "or": "ଲୋକ ସଂଗୀତ ଦଳ", "as": "লোক সংগীত দল"}, icon: '🎶' },
                             { name: {"en": "Fire Show Artist", "hi": "फायर शो कलाकार", "bn": "ফায়ার শো শিল্পী", "or": "ଫାୟର ଶୋ କଳାକାର", "as": "জুই শ্বো শিল্পী"}, icon: '🔥' }
                         ]
@@ -3305,14 +3312,6 @@ h
                             { name: {"en": "Home Shifting", "hi": "घर स्थानांतरण", "bn": "বাড়ি স্থানান্তর", "or": "ଘର ସ୍ଥାନାନ୍ତର", "as": "ঘৰ স্থানান্তৰ"}, icon: '🏠' },
                             { name: {"en": "Office Relocation", "hi": "ऑफिस रिलोकेशन", "bn": "অফিস স্থানান্তর", "or": "ଅଫିସ ସ୍ଥାନାନ୍ତର", "as": "অফিচ স্থানান্তৰ"}, icon: '🏢' },
                             { name: {"en": "Vehicle Transportation", "hi": "वाहन परिवहन", "bn": "যানবাহন পরিবহন", "or": "ଯାନ ପରିବହନ", "as": "যান পৰিবহন"}, icon: '🚗' }
-                        ]
-                    },
-                    {
-                        name: {"en": "Marble/Stone Contractor", "hi": "मार्बल ठेकेदार", "bn": "মার্বেল ঠিকাদার", "or": "ମାର୍ବଲ ଠିକାଦାର", "as": "মাৰ্বেল ঠিকাদাৰ"}, icon: '🪨',
-                        subsubcategories: [
-                            { name: {"en": "Marble Flooring", "hi": "मार्बल फ्लोरिंग", "bn": "মার্বেল ফ্লোরিং", "or": "ମାର୍ବଲ ଫ୍ଲୋରିଂ", "as": "মাৰ্বেল ফ্লোৰিং"}, icon: '🪨' },
-                            { name: {"en": "Granite Work", "hi": "ग्रेनाइट काम", "bn": "গ্রানাইট কাজ", "or": "ଗ୍ରାନାଇଟ କାମ", "as": "গ্ৰেনাইট কাম", "ta": "கிரானைட் வேலை"}, icon: '🏗️' },
-                            { name: {"en": "Stone Cladding", "hi": "पत्थर क्लैडिंग", "bn": "পাথরের ক্লাডিং", "or": "ପଥର ଆବରଣ", "as": "শিল ক্লেডিং"}, icon: '🧱' }
                         ]
                     }
                 ]
@@ -3522,6 +3521,48 @@ h
             return merged;
         }
 
+        // ==================== v4 STRUCTURAL FIXES ====================
+        // The regular merge above only ever ADDS new items — it can't fix or
+        // remove something already sitting in a visitor's saved data. These
+        // two issues predate v4 and need explicit correction so returning
+        // visitors (who already merged the old defaults into localStorage)
+        // actually get the fix, not just brand-new visitors.
+        function applyV4StructuralFixes(list) {
+            list.forEach(cat => {
+                (cat.subcategories || []).forEach(sub => {
+                    // Fix 1: remove the "Kalbeliya Performers" duplicate —
+                    // same Kalbelia folk dance as "Kalbelia Dancers", just a
+                    // different spelling/wording of the same offering.
+                    if (Array.isArray(sub.subsubcategories)) {
+                        sub.subsubcategories = sub.subsubcategories.filter(ss =>
+                            (ss.name?.en || ss.name) !== 'Kalbeliya Performers'
+                        );
+                    }
+                });
+            });
+
+            // Fix 2: relocate "Marble/Stone Contractor" from Real Estate &
+            // Property (a property-transactions category) into Home
+            // Services (where every other renovation trade already lives).
+            const realEstate = list.find(c => c.id === 'cat6');
+            const homeServices = list.find(c => c.id === 'cat1');
+            if (realEstate && homeServices && Array.isArray(realEstate.subcategories)) {
+                const idx = realEstate.subcategories.findIndex(s =>
+                    (s.name?.en || s.name) === 'Marble/Stone Contractor'
+                );
+                if (idx !== -1) {
+                    const [moved] = realEstate.subcategories.splice(idx, 1);
+                    homeServices.subcategories = homeServices.subcategories || [];
+                    const alreadyThere = homeServices.subcategories.some(s =>
+                        (s.name?.en || s.name) === 'Marble/Stone Contractor'
+                    );
+                    if (!alreadyThere) homeServices.subcategories.push(moved);
+                }
+            }
+
+            return list;
+        }
+
         // ==================== LOAD & AUTO-MERGE CATEGORIES ====================
         (function initCategories() {
             const savedVersion   = parseInt(localStorage.getItem('categoryVersion') || '0');
@@ -3535,7 +3576,8 @@ h
             } else if (savedVersion < CATEGORY_VERSION) {
                 // New version detected — merge new defaults into saved data
                 const saved  = JSON.parse(savedRaw);
-                const merged = mergeCategories(saved, DEFAULT_CATEGORIES);
+                let merged = mergeCategories(saved, DEFAULT_CATEGORIES);
+                if (savedVersion < 4) merged = applyV4StructuralFixes(merged);
                 localStorage.setItem('categories', JSON.stringify(merged));
                 localStorage.setItem('categoryVersion', String(CATEGORY_VERSION));
                 console.log(`✅ Categories: merged from v${savedVersion} → v${CATEGORY_VERSION}. Total categories: ${merged.length}`);
