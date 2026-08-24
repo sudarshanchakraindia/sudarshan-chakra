@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Scan Locations — Sudarshan Chakra Admin</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{ --saffron:#FF6B00; --gold:#F5A623; --deep:#1A1206; }
+  *{box-sizing:border-box;}
+  body{ margin:0; font-family:'Segoe UI',sans-serif; background:#FFF8F0; color:var(--deep); }
+  header{ background:linear-gradient(135deg,#1A0A00,#3D1A00); color:#fff; padding:16px 20px; display:flex; align-items:center; gap:10px; }
+  header h1{ font-size:18px; margin:0; }
+  .wrap{ padding:20px; max-width:1000px; margin:0 auto; }
+  #gate{ max-width:340px; margin:80px auto; text-align:center; }
+  #gate input{ width:100%; padding:12px; font-size:15px; border:1px solid #ddd; border-radius:8px; margin:12px 0; }
+  #gate button{ width:100%; padding:12px; font-size:15px; font-weight:700; color:#fff; background:var(--saffron); border:none; border-radius:8px; cursor:pointer; }
+  #gate p.err{ color:#c0392b; font-size:13px; }
+  #map{ height:340px; border-radius:12px; margin-bottom:20px; }
+  .stats{ display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+  .stat{ background:#fff; border-radius:10px; padding:12px 18px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+  .stat b{ display:block; font-size:22px; color:var(--saffron); }
+  .stat span{ font-size:12px; color:#7C4A1E; }
+  table{ width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; font-size:13px; }
+  th,td{ text-align:left; padding:9px 12px; border-bottom:1px solid #f0e4d4; }
+  th{ background:#FFF0DC; }
+  .badge{ padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
+  .badge.granted{ background:#dcf7dc; color:#1e7d1e; }
+  .badge.denied{ background:#fde0e0; color:#b03434; }
+  .badge.timeout,.badge.unavailable{ background:#eee; color:#666; }
+  #app{ display:none; }
+</style>
+</head>
+<body>
+
+  <div id="gate">
+    <h1 style="margin-bottom:6px;">🔱 Admin Login</h1>
+    <p style="color:#7C4A1E; font-size:13px;">Same password as your main admin dashboard</p>
+    <input type="password" id="pw" placeholder="Admin password">
+    <button onclick="tryLogin()">View Scan Locations</button>
+    <p class="err" id="err"></p>
+  </div>
+
+  <div id="app">
+    <header><h1>🔱 QR Scan Locations</h1></header>
+    <div class="wrap">
+      <div class="stats" id="stats"></div>
+      <div id="map"></div>
+      <table id="scanTable">
+        <thead><tr><th>Time</th><th>Campaign</th><th>Status</th><th>Location</th><th>Device</th></tr></thead>
+        <tbody id="scanBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
+    authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
+    databaseURL: "https://sudarshan-chakra-b0ac1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "sudarshan-chakra-b0ac1",
+    storageBucket: "sudarshan-chakra-b0ac1.firebasestorage.app",
+    messagingSenderId: "357210144411",
+    appId: "1:357210144411:web:b440a94cf78b04b58b103e"
+  };
+  const app  = initializeApp(firebaseConfig);
+  const db   = getDatabase(app);
+  const auth = getAuth(app);
+
+  const ADMIN_PASSWORD_KEY   = 'sc_admin_password';
+  const ADMIN_EMAIL          = 'sudarshanchakraindia@gmail.com';
+  const ADMIN_FIREBASE_PASSWORD = 'MyActualPassword144@Crore';
+
+  window.tryLogin = async function(){
+    const entered  = document.getElementById('pw').value;
+    const expected = localStorage.getItem(ADMIN_PASSWORD_KEY) || 'admin123';
+    if (entered !== expected){
+      document.getElementById('err').textContent = 'Incorrect password.';
+      return;
+    }
+    try {
+      await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_FIREBASE_PASSWORD);
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('app').style.display  = 'block';
+      loadScans();
+    } catch (e) {
+      document.getElementById('err').textContent = 'Firebase sign-in failed: ' + e.message;
+    }
+  };
+
+  async function loadScans(){
+    const snap = await get(ref(db, 'qrScans'));
+    const data = snap.exists() ? snap.val() : {};
+    const rows = Object.values(data).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    const total    = rows.length;
+    const withGeo  = rows.filter(r => r.status === 'granted' && r.location).length;
+    const denied   = rows.filter(r => r.status === 'denied').length;
+    document.getElementById('stats').innerHTML = `
+      <div class="stat"><b>${total}</b><span>Total scans</span></div>
+      <div class="stat"><b>${withGeo}</b><span>With location</span></div>
+      <div class="stat"><b>${denied}</b><span>Location denied</span></div>
+    `;
+
+    const map = L.map('map').setView([22.9, 78.6], 4.5); // India default view
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(map);
+    const bounds = [];
+    rows.forEach(r => {
+      if (r.status === 'granted' && r.location){
+        const m = L.marker([r.location.lat, r.location.lng]).addTo(map);
+        m.bindPopup(`<b>${r.label || 'default'}</b><br>${new Date(r.timestamp).toLocaleString()}<br>±${Math.round(r.location.accuracyMeters||0)}m`);
+        bounds.push([r.location.lat, r.location.lng]);
+      }
+    });
+    if (bounds.length) map.fitBounds(bounds, { padding:[30,30] });
+
+    const body = document.getElementById('scanBody');
+    body.innerHTML = rows.map(r => `
+      <tr>
+        <td>${new Date(r.timestamp).toLocaleString()}</td>
+        <td>${r.label || 'default'}</td>
+        <td><span class="badge ${r.status}">${r.status}</span></td>
+        <td>${r.status==='granted' && r.location ? r.location.lat.toFixed(4)+', '+r.location.lng.toFixed(4) : '—'}</td>
+        <td>${(r.userAgent||'').slice(0,40)}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;">No scans yet</td></tr>';
+  }
+
+  document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+</script>
+</body>
+</html>
