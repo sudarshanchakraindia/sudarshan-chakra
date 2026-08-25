@@ -94,6 +94,19 @@
         window._auth = { auth, RecaptchaVerifier, signInWithPhoneNumber, signInWithEmailAndPassword, signOut, onAuthStateChanged };
         window._firebaseReady = true;
 
+        // ── City Channel Partner referral capture ───────────────────────────
+        // If the app was opened via a partner's referral link (?ref=CODE),
+        // remember it in localStorage so it's still attributed correctly even
+        // if the visitor browses around before actually registering.
+        (function(){
+            const params = new URLSearchParams(location.search);
+            const refCode = params.get('ref');
+            if (refCode) {
+                localStorage.setItem('sc_partner_ref', refCode);
+                localStorage.setItem('sc_partner_ref_captured_at', new Date().toISOString());
+            }
+        })();
+
         // ── QR scan location capture ──────────────────────────────────────
         // Only runs when the app was opened via a location-tracking QR link
         // (?qr=1). Doesn't block or redirect anything — the app loads
@@ -5325,6 +5338,7 @@
                 rating: 4.0 + Math.random() * 0.5,
                 reviews: {},
                 ownerUid: firebaseUser?.uid || null,
+                referredByPartner: localStorage.getItem('sc_partner_ref') || null,
                 isActive:          true,
                 status: 'active',
                 registered: new Date().toISOString()
@@ -5380,6 +5394,7 @@
                 lat: parseFloat(document.getElementById('seekerLat').value),
                 lng: parseFloat(document.getElementById('seekerLng').value),
                 status: 'active', // active, paused, restricted
+                referredByPartner: localStorage.getItem('sc_partner_ref') || null,
                 registered: new Date().toISOString()
             };
             
