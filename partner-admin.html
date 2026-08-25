@@ -118,20 +118,29 @@
     const city = document.getElementById('newCity').value.trim();
     const code = document.getElementById('newCode').value.trim().toUpperCase();
     const errEl = document.getElementById('addErr');
+    errEl.style.color = '#c0392b';
     errEl.textContent = '';
     if (!name || !city || !code) { errEl.textContent = 'All fields are required.'; return; }
 
-    const existing = await get(ref(db, 'partners/' + code));
-    if (existing.exists()) { errEl.textContent = 'That code is already in use — pick a different one.'; return; }
+    try {
+      const existing = await get(ref(db, 'partners/' + code));
+      if (existing.exists()) { errEl.textContent = 'That code is already in use — pick a different one.'; return; }
 
-    await set(ref(db, 'partners/' + code), {
-      name, city, status: 'active',
-      appointedDate: new Date().toISOString()
-    });
-    document.getElementById('newName').value = '';
-    document.getElementById('newCity').value = '';
-    document.getElementById('newCode').value = '';
-    loadPartners();
+      await set(ref(db, 'partners/' + code), {
+        name, city, status: 'active',
+        appointedDate: new Date().toISOString()
+      });
+
+      document.getElementById('newName').value = '';
+      document.getElementById('newCity').value = '';
+      document.getElementById('newCode').value = '';
+      errEl.style.color = '#1e7d1e';
+      errEl.textContent = '✅ Partner added successfully.';
+      loadPartners();
+    } catch (e) {
+      errEl.textContent = '❌ Save failed: ' + e.code + ' — ' + e.message;
+      console.error('addPartner error:', e);
+    }
   };
 
   window.copyPartnerLink = function(code){
@@ -152,46 +161,57 @@
     const amount = Number(document.getElementById('payoutAmount').value);
     const note   = document.getElementById('payoutNote').value.trim();
     if (!amount) { alert('Enter an amount.'); return; }
-    await push(ref(db, 'partnerPayouts/' + payoutTargetCode), {
-      amount, note, date: new Date().toISOString()
-    });
-    document.getElementById('payoutAmount').value = '';
-    document.getElementById('payoutNote').value = '';
-    document.getElementById('payoutCard').style.display = 'none';
-    alert('✅ Payout logged.');
+    try {
+      await push(ref(db, 'partnerPayouts/' + payoutTargetCode), {
+        amount, note, date: new Date().toISOString()
+      });
+      document.getElementById('payoutAmount').value = '';
+      document.getElementById('payoutNote').value = '';
+      document.getElementById('payoutCard').style.display = 'none';
+      alert('✅ Payout logged.');
+    } catch (e) {
+      alert('❌ Save failed: ' + e.code + ' — ' + e.message);
+      console.error('submitPayout error:', e);
+    }
   };
 
   async function loadPartners(){
-    const [partnersSnap, providersSnap] = await Promise.all([
-      get(ref(db, 'partners')),
-      get(ref(db, 'providers'))
-    ]);
-    const partners = partnersSnap.exists() ? partnersSnap.val() : {};
-    const allProviders = providersSnap.exists() ? Object.values(providersSnap.val()) : [];
+    try {
+      const [partnersSnap, providersSnap] = await Promise.all([
+        get(ref(db, 'partners')),
+        get(ref(db, 'providers'))
+      ]);
+      const partners = partnersSnap.exists() ? partnersSnap.val() : {};
+      const allProviders = providersSnap.exists() ? Object.values(providersSnap.val()) : [];
 
-    const body = document.getElementById('partnerBody');
-    const codes = Object.keys(partners);
-    if (codes.length === 0) {
-      body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:16px;">No partners added yet</td></tr>';
-      return;
+      const body = document.getElementById('partnerBody');
+      const codes = Object.keys(partners);
+      if (codes.length === 0) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:16px;">No partners added yet</td></tr>';
+        return;
+      }
+      body.innerHTML = codes.map(code => {
+        const p = partners[code];
+        const count = allProviders.filter(pr => pr.referredByPartner === code).length;
+        return `
+          <tr>
+            <td>${p.name || '—'}</td>
+            <td>${p.city || '—'}</td>
+            <td>${code}</td>
+            <td>${p.status || 'active'}</td>
+            <td>${count}</td>
+            <td class="row-actions">
+              <button class="link-btn" onclick="copyPartnerLink('${code}')">Copy Link</button>
+              <button class="payout-btn" onclick="openPayout('${code}','${(p.name||'').replace(/'/g,"")}')">Log Payout</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (e) {
+      document.getElementById('partnerBody').innerHTML =
+        `<tr><td colspan="6" style="text-align:center; padding:16px; color:#c0392b;">❌ Load failed: ${e.code} — ${e.message}</td></tr>`;
+      console.error('loadPartners error:', e);
     }
-    body.innerHTML = codes.map(code => {
-      const p = partners[code];
-      const count = allProviders.filter(pr => pr.referredByPartner === code).length;
-      return `
-        <tr>
-          <td>${p.name || '—'}</td>
-          <td>${p.city || '—'}</td>
-          <td>${code}</td>
-          <td>${p.status || 'active'}</td>
-          <td>${count}</td>
-          <td class="row-actions">
-            <button class="link-btn" onclick="copyPartnerLink('${code}')">Copy Link</button>
-            <button class="payout-btn" onclick="openPayout('${code}','${(p.name||'').replace(/'/g,"")}')">Log Payout</button>
-          </td>
-        </tr>
-      `;
-    }).join('');
   }
 
   document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
