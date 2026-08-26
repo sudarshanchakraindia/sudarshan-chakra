@@ -118,13 +118,54 @@
           <div class="stat"><b id="statProviders">0</b><span>Providers onboarded</span></div>
           <div class="stat"><b id="statSeekers">0</b><span>Seekers onboarded</span></div>
           <div class="stat"><b id="statVerified">0</b><span>Verified providers</span></div>
+          <div class="stat"><b id="statDaysLeft">—</b><span>Days left in 30-day window</span></div>
         </div>
         <div style="margin-top:16px;">
           <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--dim);">
-            <span>Progress toward 15-provider activity requirement</span>
-            <span id="progressLabel">0 / 15</span>
+            <span>Providers — Year 1 target: 33</span>
+            <span id="progressLabelProviders">0 / 33</span>
           </div>
-          <div class="progress-bar"><div id="progressFill" style="width:0%"></div></div>
+          <div class="progress-bar"><div id="progressFillProviders" style="width:0%"></div></div>
+        </div>
+        <div style="margin-top:14px;">
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--dim);">
+            <span>Seekers — Year 1 target: 66</span>
+            <span id="progressLabelSeekers">0 / 66</span>
+          </div>
+          <div class="progress-bar"><div id="progressFillSeekers" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Earnings Calculator -->
+      <div class="card">
+        <h2>🧮 Earnings Calculator</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Plug in your own numbers — based on how many providers/seekers you think you can realistically onboard and how active they'll be, see what that could mean for your monthly and yearly earnings. Use this to set goals that fit your own capability, not just the minimum target.</p>
+
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Providers you plan to onboard</label>
+        <input type="number" id="calcProviders" value="33" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Seekers you plan to onboard</label>
+        <input type="number" id="calcSeekers" value="66" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Average completed hires per provider, per month</label>
+        <input type="number" id="calcHires" value="4" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Of those providers, how many upgrade to Silver (₹151/quarter)?</label>
+        <input type="number" id="calcSilver" value="5" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Of those providers, how many upgrade to Gold (₹251/quarter)?</label>
+        <input type="number" id="calcGold" value="2" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+
+        <button class="btn primary" style="margin-top:16px; width:100%;" onclick="runCalculator()">Calculate My Earnings</button>
+
+        <div id="calcResults" style="display:none; margin-top:18px;">
+          <div class="stat-grid">
+            <div class="stat"><b id="calcMonthlyFee">₹0</b><span>Monthly — convenience fee share</span></div>
+            <div class="stat"><b id="calcMonthlyMembership">₹0</b><span>Monthly — membership share</span></div>
+            <div class="stat"><b id="calcMonthlyTotal">₹0</b><span>Total estimated monthly</span></div>
+            <div class="stat"><b id="calcYearlyTotal">₹0</b><span>Total estimated yearly</span></div>
+          </div>
+          <p style="font-size:12px; color:var(--dim); margin-top:12px;">This is an estimate based on the numbers you entered, not a guarantee — actual earnings depend on real hires and upgrades happening on the platform. Adjust the inputs above and recalculate any time to model different goals.</p>
         </div>
       </div>
 
@@ -195,11 +236,11 @@
           </div>
           <div class="accordion-item">
             <div class="accordion-head" onclick="toggleAcc(this)">What if someone registers without my link? <span>+</span></div>
-            <div class="accordion-body">Only registrations that go through your specific referral link are credited to you. Always share your link rather than the general app link when onboarding someone.</div>
+            <div class="accordion-body">Even if the person registers without using your specific referral link or QR code, they'll still be credited to you as long as the pincode they enter matches the pincode assigned to your city. Your link/QR is still the more reliable way to guarantee credit, but pincode matching covers people who find the app on their own.</div>
           </div>
           <div class="accordion-item">
-            <div class="accordion-head" onclick="toggleAcc(this)">What is the 15-provider requirement? <span>+</span></div>
-            <div class="accordion-body">To keep your city exclusivity, you need to onboard at least 15 verified providers within your first 60 days, and maintain reasonable activity after that. This dashboard's progress bar tracks it live.</div>
+            <div class="accordion-head" onclick="toggleAcc(this)">What is the activity requirement? <span>+</span></div>
+            <div class="accordion-body">To keep your city exclusivity, you need to onboard at least 33 verified providers and 66 seekers within your first 30 days, and maintain similar monthly activity after that. This target applies for your first year as a partner — Sudarshan Chakra India already lists 525+ services with room to keep growing, so this is set to match real market scale, not an arbitrary minimum. It may be revised in future years as the platform and each city's market mature. This dashboard's progress bar tracks it live.</div>
           </div>
           <div class="accordion-item">
             <div class="accordion-head" onclick="toggleAcc(this)">Where do I get marketing materials? <span>+</span></div>
@@ -267,6 +308,32 @@
 </script>
 
 <script>
+  function runCalculator(){
+    const providers = Number(document.getElementById('calcProviders').value) || 0;
+    const hiresPerProvider = Number(document.getElementById('calcHires').value) || 0;
+    const silverCount = Number(document.getElementById('calcSilver').value) || 0;
+    const goldCount = Number(document.getElementById('calcGold').value) || 0;
+
+    const CONV_FEE = 51, CONV_SHARE = 0.25;
+    const SILVER_FEE = 151, GOLD_FEE = 251, MEMBERSHIP_SHARE = 0.20;
+
+    const monthlyHires = providers * hiresPerProvider;
+    const monthlyFeeEarnings = monthlyHires * CONV_FEE * CONV_SHARE;
+
+    // Membership fees are per quarter — convert to a monthly-equivalent share
+    const quarterlyMembershipRevenue = (silverCount * SILVER_FEE) + (goldCount * GOLD_FEE);
+    const monthlyMembershipEarnings = (quarterlyMembershipRevenue * MEMBERSHIP_SHARE) / 3;
+
+    const monthlyTotal = monthlyFeeEarnings + monthlyMembershipEarnings;
+    const yearlyTotal = monthlyTotal * 12;
+
+    document.getElementById('calcMonthlyFee').textContent = '₹' + Math.round(monthlyFeeEarnings).toLocaleString('en-IN');
+    document.getElementById('calcMonthlyMembership').textContent = '₹' + Math.round(monthlyMembershipEarnings).toLocaleString('en-IN');
+    document.getElementById('calcMonthlyTotal').textContent = '₹' + Math.round(monthlyTotal).toLocaleString('en-IN');
+    document.getElementById('calcYearlyTotal').textContent = '₹' + Math.round(yearlyTotal).toLocaleString('en-IN');
+    document.getElementById('calcResults').style.display = 'block';
+  }
+
   function toggleAcc(el){
     const body = el.nextElementSibling;
     const isOpen = body.classList.contains('open');
@@ -318,6 +385,8 @@
     document.getElementById('qrcode').innerHTML = '';
     new QRCode(document.getElementById('qrcode'), { text: refLink, width: 180, height: 180 });
 
+    runCalculator();
+
     // Live progress: count providers/seekers referred by this partner
     try {
       const [provSnap, seekSnap] = await Promise.all([
@@ -335,10 +404,20 @@
       document.getElementById('statSeekers').textContent = mySeekers.length;
       document.getElementById('statVerified').textContent = myVerified;
 
-      const target = 15;
-      const pct = Math.min(100, Math.round((myProviders.length / target) * 100));
-      document.getElementById('progressFill').style.width = pct + '%';
-      document.getElementById('progressLabel').textContent = myProviders.length + ' / ' + target;
+      const PROVIDER_TARGET = 33;
+      const SEEKER_TARGET   = 66;
+      const pctP = Math.min(100, Math.round((myProviders.length / PROVIDER_TARGET) * 100));
+      const pctS = Math.min(100, Math.round((mySeekers.length / SEEKER_TARGET) * 100));
+      document.getElementById('progressFillProviders').style.width = pctP + '%';
+      document.getElementById('progressLabelProviders').textContent = myProviders.length + ' / ' + PROVIDER_TARGET;
+      document.getElementById('progressFillSeekers').style.width = pctS + '%';
+      document.getElementById('progressLabelSeekers').textContent = mySeekers.length + ' / ' + SEEKER_TARGET;
+
+      if (partner.appointedDate) {
+        const daysElapsed = Math.floor((Date.now() - new Date(partner.appointedDate)) / 86400000);
+        const daysLeft = Math.max(0, 30 - daysElapsed);
+        document.getElementById('statDaysLeft').textContent = daysLeft;
+      }
     } catch (e) {
       console.warn('Progress load error:', e);
     }
