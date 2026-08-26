@@ -48,6 +48,8 @@
         <input id="newName" placeholder="Partner's full name">
         <label>City</label>
         <input id="newCity" placeholder="e.g. Jodhpur">
+        <label>Phone Number (shown on their marketing materials)</label>
+        <input id="newPhone" placeholder="e.g. 9251115013">
         <label>Pincode (their city/area — used to auto-credit registrations even without their link)</label>
         <input id="newPincode" placeholder="e.g. 342001" maxlength="6">
         <label>Referral Code (unique, becomes their login + link)</label>
@@ -118,12 +120,13 @@
   window.addPartner = async function(){
     const name = document.getElementById('newName').value.trim();
     const city = document.getElementById('newCity').value.trim();
+    const phone = document.getElementById('newPhone').value.trim();
     const pincode = document.getElementById('newPincode').value.trim();
     const code = document.getElementById('newCode').value.trim().toUpperCase();
     const errEl = document.getElementById('addErr');
     errEl.style.color = '#c0392b';
     errEl.textContent = '';
-    if (!name || !city || !pincode || !code) { errEl.textContent = 'All fields are required.'; return; }
+    if (!name || !city || !phone || !pincode || !code) { errEl.textContent = 'All fields are required.'; return; }
 
     try {
       const existing = await get(ref(db, 'partners/' + code));
@@ -136,13 +139,14 @@
       }
 
       await set(ref(db, 'partners/' + code), {
-        name, city, pincode, status: 'active',
+        name, city, phone, pincode, status: 'active',
         appointedDate: new Date().toISOString()
       });
       await set(ref(db, 'partnerPincodes/' + pincode), code);
 
       document.getElementById('newName').value = '';
       document.getElementById('newCity').value = '';
+      document.getElementById('newPhone').value = '';
       document.getElementById('newPincode').value = '';
       document.getElementById('newCode').value = '';
       errEl.style.color = '#1e7d1e';
