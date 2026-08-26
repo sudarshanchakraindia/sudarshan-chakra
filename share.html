@@ -337,6 +337,63 @@
   .vision-card.on-light h4 { color: var(--deep); }
   .vision-card.on-light p { color: var(--soft); }
 
+  /* ── PARTNER APPLICATION MODAL ── */
+  .partner-modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(26,18,6,0.72);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+  }
+  .partner-modal-overlay.open { display: flex; }
+  .partner-modal {
+    background: var(--white);
+    border-radius: 24px;
+    max-width: 560px;
+    width: 100%;
+    padding: 36px 30px;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+    animation: popIn 0.3s ease both;
+  }
+  .partner-modal-close {
+    position: absolute; top: 18px; right: 18px;
+    width: 34px; height: 34px; border-radius: 50%;
+    border: none; background: rgba(122,74,30,0.08);
+    color: var(--soft); font-size: 22px; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .partner-modal-close:hover { background: rgba(255,107,0,0.15); color: var(--deep-saffron); }
+  .pf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .pf-field { margin-bottom: 16px; }
+  .pf-field label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--deep); margin-bottom: 6px;
+  }
+  .pf-field label span { color: var(--soft); font-weight: 400; }
+  .pf-field input, .pf-field textarea {
+    width: 100%; padding: 11px 14px;
+    border: 1px solid rgba(122,74,30,0.2);
+    border-radius: 12px;
+    font-family: inherit; font-size: 14px;
+    color: var(--deep);
+    background: var(--cream);
+    transition: border-color 0.2s;
+  }
+  .pf-field input:focus, .pf-field textarea:focus {
+    outline: none; border-color: var(--saffron);
+    background: white;
+  }
+  .pf-field textarea { resize: vertical; min-height: 100px; }
+  @media (max-width: 520px) {
+    .pf-row { grid-template-columns: 1fr; }
+  }
+
   /* ── WALLET & CHARITY ── */
   .wallet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 8px; }
   .wallet-card {
@@ -608,12 +665,98 @@
       </div>
     </div>
     <div style="text-align:center; margin-top:40px;">
-      <a href="https://sudarshanchakraindia.github.io/sudarshan-chakra/partner-dashboard.html" class="btn-primary" target="_blank" style="display:inline-block; text-decoration:none;">
+      <button onclick="openPartnerModal()" class="btn-primary" style="border:none; cursor:pointer; font-family:inherit;">
         🤝 Become a Partner
-      </a>
+      </button>
     </div>
   </div>
 </section>
+
+<!-- ══ PARTNER APPLICATION MODAL ══ -->
+<div id="partnerModalOverlay" class="partner-modal-overlay" onclick="if(event.target===this) closePartnerModal()">
+  <div class="partner-modal">
+    <button class="partner-modal-close" onclick="closePartnerModal()" aria-label="Close">&times;</button>
+
+    <div id="partnerFormView">
+      <p class="section-label" style="text-align:left;">City Channel Partner</p>
+      <h2 style="font-family:'Playfair Display',serif; font-size:28px; margin-bottom:6px; color:var(--deep);">Partner Application</h2>
+      <p style="color:var(--soft); font-size:14px; margin-bottom:24px;">Tell us about yourself and your city. We review every application before approval.</p>
+
+      <form id="partnerForm" onsubmit="submitPartnerApplication(event)">
+        <div class="pf-row">
+          <div class="pf-field">
+            <label>City *</label>
+            <input type="text" name="city" required placeholder="e.g. Jodhpur">
+          </div>
+          <div class="pf-field">
+            <label>Pincode *</label>
+            <input type="text" name="pincode" required pattern="[0-9]{6}" maxlength="6" placeholder="6-digit pincode">
+          </div>
+        </div>
+
+        <div class="pf-field">
+          <label>Full Name *</label>
+          <input type="text" name="fullName" required placeholder="As per your ID">
+        </div>
+
+        <div class="pf-field">
+          <label>Address *</label>
+          <input type="text" name="address" required placeholder="Full residential / business address">
+        </div>
+
+        <div class="pf-row">
+          <div class="pf-field">
+            <label>Mobile Number *</label>
+            <input type="tel" name="mobile" required pattern="[6-9][0-9]{9}" maxlength="10" placeholder="10-digit mobile number">
+          </div>
+          <div class="pf-field">
+            <label>Email ID *</label>
+            <input type="email" name="email" required placeholder="you@example.com">
+          </div>
+        </div>
+
+        <div class="pf-row">
+          <div class="pf-field">
+            <label>Aadhaar Number *</label>
+            <input type="text" name="aadhaar" required pattern="[0-9]{12}" maxlength="12" placeholder="12-digit Aadhaar number">
+          </div>
+          <div class="pf-field">
+            <label>PAN Number *</label>
+            <input type="text" name="pan" required pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}" maxlength="10" placeholder="e.g. ABCDE1234F" style="text-transform:uppercase;">
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--soft); margin:-10px 0 18px;">PAN is required for TDS deduction on partner payouts, as per Indian tax law.</p>
+
+        <div class="pf-row">
+          <div class="pf-field">
+            <label>Social Media / Instagram <span style="font-weight:400;">(optional)</span></label>
+            <input type="text" name="social" placeholder="@yourhandle or profile link">
+          </div>
+          <div class="pf-field">
+            <label>Other Info <span style="font-weight:400;">(optional)</span></label>
+            <input type="text" name="otherInfo" placeholder="Anything else relevant">
+          </div>
+        </div>
+
+        <div class="pf-field">
+          <label>About You *</label>
+          <textarea name="about" required rows="5" placeholder="Tell us about your abilities, experience, local network, social links, and why you'd be a good City Channel Partner..."></textarea>
+        </div>
+
+        <button type="submit" id="partnerSubmitBtn" class="btn-primary" style="width:100%; border:none; cursor:pointer; font-family:inherit; margin-top:8px;">
+          Submit Application
+        </button>
+      </form>
+    </div>
+
+    <div id="partnerThankYouView" style="display:none; text-align:center; padding:30px 10px;">
+      <div style="font-size:52px; margin-bottom:16px;">🙏</div>
+      <h2 style="font-family:'Playfair Display',serif; font-size:26px; color:var(--deep); margin-bottom:10px;">Application Received</h2>
+      <p style="color:var(--soft); font-size:15px; line-height:1.6;">Thank you for applying to become a City Channel Partner. Our team will review your details and get in touch with you shortly.</p>
+      <button onclick="closePartnerModal()" class="btn-primary" style="border:none; cursor:pointer; font-family:inherit; margin-top:20px;">Close</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ LANGUAGES ══ -->
 <section class="languages-bg">
@@ -822,6 +965,61 @@ document.querySelectorAll('.feature-card, .step, .vision-card, .wallet-card, .la
   el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
   observer.observe(el);
 });
+
+function openPartnerModal() {
+  document.getElementById('partnerFormView').style.display = 'block';
+  document.getElementById('partnerThankYouView').style.display = 'none';
+  document.getElementById('partnerForm').reset();
+  document.getElementById('partnerModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closePartnerModal() {
+  document.getElementById('partnerModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closePartnerModal();
+});
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
+    authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
+    databaseURL: "https://sudarshan-chakra-b0ac1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "sudarshan-chakra-b0ac1",
+    storageBucket: "sudarshan-chakra-b0ac1.firebasestorage.app",
+    messagingSenderId: "357210144411",
+    appId: "1:357210144411:web:b440a94cf78b04b58b103e"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window.submitPartnerApplication = async function (e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('partnerSubmitBtn');
+    const data = Object.fromEntries(new FormData(form).entries());
+    data.pan = (data.pan || '').toUpperCase();
+    data.status = 'pending';
+    data.submittedAt = new Date().toISOString();
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    try {
+      const appRef = push(ref(db, 'partnerApplications'));
+      await set(appRef, data);
+      document.getElementById('partnerFormView').style.display = 'none';
+      document.getElementById('partnerThankYouView').style.display = 'block';
+    } catch (err) {
+      alert('Something went wrong submitting your application. Please try again.\n\n' + err.message);
+      btn.disabled = false;
+      btn.textContent = 'Submit Application';
+    }
+  };
 </script>
 </body>
 </html>
