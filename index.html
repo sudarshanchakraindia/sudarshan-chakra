@@ -620,6 +620,7 @@
                         <button onclick="showProfileTab('favourites')" id="ptab-favourites" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap" data-i18n="profileSaved">❤️ Saved</button>
                         <button onclick="showProfileTab('myReviews')" id="ptab-myReviews" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap" data-i18n="profileReviews">⭐ Reviews</button>
                         <button onclick="showProfileTab('myReports')" id="ptab-myReports" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap" data-i18n="profileReports">🚨 Reports</button>
+                        <button onclick="showProfileTab('training')" id="ptab-training" class="flex-1 px-3 py-3 font-semibold text-sm text-gray-500 hover:text-orange-600 border-b-2 border-transparent whitespace-nowrap">🎥 Training</button>
                     </div>
                 </div>
 
@@ -778,6 +779,12 @@
                     <div class="bg-white rounded-2xl shadow-md p-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4">🚨 My Complaints / Reports</h3>
                         <div id="myReportsList" class="space-y-3"></div>
+                    </div>
+                </div>
+                <div id="profileTab-training" class="hidden">
+                    <div class="bg-white rounded-2xl shadow-md p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">🎥 Training Videos</h3>
+                        <div id="trainingVideoList" class="space-y-6"></div>
                     </div>
                 </div>
             </div>
@@ -7068,7 +7075,7 @@ function toggleAdminCat(id, headerEl) {
         }
 
         function showProfileTab(tab) {
-            ['myDetails','bookings','wallet','favourites','myReviews','myReports'].forEach(t => {
+            ['myDetails','bookings','wallet','favourites','myReviews','myReports','training'].forEach(t => {
                 const tabContent = document.getElementById('profileTab-' + t);
                 const tabBtn     = document.getElementById('ptab-' + t);
                 if (tabContent) tabContent.classList.add('hidden');
@@ -7091,6 +7098,38 @@ function toggleAdminCat(id, headerEl) {
             if (tab === 'myReviews')   loadMyReviews();
             if (tab === 'myReports')   loadMyReports();
             if (tab === 'bookings')    loadMyBookings();
+            if (tab === 'training')    loadTrainingVideos();
+        }
+
+        async function loadTrainingVideos() {
+            const listEl = document.getElementById('trainingVideoList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p class="text-gray-400 text-sm">Loading…</p>';
+            try {
+                const audience = (userProfile && userProfile.role === 'provider') ? 'provider' : 'seeker';
+                const snap = await _get(fbRef('trainingVideos'));
+                const all = snap.exists() ? snap.val() : {};
+                const rows = Object.values(all)
+                    .filter(v => v.audience === audience)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                if (rows.length === 0) {
+                    listEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-6">No training videos available yet</p>';
+                    return;
+                }
+                listEl.innerHTML = rows.map(v => `
+                    <div>
+                        <div class="font-semibold text-sm text-gray-800 mb-2">${v.title}</div>
+                        <div class="relative w-full rounded-xl overflow-hidden" style="padding-top:56.25%;">
+                            <iframe src="https://www.loom.com/embed/${v.loomId}" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen
+                                class="absolute top-0 left-0 w-full h-full"></iframe>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                listEl.innerHTML = '<p class="text-red-500 text-sm">Could not load training videos.</p>';
+                console.warn('Training video load error:', e);
+            }
         }
 
         function loadMyDetails() {
