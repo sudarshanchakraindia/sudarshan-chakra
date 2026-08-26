@@ -2,544 +2,448 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Sudarshan Chakra — Reel</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>City Channel Partner Dashboard — Sudarshan Chakra India</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-:root {
-  --saffron: #EA580C; --saffron-lt: #FED7AA;
-  --navy: #1E3A5F; --navy-lt: #2D5282;
-  --gold: #D97706; --gold-lt: #FDE68A;
-  --white: #FFFFFF; --green: #059669; --teal: #0D9488;
-}
-html,body { width:100%;height:100%;background:#111;font-family:'Poppins',sans-serif;overflow:hidden;display:flex;align-items:center;justify-content:center; }
+  :root{
+    --saffron:#FF6B00; --gold:#F5A623; --maroon:#8B1E3F; --deep:#1A1206;
+    --cream:#FFF8F0; --dim:#7C4A1E;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; font-family:'Segoe UI',sans-serif; background:var(--cream); color:var(--deep); }
+  header{
+    background:linear-gradient(135deg,#1A0A00,#3D1A00); color:#fff;
+    padding:18px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  header h1{ font-size:18px; margin:0; }
+  header .sub{ font-size:12px; color:#e8c9a0; }
+  .wrap{ max-width:920px; margin:0 auto; padding:20px; }
 
-#reel { position:relative;width:min(390px,100vw);height:min(693px,100vh);overflow:hidden;border-radius:18px;box-shadow:0 0 60px rgba(234,88,12,0.3); }
+  #gate{ max-width:360px; margin:70px auto; text-align:center; }
+  #gate input{ width:100%; padding:13px; font-size:15px; border:1px solid #ddd; border-radius:10px; margin:12px 0; text-transform:uppercase; }
+  #gate button{ width:100%; padding:13px; font-size:15px; font-weight:700; color:#fff; background:var(--saffron); border:none; border-radius:10px; cursor:pointer; }
+  #gate p.err{ color:#c0392b; font-size:13px; }
+  #gate p.hint{ color:var(--dim); font-size:13px; }
 
-.slide { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 22px 80px;opacity:0;pointer-events:none;transition:opacity 0.5s ease;overflow:hidden; }
-.slide.active { opacity:1;pointer-events:all; }
+  #app{ display:none; }
 
-#top-ui { position:absolute;top:0;left:0;right:0;padding:14px 16px 0;z-index:200;display:flex;align-items:center;gap:5px; }
-.seg { flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.25);overflow:hidden; }
-.seg-fill { height:100%;width:0%;background:white;border-radius:2px; }
+  .card{ background:#fff; border-radius:14px; padding:20px; margin-bottom:18px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+  .card h2{ font-size:16px; margin:0 0 14px; color:var(--maroon); }
 
-#music-btn { position:absolute;top:28px;right:14px;z-index:300;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.3);color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);transition:all 0.2s; }
-#music-btn:hover { background:var(--saffron); }
+  .profile-row{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .avatar{ width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,var(--saffron),var(--gold)); display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; font-size:22px; flex-shrink:0; }
+  .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+  .badge.active{ background:#dcf7dc; color:#1e7d1e; }
+  .badge.probation{ background:#fff3cd; color:#8a6d1a; }
 
-.music-note { position:absolute;font-size:18px;pointer-events:none;z-index:50;animation:floatNote 3s ease-in-out forwards;opacity:0; }
-@keyframes floatNote { 0%{opacity:0;transform:translateY(0) scale(0.8)} 20%{opacity:1;transform:translateY(-10px) scale(1)} 80%{opacity:0.6;transform:translateY(-60px) scale(1.1)} 100%{opacity:0;transform:translateY(-100px) scale(0.8)} }
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; }
+  .stat{ background:#FFF3E0; border-radius:10px; padding:14px; text-align:center; }
+  .stat b{ display:block; font-size:26px; color:var(--saffron); }
+  .stat span{ font-size:12px; color:var(--dim); }
 
-#nav { position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:14px;z-index:200; }
-.nav-btn { width:42px;height:42px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.35);background:rgba(0,0,0,0.3);color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);transition:all 0.2s; }
-.nav-btn:hover { background:var(--saffron);border-color:var(--saffron); }
+  .progress-bar{ height:10px; background:#f0e4d4; border-radius:6px; overflow:hidden; margin-top:8px; }
+  .progress-bar div{ height:100%; background:linear-gradient(90deg,var(--saffron),var(--gold)); }
 
-#slide-count { position:absolute;bottom:22px;right:18px;font-size:11px;color:rgba(255,255,255,0.55);z-index:200;font-weight:600; }
+  .ref-box{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .ref-link{ flex:1; min-width:220px; background:#FFF3E0; border-radius:10px; padding:12px 14px; font-size:13px; word-break:break-all; }
+  .btn{ padding:10px 16px; border-radius:10px; border:none; font-weight:700; font-size:13px; cursor:pointer; }
+  .btn.primary{ background:var(--saffron); color:#fff; }
+  .btn.ghost{ background:#fff; border:1px solid var(--saffron); color:var(--saffron); }
+  #qrcode{ display:flex; justify-content:center; margin-top:14px; }
+  #qrcode img, #qrcode canvas{ border-radius:10px; }
 
-.orb { position:absolute;border-radius:50%;pointer-events:none; }
-.particle { position:absolute;border-radius:50%;pointer-events:none;animation:floatPart linear infinite; }
-@keyframes floatPart { 0%{transform:translateY(0) rotate(0deg);opacity:0.7} 100%{transform:translateY(-110vh) rotate(360deg);opacity:0} }
+  .steps{ counter-reset:step; }
+  .step{ display:flex; gap:12px; margin-bottom:16px; }
+  .step .num{
+    counter-increment:step; flex-shrink:0; width:28px; height:28px; border-radius:50%;
+    background:var(--saffron); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;
+  }
+  .step .num::before{ content:counter(step); }
+  .step .body b{ display:block; margin-bottom:2px; font-size:14px; }
+  .step .body p{ margin:0; font-size:13px; color:var(--dim); line-height:1.5; }
 
-.au { opacity:0;transform:translateY(28px); }
-.slide.active .au { animation:slideUp 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
-.slide.active .au:nth-child(1){animation-delay:0.08s} .slide.active .au:nth-child(2){animation-delay:0.18s} .slide.active .au:nth-child(3){animation-delay:0.28s} .slide.active .au:nth-child(4){animation-delay:0.38s} .slide.active .au:nth-child(5){animation-delay:0.48s} .slide.active .au:nth-child(6){animation-delay:0.58s}
-@keyframes slideUp { to{opacity:1;transform:translateY(0)} }
+  .accordion-item{ border-bottom:1px solid #f0e4d4; }
+  .accordion-item:last-child{ border-bottom:none; }
+  .accordion-head{ padding:14px 4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:14px; }
+  .accordion-body{ display:none; padding:0 4px 14px; font-size:13px; color:var(--dim); line-height:1.6; }
+  .accordion-body.open{ display:block; }
 
-.as { opacity:0;transform:scale(0.75); }
-.slide.active .as { animation:scaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-.slide.active .as:nth-child(1){animation-delay:0.05s} .slide.active .as:nth-child(2){animation-delay:0.15s} .slide.active .as:nth-child(3){animation-delay:0.25s} .slide.active .as:nth-child(4){animation-delay:0.35s}
-@keyframes scaleIn { to{opacity:1;transform:scale(1)} }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid #f0e4d4; }
+  th{ background:#FFF3E0; }
 
-/* S1 */
-#s1 { background:linear-gradient(155deg,#1E3A5F 0%,#0f2040 100%); }
-.sc-logo { width:88px;height:88px;border-radius:50%;background:var(--saffron);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:30px;font-weight:900;color:white;margin-bottom:20px;box-shadow:0 0 0 8px rgba(234,88,12,0.15),0 0 40px rgba(234,88,12,0.4);animation:logoPulse 2.5s ease-in-out infinite; }
-@keyframes logoPulse { 0%,100%{box-shadow:0 0 0 8px rgba(234,88,12,0.15),0 0 40px rgba(234,88,12,0.4)} 50%{box-shadow:0 0 0 16px rgba(234,88,12,0.08),0 0 70px rgba(234,88,12,0.6)} }
-#s1 h1 { font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:white;text-align:center;line-height:1.15;margin-bottom:10px; }
-#s1 h1 span{color:var(--saffron)}
-#s1 .tagline{font-size:10px;color:var(--saffron-lt);text-align:center;letter-spacing:2px;font-weight:600;margin-bottom:28px}
-.pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
-.pill{padding:5px 13px;border-radius:20px;border:1px solid rgba(234,88,12,0.4);color:var(--saffron-lt);font-size:10px;font-weight:600;background:rgba(234,88,12,0.1)}
-#s1 .url{font-size:9px;color:var(--gold);text-align:center;margin-top:14px;opacity:0.85}
+  .material-list a{ display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; text-decoration:none; color:var(--deep); background:#FFF3E0; margin-bottom:8px; font-size:13px; font-weight:600; }
+  .material-list a:hover{ background:#FFE8CC; }
 
-/* SHARED HEADER */
-.sh{width:100%;border-radius:14px;padding:13px 18px;margin-bottom:18px}
-.sh h2{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:white}
-.sh p{font-size:10px;color:rgba(255,255,255,0.7);margin-top:2px}
-
-/* S2 */
-#s2{background:#FFF7ED}
-.prob-card{width:100%;background:white;border-radius:14px;padding:13px 16px;margin-bottom:11px;display:flex;align-items:center;gap:13px;box-shadow:0 3px 16px rgba(0,0,0,0.08);border-left:4px solid var(--saffron)}
-.prob-card .ico{font-size:26px;flex-shrink:0}
-.prob-card h3{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:3px}
-.prob-card p{font-size:10px;color:#64748B;line-height:1.5}
-
-/* S3 */
-#s3{background:linear-gradient(155deg,#1E3A5F,#0f2040)}
-#s3 .lbl{font-size:10px;font-weight:700;color:var(--saffron);letter-spacing:3px;text-align:center;margin-bottom:6px;text-transform:uppercase}
-#s3 h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:white;text-align:center;margin-bottom:20px;line-height:1.2}
-.vbox{width:100%;border-radius:14px;padding:16px;margin-bottom:12px}
-.vbox.v{background:rgba(234,88,12,0.15);border:1px solid rgba(234,88,12,0.3)}
-.vbox.m{background:rgba(45,82,130,0.5);border:1px solid rgba(255,255,255,0.1)}
-.vbox .vt{font-size:10px;font-weight:700;letter-spacing:2px;margin-bottom:7px;text-transform:uppercase}
-.vbox.v .vt{color:var(--gold-lt)} .vbox.m .vt{color:var(--saffron-lt)}
-.vbox p{font-size:11px;color:white;line-height:1.65}
-.val-row{display:flex;gap:7px;width:100%;flex-wrap:wrap}
-.val-chip{flex:1;min-width:70px;padding:7px 4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;text-align:center;font-size:10px;color:white;font-weight:600}
-
-/* STEPS */
-.step-row{display:flex;align-items:flex-start;gap:13px;width:100%;margin-bottom:13px}
-.snum{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;flex-shrink:0;box-shadow:0 3px 12px rgba(0,0,0,0.2)}
-.scon h3{font-size:13px;font-weight:700;margin-bottom:2px}
-.scon p{font-size:10px;color:#64748B;line-height:1.5}
-#s4{background:#F0FDFA} #s4 .scon h3{color:var(--navy)}
-#s5{background:#FFF7ED} #s5 .scon h3{color:var(--saffron)}
-.sico{font-size:17px;margin-bottom:2px}
-
-/* S6 */
-#s6{background:linear-gradient(155deg,#1E3A5F,#0f2040)}
-.ig{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
-.ic-card{background:var(--navy-lt);border-radius:14px;padding:14px 12px;border-top:3px solid var(--green);text-align:center}
-.ic-card .ic{font-size:26px;margin-bottom:7px}
-.ic-card h3{font-size:11px;font-weight:700;color:white;margin-bottom:5px}
-.ic-card p{font-size:9px;color:var(--saffron-lt);line-height:1.5}
-
-/* S7 */
-#s7{background:#FFFBEB}
-.er{display:flex;align-items:center;justify-content:space-between;width:100%;padding:9px 13px;background:white;border-radius:11px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
-.er .el{font-size:11px;font-weight:600;color:var(--navy)}
-.eb{padding:3px 11px;background:var(--gold-lt);border:1px solid var(--gold);border-radius:20px;font-size:10px;font-weight:700;color:var(--gold)}
-.rbanner{width:100%;background:linear-gradient(135deg,var(--saffron),var(--gold));border-radius:14px;padding:14px;text-align:center;margin-top:10px}
-.rbanner .big{font-size:28px;font-weight:900;color:white;font-family:'Playfair Display',serif}
-.rbanner .eq{font-size:12px;font-weight:700;color:white;opacity:0.9}
-
-/* S8 */
-#s8{background:linear-gradient(155deg,#1E3A5F,#0f2040)}
-.pc{width:100%;border-radius:14px;padding:15px 16px;margin-bottom:11px;display:flex;align-items:center;gap:15px}
-.pc.p1{background:rgba(30,58,95,0.8);border:1px solid rgba(255,255,255,0.12)}
-.pc.p2{background:rgba(13,148,136,0.18);border:1px solid rgba(13,148,136,0.35)}
-.pc.p3{background:rgba(5,150,105,0.18);border:1px solid rgba(5,150,105,0.35)}
-.pico{font-size:28px;flex-shrink:0}
-.pi h3{font-size:13px;font-weight:700;color:white;margin-bottom:2px}
-.pi .amt{font-size:20px;font-weight:900;font-family:'Playfair Display',serif}
-.pc.p1 .amt{color:var(--saffron-lt)} .pc.p2 .amt{color:#5EEAD4} .pc.p3 .amt{color:#6EE7B7}
-.pi p{font-size:9px;color:rgba(255,255,255,0.55);margin-top:2px}
-.ftag{margin-left:auto;flex-shrink:0;background:var(--green);color:white;font-size:8px;font-weight:700;padding:3px 7px;border-radius:9px;letter-spacing:0.5px;text-align:center}
-
-/* S9 */
-#s9{background:linear-gradient(155deg,#1E3A5F,#0f2040)}
-.ph{width:100%;background:var(--navy-lt);border-radius:13px;padding:13px 15px;margin-bottom:9px;display:flex;align-items:center;gap:13px}
-.ph.live{border-left:4px solid var(--green)} .ph.prog{border-left:4px solid var(--gold)} .ph.upco{border-left:4px solid var(--saffron)} .ph.vis{border-left:4px solid var(--teal)}
-.pbadge{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.ph.live .pbadge{background:rgba(5,150,105,0.18)} .ph.prog .pbadge{background:rgba(217,119,6,0.18)} .ph.upco .pbadge{background:rgba(234,88,12,0.18)} .ph.vis .pbadge{background:rgba(13,148,136,0.18)}
-.ptxt .plbl{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px}
-.ph.live .plbl{color:#6EE7B7} .ph.prog .plbl{color:var(--gold-lt)} .ph.upco .plbl{color:var(--saffron-lt)} .ph.vis .plbl{color:#5EEAD4}
-.ptxt h3{font-size:12px;font-weight:700;color:white;margin-bottom:1px}
-.ptxt p{font-size:9px;color:rgba(255,255,255,0.5)}
-
-/* S10 */
-#s10{background:linear-gradient(155deg,#EA580C,#D97706)}
-.sc-logo2{width:78px;height:78px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:white;margin-bottom:18px;box-shadow:0 8px 30px rgba(0,0,0,0.3)}
-#s10 h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:white;text-align:center;margin-bottom:6px;line-height:1.2}
-#s10 .sub{font-size:12px;color:var(--navy);text-align:center;font-weight:600;margin-bottom:22px}
-.cta-cards{display:flex;flex-direction:column;gap:9px;width:100%}
-.cc{background:rgba(30,58,95,0.8);border-radius:13px;padding:13px 16px;display:flex;align-items:center;gap:13px;backdrop-filter:blur(8px)}
-.cc .ci{font-size:22px;flex-shrink:0}
-.cc h3{font-size:12px;font-weight:700;color:white}
-.cc p{font-size:9px;color:var(--saffron-lt);margin-top:1px}
-#s10 .url2{margin-top:16px;font-size:9px;font-weight:700;color:var(--navy);text-align:center}
-
-/* START SCREEN */
-#start-screen { position:absolute;inset:0;z-index:500;background:linear-gradient(155deg,#1E3A5F,#0a1628);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0; }
-#start-screen .sl{width:100px;height:100px;border-radius:50%;background:var(--saffron);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:white;margin-bottom:22px;box-shadow:0 0 60px rgba(234,88,12,0.5);animation:logoPulse 2s ease-in-out infinite}
-#start-screen h1{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:white;text-align:center;margin-bottom:8px}
-#start-screen h1 span{color:var(--saffron)}
-#start-screen .desc{font-size:12px;color:var(--saffron-lt);text-align:center;margin-bottom:34px}
-#play-btn{background:var(--saffron);color:white;border:none;border-radius:50px;padding:16px 40px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;box-shadow:0 8px 30px rgba(234,88,12,0.5);display:flex;align-items:center;gap:10px;transition:all 0.2s}
-#play-btn:hover{transform:scale(1.05)}
-#start-screen .note{font-size:10px;color:rgba(255,255,255,0.4);margin-top:14px;text-align:center;line-height:1.6}
+  .empty{ text-align:center; color:var(--dim); font-size:13px; padding:20px; }
 </style>
 </head>
 <body>
-<div id="reel">
 
-  <!-- Start screen -->
-  <div id="start-screen">
-    <div class="sl">SC</div>
-    <h1>Sudarshan<br><span>Chakra</span></h1>
-    <p class="desc">Connecting Communities · Empowering Lives</p>
-    <button id="play-btn" onclick="startReel()">▶ &nbsp; Play Reel with Music</button>
-    <p class="note">🎵 Soulful Indian Bansuri flute will play<br>🔊 Please turn up your volume!</p>
+  <div id="gate">
+    <h1 style="margin-bottom:4px;">🔱 Partner Login</h1>
+    <p class="hint">Enter the referral code given to you when you were appointed</p>
+    <input type="text" id="codeInput" placeholder="e.g. JODHPUR01">
+    <button onclick="loadPartner()">View My Dashboard</button>
+    <p class="err" id="err"></p>
   </div>
 
-  <!-- Segment progress bar -->
-  <div id="top-ui">
-    <div class="seg"><div class="seg-fill" id="sf0"></div></div>
-    <div class="seg"><div class="seg-fill" id="sf1"></div></div>
-    <div class="seg"><div class="seg-fill" id="sf2"></div></div>
-    <div class="seg"><div class="seg-fill" id="sf3"></div></div>
-    <div class="seg"><div class="seg-fill" id="sf4"></div></div>
-    <div class="seg"><div class="seg-fill" id="sf5"></div></div>
-    <div class="seg"><div class="seg-fill" id="sf6"></div></div>
-    <div class="seg"><div class="seg-fill" id="sf7"></div></div>
-    <div class="seg"><div class="seg-fill" id="sf8"></div></div>
-    <div class="seg"><div class="seg-fill" id="sf9"></div></div>
-  </div>
+  <div id="app">
+    <header>
+      <div>
+        <h1 id="hdrName">🔱 Partner Dashboard</h1>
+        <div class="sub" id="hdrCity">—</div>
+      </div>
+      <span class="badge" id="hdrStatus">—</span>
+    </header>
 
-  <button id="music-btn" onclick="toggleMusic()">🎵</button>
+    <div class="wrap">
 
-  <!-- SLIDE 1: TITLE -->
-  <div class="slide active" id="s1">
-    <div class="orb" style="width:300px;height:300px;top:-100px;right:-90px;background:radial-gradient(circle,#2D528233,transparent 70%)"></div>
-    <div class="orb" style="width:200px;height:200px;bottom:-70px;left:-70px;background:radial-gradient(circle,#EA580C22,transparent 70%)"></div>
-    <div class="sc-logo as">SC</div>
-    <h1 class="au">Sudarshan<br><span>Chakra</span></h1>
-    <p class="tagline au">CONNECTING COMMUNITIES · EMPOWERING LIVES</p>
-    <div class="pills au"><span class="pill">🔍 Find Services</span><span class="pill">🛠️ Hire Locally</span><span class="pill">💚 Give Back</span></div>
-    <div class="pills au"><span class="pill">🇮🇳 Made for India</span><span class="pill">🗣️ 10 Languages</span></div>
-    <p class="url au">🌐 sudarshanchakraindia.github.io/sudarshan-chakra</p>
-  </div>
+      <!-- Profile -->
+      <div class="card">
+        <div class="profile-row">
+          <div class="avatar" id="avatarInitial">?</div>
+          <div style="flex:1;">
+            <div style="font-weight:800; font-size:17px;" id="profName">—</div>
+            <div style="font-size:13px; color:var(--dim);" id="profMeta">—</div>
+          </div>
+        </div>
+      </div>
 
-  <!-- SLIDE 2: PROBLEM -->
-  <div class="slide" id="s2">
-    <div class="sh au" style="background:var(--navy)"><h2>The Problem We Solve</h2><p>Why India needs Sudarshan Chakra</p></div>
-    <div class="prob-card au"><div class="ico">🔍</div><div><h3>Hard to Find Reliable Help</h3><p>Finding a trusted plumber, electrician or tutor is still done by word of mouth — unreliable and slow.</p></div></div>
-    <div class="prob-card au"><div class="ico">🤝</div><div><h3>No Trust or Verification</h3><p>No way to check ratings, reviews or credentials before letting someone into your home.</p></div></div>
-    <div class="prob-card au"><div class="ico">💼</div><div><h3>Skilled Workers Have No Platform</h3><p>Carpenters, cooks, tutors — stuck with no way to grow their business beyond their neighbourhood.</p></div></div>
-  </div>
+      <!-- Progress -->
+      <div class="card">
+        <h2>📊 Your Onboarding Progress</h2>
+        <div class="stat-grid">
+          <div class="stat"><b id="statProviders">0</b><span>Providers onboarded</span></div>
+          <div class="stat"><b id="statSeekers">0</b><span>Seekers onboarded</span></div>
+          <div class="stat"><b id="statVerified">0</b><span>Verified providers</span></div>
+          <div class="stat"><b id="statDaysLeft">—</b><span>Days left in 30-day window</span></div>
+        </div>
+        <div style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--dim);">
+            <span>Providers — Year 1 target: 33</span>
+            <span id="progressLabelProviders">0 / 33</span>
+          </div>
+          <div class="progress-bar"><div id="progressFillProviders" style="width:0%"></div></div>
+        </div>
+        <div style="margin-top:14px;">
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--dim);">
+            <span>Seekers — Year 1 target: 66</span>
+            <span id="progressLabelSeekers">0 / 66</span>
+          </div>
+          <div class="progress-bar"><div id="progressFillSeekers" style="width:0%"></div></div>
+        </div>
+      </div>
 
-  <!-- SLIDE 3: VISION -->
-  <div class="slide" id="s3">
-    <p class="lbl au">Our Purpose</p>
-    <h2 class="au">Vision & Mission</h2>
-    <div class="vbox v au"><div class="vt">🎯 VISION</div><p>To be India's most trusted local service network — connecting every skilled person with every person who needs help, in every town and village.</p></div>
-    <div class="vbox m au"><div class="vt">🚀 MISSION</div><p>Empower communities by making services accessible, affordable and trustworthy — creating income opportunities and giving back to society.</p></div>
-    <div class="val-row au"><div class="val-chip">🤝 Trust</div><div class="val-chip">🌍 Community</div><div class="val-chip">⭐ Quality</div><div class="val-chip">💚 Giving</div></div>
-  </div>
+      <!-- Earnings Calculator -->
+      <div class="card">
+        <h2>🧮 Earnings Calculator</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Plug in your own numbers — based on how many providers/seekers you think you can realistically onboard and how active they'll be, see what that could mean for your monthly and yearly earnings. Use this to set goals that fit your own capability, not just the minimum target.</p>
 
-  <!-- SLIDE 4: SEEKERS -->
-  <div class="slide" id="s4">
-    <div class="sh au" style="background:var(--teal)"><h2>For Service Seekers</h2><p>Find help in 4 simple steps</p></div>
-    <div class="step-row au"><div class="snum" style="background:var(--teal)">1</div><div class="scon"><div class="sico">📱</div><h3>Download & Login</h3><p>Open on browser or app. Login with mobile OTP — quick and secure.</p></div></div>
-    <div class="step-row au"><div class="snum" style="background:var(--teal)">2</div><div class="scon"><div class="sico">🔍</div><h3>Browse or Search</h3><p>Search by service type — plumber, cook, tutor. Filter by location and ratings.</p></div></div>
-    <div class="step-row au"><div class="snum" style="background:var(--teal)">3</div><div class="scon"><div class="sico">📍</div><h3>Find Nearby Providers</h3><p>See verified providers on map. View ratings, photos and contact details.</p></div></div>
-    <div class="step-row au"><div class="snum" style="background:var(--teal)">4</div><div class="scon"><div class="sico">✅</div><h3>Hire & Review</h3><p>Contact directly. Leave a review and earn reward points!</p></div></div>
-  </div>
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Providers you plan to onboard</label>
+        <input type="number" id="calcProviders" value="33" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
 
-  <!-- SLIDE 5: PROVIDERS -->
-  <div class="slide" id="s5">
-    <div class="sh au" style="background:var(--saffron)"><h2>For Service Providers</h2><p>Grow your business — absolutely FREE</p></div>
-    <div class="step-row au"><div class="snum" style="background:var(--saffron)">1</div><div class="scon"><div class="sico">📝</div><h3>Register FREE</h3><p>Sign up in minutes. Zero fee for providers. Name, service and location.</p></div></div>
-    <div class="step-row au"><div class="snum" style="background:var(--saffron)">2</div><div class="scon"><div class="sico">📸</div><h3>Build Your Profile</h3><p>Add photo and skills. Visible to thousands of seekers in your area.</p></div></div>
-    <div class="step-row au"><div class="snum" style="background:var(--saffron)">3</div><div class="scon"><div class="sico">📞</div><h3>Get Contacted Directly</h3><p>Seekers find you and call directly. No middlemen. No commission. Ever.</p></div></div>
-    <div class="step-row au"><div class="snum" style="background:var(--saffron)">4</div><div class="scon"><div class="sico">⭐</div><h3>Earn Reviews & Grow</h3><p>More reviews = more trust = more customers = more income!</p></div></div>
-  </div>
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Seekers you plan to onboard</label>
+        <input type="number" id="calcSeekers" value="66" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
 
-  <!-- SLIDE 6: IMPACT -->
-  <div class="slide" id="s6">
-    <p class="lbl au" style="color:var(--green)">Social Impact</p>
-    <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:white;text-align:center;margin-bottom:6px" class="au">Giving Back to Society</h2>
-    <p style="font-size:10px;color:var(--saffron-lt);text-align:center;margin-bottom:16px;font-style:italic" class="au">Every transaction contributes to a greater purpose</p>
-    <div class="ig">
-      <div class="ic-card as"><div class="ic">🎓</div><h3>Skill Development</h3><p>Vocational training for underprivileged youth</p></div>
-      <div class="ic-card as"><div class="ic">👩‍💼</div><h3>Women Empowerment</h3><p>Supporting women entrepreneurs</p></div>
-      <div class="ic-card as"><div class="ic">🏥</div><h3>Community Welfare</h3><p>Health camps & social activities</p></div>
-      <div class="ic-card as"><div class="ic">🌱</div><h3>Charity Donations</h3><p>100% to welfare activities</p></div>
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Average completed hires per provider, per month</label>
+        <input type="number" id="calcHires" value="4" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Of those providers, how many upgrade to Silver (₹151/quarter)?</label>
+        <input type="number" id="calcSilver" value="5" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+
+        <label style="display:block; font-size:12px; font-weight:700; color:var(--dim); margin:12px 0 4px;">Of those providers, how many upgrade to Gold (₹251/quarter)?</label>
+        <input type="number" id="calcGold" value="2" min="0" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+
+        <button class="btn primary" style="margin-top:16px; width:100%;" onclick="runCalculator()">Calculate My Earnings</button>
+
+        <div id="calcResults" style="display:none; margin-top:18px;">
+          <div class="stat-grid">
+            <div class="stat"><b id="calcMonthlyFee">₹0</b><span>Monthly — convenience fee share</span></div>
+            <div class="stat"><b id="calcMonthlyMembership">₹0</b><span>Monthly — membership share</span></div>
+            <div class="stat"><b id="calcMonthlyTotal">₹0</b><span>Total estimated monthly</span></div>
+            <div class="stat"><b id="calcYearlyTotal">₹0</b><span>Total estimated yearly</span></div>
+          </div>
+          <p style="font-size:12px; color:var(--dim); margin-top:12px;">This is an estimate based on the numbers you entered, not a guarantee — actual earnings depend on real hires and upgrades happening on the platform. Adjust the inputs above and recalculate any time to model different goals.</p>
+        </div>
+      </div>
+
+      <!-- Referral link -->
+      <div class="card">
+        <h2>🔗 Your Referral Link</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Share this link or QR with providers and seekers in your city — anyone who registers through it is automatically credited to you.</p>
+        <div class="ref-box">
+          <div class="ref-link" id="refLinkText">—</div>
+          <button class="btn primary" onclick="copyRefLink()">Copy Link</button>
+        </div>
+        <div id="qrcode"></div>
+      </div>
+
+      <!-- Getting started guide -->
+      <div class="card">
+        <h2>🚀 Getting Started — How This Works</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="num"></div>
+            <div class="body">
+              <b>Share your referral link</b>
+              <p>Send your link (above) via WhatsApp, or show the QR code in person. It takes people straight into the Sudarshan Chakra India app.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="num"></div>
+            <div class="body">
+              <b>Help providers register</b>
+              <p>Guide local plumbers, electricians, beauticians, tutors etc. through the "Register as Provider" flow — they pick a category, add their details, and submit an ID for verification.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="num"></div>
+            <div class="body">
+              <b>Get providers ID-verified</b>
+              <p>Verified providers earn more trust from seekers and are more likely to get hired — encourage everyone you onboard to complete ID verification.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="num"></div>
+            <div class="body">
+              <b>Promote to seekers too</b>
+              <p>The more seekers actively using the app in your city, the more your onboarded providers get hired — and the more you earn.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="num"></div>
+            <div class="body">
+              <b>Track your progress here</b>
+              <p>Check back on this dashboard anytime to see your onboarding numbers and payout history.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ / education -->
+      <div class="card">
+        <h2>📖 Partner FAQ</h2>
+        <div class="accordion">
+          <div class="accordion-item">
+            <div class="accordion-head" onclick="toggleAcc(this)">How do I earn money? <span>+</span></div>
+            <div class="accordion-body">You earn 25% of the ₹51 platform convenience fee on every completed hire involving a provider or seeker you onboarded, plus 20% of membership plan revenue (₹151 Silver / ₹251 Gold) when your onboarded providers upgrade. Payouts are logged below and paid monthly via UPI.</div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-head" onclick="toggleAcc(this)">What counts as "my" provider or seeker? <span>+</span></div>
+            <div class="accordion-body">Anyone who registers using your referral link or QR code is automatically attributed to you — permanently, as long as they stay active on the platform.</div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-head" onclick="toggleAcc(this)">What if someone registers without my link? <span>+</span></div>
+            <div class="accordion-body">Even if the person registers without using your specific referral link or QR code, they'll still be credited to you as long as the pincode they enter matches the pincode assigned to your city. Your link/QR is still the more reliable way to guarantee credit, but pincode matching covers people who find the app on their own.</div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-head" onclick="toggleAcc(this)">What is the activity requirement? <span>+</span></div>
+            <div class="accordion-body">To keep your city exclusivity, you need to onboard at least 33 verified providers and 66 seekers within your first 30 days, and maintain similar monthly activity after that. This target applies for your first year as a partner — Sudarshan Chakra India already lists 525+ services with room to keep growing, so this is set to match real market scale, not an arbitrary minimum. It may be revised in future years as the platform and each city's market mature. This dashboard's progress bar tracks it live.</div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-head" onclick="toggleAcc(this)">Where do I get marketing materials? <span>+</span></div>
+            <div class="accordion-body">See the "Marketing Materials" section below — download posters and share them as-is, they already include your referral QR code area for you to reference.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payout history -->
+      <div class="card">
+        <h2>💰 Payout History</h2>
+        <table>
+          <thead><tr><th>Date</th><th>Amount</th><th>Note</th></tr></thead>
+          <tbody id="payoutBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Marketing materials -->
+      <div class="card">
+        <h2>🎨 Marketing Materials</h2>
+        <div class="material-list">
+          <a href="saarthi_promo_poster.png" target="_blank">🖼️ SAARTHI Promo Poster (image)</a>
+          <a href="sudarshan_chakra_reel.html" target="_blank">🎬 Promo Reel (video script/animation)</a>
+          <a href="flyer_020426_updated_qr.jpg" target="_blank">📋 Community Flyer (image)</a>
+        </div>
+      </div>
+
+      <!-- Support -->
+      <div class="card">
+        <h2>🙋 Need Help?</h2>
+        <p style="font-size:13px; color:var(--dim);">Contact the central team any time:</p>
+        <p style="font-size:13px;"><b>WhatsApp:</b> +91 92511 15013<br><b>Email:</b> sudarshanchakraindia@gmail.com</p>
+      </div>
+
     </div>
   </div>
 
-  <!-- SLIDE 7: REWARDS -->
-  <div class="slide" id="s7">
-    <div class="sh au" style="background:var(--gold)"><h2 style="color:var(--navy)">🪙 Referral Rewards</h2><p style="color:var(--navy);opacity:0.75">Earn points. Redeem for discounts.</p></div>
-    <div class="er au"><span class="el">👥 Refer a Seeker</span><span class="eb">+5 pts</span></div>
-    <div class="er au"><span class="el">🛠️ Refer a Provider</span><span class="eb">+10 pts</span></div>
-    <div class="er au"><span class="el">⭐ Write a Review</span><span class="eb">+2 pts</span></div>
-    <div class="er au"><span class="el">📅 Daily Login</span><span class="eb">+1 pt/day</span></div>
-    <div class="rbanner au"><div class="big">10 Points</div><div class="eq">= ₹1 Discount on Portal Fee</div></div>
-  </div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  <!-- SLIDE 8: PAYMENTS -->
-  <div class="slide" id="s8">
-    <p style="font-size:10px;font-weight:700;color:var(--saffron);letter-spacing:3px;text-align:center;margin-bottom:6px;text-transform:uppercase" class="au">Simple & Transparent</p>
-    <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:white;text-align:center;margin-bottom:20px" class="au">💳 Payments</h2>
-    <div class="pc p1 au"><div class="pico">🔱</div><div class="pi"><h3>Portal Access Fee</h3><div class="amt">₹10</div><p>One-time only</p></div><span class="ftag">FREE<br>for<br>Providers</span></div>
-    <div class="pc p2 au"><div class="pico">🙏</div><div class="pi"><h3>Tip the Provider</h3><div class="amt">Any ₹</div><p>Optional · 100% goes to provider</p></div></div>
-    <div class="pc p3 au"><div class="pico">🌱</div><div class="pi"><h3>Charity Donation</h3><div class="amt">Any ₹</div><p>Optional · 100% to welfare</p></div></div>
-  </div>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
+    authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
+    databaseURL: "https://sudarshan-chakra-b0ac1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "sudarshan-chakra-b0ac1",
+    storageBucket: "sudarshan-chakra-b0ac1.firebasestorage.app",
+    messagingSenderId: "357210144411",
+    appId: "1:357210144411:web:b440a94cf78b04b58b103e"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+  window._pdb = db;
+  window._pref = ref;
+  window._pget = get;
 
-  <!-- SLIDE 9: ROADMAP -->
-  <div class="slide" id="s9">
-    <p style="font-size:10px;font-weight:700;color:var(--saffron);letter-spacing:3px;text-align:center;margin-bottom:6px;text-transform:uppercase" class="au">Our Journey</p>
-    <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:white;text-align:center;margin-bottom:16px" class="au">🗺️ Roadmap</h2>
-    <div class="ph live au"><div class="pbadge">✅</div><div class="ptxt"><div class="plbl">Phase 1 · Live Now</div><h3>Web App Launch</h3><p>10 languages · OTP login · Map search · Reviews</p></div></div>
-    <div class="ph prog au"><div class="pbadge">🔄</div><div class="ptxt"><div class="plbl">Phase 2 · In Progress</div><h3>Payments & Rewards</h3><p>UPI · Referral points · Wallet</p></div></div>
-    <div class="ph upco au"><div class="pbadge">📱</div><div class="ptxt"><div class="plbl">Phase 3 · Upcoming</div><h3>Mobile APK</h3><p>Android · iOS · Push notifications</p></div></div>
-    <div class="ph vis au"><div class="pbadge">🚀</div><div class="ptxt"><div class="plbl">Phase 4 · Vision</div><h3>Scale Across India</h3><p>10,000+ providers · Pan-India expansion</p></div></div>
-  </div>
-
-  <!-- SLIDE 10: CTA -->
-  <div class="slide" id="s10">
-    <div class="orb" style="width:250px;height:250px;top:-80px;right:-70px;background:radial-gradient(circle,#FED7AA22,transparent 70%)"></div>
-    <div class="orb" style="width:180px;height:180px;bottom:-50px;left:-50px;background:radial-gradient(circle,#1E3A5F33,transparent 70%)"></div>
-    <div class="sc-logo2 as">SC</div>
-    <h2 class="au">Join Sudarshan<br>Chakra Today!</h2>
-    <p class="sub au">Be part of India's most caring<br>local service community</p>
-    <div class="cta-cards">
-      <div class="cc au"><div class="ci">🔍</div><div><h3>I Need a Service</h3><p>Register as Seeker — Find help near you</p></div></div>
-      <div class="cc au"><div class="ci">🛠️</div><div><h3>I Offer a Service</h3><p>Register as Provider — Grow your business FREE</p></div></div>
-      <div class="cc au"><div class="ci">🤝</div><div><h3>I Want to Refer</h3><p>Share with friends — Earn reward points</p></div></div>
-    </div>
-    <p class="url2 au">🌐 sudarshanchakraindia.github.io/sudarshan-chakra</p>
-  </div>
-
-  <div id="nav">
-    <button class="nav-btn" onclick="prev()">◀</button>
-    <button class="nav-btn" onclick="next()">▶</button>
-  </div>
-  <div id="slide-count">1 / 10</div>
-</div>
+  // Auto-fill code from URL (?code=XYZ) if present, and auto-load.
+  // Module scripts already execute after the DOM is parsed, so the plain
+  // <script> below (which defines loadPartner) has already run by now.
+  const urlCode = new URLSearchParams(location.search).get('code');
+  if (urlCode) {
+    document.getElementById('codeInput').value = urlCode;
+    if (window.loadPartner) window.loadPartner();
+  }
+</script>
 
 <script>
-/* ══════════════════════════════════════════
-   BANSURI FLUTE ENGINE — Web Audio API
-   Raag Bhupali (pentatonic: Sa Re Ga Pa Dha)
-══════════════════════════════════════════ */
-let ctx = null, musicOn = false, loopTid = null;
-let nodes = [];
+  function runCalculator(){
+    const providers = Number(document.getElementById('calcProviders').value) || 0;
+    const hiresPerProvider = Number(document.getElementById('calcHires').value) || 0;
+    const silverCount = Number(document.getElementById('calcSilver').value) || 0;
+    const goldCount = Number(document.getElementById('calcGold').value) || 0;
 
-const BPM = 68, BEAT = 60 / BPM;
+    const CONV_FEE = 51, CONV_SHARE = 0.25;
+    const SILVER_FEE = 151, GOLD_FEE = 251, MEMBERSHIP_SHARE = 0.20;
 
-// Raag Bhupali frequencies (C major pentatonic)
-const N = {
-  S0: 130.81, R0: 146.83, G0: 164.81, P0: 196.00, D0: 220.00,
-  S:  261.63, R:  293.66, G:  329.63, P:  392.00, D:  440.00,
-  S2: 523.25, R2: 587.33, G2: 659.25, P2: 784.00,
-};
+    const monthlyHires = providers * hiresPerProvider;
+    const monthlyFeeEarnings = monthlyHires * CONV_FEE * CONV_SHARE;
 
-// Melody — authentic bansuri phrasing with meend (glide) effect
-const MELODY = [
-  // Alaap — slow opening
-  [N.S, 1.5, 0.45], [N.R, 0.5, 0.55], [N.G, 2.0, 0.75],
-  [N.P, 0.5, 0.65], [N.G, 0.5, 0.60], [N.R, 1.0, 0.65],
-  [N.S, 0.5, 0.50], [N.R, 0.5, 0.58], [N.G, 0.5, 0.72],
-  // Ascending run
-  [N.P, 0.5, 0.80], [N.D, 1.0, 0.88], [N.S2,0.5, 0.95],
-  [N.D, 0.5, 0.78], [N.P, 0.5, 0.70], [N.D, 0.5, 0.82],
-  [N.S2,1.5, 1.00],
-  // Descend with grace
-  [N.D, 0.5, 0.75], [N.P, 0.5, 0.68], [N.G, 0.5, 0.62],
-  [N.R, 0.5, 0.58], [N.S, 1.5, 0.50],
-  // Middle octave play
-  [N.R, 0.5, 0.60], [N.G, 0.5, 0.72], [N.P, 0.5, 0.80],
-  [N.G, 0.5, 0.68], [N.R, 0.5, 0.62], [N.G, 1.0, 0.75],
-  [N.P, 0.5, 0.82], [N.D, 0.5, 0.88], [N.P, 0.5, 0.75],
-  [N.G, 0.5, 0.65], [N.R, 0.5, 0.58], [N.S, 2.0, 0.55],
-  // Final resolution
-  [N.G, 0.5, 0.68], [N.R, 0.5, 0.62], [N.S, 0.5, 0.55],
-  [N.D0,1.0, 0.45], [N.S, 1.5, 0.60],
-];
+    // Membership fees are per quarter — convert to a monthly-equivalent share
+    const quarterlyMembershipRevenue = (silverCount * SILVER_FEE) + (goldCount * GOLD_FEE);
+    const monthlyMembershipEarnings = (quarterlyMembershipRevenue * MEMBERSHIP_SHARE) / 3;
 
-function note(freq, start, dur, vol, glideFrom) {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const vLfo = ctx.createOscillator();   // vibrato
-  const vGain = ctx.createGain();
-  const osc2 = ctx.createOscillator();   // 2nd harmonic (breath)
-  const g2 = ctx.createGain();
+    const monthlyTotal = monthlyFeeEarnings + monthlyMembershipEarnings;
+    const yearlyTotal = monthlyTotal * 12;
 
-  osc.type = 'sine';
-  if (glideFrom) {
-    osc.frequency.setValueAtTime(glideFrom, start);
-    osc.frequency.linearRampToValueAtTime(freq, start + Math.min(0.15, dur * 0.3));
-  } else {
-    osc.frequency.setValueAtTime(freq, start);
+    document.getElementById('calcMonthlyFee').textContent = '₹' + Math.round(monthlyFeeEarnings).toLocaleString('en-IN');
+    document.getElementById('calcMonthlyMembership').textContent = '₹' + Math.round(monthlyMembershipEarnings).toLocaleString('en-IN');
+    document.getElementById('calcMonthlyTotal').textContent = '₹' + Math.round(monthlyTotal).toLocaleString('en-IN');
+    document.getElementById('calcYearlyTotal').textContent = '₹' + Math.round(yearlyTotal).toLocaleString('en-IN');
+    document.getElementById('calcResults').style.display = 'block';
   }
 
-  // Vibrato — starts after attack
-  vLfo.type = 'sine';
-  vLfo.frequency.value = 5.8;
-  vGain.gain.setValueAtTime(0, start);
-  vGain.gain.linearRampToValueAtTime(freq * 0.013, start + dur * 0.4);
-  vLfo.connect(vGain);
-  vGain.connect(osc.frequency);
-
-  // Slight octave harmonic for flute colour
-  osc2.type = 'sine';
-  osc2.frequency.value = freq * 2;
-  g2.gain.setValueAtTime(0, start);
-  g2.gain.linearRampToValueAtTime(vol * 0.06, start + 0.05);
-  g2.gain.setValueAtTime(vol * 0.06, start + dur - 0.08);
-  g2.gain.linearRampToValueAtTime(0, start + dur);
-
-  // Breath noise
-  const bufLen = Math.ceil(ctx.sampleRate * (dur + 0.1));
-  const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * 0.025;
-  const noise = ctx.createBufferSource();
-  noise.buffer = buf;
-  const bp = ctx.createBiquadFilter();
-  bp.type = 'bandpass'; bp.frequency.value = freq * 1.6; bp.Q.value = 0.8;
-  const ng = ctx.createGain();
-
-  // Envelope
-  const atk = Math.min(0.09, dur * 0.18);
-  const rel = Math.min(0.14, dur * 0.22);
-  gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(vol * 0.68, start + atk);
-  gain.gain.setValueAtTime(vol * 0.68, start + dur - rel);
-  gain.gain.linearRampToValueAtTime(0, start + dur);
-
-  ng.gain.setValueAtTime(0, start);
-  ng.gain.linearRampToValueAtTime(vol * 0.07, start + atk * 0.6);
-  ng.gain.setValueAtTime(vol * 0.04, start + dur - rel);
-  ng.gain.linearRampToValueAtTime(0, start + dur);
-
-  osc.connect(gain); gain.connect(ctx.destination);
-  osc2.connect(g2); g2.connect(ctx.destination);
-  noise.connect(bp); bp.connect(ng); ng.connect(ctx.destination);
-
-  osc.start(start); vLfo.start(start); osc2.start(start); noise.start(start);
-  osc.stop(start + dur + 0.05); vLfo.stop(start + dur + 0.05);
-  osc2.stop(start + dur + 0.05); noise.stop(start + dur + 0.05);
-  nodes.push(osc, vLfo, osc2, noise);
-}
-
-function tabla(start, vol) {
-  const o = ctx.createOscillator(), g = ctx.createGain();
-  o.type = 'sine';
-  o.frequency.setValueAtTime(160, start);
-  o.frequency.exponentialRampToValueAtTime(55, start + 0.18);
-  g.gain.setValueAtTime(vol, start);
-  g.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
-  o.connect(g); g.connect(ctx.destination);
-  o.start(start); o.stop(start + 0.28);
-  nodes.push(o);
-}
-
-function drone(start, dur) {
-  [[N.S, 0.038], [N.P0, 0.022], [N.S0, 0.018]].forEach(([f, v]) => {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = 'sine'; o.frequency.value = f;
-    g.gain.setValueAtTime(0, start);
-    g.gain.linearRampToValueAtTime(v, start + 0.8);
-    g.gain.setValueAtTime(v, start + dur - 0.8);
-    g.gain.linearRampToValueAtTime(0, start + dur);
-    o.connect(g); g.connect(ctx.destination);
-    o.start(start); o.stop(start + dur + 0.1);
-    nodes.push(o);
-  });
-}
-
-function playLoop() {
-  if (!musicOn) return;
-  const now = ctx.currentTime;
-  let t = now + 0.08;
-  const totalDur = MELODY.reduce((s, n) => s + n[1], 0) * BEAT;
-
-  drone(t, totalDur);
-
-  // Play melody with occasional glides
-  let prev = null;
-  MELODY.forEach(([f, beats, vol], i) => {
-    const dur = beats * BEAT;
-    const glide = (prev && Math.abs(f - prev) < 100 && Math.random() > 0.6) ? prev : null;
-    note(f, t, dur, vol * 0.58, glide);
-    prev = f;
-    t += dur;
-  });
-
-  // Tabla pattern — sam (beat 1) stronger
-  let tb = now + 0.08;
-  const totalBeats = Math.floor(MELODY.reduce((s, n) => s + n[1], 0));
-  for (let i = 0; i < totalBeats; i++) {
-    tabla(tb, i % 8 === 0 ? 0.20 : i % 4 === 0 ? 0.13 : 0.07);
-    tb += BEAT;
+  function toggleAcc(el){
+    const body = el.nextElementSibling;
+    const isOpen = body.classList.contains('open');
+    document.querySelectorAll('.accordion-body.open').forEach(b => b.classList.remove('open'));
+    if (!isOpen) body.classList.add('open');
   }
 
-  loopTid = setTimeout(playLoop, (totalDur - 0.25) * 1000);
-}
+  function copyRefLink(){
+    const text = document.getElementById('refLinkText').textContent;
+    navigator.clipboard.writeText(text).then(() => alert('✅ Link copied!'));
+  }
 
-function stopMusic() {
-  clearTimeout(loopTid);
-  nodes.forEach(n => { try { n.stop(); } catch(e){} });
-  nodes = [];
-}
-
-function toggleMusic() {
-  musicOn = !musicOn;
-  document.getElementById('music-btn').textContent = musicOn ? '🎵' : '🔇';
-  if (musicOn) playLoop(); else stopMusic();
-}
-
-/* ══════════════════════════════════════════
-   MUSIC NOTE VISUALS
-══════════════════════════════════════════ */
-const SYMBOLS = ['♩','♪','♫','♬'];
-function spawnNote() {
-  if (!musicOn) return;
-  const n = document.createElement('div');
-  n.className = 'music-note';
-  n.textContent = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-  n.style.cssText = `left:${10+Math.random()*80}%;bottom:${8+Math.random()*35}%;color:${Math.random()>.5?'#EA580C':'#FDE68A'};animation-duration:${2+Math.random()*2}s;`;
-  document.getElementById('reel').appendChild(n);
-  setTimeout(() => n.remove(), 3500);
-}
-
-/* ══════════════════════════════════════════
-   SLIDE ENGINE
-══════════════════════════════════════════ */
-const TOTAL = 10, DUR = 5500;
-let cur = 0, tid = null, raf = null, t0 = null;
-
-function goTo(n) {
-  document.querySelectorAll('.slide')[cur].classList.remove('active');
-  for (let i = 0; i < cur; i++) { const sf = document.getElementById('sf'+i); if(sf) sf.style.width='100%'; }
-  document.querySelectorAll('.slide')[n].querySelectorAll('.au,.as').forEach(el => { el.style.animation='none'; void el.offsetHeight; el.style.animation=''; });
-  cur = n;
-  document.querySelectorAll('.slide')[cur].classList.add('active');
-  document.getElementById('slide-count').textContent = (cur+1)+' / '+TOTAL;
-  for (let i = cur; i < TOTAL; i++) { const sf = document.getElementById('sf'+i); if(sf) sf.style.width='0%'; }
-  resetTimer();
-}
-function next() { goTo(cur >= TOTAL-1 ? 0 : cur+1); }
-function prev() { goTo(cur <= 0 ? TOTAL-1 : cur-1); }
-
-function resetTimer() {
-  clearTimeout(tid); cancelAnimationFrame(raf);
-  t0 = performance.now(); animSeg();
-  tid = setTimeout(next, DUR);
-}
-function animSeg() {
-  const pct = Math.min(((performance.now()-t0)/DUR)*100, 100);
-  const sf = document.getElementById('sf'+cur); if(sf) sf.style.width = pct+'%';
-  if (pct < 100) raf = requestAnimationFrame(animSeg);
-}
-
-function startReel() {
-  document.getElementById('start-screen').style.display = 'none';
-  ctx = new (window.AudioContext || window.webkitAudioContext)();
-  musicOn = true;
-  document.getElementById('music-btn').textContent = '🎵';
-  playLoop();
-  resetTimer();
-  setInterval(spawnNote, 2000);
-  // Particles
-  ['s1','s10'].forEach(id => {
-    const sl = document.getElementById(id);
-    for (let i = 0; i < 14; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      const sz = Math.random()*4+2;
-      p.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;background:rgba(234,88,12,${Math.random()*0.4+0.1});animation-duration:${Math.random()*8+6}s;animation-delay:${Math.random()*5}s;`;
-      sl.appendChild(p);
+  async function loadPartner(){
+    const code = document.getElementById('codeInput').value.trim().toUpperCase();
+    if (!code) return;
+    document.getElementById('err').textContent = '';
+    try {
+      const snap = await window._pget(window._pref(window._pdb, 'partners/' + code));
+      if (!snap.exists()) {
+        document.getElementById('err').textContent = 'Code not found. Check with the central team if you believe this is an error.';
+        return;
+      }
+      const partner = snap.val();
+      showDashboard(code, partner);
+    } catch (e) {
+      document.getElementById('err').textContent = 'Error loading dashboard: ' + e.message;
     }
-  });
-}
+  }
 
-// Swipe
-let tx = 0;
-document.getElementById('reel').addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, {passive:true});
-document.getElementById('reel').addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx)>40) dx<0?next():prev(); });
+  async function showDashboard(code, partner){
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    document.getElementById('hdrName').textContent = '🔱 ' + (partner.name || 'Partner') + "'s Dashboard";
+    document.getElementById('hdrCity').textContent = (partner.city || '—') + ' · Code: ' + code;
+    const statusEl = document.getElementById('hdrStatus');
+    statusEl.textContent = (partner.status || 'active').toUpperCase();
+    statusEl.className = 'badge ' + (partner.status === 'probation' ? 'probation' : 'active');
+
+    document.getElementById('avatarInitial').textContent = (partner.name || '?').charAt(0).toUpperCase();
+    document.getElementById('profName').textContent = partner.name || '—';
+    document.getElementById('profMeta').textContent =
+      (partner.city ? partner.city + ' — ' : '') +
+      'Appointed ' + (partner.appointedDate ? new Date(partner.appointedDate).toLocaleDateString() : '—');
+
+    // Referral link + QR
+    const refLink = location.origin + location.pathname.replace('partner-dashboard.html', 'index.html') + '?ref=' + code;
+    document.getElementById('refLinkText').textContent = refLink;
+    document.getElementById('qrcode').innerHTML = '';
+    new QRCode(document.getElementById('qrcode'), { text: refLink, width: 180, height: 180 });
+
+    runCalculator();
+
+    // Live progress: count providers/seekers referred by this partner
+    try {
+      const [provSnap, seekSnap] = await Promise.all([
+        window._pget(window._pref(window._pdb, 'providers')),
+        window._pget(window._pref(window._pdb, 'seekers'))
+      ]);
+      const allProviders = provSnap.exists() ? Object.values(provSnap.val()) : [];
+      const allSeekers    = seekSnap.exists() ? Object.values(seekSnap.val()) : [];
+
+      const myProviders = allProviders.filter(p => p.referredByPartner === code);
+      const mySeekers    = allSeekers.filter(s => s.referredByPartner === code);
+      const myVerified   = myProviders.filter(p => p.verified).length;
+
+      document.getElementById('statProviders').textContent = myProviders.length;
+      document.getElementById('statSeekers').textContent = mySeekers.length;
+      document.getElementById('statVerified').textContent = myVerified;
+
+      const PROVIDER_TARGET = 33;
+      const SEEKER_TARGET   = 66;
+      const pctP = Math.min(100, Math.round((myProviders.length / PROVIDER_TARGET) * 100));
+      const pctS = Math.min(100, Math.round((mySeekers.length / SEEKER_TARGET) * 100));
+      document.getElementById('progressFillProviders').style.width = pctP + '%';
+      document.getElementById('progressLabelProviders').textContent = myProviders.length + ' / ' + PROVIDER_TARGET;
+      document.getElementById('progressFillSeekers').style.width = pctS + '%';
+      document.getElementById('progressLabelSeekers').textContent = mySeekers.length + ' / ' + SEEKER_TARGET;
+
+      if (partner.appointedDate) {
+        const daysElapsed = Math.floor((Date.now() - new Date(partner.appointedDate)) / 86400000);
+        const daysLeft = Math.max(0, 30 - daysElapsed);
+        document.getElementById('statDaysLeft').textContent = daysLeft;
+      }
+    } catch (e) {
+      console.warn('Progress load error:', e);
+    }
+
+    // Payout history
+    try {
+      const paySnap = await window._pget(window._pref(window._pdb, 'partnerPayouts/' + code));
+      const body = document.getElementById('payoutBody');
+      if (!paySnap.exists()) {
+        body.innerHTML = '<tr><td colspan="3" class="empty">No payouts logged yet</td></tr>';
+      } else {
+        const rows = Object.values(paySnap.val()).sort((a,b) => new Date(b.date) - new Date(a.date));
+        body.innerHTML = rows.map(r => `
+          <tr>
+            <td>${new Date(r.date).toLocaleDateString()}</td>
+            <td>₹${r.amount}</td>
+            <td>${r.note || '—'}</td>
+          </tr>
+        `).join('');
+      }
+    } catch (e) {
+      document.getElementById('payoutBody').innerHTML = '<tr><td colspan="3" class="empty">Could not load payout history</td></tr>';
+    }
+  }
+
+  document.getElementById('codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadPartner(); });
 </script>
 </body>
 </html>
