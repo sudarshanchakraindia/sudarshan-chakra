@@ -107,6 +107,24 @@
             }
         })();
 
+        // Resolves which partner (if any) a new registration should be
+        // credited to. A referral link always wins if present; otherwise,
+        // falls back to matching the entered pincode against partnerPincodes/
+        // — this is what makes City Channel Partners get credit for people
+        // in their area even if that person never used the referral link.
+        window.resolvePartnerAttribution = async function(pincode){
+            const refCode = localStorage.getItem('sc_partner_ref');
+            if (refCode) return refCode;
+            if (!pincode) return null;
+            try {
+                const snap = await get(ref(db, 'partnerPincodes/' + pincode));
+                return snap.exists() ? snap.val() : null;
+            } catch (e) {
+                console.warn('Pincode attribution lookup failed:', e);
+                return null;
+            }
+        };
+
         // ── QR scan location capture ──────────────────────────────────────
         // Only runs when the app was opened via a location-tracking QR link
         // (?qr=1). Doesn't block or redirect anything — the app loads
@@ -969,6 +987,11 @@
                     <label class="block text-gray-700 font-medium mb-2">Location/Address *</label>
                     <input type="text" id="providerLocation" required class="w-full px-4 py-2 border rounded-lg">
                 </div>
+
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">Pincode *</label>
+                    <input type="text" id="providerPincode" required maxlength="6" pattern="[0-9]{6}" placeholder="e.g. 342001" class="w-full px-4 py-2 border rounded-lg">
+                </div>
                 
                 <div class="mt-4">
                     <div class="flex justify-between items-center mb-2">
@@ -1082,6 +1105,11 @@
                 <div class="mt-4">
                     <label class="block text-gray-700 font-medium mb-2">Location/Address *</label>
                     <input type="text" id="seekerLocation" required class="w-full px-4 py-2 border rounded-lg">
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">Pincode *</label>
+                    <input type="text" id="seekerPincode" required maxlength="6" pattern="[0-9]{6}" placeholder="e.g. 342001" class="w-full px-4 py-2 border rounded-lg">
                 </div>
                 
                 <div class="mt-4">
@@ -5333,12 +5361,13 @@
                 workingHours: document.querySelector('input[name="workingHours"]:checked')?.value || 'mon-fri',
                 serviceArea: document.querySelector('input[name="serviceArea"]:checked')?.value || '10km',
                 location: document.getElementById('providerLocation').value,
+                pincode: document.getElementById('providerPincode').value.trim(),
                 lat: parseFloat(document.getElementById('providerLat').value),
                 lng: parseFloat(document.getElementById('providerLng').value),
                 rating: 4.0 + Math.random() * 0.5,
                 reviews: {},
                 ownerUid: firebaseUser?.uid || null,
-                referredByPartner: localStorage.getItem('sc_partner_ref') || null,
+                referredByPartner: await window.resolvePartnerAttribution(document.getElementById('providerPincode').value.trim()),
                 isActive:          true,
                 status: 'active',
                 registered: new Date().toISOString()
@@ -5391,10 +5420,11 @@
                 religion: document.getElementById('seekerReligion').value,
                 language: seekerLangs,
                 location: document.getElementById('seekerLocation').value,
+                pincode: document.getElementById('seekerPincode').value.trim(),
                 lat: parseFloat(document.getElementById('seekerLat').value),
                 lng: parseFloat(document.getElementById('seekerLng').value),
                 status: 'active', // active, paused, restricted
-                referredByPartner: localStorage.getItem('sc_partner_ref') || null,
+                referredByPartner: await window.resolvePartnerAttribution(document.getElementById('seekerPincode').value.trim()),
                 registered: new Date().toISOString()
             };
             
