@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudarshan Chakra India — Reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Inter:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#FFF8EC;
+    --night1:#1A0F2E;
+    --night2:#2B1245;
+    --saffron:#FF7A1A;
+    --saffron2:#FFB020;
+    --gold:#FFD166;
+    --maroon:#8B1E3F;
+    --dim:#C9B8DC;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; background:#0C0714;}
+  body{
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Noto Sans Devanagari','Inter',sans-serif;
+    overflow:hidden;
+  }
+  .stage{
+    position:relative;
+    width:min(92vw, 56.25vh);
+    height:min(160vw, 100vh);
+    aspect-ratio:9/16;
+    background:radial-gradient(120% 90% at 50% 0%, var(--night2), var(--night1) 60%, #0C0714 100%);
+    border-radius:28px;
+    overflow:hidden;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);
+  }
+
+  /* progress dots, story-style — width/transition driven entirely by JS now,
+     so each bar's fill duration matches how long its scene actually plays */
+  .progress{
+    position:absolute; top:18px; left:18px; right:18px;
+    display:flex; gap:6px; z-index:50;
+  }
+  .progress i{
+    flex:1; height:4px; border-radius:4px; background:rgba(255,255,255,.18); overflow:hidden;
+  }
+  .progress i b{
+    display:block; height:100%; width:0%; background:var(--gold); transform-origin:left;
+  }
+
+  /* Chakra motif - always spinning, subtle, in background */
+  .chakra{
+    position:absolute; left:50%; top:50%;
+    width:130vmin; height:130vmin;
+    transform:translate(-50%,-50%);
+    opacity:.10;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 30%, var(--saffron) 30.5%, var(--saffron) 31%, transparent 31.5%),
+      conic-gradient(from 0deg, var(--gold) 0 8deg, transparent 8deg 22.5deg);
+    background-repeat: no-repeat, repeat;
+    background-size: 100% 100%, 100% 100%;
+    border-radius:50%;
+    animation: spin 26s linear infinite;
+  }
+  @keyframes spin{ to{ transform:translate(-50%,-50%) rotate(360deg); } }
+
+  /* Scene visibility is now driven by JS toggling .active, so each scene can
+     stay on screen exactly as long as its voice line takes to finish —
+     nothing gets cut off mid-sentence. */
+  .scene{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:14% 9%;
+    opacity:0; transform:translateY(14px) scale(.98);
+    transition:opacity .45s ease, transform .45s ease;
+    pointer-events:none;
+  }
+  .scene.active{
+    opacity:1; transform:translateY(0) scale(1);
+    pointer-events:auto;
+  }
+
+  .eyebrow{
+    font-family:'Inter',sans-serif; font-weight:700; letter-spacing:.14em;
+    font-size:12px; color:var(--gold); text-transform:uppercase; margin-bottom:14px;
+  }
+  h1{
+    font-family:'Baloo 2',sans-serif; font-weight:800;
+    font-size:clamp(28px,7.6vw,40px); line-height:1.22; color:var(--ink);
+    text-shadow:0 2px 22px rgba(255,122,26,.35);
+  }
+  .sub{
+    margin-top:14px; font-size:clamp(14px,3.6vw,17px); color:var(--dim); line-height:1.55; font-weight:600;
+  }
+
+  .pill-row{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:22px; }
+  .pill{
+    font-size:13px; font-weight:700; color:var(--night1);
+    background:linear-gradient(135deg, var(--gold), var(--saffron2));
+    padding:8px 14px; border-radius:999px;
+  }
+
+  .stat-row{ display:flex; gap:22px; margin-top:26px; }
+  .stat b{ display:block; font-family:'Baloo 2',sans-serif; font-size:clamp(26px,7vw,34px); color:var(--saffron2); }
+  .stat span{ font-size:12px; color:var(--dim); font-weight:600; }
+
+  .badge-circle{
+    width:96px; height:96px; border-radius:50%;
+    background:linear-gradient(135deg, var(--saffron), var(--maroon));
+    display:flex; align-items:center; justify-content:center;
+    font-size:44px; margin-bottom:18px;
+    box-shadow:0 0 0 6px rgba(255,178,32,.18);
+  }
+
+  .cta-row{ display:flex; gap:12px; margin-top:26px; }
+  .btn{
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px;
+    padding:13px 20px; border-radius:14px;
+  }
+  .btn.primary{ background:linear-gradient(135deg,var(--saffron),var(--saffron2)); color:#2B1245; }
+  .btn.ghost{ border:2px solid var(--gold); color:var(--gold); }
+
+  .url{
+    position:absolute; bottom:22px; left:0; right:0; text-align:center;
+    font-family:'Inter',sans-serif; font-size:12px; color:var(--dim); letter-spacing:.03em;
+  }
+  .url b{ color:var(--gold); }
+
+  .mic-wrap{ position:relative; margin-bottom:18px; }
+  .mic{ font-size:54px; }
+  .mic-ring{
+    position:absolute; inset:-14px; border:2px solid var(--gold); border-radius:50%;
+    animation:pulse 1.6s ease-out infinite;
+  }
+  @keyframes pulse{ 0%{ transform:scale(.8); opacity:.9;} 100%{ transform:scale(1.5); opacity:0;} }
+
+  .lang-grid{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:280px; margin-top:20px; }
+  .lang-grid span{
+    font-size:12px; font-weight:700; color:var(--night1);
+    background:var(--ink); padding:6px 11px; border-radius:8px;
+  }
+
+  /* ── Host character — persistent illustrated "presenter" who talks
+     through the whole reel. Original cartoon design, not a real person. ── */
+  .host{
+    position:absolute; left:16px; bottom:56px; z-index:40;
+    display:flex; align-items:flex-end; gap:8px;
+  }
+  .host-face{
+    width:74px; height:74px; border-radius:50%;
+    background:linear-gradient(160deg, var(--gold), var(--saffron));
+    box-shadow:0 8px 22px rgba(0,0,0,.4), 0 0 0 3px rgba(255,209,102,.35);
+    position:relative; overflow:hidden;
+  }
+  /* skin */
+  .host-face .skin{
+    position:absolute; left:8%; top:14%; width:84%; height:80%;
+    background:#F2B98A; border-radius:48% 48% 46% 46% / 52% 52% 44% 44%;
+  }
+  /* pagdi / cap nod to the app's cultural identity */
+  .host-face .cap{
+    position:absolute; left:2%; top:-10%; width:96%; height:46%;
+    background:linear-gradient(120deg, var(--maroon), var(--saffron));
+    border-radius:50% 50% 20% 20%/60% 60% 20% 20%;
+  }
+  .host-face .eye{
+    position:absolute; top:44%; width:9px; height:9px; background:#241226; border-radius:50%;
+    animation: blink 4.2s ease-in-out infinite;
+  }
+  .host-face .eye.l{ left:26%; } .host-face .eye.r{ right:26%; }
+  @keyframes blink{ 0%,92%,100%{ transform:scaleY(1); } 95%{ transform:scaleY(.1); } }
+  .host-face .brow{
+    position:absolute; top:37%; width:12px; height:3px; background:#241226; border-radius:3px;
+  }
+  .host-face .brow.l{ left:23%; transform:rotate(-8deg); } .host-face .brow.r{ right:23%; transform:rotate(8deg); }
+  .host-face .mouth{
+    position:absolute; left:50%; bottom:16%; transform:translateX(-50%);
+    width:22px; height:8px; background:#7A2E2E; border-radius:0 0 10px 10px;
+    animation: talk .42s steps(1) infinite;
+  }
+  @keyframes talk{
+    0%   { height:4px;  width:20px; border-radius:8px; }
+    33%  { height:11px; width:16px; border-radius:0 0 10px 10px; }
+    66%  { height:7px;  width:22px; border-radius:0 0 10px 10px; }
+    100% { height:4px;  width:20px; border-radius:8px; }
+  }
+  .host-waves{ display:flex; align-items:flex-end; gap:3px; height:22px; margin-bottom:6px; }
+  .host-waves i{
+    width:3px; border-radius:2px; background:var(--gold);
+    animation: wave .9s ease-in-out infinite;
+  }
+  .host-waves i:nth-child(1){ height:8px;  animation-delay:0s; }
+  .host-waves i:nth-child(2){ height:18px; animation-delay:.12s; }
+  .host-waves i:nth-child(3){ height:12px; animation-delay:.24s; }
+  .host-waves i:nth-child(4){ height:20px; animation-delay:.36s; }
+  .host-waves i:nth-child(5){ height:9px;  animation-delay:.48s; }
+  @keyframes wave{ 0%,100%{ transform:scaleY(.5); } 50%{ transform:scaleY(1); } }
+
+  .voice-gate{
+    position:absolute; inset:0; z-index:100;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+    background:rgba(12,7,20,.88); text-align:center; padding:0 12%;
+    transition:opacity .3s ease;
+  }
+  .voice-gate.hide{ opacity:0; pointer-events:none; }
+  .voice-gate .vg-icon{ font-size:46px; }
+  .voice-gate p{ font-family:'Baloo 2',sans-serif; font-weight:700; color:var(--ink); font-size:18px; }
+  .voice-gate span{ font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+
+  <div class="stage" id="stage">
+    <div class="chakra"></div>
+    <div class="progress" id="progress"></div>
+
+    <!-- Tap-to-enable overlay — mobile browsers block audio until a user gesture -->
+    <div class="voice-gate" id="voiceGate">
+      <div class="vg-icon">🔊</div>
+      <p>आवाज़ के लिए टैप करें</p>
+      <span>फिर तुरंत स्क्रीन रिकॉर्डिंग शुरू करें</span>
+    </div>
+
+    <!-- Persistent talking host, present through every scene -->
+    <div class="host">
+      <div class="host-face">
+        <div class="cap"></div>
+        <div class="skin"></div>
+        <div class="brow l"></div><div class="brow r"></div>
+        <div class="eye l"></div><div class="eye r"></div>
+        <div class="mouth"></div>
+      </div>
+      <div class="host-waves"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <!-- Scene 1 — Hook -->
+    <section class="scene active">
+      <div class="badge-circle">🔱</div>
+      <div class="eyebrow">सुदर्शन चक्र इंडिया</div>
+      <h1>अब हर सेवा,<br>एक क्लिक दूर</h1>
+      <p class="sub">प्लंबर, इलेक्ट्रीशियन, ब्यूटीशियन, ट्यूटर — आपके आसपास के भरोसेमंद प्रदाता, अब आपकी जेब में</p>
+    </section>
+
+    <!-- Scene 2 — Scale / trust -->
+    <section class="scene">
+      <div class="eyebrow">भरोसे का नेटवर्क</div>
+      <h1>50+ सेवा श्रेणियाँ,<br>पूरे भारत में</h1>
+      <div class="stat-row">
+        <div class="stat"><b>50+</b><span>सेवा श्रेणियाँ</span></div>
+        <div class="stat"><b>✅</b><span>सत्यापित प्रदाता</span></div>
+        <div class="stat"><b>⭐</b><span>रेटेड और रिव्यूड</span></div>
+      </div>
+    </section>
+
+    <!-- Scene 3 — Languages -->
+    <section class="scene">
+      <div class="eyebrow">पूरे भारत की भाषा में</div>
+      <h1>12 भारतीय भाषाओं<br>में उपलब्ध</h1>
+      <div class="lang-grid">
+        <span>हिंदी</span><span>বাংলা</span><span>ગુજરાતી</span><span>मराठी</span>
+        <span>ಕನ್ನಡ</span><span>తెలుగు</span><span>മലയാളം</span><span>தமிழ்</span>
+        <span>ਪੰਜਾਬੀ</span><span>ଓଡ଼ିଆ</span><span>অসমীয়া</span><span>English</span>
+      </div>
+    </section>
+
+    <!-- Scene 4 — Verified/ID -->
+    <section class="scene">
+      <div class="badge-circle">🪪</div>
+      <div class="eyebrow">सुरक्षा पहले</div>
+      <h1>आधार सत्यापित<br>प्रदाता</h1>
+      <p class="sub">ID वेरिफाई करने पर प्रदाताओं को मिलता है ✅ Verified बैज — आप जानें कि किसे अपने घर बुला रहे हैं</p>
+    </section>
+
+    <!-- Scene 5 — RADHEY voice assistant -->
+    <section class="scene">
+      <div class="mic-wrap"><div class="mic-ring"></div><span class="mic">🎙️</span></div>
+      <div class="eyebrow">RADHEY — आवाज़ सहायिका</div>
+      <h1>बोलकर रजिस्टर करें,<br>पढ़ना लिखना ज़रूरी नहीं</h1>
+      <p class="sub">जो लिख-पढ़ नहीं सकते, उनके लिए भी सुदर्शन चक्र में जगह है — पूरी तरह हिंदी आवाज़ में</p>
+    </section>
+
+    <!-- Scene 6 — CTA -->
+    <section class="scene">
+      <div class="eyebrow">आज ही जुड़ें</div>
+      <h1>प्रदाता बनें या<br>सेवा खोजें</h1>
+      <div class="pill-row">
+        <div class="pill">🔧 काम पाएं</div>
+        <div class="pill">🏠 सेवा बुक करें</div>
+        <div class="pill">💰 वॉलेट पॉइंट्स</div>
+      </div>
+      <div class="cta-row">
+        <div class="btn primary">प्रदाता बनें</div>
+        <div class="btn ghost">सेवा खोजें</div>
+      </div>
+    </section>
+
+    <div class="url">🔱 <b>sudarshanchakraindia.github.io/sudarshan-chakra/</b></div>
+  </div>
+
+<script>
+  const scenes       = document.querySelectorAll('.scene');
+  const progressBars = document.querySelectorAll('.progress i b');
+
+  // Build one progress segment per scene
+  const barTrack = document.getElementById('progress');
+  scenes.forEach(() => {
+    const seg = document.createElement('i');
+    seg.appendChild(document.createElement('b'));
+    barTrack.appendChild(seg);
+  });
+  const bars = document.querySelectorAll('.progress i b');
+
+  const sceneLines = [
+    'सुदर्शन चक्र इंडिया में आपका स्वागत है। अब हर सेवा, एक क्लिक दूर।',
+    'पचास से ज़्यादा सेवा श्रेणियाँ, सत्यापित और रेटेड प्रदाताओं के साथ, पूरे भारत में।',
+    'बारह भारतीय भाषाओं में उपलब्ध। अपनी भाषा में इस्तेमाल करें।',
+    'हर प्रदाता का आधार सत्यापन होता है, ताकि आप सुरक्षित और भरोसे के साथ बुक करें।',
+    'राधे, हमारी आवाज़ सहायिका के साथ, बोलकर रजिस्टर करें। पढ़ना लिखना ज़रूरी नहीं।',
+    'आज ही जुड़ें। प्रदाता बनें या सेवा खोजें, दोनों बिल्कुल मुफ़्त हैं।'
+  ];
+  // Rough on-screen durations, used for the silent preview (before tap) and
+  // as a visual pace for the progress bar. In voice mode, the ACTUAL advance
+  // to the next scene is driven by the voice line finishing (onend), not by
+  // this timer — so speech is never cut off mid-sentence.
+  const defaultDurations = [4200, 4800, 3600, 5200, 4600, 4200];
+
+  let currentIndex   = 0;
+  let usingVoice      = false;
+  let advanceTimer    = null;
+
+  function showScene(i, durationMs){
+    scenes.forEach(s => s.classList.remove('active'));
+    scenes[i].classList.add('active');
+    currentIndex = i;
+    updateProgress(i, durationMs);
+  }
+
+  function updateProgress(i, durationMs){
+    bars.forEach((b, idx) => {
+      b.style.transition = 'none';
+      b.style.width = idx < i ? '100%' : '0%';
+    });
+    void bars[i].offsetWidth; // force reflow so the transition below actually runs
+    bars[i].style.transition = `width ${durationMs}ms linear`;
+    requestAnimationFrame(() => { bars[i].style.width = '100%'; });
+  }
+
+  function nextIndex(){ return (currentIndex + 1) % scenes.length; }
+
+  // ── Silent preview loop (runs before the voice is unlocked) ──
+  function scheduleSilentAdvance(){
+    clearTimeout(advanceTimer);
+    advanceTimer = setTimeout(() => {
+      if (usingVoice) return;
+      const ni = nextIndex();
+      showScene(ni, defaultDurations[ni]);
+      scheduleSilentAdvance();
+    }, defaultDurations[currentIndex]);
+  }
+  showScene(0, defaultDurations[0]);
+  scheduleSilentAdvance();
+
+  // ── Voice — waits for each line to actually finish before advancing ──
+  let hindiVoice = null;
+  function pickVoice(){
+    const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    hindiVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi')) || null;
+  }
+  if (window.speechSynthesis) {
+    speechSynthesis.onvoiceschanged = pickVoice;
+    pickVoice();
+  }
+
+  function speakAndAdvance(i){
+    clearTimeout(advanceTimer);
+    showScene(i, defaultDurations[i]);
+
+    if (!window.speechSynthesis) {
+      advanceTimer = setTimeout(() => speakAndAdvance(nextIndex()), defaultDurations[i]);
+      return;
+    }
+
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(sceneLines[i]);
+    u.lang = 'hi-IN';
+    if (hindiVoice) u.voice = hindiVoice;
+    u.rate = 0.98;
+
+    let moved = false;
+    const goNext = () => {
+      if (moved) return;
+      moved = true;
+      clearTimeout(advanceTimer);
+      speakAndAdvance(nextIndex());
+    };
+    u.onend   = goNext;
+    u.onerror = goNext;
+    // Safety net: if the browser never fires onend (happens occasionally),
+    // don't get stuck on one scene forever.
+    advanceTimer = setTimeout(goNext, Math.max(defaultDurations[i] * 2.2, 9000));
+
+    speechSynthesis.speak(u);
+  }
+
+  function startVoice(){
+    if (usingVoice || !window.speechSynthesis) return;
+    usingVoice = true;
+    clearTimeout(advanceTimer);
+    speak0Unlock();
+    speakAndAdvance(0);
+  }
+
+  // Near-silent first call unlocks audio on iOS Safari
+  function speak0Unlock(){
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      speechSynthesis.speak(u);
+    } catch(e){}
+  }
+
+  const gate = document.getElementById('voiceGate');
+  gate.addEventListener('click', () => {
+    startVoice();
+    gate.classList.add('hide');
+  });
+</script>
+</body>
+</html>
