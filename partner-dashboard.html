@@ -244,7 +244,11 @@
           </div>
           <div class="accordion-item">
             <div class="accordion-head" onclick="toggleAcc(this)">Where do I get marketing materials? <span>+</span></div>
-            <div class="accordion-body">See the "Marketing Materials" section below — download posters and share them as-is, they already include your referral QR code area for you to reference.</div>
+            <div class="accordion-body">See the "Share & Promote" section above — it generates a poster personalized with your own name, phone number, and your tracked QR code automatically. Use "Share My Poster" to send it directly to WhatsApp, Instagram, Facebook or any app on your phone, or "Download My Poster" to save it first. Generic (non-personalized) materials are also available further down if you prefer those.</div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-head" onclick="toggleAcc(this)">Does my shared QR/link still track location? <span>+</span></div>
+            <div class="accordion-body">Yes — every link and QR code generated for you (including the one baked into your personalized poster) includes location tracking automatically. This isn't for surveillance; it's what lets the central team confirm scans are genuinely coming from your assigned city, which protects your exclusivity and credibility as a partner.</div>
           </div>
         </div>
       </div>
@@ -258,13 +262,30 @@
         </table>
       </div>
 
+      <!-- Share & Promote -->
+      <div class="card">
+        <h2>📢 Share &amp; Promote</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">This poster is personalized just for you — your name, phone number, and your own tracked QR code are built in automatically.</p>
+        <canvas id="posterCanvas" style="display:none;"></canvas>
+        <img id="posterPreview" style="width:100%; border-radius:12px; margin-bottom:14px; display:none;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn primary" onclick="downloadPoster()">⬇️ Download My Poster</button>
+          <button class="btn primary" onclick="shareMyPoster()">📤 Share My Poster</button>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+          <a id="waShareBtn" class="btn ghost" target="_blank" style="text-decoration:none; display:inline-block;">💬 Share Link on WhatsApp</a>
+          <a id="fbShareBtn" class="btn ghost" target="_blank" style="text-decoration:none; display:inline-block;">📘 Share Link on Facebook</a>
+        </div>
+        <p style="font-size:12px; color:var(--dim); margin-top:10px;">Instagram doesn't support direct web sharing — tap "Share My Poster" on your phone and pick Instagram from the share menu that pops up.</p>
+      </div>
+
       <!-- Marketing materials -->
       <div class="card">
-        <h2>🎨 Marketing Materials</h2>
+        <h2>🎨 Other Marketing Materials</h2>
         <div class="material-list">
-          <a href="saarthi_promo_poster.png" target="_blank">🖼️ SAARTHI Promo Poster (image)</a>
+          <a href="saarthi_promo_poster.png" target="_blank">🖼️ SAARTHI Promo Poster (generic)</a>
           <a href="sudarshan_chakra_reel.html" target="_blank">🎬 Promo Reel (video script/animation)</a>
-          <a href="flyer_020426_updated_qr.jpg" target="_blank">📋 Community Flyer (image)</a>
+          <a href="flyer_020426_updated_qr.jpg" target="_blank">📋 Community Flyer (generic)</a>
         </div>
       </div>
 
@@ -334,6 +355,80 @@
     document.getElementById('calcResults').style.display = 'block';
   }
 
+  // ── Personalized poster: draws the partner's name, phone, and their own
+  // tracked QR code onto fixed zones of a shared template image. ──
+  const POSTER_TEXT_ZONE = { x: 60, y: 690, w: 960, h: 140 };
+  const POSTER_QR_ZONE   = { x: 340, y: 870, size: 400 };
+
+  async function renderPersonalizedPoster(partnerName, phone, refLink){
+    const canvas = document.getElementById('posterCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const baseImg = new Image();
+    await new Promise((resolve, reject) => {
+      baseImg.onload = resolve;
+      baseImg.onerror = reject;
+      baseImg.src = 'partner_poster_template.png';
+    });
+
+    canvas.width = baseImg.width;
+    canvas.height = baseImg.height;
+    ctx.drawImage(baseImg, 0, 0);
+
+    // Name + phone, centered in the fixed text zone
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8B1E3F';
+    ctx.font = "bold 40px 'Segoe UI', Arial, sans-serif";
+    ctx.fillText(partnerName || 'Channel Partner', canvas.width/2, POSTER_TEXT_ZONE.y + 95);
+    ctx.font = "30px 'Segoe UI', Arial, sans-serif";
+    ctx.fillText('📞 ' + (phone || '—'), canvas.width/2, POSTER_TEXT_ZONE.y + 132);
+
+    // QR code, drawn into the fixed QR zone
+    const qrHolder = document.createElement('div');
+    qrHolder.style.display = 'none';
+    document.body.appendChild(qrHolder);
+    new QRCode(qrHolder, { text: refLink, width: POSTER_QR_ZONE.size, height: POSTER_QR_ZONE.size });
+    await new Promise(r => setTimeout(r, 150)); // let QRCode.js finish rendering
+    const qrEl = qrHolder.querySelector('canvas') || qrHolder.querySelector('img');
+    if (qrEl.tagName === 'IMG' && !qrEl.complete) {
+      await new Promise(r => { qrEl.onload = r; });
+    }
+    ctx.drawImage(qrEl, POSTER_QR_ZONE.x, POSTER_QR_ZONE.y, POSTER_QR_ZONE.size, POSTER_QR_ZONE.size);
+    document.body.removeChild(qrHolder);
+
+    const preview = document.getElementById('posterPreview');
+    preview.src = canvas.toDataURL('image/png');
+    preview.style.display = 'block';
+  }
+
+  function downloadPoster(){
+    const canvas = document.getElementById('posterCanvas');
+    const link = document.createElement('a');
+    link.download = 'my-sudarshan-chakra-poster.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  function shareMyPoster(){
+    const canvas = document.getElementById('posterCanvas');
+    canvas.toBlob(async (blob) => {
+      const file = new File([blob], 'my-sudarshan-chakra-poster.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'Sudarshan Chakra India',
+            text: 'Join Sudarshan Chakra India — register as a service provider or seeker today!'
+          });
+        } catch (e) {
+          console.warn('Share cancelled or failed:', e);
+        }
+      } else {
+        alert('Direct sharing isn\'t supported on this browser. Please use "Download My Poster" instead and share it manually via WhatsApp, Instagram, etc.');
+      }
+    }, 'image/png');
+  }
+
   function toggleAcc(el){
     const body = el.nextElementSibling;
     const isOpen = body.classList.contains('open');
@@ -380,10 +475,19 @@
       'Appointed ' + (partner.appointedDate ? new Date(partner.appointedDate).toLocaleDateString() : '—');
 
     // Referral link + QR
-    const refLink = location.origin + location.pathname.replace('partner-dashboard.html', 'index.html') + '?ref=' + code;
+    // Includes BOTH ?ref (attribution) AND ?qr=1 (location capture) — every
+    // scan of a partner's QR/link logs a location, tagged with that partner's
+    // code, so you can verify they're actually promoting in their own city.
+    const refLink = location.origin + location.pathname.replace('partner-dashboard.html', 'index.html') + '?ref=' + code + '&qr=1&label=partner-' + code;
     document.getElementById('refLinkText').textContent = refLink;
     document.getElementById('qrcode').innerHTML = '';
     new QRCode(document.getElementById('qrcode'), { text: refLink, width: 180, height: 180 });
+
+    // Personalized poster + share buttons
+    renderPersonalizedPoster(partner.name, partner.phone, refLink).catch(e => console.warn('Poster render failed:', e));
+    const shareText = 'Join Sudarshan Chakra India — register as a service provider or seeker today! ' + refLink;
+    document.getElementById('waShareBtn').href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
+    document.getElementById('fbShareBtn').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(refLink);
 
     runCalculator();
 
