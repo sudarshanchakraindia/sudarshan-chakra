@@ -48,6 +48,8 @@
         <input id="newName" placeholder="Partner's full name">
         <label>City</label>
         <input id="newCity" placeholder="e.g. Jodhpur">
+        <label>Pincode (their city/area — used to auto-credit registrations even without their link)</label>
+        <input id="newPincode" placeholder="e.g. 342001" maxlength="6">
         <label>Referral Code (unique, becomes their login + link)</label>
         <input id="newCode" placeholder="e.g. JODHPUR01" style="text-transform:uppercase;">
         <button class="btn" onclick="addPartner()">Add Partner</button>
@@ -57,8 +59,8 @@
       <div class="card">
         <h2>👥 All Partners</h2>
         <table>
-          <thead><tr><th>Name</th><th>City</th><th>Code</th><th>Status</th><th>Providers</th><th></th></tr></thead>
-          <tbody id="partnerBody"><tr><td colspan="6">Loading…</td></tr></tbody>
+          <thead><tr><th>Name</th><th>City</th><th>Pincode</th><th>Code</th><th>Status</th><th>Providers</th><th></th></tr></thead>
+          <tbody id="partnerBody"><tr><td colspan="7">Loading…</td></tr></tbody>
         </table>
       </div>
 
@@ -116,23 +118,32 @@
   window.addPartner = async function(){
     const name = document.getElementById('newName').value.trim();
     const city = document.getElementById('newCity').value.trim();
+    const pincode = document.getElementById('newPincode').value.trim();
     const code = document.getElementById('newCode').value.trim().toUpperCase();
     const errEl = document.getElementById('addErr');
     errEl.style.color = '#c0392b';
     errEl.textContent = '';
-    if (!name || !city || !code) { errEl.textContent = 'All fields are required.'; return; }
+    if (!name || !city || !pincode || !code) { errEl.textContent = 'All fields are required.'; return; }
 
     try {
       const existing = await get(ref(db, 'partners/' + code));
       if (existing.exists()) { errEl.textContent = 'That code is already in use — pick a different one.'; return; }
 
+      const existingPincode = await get(ref(db, 'partnerPincodes/' + pincode));
+      if (existingPincode.exists() && existingPincode.val() !== code) {
+        errEl.textContent = 'That pincode is already assigned to partner ' + existingPincode.val() + '.';
+        return;
+      }
+
       await set(ref(db, 'partners/' + code), {
-        name, city, status: 'active',
+        name, city, pincode, status: 'active',
         appointedDate: new Date().toISOString()
       });
+      await set(ref(db, 'partnerPincodes/' + pincode), code);
 
       document.getElementById('newName').value = '';
       document.getElementById('newCity').value = '';
+      document.getElementById('newPincode').value = '';
       document.getElementById('newCode').value = '';
       errEl.style.color = '#1e7d1e';
       errEl.textContent = '✅ Partner added successfully.';
@@ -187,7 +198,7 @@
       const body = document.getElementById('partnerBody');
       const codes = Object.keys(partners);
       if (codes.length === 0) {
-        body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:16px;">No partners added yet</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:16px;">No partners added yet</td></tr>';
         return;
       }
       body.innerHTML = codes.map(code => {
@@ -197,6 +208,7 @@
           <tr>
             <td>${p.name || '—'}</td>
             <td>${p.city || '—'}</td>
+            <td>${p.pincode || '—'}</td>
             <td>${code}</td>
             <td>${p.status || 'active'}</td>
             <td>${count}</td>
@@ -209,7 +221,7 @@
       }).join('');
     } catch (e) {
       document.getElementById('partnerBody').innerHTML =
-        `<tr><td colspan="6" style="text-align:center; padding:16px; color:#c0392b;">❌ Load failed: ${e.code} — ${e.message}</td></tr>`;
+        `<tr><td colspan="7" style="text-align:center; padding:16px; color:#c0392b;">❌ Load failed: ${e.code} — ${e.message}</td></tr>`;
       console.error('loadPartners error:', e);
     }
   }
