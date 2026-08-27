@@ -77,6 +77,26 @@
   .material-list a:hover{ background:#FFE8CC; }
 
   .empty{ text-align:center; color:var(--dim); font-size:13px; padding:20px; }
+
+  /* ── Lead Tracker ── */
+  .lead-form{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .lead-form input{ padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+  .lead-form input.full{ grid-column:1 / -1; }
+  .lead-item{ border:1px solid #f0e4d4; border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .lead-item .lead-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+  .lead-item .lead-name{ font-weight:700; font-size:14px; }
+  .lead-item .lead-meta{ font-size:12px; color:var(--dim); margin-top:2px; }
+  .lead-status-select{ padding:6px 10px; border-radius:20px; font-size:12px; font-weight:700; border:none; cursor:pointer; }
+  .status-not_contacted{ background:#FFF3E0; color:#B8600A; }
+  .status-contacted{ background:#E3F2FD; color:#1565C0; }
+  .status-interested{ background:#F3E5F5; color:#7B1FA2; }
+  .status-registered{ background:#E8F5E9; color:#2E7D32; }
+  .status-not_interested{ background:#FFEBEE; color:#C62828; }
+  .lead-item .lead-actions{ margin-top:8px; }
+  .lead-item .lead-actions button{ font-size:11px; padding:5px 10px; border-radius:6px; border:none; cursor:pointer; background:#eee; color:var(--deep); }
+  .lead-filter-row{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .lead-filter-row button{ font-size:12px; padding:6px 12px; border-radius:20px; border:1px solid #f0e4d4; background:#fff; cursor:pointer; color:var(--dim); }
+  .lead-filter-row button.active{ background:var(--saffron); color:#fff; border-color:var(--saffron); }
 </style>
 </head>
 <body>
@@ -222,6 +242,32 @@
         </div>
       </div>
 
+      <!-- Lead Tracker -->
+      <div class="card">
+        <h2>🎯 My Leads</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Keep track of local businesses you've spotted — while walking around, browsing Google Maps, or hearing about them locally. Add them here so you don't lose track, and move them through the pipeline as you follow up.</p>
+
+        <div class="lead-form">
+          <input type="text" id="leadName" placeholder="Business / person name *">
+          <input type="text" id="leadCategory" placeholder="Category (e.g. Plumber)">
+          <input type="text" id="leadPhone" placeholder="Phone number">
+          <input type="text" id="leadArea" placeholder="Area / locality">
+          <input type="text" id="leadNotes" class="full" placeholder="Notes (optional)">
+        </div>
+        <button class="btn primary" style="width:100%;" onclick="addLead()">➕ Add Lead</button>
+        <p id="leadErr" style="color:#c0392b; font-size:12px; margin-top:6px;"></p>
+
+        <div class="lead-filter-row" style="margin-top:20px;">
+          <button class="active" data-filter="all" onclick="setLeadFilter('all')">All</button>
+          <button data-filter="not_contacted" onclick="setLeadFilter('not_contacted')">Not Contacted</button>
+          <button data-filter="contacted" onclick="setLeadFilter('contacted')">Contacted</button>
+          <button data-filter="interested" onclick="setLeadFilter('interested')">Interested</button>
+          <button data-filter="registered" onclick="setLeadFilter('registered')">Registered</button>
+        </div>
+
+        <div id="leadListEl"><div class="empty">Loading…</div></div>
+      </div>
+
       <!-- Training Videos -->
       <div class="card">
         <h2>🎥 Training Videos</h2>
@@ -307,7 +353,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -323,6 +369,8 @@
   window._pdb = db;
   window._pref = ref;
   window._pget = get;
+  window._pset = set;
+  window._ppush = push;
 
   // Auto-fill code from URL (?code=XYZ) if present, and auto-load.
   // Module scripts already execute after the DOM is parsed, so the plain
@@ -465,6 +513,7 @@
   }
 
   async function showDashboard(code, partner){
+    window._currentPartnerCode = code;
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
 
@@ -496,6 +545,7 @@
     document.getElementById('fbShareBtn').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(refLink);
 
     runCalculator();
+    loadLeads();
 
     // Training videos for partners
     try {
@@ -581,6 +631,123 @@
   }
 
   document.getElementById('codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadPartner(); });
+
+  // ── Lead Tracker ──
+  const LEAD_STATUS_LABEL = {
+    not_contacted: 'Not Contacted',
+    contacted: 'Contacted',
+    interested: 'Interested',
+    registered: 'Registered',
+    not_interested: 'Not Interested'
+  };
+  let leadFilter = 'all';
+  let leadsCache = {};
+
+  window.setLeadFilter = function(filter){
+    leadFilter = filter;
+    document.querySelectorAll('.lead-filter-row button').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+    renderLeads();
+  };
+
+  window.addLead = async function(){
+    const code = window._currentPartnerCode;
+    const name = document.getElementById('leadName').value.trim();
+    const category = document.getElementById('leadCategory').value.trim();
+    const phone = document.getElementById('leadPhone').value.trim();
+    const area = document.getElementById('leadArea').value.trim();
+    const notes = document.getElementById('leadNotes').value.trim();
+    const errEl = document.getElementById('leadErr');
+    errEl.textContent = '';
+
+    if (!name) { errEl.textContent = 'Please enter a business or person name.'; return; }
+
+    try {
+      const leadRef = window._ppush(window._pref(window._pdb, 'partnerLeads/' + code));
+      await window._pset(leadRef, {
+        businessName: name, category, phone, area, notes,
+        status: 'not_contacted',
+        addedAt: new Date().toISOString()
+      });
+      document.getElementById('leadName').value = '';
+      document.getElementById('leadCategory').value = '';
+      document.getElementById('leadPhone').value = '';
+      document.getElementById('leadArea').value = '';
+      document.getElementById('leadNotes').value = '';
+      loadLeads();
+    } catch (e) {
+      errEl.textContent = 'Could not save lead: ' + e.message;
+    }
+  };
+
+  window.updateLeadStatus = async function(leadId, newStatus){
+    const code = window._currentPartnerCode;
+    try {
+      await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId + '/status'), newStatus);
+      leadsCache[leadId].status = newStatus;
+      renderLeads();
+    } catch (e) {
+      alert('Could not update lead: ' + e.message);
+    }
+  };
+
+  window.removeLead = async function(leadId){
+    if (!confirm('Remove this lead from your list?')) return;
+    const code = window._currentPartnerCode;
+    try {
+      await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId), null);
+      delete leadsCache[leadId];
+      renderLeads();
+    } catch (e) {
+      alert('Could not remove lead: ' + e.message);
+    }
+  };
+
+  async function loadLeads(){
+    const code = window._currentPartnerCode;
+    const listEl = document.getElementById('leadListEl');
+    try {
+      const snap = await window._pget(window._pref(window._pdb, 'partnerLeads/' + code));
+      leadsCache = snap.exists() ? snap.val() : {};
+      renderLeads();
+    } catch (e) {
+      listEl.innerHTML = '<div class="empty">Could not load leads: ' + e.message + '</div>';
+    }
+  }
+
+  function renderLeads(){
+    const listEl = document.getElementById('leadListEl');
+    const ids = Object.keys(leadsCache).sort((a,b) => (leadsCache[b].addedAt||'').localeCompare(leadsCache[a].addedAt||''));
+    const filtered = leadFilter === 'all' ? ids : ids.filter(id => leadsCache[id].status === leadFilter);
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div class="empty">' + (ids.length === 0 ? 'No leads added yet — use the form above to add your first one.' : 'No leads match this filter.') + '</div>';
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(id => {
+      const l = leadsCache[id];
+      const statusOptions = Object.keys(LEAD_STATUS_LABEL).map(s =>
+        `<option value="${s}" ${s === l.status ? 'selected' : ''}>${LEAD_STATUS_LABEL[s]}</option>`
+      ).join('');
+      return `
+        <div class="lead-item">
+          <div class="lead-top">
+            <div>
+              <div class="lead-name">${l.businessName}</div>
+              <div class="lead-meta">${l.category || ''}${l.category && l.area ? ' · ' : ''}${l.area || ''}${l.phone ? ' · 📱 ' + l.phone : ''}</div>
+              ${l.notes ? `<div class="lead-meta" style="margin-top:4px;">${l.notes}</div>` : ''}
+            </div>
+            <select class="lead-status-select status-${l.status}" onchange="updateLeadStatus('${id}', this.value)">
+              ${statusOptions}
+            </select>
+          </div>
+          <div class="lead-actions">
+            <button onclick="removeLead('${id}')">🗑 Remove</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 </script>
 </body>
 </html>
