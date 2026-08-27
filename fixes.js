@@ -3157,3 +3157,90 @@ window.radheyStop = function() {
 
     console.log('[SC Phase1] Provisional registration gate loaded');
 })();
+
+/* =====================================================================
+ * PHASE 2: Login Modal Reset + Hung-OTP Safety Timeout
+ * ---------------------------------------------------------------------
+ * Bug: openLoginModal() never resets the "Send OTP" button back to its
+ * normal state. If a previous OTP attempt got stuck mid-flight (most
+ * commonly: the invisible reCAPTCHA silently fails to load — an ad
+ * blocker, or this domain missing from Firebase Auth's authorized
+ * domains list — so signInWithPhoneNumber() never resolves or rejects),
+ * the button is left disabled showing "Sending..." forever. Every time
+ * the modal is reopened after that, it still shows "Sending..." even
+ * with an empty phone field, because nothing ever resets it.
+ *
+ * Fix: (1) always reset the button to a clean state whenever the login
+ * modal is opened, and (2) wrap sendOTP() with a safety timeout so a
+ * hung request auto-recovers with a clear message instead of freezing
+ * the button permanently.
+ * ===================================================================== */
+(function scLoginModalResetFix(){
+    'use strict';
+
+    function resetSendOtpButton(){
+        const btn = document.getElementById('sendOtpBtn');
+        if (btn) { btn.disabled = false; btn.textContent = 'Send OTP'; }
+    }
+
+    function patchOpenLoginModal(){
+        if (typeof window.openLoginModal !== 'function') return false;
+        if (window.openLoginModal.__scResetPatched) return true;
+        const orig = window.openLoginModal;
+        window.openLoginModal = function(){
+            const result = orig.apply(this, arguments);
+            resetSendOtpButton();
+            return result;
+        };
+        window.openLoginModal.__scResetPatched = true;
+        return true;
+    }
+
+    function patchSendOTP(){
+        if (typeof window.sendOTP !== 'function') return false;
+        if (window.sendOTP.__scTimeoutPatched) return true;
+        const orig = window.sendOTP;
+        window.sendOTP = async function(){
+            const btn = document.getElementById('sendOtpBtn');
+            let settled = false;
+            const safety = setTimeout(function(){
+                if (settled) return;
+                settled = true;
+                if (btn) { btn.disabled = false; btn.textContent = 'Send OTP'; }
+                alert('The OTP request is taking too long — this can happen if a security check failed to load. Please try again. If it keeps happening, try disabling any ad blocker or switching networks.');
+            }, 20000);
+            try {
+                const result = await orig.apply(this, arguments);
+                settled = true;
+                clearTimeout(safety);
+                return result;
+            } catch(e) {
+                settled = true;
+                clearTimeout(safety);
+                throw e;
+            }
+        };
+        window.sendOTP.__scTimeoutPatched = true;
+        return true;
+    }
+
+    function scInit(){
+        const ok1 = patchOpenLoginModal();
+        const ok2 = patchSendOTP();
+        return ok1 && ok2;
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scInit);
+    } else {
+        scInit();
+    }
+    let tries = 0;
+    const iv = setInterval(function(){
+        tries++;
+        const done = scInit();
+        if (done || tries > 40) clearInterval(iv);
+    }, 250);
+
+    console.log('[SC Phase2] Login modal reset/timeout fix loaded');
+})();
