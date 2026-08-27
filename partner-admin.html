@@ -3,85 +3,155 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Manage City Channel Partners — Admin</title>
+<title>Partner Agreement — Sudarshan Chakra India</title>
 <style>
-  :root{ --saffron:#FF6B00; --gold:#F5A623; --deep:#1A1206; }
+  :root{ --saffron:#FF6B00; --gold:#F5A623; --deep:#1A1206; --soft:#7C4A1E; --cream:#FFF8F0; }
   *{box-sizing:border-box;}
-  body{ margin:0; font-family:'Segoe UI',sans-serif; background:#FFF8F0; color:var(--deep); }
-  header{ background:linear-gradient(135deg,#1A0A00,#3D1A00); color:#fff; padding:16px 20px; }
-  .wrap{ padding:20px; max-width:900px; margin:0 auto; }
-  #gate{ max-width:340px; margin:80px auto; text-align:center; }
-  #gate input{ width:100%; padding:12px; font-size:15px; border:1px solid #ddd; border-radius:8px; margin:12px 0; }
-  #gate button{ width:100%; padding:12px; font-size:15px; font-weight:700; color:#fff; background:var(--saffron); border:none; border-radius:8px; cursor:pointer; }
-  #gate p.err{ color:#c0392b; font-size:13px; }
-  #app{ display:none; }
-  .card{ background:#fff; border-radius:12px; padding:18px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
-  .card h2{ font-size:15px; margin:0 0 12px; }
-  label{ display:block; font-size:12px; font-weight:700; color:#7C4A1E; margin-bottom:4px; margin-top:10px; }
-  input, select{ width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
-  .btn{ margin-top:14px; padding:10px 18px; border-radius:8px; border:none; font-weight:700; color:#fff; background:var(--saffron); cursor:pointer; }
-  table{ width:100%; border-collapse:collapse; font-size:13px; }
-  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid #f0e4d4; }
-  th{ background:#FFF3E0; }
-  .row-actions button{ font-size:11px; padding:4px 8px; border-radius:6px; border:none; cursor:pointer; margin-right:4px; }
-  .link-btn{ background:#e0e0e0; }
-  .payout-btn{ background:#dcf7dc; }
+  body{ margin:0; font-family:'Segoe UI',sans-serif; background:var(--cream); color:var(--deep); line-height:1.6; }
+  header{ background:linear-gradient(135deg,#1A0A00,#3D1A00); color:#fff; padding:20px; text-align:center; }
+  header img{ width:56px; height:56px; border-radius:50%; margin-bottom:8px; }
+  .wrap{ max-width:680px; margin:0 auto; padding:24px 18px 80px; }
+  .card{ background:#fff; border-radius:14px; padding:24px; margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+  h1{ font-size:20px; margin:0 0 4px; }
+  h2{ font-size:16px; margin:0 0 12px; }
+  .terms-box{ max-height:340px; overflow-y:auto; border:1px solid #eee; border-radius:10px; padding:16px; font-size:13px; background:#FFFDF9; }
+  .terms-box h3{ font-size:14px; margin:16px 0 6px; }
+  .terms-box h3:first-child{ margin-top:0; }
+  .terms-box p, .terms-box li{ font-size:13px; color:#333; }
+  label{ display:block; font-size:13px; font-weight:700; color:var(--soft); margin-bottom:6px; margin-top:14px; }
+  input[type=text], input[type=file]{ width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+  .consent-row{ display:flex; align-items:flex-start; gap:10px; margin-top:16px; background:#FFF3E0; padding:14px; border-radius:10px; }
+  .consent-row input{ margin-top:3px; }
+  .doc-item{ margin-bottom:16px; }
+  .doc-item .file-status{ font-size:12px; margin-top:4px; }
+  .file-status.ok{ color:#2E7D32; }
+  .file-status.pending{ color:#B8600A; }
+  .btn{ width:100%; padding:14px; font-size:15px; font-weight:700; color:#fff; background:var(--saffron); border:none; border-radius:10px; cursor:pointer; margin-top:20px; }
+  .btn:disabled{ background:#ccc; cursor:not-allowed; }
+  .msg{ font-size:13px; margin-top:10px; }
+  .msg.err{ color:#c0392b; }
+  .msg.ok{ color:#1e7d1e; }
+  #invalidView, #thankYouView{ display:none; text-align:center; padding:60px 20px; }
 </style>
 </head>
 <body>
 
-  <div id="gate">
-    <h1>🔱 Admin Login</h1>
-    <p style="color:#7C4A1E; font-size:13px;">Same password as your main admin dashboard</p>
-    <input type="password" id="pw" placeholder="Admin password">
-    <button onclick="tryLogin()">Manage Partners</button>
-    <p class="err" id="err"></p>
+<header>
+  <img src="icon-512.png" alt="Sudarshan Chakra India">
+  <h1 style="color:#fff;">City Channel Partner Agreement</h1>
+  <p style="font-size:13px; opacity:0.85; margin:4px 0 0;">Sudarshan Chakra India — SAARTHI</p>
+</header>
+
+<div class="wrap">
+
+  <div id="loadingView" style="text-align:center; padding:60px 20px;">Loading your application…</div>
+
+  <div id="invalidView">
+    <h2>⚠️ Link not valid</h2>
+    <p style="color:var(--soft);">This link may have expired, already been used, or is incorrect. Please contact us if you believe this is a mistake.</p>
   </div>
 
-  <div id="app">
-    <header><h1 style="margin:0; font-size:18px;">🔱 City Channel Partners</h1></header>
-    <div class="wrap">
+  <div id="formView" style="display:none;">
+    <div class="card">
+      <h2>👋 Hello, <span id="applicantName"></span></h2>
+      <p style="font-size:13px; color:var(--soft);">City: <span id="applicantCity"></span> · Pincode: <span id="applicantPincode"></span></p>
+      <p style="font-size:13px;">Please read the agreement below carefully, give your consent, and upload the required documents to complete your City Channel Partner application.</p>
+    </div>
 
-      <div class="card">
-        <h2>➕ Add New Partner</h2>
-        <label>Name</label>
-        <input id="newName" placeholder="Partner's full name">
-        <label>City</label>
-        <input id="newCity" placeholder="e.g. Jodhpur">
-        <label>Phone Number (shown on their marketing materials)</label>
-        <input id="newPhone" placeholder="e.g. 9251115013">
-        <label>Pincode (their city/area — used to auto-credit registrations even without their link)</label>
-        <input id="newPincode" placeholder="e.g. 342001" maxlength="6">
-        <label>Referral Code (unique, becomes their login + link)</label>
-        <input id="newCode" placeholder="e.g. JODHPUR01" style="text-transform:uppercase;">
-        <button class="btn" onclick="addPartner()">Add Partner</button>
-        <p id="addErr" style="color:#c0392b; font-size:13px; margin-top:8px;"></p>
+    <div class="card">
+      <h2>📜 Agreement & Terms and Conditions</h2>
+      <div class="terms-box">
+        <h3>1. Appointment</h3>
+        <p>Sudarshan Chakra India ("the Company") appoints the applicant as a non-exclusive City Channel Partner ("Partner") for the city and pincode(s) specified in this application, subject to the terms below.</p>
+
+        <h3>2. Role & Responsibilities</h3>
+        <ul>
+          <li>Onboard genuine service providers and seekers onto the SAARTHI platform within the assigned territory.</li>
+          <li>Represent the Company honestly and professionally at all times.</li>
+          <li>Not make promises, guarantees, or commitments on behalf of the Company beyond what is officially communicated.</li>
+          <li>Not collect any payment directly from providers or seekers on behalf of the Company.</li>
+        </ul>
+
+        <h3>3. Revenue Share</h3>
+        <p>The Partner shall earn a percentage share of the seeker convenience fee and provider membership upgrades attributable to their referral code or assigned pincode, as communicated separately by the Company from time to time. Payouts are subject to verification and are made periodically at the Company's discretion.</p>
+
+        <h3>4. TDS & Taxation</h3>
+        <p>Payouts to the Partner may be subject to Tax Deducted at Source (TDS) as per applicable Indian tax law. The Partner's PAN is collected for this purpose. The Partner is responsible for their own tax filings and compliance.</p>
+
+        <h3>5. Term & Termination</h3>
+        <p>This arrangement may be terminated by either party at any time, with or without cause, by written notice (including email or WhatsApp). Upon termination, the Partner's referral code and pincode attribution will be deactivated, and any pending verified payouts will be settled.</p>
+
+        <h3>6. Confidentiality</h3>
+        <p>The Partner agrees to keep confidential any non-public business information, pricing, or user data shared by the Company, and not to misuse or share such information with third parties.</p>
+
+        <h3>7. Independent Relationship</h3>
+        <p>The Partner is an independent contractor and not an employee, agent, or legal representative of the Company. Nothing in this agreement creates a partnership, joint venture, or employment relationship.</p>
+
+        <h3>8. Data & Documents</h3>
+        <p>Identity documents (Aadhaar, PAN, photo) are collected solely for verification and TDS compliance purposes and will be handled in accordance with the Company's data protection practices.</p>
+
+        <h3>9. Dispute Resolution</h3>
+        <p>Any disputes arising from this agreement shall first be attempted to be resolved amicably, failing which they shall be subject to the jurisdiction of the courts at Jodhpur, Rajasthan.</p>
+
+        <p style="margin-top:16px; font-style:italic; color:#888;">This is a standard template agreement. The Company reserves the right to update these terms; material changes will be communicated to active Partners.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🪪 Upload Identity Documents</h2>
+      <p style="font-size:13px; color:var(--soft); margin-top:-6px;">Clear photos or scans. Max 8MB each. JPG/PNG only.</p>
+
+      <div class="doc-item">
+        <label>Aadhaar Card — Front *</label>
+        <input type="file" accept="image/*" id="docAadhaarFront" onchange="handleFile('aadhaarFront', this)">
+        <div class="file-status pending" id="statusAadhaarFront">Not uploaded</div>
+      </div>
+      <div class="doc-item">
+        <label>Aadhaar Card — Back *</label>
+        <input type="file" accept="image/*" id="docAadhaarBack" onchange="handleFile('aadhaarBack', this)">
+        <div class="file-status pending" id="statusAadhaarBack">Not uploaded</div>
+      </div>
+      <div class="doc-item">
+        <label>PAN Card *</label>
+        <input type="file" accept="image/*" id="docPan" onchange="handleFile('panCard', this)">
+        <div class="file-status pending" id="statusPanCard">Not uploaded</div>
+      </div>
+      <div class="doc-item">
+        <label>Your Photo *</label>
+        <input type="file" accept="image/*" id="docPhoto" onchange="handleFile('photo', this)">
+        <div class="file-status pending" id="statusPhoto">Not uploaded</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>✍️ Consent</h2>
+      <label>Type your full name to digitally sign *</label>
+      <input type="text" id="signatureName" placeholder="Your full name">
+
+      <div class="consent-row">
+        <input type="checkbox" id="consentCheck">
+        <label style="margin:0; font-weight:400; color:var(--deep);" for="consentCheck">
+          I have read and understood the Agreement & Terms and Conditions above, and I voluntarily agree to them. I confirm that the documents uploaded are genuine and belong to me.
+        </label>
       </div>
 
-      <div class="card">
-        <h2>👥 All Partners</h2>
-        <table>
-          <thead><tr><th>Name</th><th>City</th><th>Pincode</th><th>Code</th><th>Status</th><th>Providers</th><th></th></tr></thead>
-          <tbody id="partnerBody"><tr><td colspan="7">Loading…</td></tr></tbody>
-        </table>
-      </div>
-
-      <div class="card" id="payoutCard" style="display:none;">
-        <h2>💰 Log Payout — <span id="payoutForName"></span></h2>
-        <label>Amount (₹)</label>
-        <input id="payoutAmount" type="number">
-        <label>Note</label>
-        <input id="payoutNote" placeholder="e.g. September convenience fee share">
-        <button class="btn" onclick="submitPayout()">Log Payout</button>
-      </div>
-
+      <button class="btn" id="submitBtn" onclick="submitApplication()">Submit Agreement & Documents</button>
+      <p class="msg err" id="formMsg"></p>
     </div>
   </div>
 
+  <div id="thankYouView">
+    <div style="font-size:52px; margin-bottom:16px;">🙏</div>
+    <h2>Thank You!</h2>
+    <p style="color:var(--soft);">Your agreement and documents have been submitted successfully. Our team will review everything and get back to you shortly with your Partner Dashboard access.</p>
+  </div>
+
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -92,145 +162,101 @@
     messagingSenderId: "357210144411",
     appId: "1:357210144411:web:b440a94cf78b04b58b103e"
   };
-  const app  = initializeApp(firebaseConfig);
-  const db   = getDatabase(app);
-  const auth = getAuth(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const storage = getStorage(app);
 
-  const ADMIN_PASSWORD_KEY = 'sc_admin_password';
-  const ADMIN_EMAIL = 'sudarshanchakraindia@gmail.com';
-  const ADMIN_FIREBASE_PASSWORD = 'MyActualPassword144@Crore';
+  const params = new URLSearchParams(location.search);
+  const appId = params.get('app');
+  const uploadedFiles = {}; // docType -> File object
+  const uploadedUrls = {};  // docType -> download URL (after actual upload on submit)
 
-  window.tryLogin = async function(){
-    const entered  = document.getElementById('pw').value;
-    const expected = localStorage.getItem(ADMIN_PASSWORD_KEY) || 'admin123';
-    if (entered !== expected){
-      document.getElementById('err').textContent = 'Incorrect password.';
-      return;
-    }
+  async function init(){
+    if (!appId) return showInvalid();
     try {
-      await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_FIREBASE_PASSWORD);
-      document.getElementById('gate').style.display = 'none';
-      document.getElementById('app').style.display  = 'block';
-      loadPartners();
+      const snap = await get(ref(db, 'partnerApplications/' + appId));
+      if (!snap.exists()) return showInvalid();
+      const data = snap.val();
+      if (!['agreement_sent','docs_submitted'].includes(data.status)) return showInvalid();
+
+      document.getElementById('applicantName').textContent = data.fullName || '';
+      document.getElementById('applicantCity').textContent = data.city || '';
+      document.getElementById('applicantPincode').textContent = data.pincode || '';
+
+      document.getElementById('loadingView').style.display = 'none';
+      document.getElementById('formView').style.display = 'block';
     } catch (e) {
-      document.getElementById('err').textContent = 'Firebase sign-in failed: ' + e.message;
-    }
-  };
-
-  window.addPartner = async function(){
-    const name = document.getElementById('newName').value.trim();
-    const city = document.getElementById('newCity').value.trim();
-    const phone = document.getElementById('newPhone').value.trim();
-    const pincode = document.getElementById('newPincode').value.trim();
-    const code = document.getElementById('newCode').value.trim().toUpperCase();
-    const errEl = document.getElementById('addErr');
-    errEl.style.color = '#c0392b';
-    errEl.textContent = '';
-    if (!name || !city || !phone || !pincode || !code) { errEl.textContent = 'All fields are required.'; return; }
-
-    try {
-      const existing = await get(ref(db, 'partners/' + code));
-      if (existing.exists()) { errEl.textContent = 'That code is already in use — pick a different one.'; return; }
-
-      const existingPincode = await get(ref(db, 'partnerPincodes/' + pincode));
-      if (existingPincode.exists() && existingPincode.val() !== code) {
-        errEl.textContent = 'That pincode is already assigned to partner ' + existingPincode.val() + '.';
-        return;
-      }
-
-      await set(ref(db, 'partners/' + code), {
-        name, city, phone, pincode, status: 'active',
-        appointedDate: new Date().toISOString()
-      });
-      await set(ref(db, 'partnerPincodes/' + pincode), code);
-
-      document.getElementById('newName').value = '';
-      document.getElementById('newCity').value = '';
-      document.getElementById('newPhone').value = '';
-      document.getElementById('newPincode').value = '';
-      document.getElementById('newCode').value = '';
-      errEl.style.color = '#1e7d1e';
-      errEl.textContent = '✅ Partner added successfully.';
-      loadPartners();
-    } catch (e) {
-      errEl.textContent = '❌ Save failed: ' + e.code + ' — ' + e.message;
-      console.error('addPartner error:', e);
-    }
-  };
-
-  window.copyPartnerLink = function(code){
-    const link = location.origin + location.pathname.replace('partner-admin.html', 'partner-dashboard.html') + '?code=' + code;
-    navigator.clipboard.writeText(link).then(() => alert('✅ Dashboard link copied:\n' + link));
-  };
-
-  let payoutTargetCode = null;
-  window.openPayout = function(code, name){
-    payoutTargetCode = code;
-    document.getElementById('payoutForName').textContent = name + ' (' + code + ')';
-    document.getElementById('payoutCard').style.display = 'block';
-    document.getElementById('payoutCard').scrollIntoView({ behavior:'smooth' });
-  };
-
-  window.submitPayout = async function(){
-    if (!payoutTargetCode) return;
-    const amount = Number(document.getElementById('payoutAmount').value);
-    const note   = document.getElementById('payoutNote').value.trim();
-    if (!amount) { alert('Enter an amount.'); return; }
-    try {
-      await push(ref(db, 'partnerPayouts/' + payoutTargetCode), {
-        amount, note, date: new Date().toISOString()
-      });
-      document.getElementById('payoutAmount').value = '';
-      document.getElementById('payoutNote').value = '';
-      document.getElementById('payoutCard').style.display = 'none';
-      alert('✅ Payout logged.');
-    } catch (e) {
-      alert('❌ Save failed: ' + e.code + ' — ' + e.message);
-      console.error('submitPayout error:', e);
-    }
-  };
-
-  async function loadPartners(){
-    try {
-      const [partnersSnap, providersSnap] = await Promise.all([
-        get(ref(db, 'partners')),
-        get(ref(db, 'providers'))
-      ]);
-      const partners = partnersSnap.exists() ? partnersSnap.val() : {};
-      const allProviders = providersSnap.exists() ? Object.values(providersSnap.val()) : [];
-
-      const body = document.getElementById('partnerBody');
-      const codes = Object.keys(partners);
-      if (codes.length === 0) {
-        body.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:16px;">No partners added yet</td></tr>';
-        return;
-      }
-      body.innerHTML = codes.map(code => {
-        const p = partners[code];
-        const count = allProviders.filter(pr => pr.referredByPartner === code).length;
-        return `
-          <tr>
-            <td>${p.name || '—'}</td>
-            <td>${p.city || '—'}</td>
-            <td>${p.pincode || '—'}</td>
-            <td>${code}</td>
-            <td>${p.status || 'active'}</td>
-            <td>${count}</td>
-            <td class="row-actions">
-              <button class="link-btn" onclick="copyPartnerLink('${code}')">Copy Link</button>
-              <button class="payout-btn" onclick="openPayout('${code}','${(p.name||'').replace(/'/g,"")}')">Log Payout</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    } catch (e) {
-      document.getElementById('partnerBody').innerHTML =
-        `<tr><td colspan="7" style="text-align:center; padding:16px; color:#c0392b;">❌ Load failed: ${e.code} — ${e.message}</td></tr>`;
-      console.error('loadPartners error:', e);
+      console.error(e);
+      showInvalid();
     }
   }
 
-  document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+  function showInvalid(){
+    document.getElementById('loadingView').style.display = 'none';
+    document.getElementById('invalidView').style.display = 'block';
+  }
+
+  window.handleFile = function(docType, input){
+    const statusIds = { aadhaarFront:'statusAadhaarFront', aadhaarBack:'statusAadhaarBack', panCard:'statusPanCard', photo:'statusPhoto' };
+    const statusEl = document.getElementById(statusIds[docType]);
+    const file = input.files[0];
+    if (!file) { uploadedFiles[docType] = null; statusEl.textContent = 'Not uploaded'; statusEl.className = 'file-status pending'; return; }
+    if (file.size > 8 * 1024 * 1024) {
+      statusEl.textContent = 'File too large (max 8MB)';
+      statusEl.className = 'file-status pending';
+      input.value = '';
+      uploadedFiles[docType] = null;
+      return;
+    }
+    uploadedFiles[docType] = file;
+    statusEl.textContent = '✓ Selected: ' + file.name;
+    statusEl.className = 'file-status ok';
+  };
+
+  window.submitApplication = async function(){
+    const msg = document.getElementById('formMsg');
+    msg.textContent = '';
+    const sigName = document.getElementById('signatureName').value.trim();
+    const consented = document.getElementById('consentCheck').checked;
+    const required = ['aadhaarFront','aadhaarBack','panCard','photo'];
+    const missing = required.filter(k => !uploadedFiles[k]);
+
+    if (!sigName) { msg.textContent = 'Please type your full name to sign.'; return; }
+    if (!consented) { msg.textContent = 'Please check the consent box to continue.'; return; }
+    if (missing.length) { msg.textContent = 'Please upload all required documents: ' + missing.join(', '); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Uploading documents…';
+
+    try {
+      for (const docType of required) {
+        const file = uploadedFiles[docType];
+        const path = `partnerDocs/${appId}/${docType}_${Date.now()}_${file.name}`;
+        const storageRef = sref(storage, path);
+        await uploadBytes(storageRef, file);
+        uploadedUrls[docType] = await getDownloadURL(storageRef);
+      }
+
+      btn.textContent = 'Saving…';
+      await set(ref(db, 'partnerApplications/' + appId + '/idDocs'), uploadedUrls);
+      await set(ref(db, 'partnerApplications/' + appId + '/consentGiven'), true);
+      await set(ref(db, 'partnerApplications/' + appId + '/consentSignatureName'), sigName);
+      await set(ref(db, 'partnerApplications/' + appId + '/consentGivenAt'), new Date().toISOString());
+      await set(ref(db, 'partnerApplications/' + appId + '/status'), 'docs_submitted');
+      await set(ref(db, 'partnerApplications/' + appId + '/docsSubmittedAt'), new Date().toISOString());
+
+      document.getElementById('formView').style.display = 'none';
+      document.getElementById('thankYouView').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      msg.textContent = 'Submission failed: ' + e.message + '. Please try again.';
+      btn.disabled = false;
+      btn.textContent = 'Submit Agreement & Documents';
+    }
+  };
+
+  init();
 </script>
 </body>
 </html>
