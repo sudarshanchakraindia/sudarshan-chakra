@@ -94,6 +94,15 @@
   .status-not_interested{ background:#FFEBEE; color:#C62828; }
   .lead-item .lead-actions{ margin-top:8px; }
   .lead-item .lead-actions button{ font-size:11px; padding:5px 10px; border-radius:6px; border:none; cursor:pointer; background:#eee; color:var(--deep); }
+
+  /* Marketing & Client Materials */
+  .material-item{ display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid #f0e4d4; border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .material-item .material-name{ font-weight:700; font-size:14px; }
+  .material-item .material-desc{ font-size:12px; color:var(--dim); margin-top:2px; }
+  .material-item .material-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .material-item .material-actions a{ font-size:12px; padding:7px 12px; border-radius:6px; text-decoration:none; font-weight:700; white-space:nowrap; }
+  .material-open{ background:var(--saffron); color:#fff; }
+  .material-share{ background:#25D366; color:#fff; }
   .lead-filter-row{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
   .lead-filter-row button{ font-size:12px; padding:6px 12px; border-radius:20px; border:1px solid #f0e4d4; background:#fff; cursor:pointer; color:var(--dim); }
   .lead-filter-row button.active{ background:var(--saffron); color:#fff; border-color:var(--saffron); }
@@ -249,8 +258,12 @@
 
         <div class="lead-form">
           <input type="text" id="leadName" placeholder="Business / person name *">
+          <select id="leadType" style="padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+            <option value="provider">Lead type: Provider</option>
+            <option value="seeker">Lead type: Seeker</option>
+          </select>
           <input type="text" id="leadCategory" placeholder="Category (e.g. Plumber)">
-          <input type="text" id="leadPhone" placeholder="Phone number">
+          <input type="text" id="leadPhone" placeholder="Phone number (needed to WhatsApp them)">
           <input type="text" id="leadArea" placeholder="Area / locality">
           <input type="text" id="leadNotes" class="full" placeholder="Notes (optional)">
         </div>
@@ -262,16 +275,30 @@
           <button data-filter="not_contacted" onclick="setLeadFilter('not_contacted')">Not Contacted</button>
           <button data-filter="contacted" onclick="setLeadFilter('contacted')">Contacted</button>
           <button data-filter="interested" onclick="setLeadFilter('interested')">Interested</button>
-          <button data-filter="registered" onclick="setLeadFilter('registered')">Registered</button>
+          <button data-filter="not_interested" onclick="setLeadFilter('not_interested')">Not Interested</button>
         </div>
 
         <div id="leadListEl"><div class="empty">Loading…</div></div>
+      </div>
+
+      <!-- My Clients (converted / registered leads) -->
+      <div class="card">
+        <h2>🤝 My Clients</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Leads that have registered move here automatically. Stay in touch — a quick check-in message goes a long way.</p>
+        <div id="clientListEl"><div class="empty">Loading…</div></div>
       </div>
 
       <!-- Training Videos -->
       <div class="card">
         <h2>🎥 Training Videos</h2>
         <div id="trainingVideoList"><div class="empty">Loading…</div></div>
+      </div>
+
+      <!-- Marketing & Client Materials -->
+      <div class="card">
+        <h2>📄 Marketing & Client Materials</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Ready-to-share documents for the providers and seekers you onboard — download, print, or share the link directly on WhatsApp.</p>
+        <div id="materialsList"></div>
       </div>
 
       <!-- FAQ / education -->
@@ -537,6 +564,9 @@
     document.getElementById('refLinkText').textContent = refLink;
     document.getElementById('qrcode').innerHTML = '';
     new QRCode(document.getElementById('qrcode'), { text: refLink, width: 180, height: 180 });
+    window._currentRefLink = refLink;
+    window._currentPartnerName = partner.name || '';
+    window._currentPartnerCity = partner.city || '';
 
     // Personalized poster + share buttons
     renderPersonalizedPoster(partner.name, partner.phone, refLink).catch(e => console.warn('Poster render failed:', e));
@@ -546,6 +576,7 @@
 
     runCalculator();
     loadLeads();
+    renderMaterials();
 
     // Training videos for partners
     try {
@@ -652,6 +683,7 @@
   window.addLead = async function(){
     const code = window._currentPartnerCode;
     const name = document.getElementById('leadName').value.trim();
+    const type = document.getElementById('leadType').value;
     const category = document.getElementById('leadCategory').value.trim();
     const phone = document.getElementById('leadPhone').value.trim();
     const area = document.getElementById('leadArea').value.trim();
@@ -664,11 +696,12 @@
     try {
       const leadRef = window._ppush(window._pref(window._pdb, 'partnerLeads/' + code));
       await window._pset(leadRef, {
-        businessName: name, category, phone, area, notes,
+        businessName: name, type, category, phone, area, notes,
         status: 'not_contacted',
         addedAt: new Date().toISOString()
       });
       document.getElementById('leadName').value = '';
+      document.getElementById('leadType').value = 'provider';
       document.getElementById('leadCategory').value = '';
       document.getElementById('leadPhone').value = '';
       document.getElementById('leadArea').value = '';
@@ -685,6 +718,7 @@
       await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId + '/status'), newStatus);
       leadsCache[leadId].status = newStatus;
       renderLeads();
+      renderClients();
     } catch (e) {
       alert('Could not update lead: ' + e.message);
     }
@@ -697,8 +731,50 @@
       await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId), null);
       delete leadsCache[leadId];
       renderLeads();
+      renderClients();
     } catch (e) {
       alert('Could not remove lead: ' + e.message);
+    }
+  };
+
+  function cleanPhoneForWhatsApp(phone){
+    if (!phone) return null;
+    let digits = phone.replace(/\D/g, '');
+    if (digits.length > 10) digits = digits.slice(-10); // strip leading 91/0 etc.
+    if (digits.length !== 10) return null;
+    return '91' + digits;
+  }
+
+  function buildLeadWhatsAppMessage(lead){
+    const partnerName = window._currentPartnerName || 'your City Channel Partner';
+    const city = window._currentPartnerCity || 'your city';
+    const refLink = window._currentRefLink || '';
+    const leadName = lead.businessName || '';
+
+    if (lead.type === 'seeker') {
+      return `Namaste ${leadName} 🙏 Looking for a reliable service provider near you? SAARTHI connects you with verified local providers in ${city} — free to browse, you only pay a small ₹51 fee when you actually book someone. Check it out: ${refLink}\n\n— ${partnerName}, SAARTHI City Channel Partner`;
+    }
+    return `Namaste ${leadName} 🙏 I'm ${partnerName}, City Channel Partner for SAARTHI in ${city}. We're a new app connecting local service providers like you directly with customers — completely free to list, zero commission on what you earn. Takes 5 minutes to set up: ${refLink}\n\nHappy to help you get started if you have any questions!`;
+  }
+
+  window.sendLeadWhatsApp = async function(leadId){
+    const lead = leadsCache[leadId];
+    if (!lead) return;
+    const message = buildLeadWhatsAppMessage(lead);
+    const waNumber = cleanPhoneForWhatsApp(lead.phone);
+    const url = waNumber
+      ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(message)
+      : 'https://wa.me/?text=' + encodeURIComponent(message);
+    window.open(url, '_blank');
+
+    // Mark as contacted if this is their first outreach
+    if (lead.status === 'not_contacted') {
+      const code = window._currentPartnerCode;
+      try {
+        await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId + '/status'), 'contacted');
+        leadsCache[leadId].status = 'contacted';
+        renderLeads();
+      } catch (e) { /* non-critical, ignore */ }
     }
   };
 
@@ -709,6 +785,7 @@
       const snap = await window._pget(window._pref(window._pdb, 'partnerLeads/' + code));
       leadsCache = snap.exists() ? snap.val() : {};
       renderLeads();
+      renderClients();
     } catch (e) {
       listEl.innerHTML = '<div class="empty">Could not load leads: ' + e.message + '</div>';
     }
@@ -716,7 +793,9 @@
 
   function renderLeads(){
     const listEl = document.getElementById('leadListEl');
-    const ids = Object.keys(leadsCache).sort((a,b) => (leadsCache[b].addedAt||'').localeCompare(leadsCache[a].addedAt||''));
+    // Registered leads graduate to "My Clients" below and no longer show here.
+    const activeIds = Object.keys(leadsCache).filter(id => leadsCache[id].status !== 'registered');
+    const ids = activeIds.sort((a,b) => (leadsCache[b].addedAt||'').localeCompare(leadsCache[a].addedAt||''));
     const filtered = leadFilter === 'all' ? ids : ids.filter(id => leadsCache[id].status === leadFilter);
 
     if (filtered.length === 0) {
@@ -729,11 +808,12 @@
       const statusOptions = Object.keys(LEAD_STATUS_LABEL).map(s =>
         `<option value="${s}" ${s === l.status ? 'selected' : ''}>${LEAD_STATUS_LABEL[s]}</option>`
       ).join('');
+      const typeLabel = l.type === 'seeker' ? '🔍 Seeker' : '🛠 Provider';
       return `
         <div class="lead-item">
           <div class="lead-top">
             <div>
-              <div class="lead-name">${l.businessName}</div>
+              <div class="lead-name">${l.businessName} <span style="font-weight:400; font-size:11px; color:var(--dim);">(${typeLabel})</span></div>
               <div class="lead-meta">${l.category || ''}${l.category && l.area ? ' · ' : ''}${l.area || ''}${l.phone ? ' · 📱 ' + l.phone : ''}</div>
               ${l.notes ? `<div class="lead-meta" style="margin-top:4px;">${l.notes}</div>` : ''}
             </div>
@@ -742,7 +822,112 @@
             </select>
           </div>
           <div class="lead-actions">
+            <button onclick="sendLeadWhatsApp('${id}')" style="background:#25D366; color:#fff;">📲 WhatsApp</button>
             <button onclick="removeLead('${id}')">🗑 Remove</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── Marketing & Client Materials ──
+  // Static list for now — add new entries here as more documents are created.
+  // "file" is the filename as uploaded to the repo root (same folder as this dashboard).
+  const MARKETING_MATERIALS = [
+    {
+      name: 'Client Quick Start & Success Guide (English)',
+      desc: 'Give this to every provider or seeker you onboard — explains how SAARTHI works and how to get the most out of it.',
+      file: 'Client_Quick_Start_Success_Guide.pdf'
+    },
+    {
+      name: 'क्विक स्टार्ट और सक्सेस गाइड (हिंदी)',
+      desc: 'वही गाइड, हिंदी में — जिन क्लाइंट्स को हिंदी ज़्यादा सहज लगे, उन्हें यह भेजें।',
+      file: 'Client_Quick_Start_Success_Guide_Hindi.pdf'
+    }
+  ];
+
+  function renderMaterials(){
+    const listEl = document.getElementById('materialsList');
+    if (!listEl) return;
+    if (MARKETING_MATERIALS.length === 0) {
+      listEl.innerHTML = '<div class="empty">No materials available yet.</div>';
+      return;
+    }
+    listEl.innerHTML = MARKETING_MATERIALS.map(m => {
+      const url = location.origin + location.pathname.replace('partner-dashboard.html', m.file);
+      const shareText = 'Here\u2019s a quick guide to SAARTHI: ' + url;
+      return `
+        <div class="material-item">
+          <div>
+            <div class="material-name">${m.name}</div>
+            <div class="material-desc">${m.desc}</div>
+          </div>
+          <div class="material-actions">
+            <a class="material-open" href="${url}" target="_blank">📄 Open</a>
+            <a class="material-share" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank">📲 Share</a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function buildClientCheckinMessage(client){
+    const partnerName = window._currentPartnerName || 'your City Channel Partner';
+    const clientName = client.businessName || '';
+    return `Namaste ${clientName} 🙏 Just checking in — hope things are going well on SAARTHI! Let me know if you ever need any help or have questions.\n\n— ${partnerName}`;
+  }
+
+  window.sendClientWhatsApp = function(clientId){
+    const client = leadsCache[clientId];
+    if (!client) return;
+    const message = buildClientCheckinMessage(client);
+    const waNumber = cleanPhoneForWhatsApp(client.phone);
+    const url = waNumber
+      ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(message)
+      : 'https://wa.me/?text=' + encodeURIComponent(message);
+    window.open(url, '_blank');
+  };
+
+  window.moveClientBackToLeads = async function(clientId){
+    if (!confirm('Move this back to your Leads list? Use this if it was marked Registered by mistake.')) return;
+    const code = window._currentPartnerCode;
+    try {
+      await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + clientId + '/status'), 'interested');
+      leadsCache[clientId].status = 'interested';
+      renderLeads();
+      renderClients();
+    } catch (e) {
+      alert('Could not update: ' + e.message);
+    }
+  };
+
+  function renderClients(){
+    const listEl = document.getElementById('clientListEl');
+    if (!listEl) return;
+    const ids = Object.keys(leadsCache)
+      .filter(id => leadsCache[id].status === 'registered')
+      .sort((a,b) => (leadsCache[b].addedAt||'').localeCompare(leadsCache[a].addedAt||''));
+
+    if (ids.length === 0) {
+      listEl.innerHTML = '<div class="empty">No clients yet — once a lead registers, they will show up here automatically.</div>';
+      return;
+    }
+
+    listEl.innerHTML = ids.map(id => {
+      const l = leadsCache[id];
+      const typeLabel = l.type === 'seeker' ? '🔍 Seeker' : '🛠 Provider';
+      return `
+        <div class="lead-item">
+          <div class="lead-top">
+            <div>
+              <div class="lead-name">${l.businessName} <span style="font-weight:400; font-size:11px; color:var(--dim);">(${typeLabel})</span></div>
+              <div class="lead-meta">${l.category || ''}${l.category && l.area ? ' · ' : ''}${l.area || ''}${l.phone ? ' · 📱 ' + l.phone : ''}</div>
+            </div>
+            <span class="badge status-registered" style="align-self:flex-start;">✅ Registered</span>
+          </div>
+          <div class="lead-actions">
+            <button onclick="sendClientWhatsApp('${id}')" style="background:#25D366; color:#fff;">📲 Chat on WhatsApp</button>
+            <button onclick="moveClientBackToLeads('${id}')">↩ Move back to Leads</button>
           </div>
         </div>
       `;
