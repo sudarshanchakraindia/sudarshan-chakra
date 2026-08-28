@@ -80,7 +80,7 @@
 
   /* ── Lead Tracker ── */
   .lead-form{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
-  .lead-form input{ padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+  .lead-form input, .lead-form select{ padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; background:#fff; }
   .lead-form input.full{ grid-column:1 / -1; }
   .lead-item{ border:1px solid #f0e4d4; border-radius:10px; padding:12px 14px; margin-bottom:10px; }
   .lead-item .lead-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; }
@@ -262,7 +262,8 @@
             <option value="provider">Lead type: Provider</option>
             <option value="seeker">Lead type: Seeker</option>
           </select>
-          <input type="text" id="leadCategory" placeholder="Category (e.g. Plumber)">
+          <input type="text" id="leadCategory" list="categoryOptions" placeholder="Category — start typing...">
+          <datalist id="categoryOptions"></datalist>
           <input type="text" id="leadPhone" placeholder="Phone number (needed to WhatsApp them)">
           <input type="text" id="leadArea" placeholder="Area / locality">
           <input type="text" id="leadNotes" class="full" placeholder="Notes (optional)">
@@ -577,6 +578,7 @@
     runCalculator();
     loadLeads();
     renderMaterials();
+    loadCategoryOptions();
 
     // Training videos for partners
     try {
@@ -845,6 +847,24 @@
       file: 'Client_Quick_Start_Success_Guide_Hindi.pdf'
     }
   ];
+
+  // ── Lead category dropdown — pulled from the app's real category list ──
+  async function loadCategoryOptions(){
+    const listEl = document.getElementById('categoryOptions');
+    if (!listEl) return;
+    try {
+      const snap = await window._pget(window._pref(window._pdb, 'categories'));
+      if (!snap.exists()) return;
+      const cats = snap.val();
+      const options = cats
+        .map(c => ({ icon: c.icon || '', name: (c.name && c.name.en) || '' }))
+        .filter(c => c.name)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      listEl.innerHTML = options.map(c => `<option value="${c.icon} ${c.name}"></option>`).join('');
+    } catch (e) {
+      console.warn('Could not load categories for lead autocomplete:', e);
+    }
+  }
 
   function renderMaterials(){
     const listEl = document.getElementById('materialsList');
