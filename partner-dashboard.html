@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>City Channel Partner Dashboard — Sudarshan Chakra India</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --saffron:#FF6B00; --gold:#F5A623; --maroon:#8B1E3F; --deep:#1A1206;
@@ -270,6 +271,28 @@
         </div>
         <button class="btn primary" style="width:100%;" onclick="addLead()">➕ Add Lead</button>
         <p id="leadErr" style="color:#c0392b; font-size:12px; margin-top:6px;"></p>
+
+        <button id="importToggleBtn" style="width:100%; margin-top:12px; padding:10px; border-radius:8px; border:1px dashed #ccc; background:#FAFAFA; color:var(--dim); font-size:13px; cursor:pointer;" onclick="toggleImportPanel()">📥 Import leads from a CSV / Excel file</button>
+
+        <div id="importPanel" style="display:none; margin-top:14px; border:1px solid #f0e4d4; border-radius:10px; padding:14px; background:#FFFDF9;">
+          <p style="font-size:12px; color:var(--dim); margin:0 0 10px;">Works with a spreadsheet from any source — a list you built yourself, a directory export, notes from an event, etc. Upload it, match the columns, and review before importing.</p>
+          <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls" onchange="handleImportFile(this)">
+          <div id="importMapArea" style="display:none; margin-top:14px;">
+            <div id="importMapFields"></div>
+            <div id="importPreviewWrap" style="margin-top:12px; overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                <thead><tr id="importPreviewHead"></tr></thead>
+                <tbody id="importPreviewBody"></tbody>
+              </table>
+            </div>
+            <p style="font-size:11px; color:var(--dim); margin-top:8px;" id="importRowCount"></p>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <button class="btn primary" style="flex:1;" onclick="commitImport(this)">✅ Import Leads</button>
+              <button style="padding:10px 16px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer;" onclick="toggleImportPanel(false)">Cancel</button>
+            </div>
+            <p id="importErr" style="color:#c0392b; font-size:12px; margin-top:8px;"></p>
+          </div>
+        </div>
 
         <div class="lead-filter-row" style="margin-top:20px;">
           <button class="active" data-filter="all" onclick="setLeadFilter('all')">All</button>
@@ -849,6 +872,160 @@
   ];
 
   // ── Lead category dropdown — pulled from the app's real category list ──
+  // ── CSV / Excel Lead Import ──
+  let importParsed = null; // { headers: [...], rows: [ {header: value, ...} ] }
+
+  window.toggleImportPanel = function(forceShow){
+    const panel = document.getElementById('importPanel');
+    const show = forceShow === undefined ? panel.style.display === 'none' : forceShow;
+    panel.style.display = show ? 'block' : 'none';
+    if (!show) {
+      document.getElementById('importFileInput').value = '';
+      document.getElementById('importMapArea').style.display = 'none';
+      document.getElementById('importErr').textContent = '';
+      importParsed = null;
+    }
+  };
+
+  const IMPORT_FIELD_GUESSES = {
+    name: ['name', 'business', 'title', 'company'],
+    phone: ['phone', 'mobile', 'contact number', 'whatsapp', 'contact'],
+    category: ['categor', 'industry', 'business type', 'trade'],
+    area: ['area', 'address', 'location', 'city', 'locality'],
+    notes: ['note', 'description', 'about', 'remark']
+  };
+
+  function guessColumnFor(field, headers){
+    const keywords = IMPORT_FIELD_GUESSES[field] || [];
+    for (const kw of keywords) {
+      const match = headers.find(h => h.toLowerCase().includes(kw));
+      if (match) return match;
+    }
+    return '';
+  }
+
+  window.handleImportFile = function(input){
+    const file = input.files[0];
+    const errEl = document.getElementById('importErr');
+    errEl.textContent = '';
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        if (!rows.length) {
+          errEl.textContent = 'This file appears to be empty, or has no data rows.';
+          return;
+        }
+        const headers = Object.keys(rows[0]);
+        importParsed = { headers, rows };
+        showImportMapping(headers, rows);
+      } catch (err) {
+        errEl.textContent = 'Could not read this file. Make sure it is a valid CSV or Excel file. (' + err.message + ')';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  function showImportMapping(headers, rows){
+    const mapArea = document.getElementById('importMapArea');
+    const fieldsEl = document.getElementById('importMapFields');
+    mapArea.style.display = 'block';
+
+    const fieldDefs = [
+      { key: 'name', label: 'Business / Person Name *', required: true },
+      { key: 'phone', label: 'Phone Number', required: false },
+      { key: 'category', label: 'Category', required: false },
+      { key: 'area', label: 'Area / Locality', required: false },
+      { key: 'notes', label: 'Notes', required: false }
+    ];
+
+    const headerOptions = (selected) => '<option value="">— don\u2019t import —</option>' +
+      headers.map(h => `<option value="${h}" ${h === selected ? 'selected' : ''}>${h}</option>`).join('');
+
+    fieldsEl.innerHTML = fieldDefs.map(f => `
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+        <label style="flex:0 0 170px; font-size:12px; font-weight:700; color:var(--soft);">${f.label}</label>
+        <select id="importMap_${f.key}" style="flex:1; padding:7px; border:1px solid #ddd; border-radius:6px; font-size:13px;">
+          ${headerOptions(guessColumnFor(f.key, headers))}
+        </select>
+      </div>
+    `).join('') + `
+      <div style="display:flex; align-items:center; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid #eee;">
+        <label style="flex:0 0 170px; font-size:12px; font-weight:700; color:var(--soft);">Default Lead Type</label>
+        <select id="importMap_defaultType" style="flex:1; padding:7px; border:1px solid #ddd; border-radius:6px; font-size:13px;">
+          <option value="provider">Provider</option>
+          <option value="seeker">Seeker</option>
+        </select>
+      </div>
+      <p style="font-size:11px; color:var(--dim); margin-top:6px;">Applied to every imported row (leads can be individually corrected afterward).</p>
+    `;
+
+    // Preview: first 5 rows, raw columns
+    const previewRows = rows.slice(0, 5);
+    document.getElementById('importPreviewHead').innerHTML = headers.map(h => `<th style="text-align:left; padding:6px; background:#f5f0e8; border-bottom:1px solid #ddd;">${h}</th>`).join('');
+    document.getElementById('importPreviewBody').innerHTML = previewRows.map(r =>
+      '<tr>' + headers.map(h => `<td style="padding:6px; border-bottom:1px solid #eee;">${(r[h] ?? '').toString().slice(0,40)}</td>`).join('') + '</tr>'
+    ).join('');
+
+    document.getElementById('importRowCount').textContent =
+      `${rows.length} row(s) found. Rows with no name will be skipped.` + (rows.length > 5 ? ' Showing first 5 for preview.' : '');
+  }
+
+  window.commitImport = async function(btn){
+    const errEl = document.getElementById('importErr');
+    errEl.textContent = '';
+    if (!importParsed) return;
+
+    const nameCol = document.getElementById('importMap_name').value;
+    if (!nameCol) { errEl.textContent = 'Please map a column to "Business / Person Name" — this is required.'; return; }
+
+    const phoneCol = document.getElementById('importMap_phone').value;
+    const categoryCol = document.getElementById('importMap_category').value;
+    const areaCol = document.getElementById('importMap_area').value;
+    const notesCol = document.getElementById('importMap_notes').value;
+    const defaultType = document.getElementById('importMap_defaultType').value;
+
+    const code = window._currentPartnerCode;
+    const toImport = importParsed.rows
+      .map(r => ({
+        businessName: (r[nameCol] ?? '').toString().trim(),
+        phone: phoneCol ? (r[phoneCol] ?? '').toString().trim() : '',
+        category: categoryCol ? (r[categoryCol] ?? '').toString().trim() : '',
+        area: areaCol ? (r[areaCol] ?? '').toString().trim() : '',
+        notes: notesCol ? (r[notesCol] ?? '').toString().trim() : '',
+        type: defaultType
+      }))
+      .filter(r => r.businessName);
+
+    if (toImport.length === 0) { errEl.textContent = 'No rows with a name were found to import.'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Importing…';
+
+    try {
+      for (const lead of toImport) {
+        const leadRef = window._ppush(window._pref(window._pdb, 'partnerLeads/' + code));
+        await window._pset(leadRef, {
+          ...lead,
+          status: 'not_contacted',
+          addedAt: new Date().toISOString()
+        });
+      }
+      toggleImportPanel(false);
+      loadLeads();
+      alert('✅ Imported ' + toImport.length + ' lead(s). Find them in your Leads list below, all marked "Not Contacted."');
+    } catch (e) {
+      errEl.textContent = 'Import failed partway through: ' + e.message;
+      btn.disabled = false;
+      btn.textContent = '✅ Import Leads';
+    }
+  };
+
   async function loadCategoryOptions(){
     const listEl = document.getElementById('categoryOptions');
     if (!listEl) return;
