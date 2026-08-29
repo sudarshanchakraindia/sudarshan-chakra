@@ -792,14 +792,19 @@
       : 'https://wa.me/?text=' + encodeURIComponent(message);
     window.open(url, '_blank');
 
-    // Mark as contacted if this is their first outreach
+    // We can't detect from here whether the message actually sent — wa.me just opens
+    // a chat window, and it opens the same way whether or not the number is on
+    // WhatsApp. So instead of assuming success, ask once you're back on this tab.
     if (lead.status === 'not_contacted') {
-      const code = window._currentPartnerCode;
-      try {
-        await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId + '/status'), 'contacted');
-        leadsCache[leadId].status = 'contacted';
-        renderLeads();
-      } catch (e) { /* non-critical, ignore */ }
+      const confirmed = confirm('Did the WhatsApp message actually send?\n\nClick OK only if you saw it go through in WhatsApp. Click Cancel if the number didn\u2019t work or you didn\u2019t send it — it will stay as "Not Contacted."');
+      if (confirmed) {
+        const code = window._currentPartnerCode;
+        try {
+          await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId + '/status'), 'contacted');
+          leadsCache[leadId].status = 'contacted';
+          renderLeads();
+        } catch (e) { /* non-critical, ignore */ }
+      }
     }
   };
 
