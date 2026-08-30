@@ -363,6 +363,13 @@
         </div>
       </div>
 
+      <!-- My Portal Activity -->
+      <div class="card">
+        <h2>📊 My Portal Activity</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Real, admin-verified activity from people you've referred — every entry here is a payment that's actually gone through, not just a claim.</p>
+        <div id="activityListEl"><div class="empty">Loading…</div></div>
+      </div>
+
       <!-- Payout history -->
       <div class="card">
         <h2>💰 Payout History</h2>
@@ -673,6 +680,7 @@
     loadLeads();
     renderMaterials();
     loadCategoryOptions();
+    loadPartnerActivity();
 
     // Training videos for partners
     try {
@@ -702,38 +710,37 @@
     }
 
     // Live progress: count providers/seekers referred by this partner.
-    // Providers are publicly readable, but seekers are admin-only (correctly,
-    // to protect seeker privacy) — a partner session is never signed in as
-    // admin. Using allSettled (not all) means the seekers read failing
-    // doesn't also silently take down the providers count with it, which is
-    // what was happening before.
+    // Providers are publicly readable. Seekers are NOT read from the global
+    // 'seekers' node (admin-only, to protect seeker privacy) — instead we
+    // read 'partnerSeekerRefs/{code}', a lightweight name+mobile-only record
+    // written automatically at seeker registration, scoped to this partner.
     try {
-      const [provResult, seekResult] = await Promise.allSettled([
+      const [provResult, seekRefResult] = await Promise.allSettled([
         window._pget(window._pref(window._pdb, 'providers')),
-        window._pget(window._pref(window._pdb, 'seekers'))
+        window._pget(window._pref(window._pdb, 'partnerSeekerRefs/' + code))
       ]);
 
       const provSnap = provResult.status === 'fulfilled' ? provResult.value : null;
-      const seekSnap = seekResult.status === 'fulfilled' ? seekResult.value : null;
-      if (seekResult.status === 'rejected') {
-        console.warn('Seeker count unavailable on partner dashboard (expected — seekers are admin-only for privacy):', seekResult.reason?.message);
+      const seekRefSnap = seekRefResult.status === 'fulfilled' ? seekRefResult.value : null;
+      if (seekRefResult.status === 'rejected') {
+        console.warn('Seeker refs load error:', seekRefResult.reason?.message);
       }
 
       const allProviders = provSnap && provSnap.exists() ? Object.values(provSnap.val()) : [];
-      const allSeekers    = seekSnap && seekSnap.exists() ? Object.values(seekSnap.val()) : [];
+      const mySeekerRefs = seekRefSnap && seekRefSnap.exists() ? Object.values(seekRefSnap.val()) : [];
 
       // Normalize both sides before comparing — a stray space (e.g. from a
       // URL-encoded '%20' in an old link) must never silently break this match.
       function normalizeCode(c){ return (c || '').toString().replace(/\s+/g, '').toUpperCase(); }
       const targetCode = normalizeCode(code);
       const myProviders = allProviders.filter(p => normalizeCode(p.referredByPartner) === targetCode);
-      const mySeekers    = allSeekers.filter(s => normalizeCode(s.referredByPartner) === targetCode);
+      const mySeekers    = mySeekerRefs; // already scoped to this partner by the DB path itself
       const myVerified   = myProviders.filter(p => p.verified).length;
       window._realConversions = { providers: myProviders, seekers: mySeekers };
       renderClients();
 
       document.getElementById('statProviders').textContent = myProviders.length;
-      document.getElementById('statSeekers').textContent = seekResult.status === 'rejected' ? '—' : mySeekers.length;
+      document.getElementById('statSeekers').textContent = mySeekers.length;
       document.getElementById('statVerified').textContent = myVerified;
 
       const PROVIDER_TARGET = 33;
@@ -742,8 +749,8 @@
       const pctS = Math.min(100, Math.round((mySeekers.length / SEEKER_TARGET) * 100));
       document.getElementById('progressFillProviders').style.width = pctP + '%';
       document.getElementById('progressLabelProviders').textContent = myProviders.length + ' / ' + PROVIDER_TARGET;
-      document.getElementById('progressFillSeekers').style.width = seekResult.status === 'rejected' ? '0%' : pctS + '%';
-      document.getElementById('progressLabelSeekers').textContent = seekResult.status === 'rejected' ? 'Unavailable' : (mySeekers.length + ' / ' + SEEKER_TARGET);
+      document.getElementById('progressFillSeekers').style.width = pctS + '%';
+      document.getElementById('progressLabelSeekers').textContent = mySeekers.length + ' / ' + SEEKER_TARGET;
 
       if (partner.appointedDate) {
         const daysElapsed = Math.floor((Date.now() - new Date(partner.appointedDate)) / 86400000);
@@ -1179,6 +1186,48 @@
     }
   };
 
+  async function loadPartnerActivity(){
+    const listEl = document.getElementById('activityListEl');
+    if (!listEl) return;
+    if (window._demoMode) {
+      const sample = [
+        { date: new Date(Date.now()-2*86400000).toLocaleDateString('en-IN'), type: 'hire_fee', amount: 51, fee: 51, role: 'provider', counterpartName: 'Sunita (Seeker)', service: 'Electrical Repair' },
+        { date: new Date(Date.now()-6*86400000).toLocaleDateString('en-IN'), type: 'hire_fee', amount: 51, fee: 51, role: 'seeker', counterpartName: 'Sharma Electricals', service: 'Fan Installation' }
+      ];
+      listEl.innerHTML = sample.map(renderActivityRow).join('');
+      return;
+    }
+    try {
+      const code = window._currentPartnerCode;
+      const snap = await window._pget(window._pref(window._pdb, 'partnerActivity/' + code));
+      if (!snap.exists()) {
+        listEl.innerHTML = '<div class="empty">No activity yet — this fills in automatically once someone you referred completes a paid hire.</div>';
+        return;
+      }
+      const entries = Object.values(snap.val()).sort((a,b) => (b.approvedAt||'').localeCompare(a.approvedAt||''));
+      listEl.innerHTML = entries.map(renderActivityRow).join('');
+    } catch (e) {
+      listEl.innerHTML = '<div class="empty">Could not load activity: ' + e.message + '</div>';
+    }
+  }
+
+  function renderActivityRow(a){
+    const typeLabel = { hire_fee: '💳 Convenience Fee', tip: '🎁 Tip', charity: '🤝 Charity Donation' }[a.type] || a.type;
+    const roleLabel = a.role === 'provider' ? 'Your provider was hired by' : 'Your seeker hired';
+    return `
+      <div class="lead-item">
+        <div class="lead-top">
+          <div>
+            <div class="lead-name">${typeLabel} — ₹${a.amount}</div>
+            <div class="lead-meta">${roleLabel} ${a.counterpartName || 'someone'}${a.service ? ' · ' + a.service : ''}</div>
+            <div class="lead-meta" style="margin-top:2px;">${a.date || ''}</div>
+          </div>
+          <span class="badge status-registered" style="align-self:flex-start;">✅ Verified</span>
+        </div>
+      </div>
+    `;
+  }
+
   async function loadCategoryOptions(){
     const listEl = document.getElementById('categoryOptions');
     if (!listEl) return;
@@ -1297,7 +1346,7 @@
       ...real.seekers.map(s => ({
         source: 'real', type: 'seeker', name: s.name, phone: s.mobile,
         category: '', area: s.location || '',
-        verified: false, date: s.registered || ''
+        verified: false, date: s.registeredAt || s.registered || ''
       }))
     ];
     const realPhones = new Set(realEntries.map(e => normalizePhone(e.phone)).filter(Boolean));
