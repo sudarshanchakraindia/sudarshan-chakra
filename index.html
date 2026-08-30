@@ -8129,7 +8129,19 @@ function toggleAdminCat(id, headerEl) {
         function toggleVerified(providerId, currentState) {
             const action = currentState ? 'Remove Verified badge from' : 'Mark as Verified';
             if (confirm(`${action} this provider?`)) {
-                updateProviderInFirebase(providerId, { verified: !currentState }).then(success => {
+                const updates = { verified: !currentState };
+                // If we're granting Verified and they have a submitted ID sitting at
+                // 'pending' (or no status at all), bring that in sync too — otherwise
+                // the provider shows as Verified overall while their own ID document
+                // still looks stuck "pending" forever in the ID Verify tab.
+                if (!currentState) {
+                    const prov = providers.find(p => p.id === providerId);
+                    if (prov && prov.idVerification && prov.idVerification.status !== 'approved') {
+                        updates['idVerification/status'] = 'approved';
+                        updates['idVerification/reviewedAt'] = new Date().toISOString();
+                    }
+                }
+                updateProviderInFirebase(providerId, updates).then(success => {
                     if (success) showFirebaseStatus(`✅ Verified status updated!`, 'success');
                 });
             }
