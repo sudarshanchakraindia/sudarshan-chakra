@@ -701,14 +701,26 @@
       console.warn('Training video load error:', e);
     }
 
-    // Live progress: count providers/seekers referred by this partner
+    // Live progress: count providers/seekers referred by this partner.
+    // Providers are publicly readable, but seekers are admin-only (correctly,
+    // to protect seeker privacy) — a partner session is never signed in as
+    // admin. Using allSettled (not all) means the seekers read failing
+    // doesn't also silently take down the providers count with it, which is
+    // what was happening before.
     try {
-      const [provSnap, seekSnap] = await Promise.all([
+      const [provResult, seekResult] = await Promise.allSettled([
         window._pget(window._pref(window._pdb, 'providers')),
         window._pget(window._pref(window._pdb, 'seekers'))
       ]);
-      const allProviders = provSnap.exists() ? Object.values(provSnap.val()) : [];
-      const allSeekers    = seekSnap.exists() ? Object.values(seekSnap.val()) : [];
+
+      const provSnap = provResult.status === 'fulfilled' ? provResult.value : null;
+      const seekSnap = seekResult.status === 'fulfilled' ? seekResult.value : null;
+      if (seekResult.status === 'rejected') {
+        console.warn('Seeker count unavailable on partner dashboard (expected — seekers are admin-only for privacy):', seekResult.reason?.message);
+      }
+
+      const allProviders = provSnap && provSnap.exists() ? Object.values(provSnap.val()) : [];
+      const allSeekers    = seekSnap && seekSnap.exists() ? Object.values(seekSnap.val()) : [];
 
       // Normalize both sides before comparing — a stray space (e.g. from a
       // URL-encoded '%20' in an old link) must never silently break this match.
@@ -721,7 +733,7 @@
       renderClients();
 
       document.getElementById('statProviders').textContent = myProviders.length;
-      document.getElementById('statSeekers').textContent = mySeekers.length;
+      document.getElementById('statSeekers').textContent = seekResult.status === 'rejected' ? '—' : mySeekers.length;
       document.getElementById('statVerified').textContent = myVerified;
 
       const PROVIDER_TARGET = 33;
@@ -730,8 +742,8 @@
       const pctS = Math.min(100, Math.round((mySeekers.length / SEEKER_TARGET) * 100));
       document.getElementById('progressFillProviders').style.width = pctP + '%';
       document.getElementById('progressLabelProviders').textContent = myProviders.length + ' / ' + PROVIDER_TARGET;
-      document.getElementById('progressFillSeekers').style.width = pctS + '%';
-      document.getElementById('progressLabelSeekers').textContent = mySeekers.length + ' / ' + SEEKER_TARGET;
+      document.getElementById('progressFillSeekers').style.width = seekResult.status === 'rejected' ? '0%' : pctS + '%';
+      document.getElementById('progressLabelSeekers').textContent = seekResult.status === 'rejected' ? 'Unavailable' : (mySeekers.length + ' / ' + SEEKER_TARGET);
 
       if (partner.appointedDate) {
         const daysElapsed = Math.floor((Date.now() - new Date(partner.appointedDate)) / 86400000);
