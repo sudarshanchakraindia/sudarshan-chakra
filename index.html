@@ -2267,6 +2267,26 @@
         const ADMIN_EMAIL = 'sudarshanchakraindia@gmail.com'; // Firebase admin email for DB auth
         const ADMIN_FIREBASE_PASSWORD = 'MyActualPassword144@Crore'; // Set this to your sudarshanchakraindia@gmail.com Firebase password
 
+        // The admin password above only lived in this one browser's localStorage,
+        // so it silently reset to 'admin123' on any other browser, device, or
+        // incognito window. Sync it through Firebase instead, so it's the same
+        // everywhere. Runs once on load; by the time a human actually clicks
+        // "Login" this will already have completed.
+        (function syncAdminPasswordFromFirebase(attempt){
+            attempt = attempt || 0;
+            if (!window._firebase || !window._firebase.db) {
+                if (attempt < 20) setTimeout(function(){ syncAdminPasswordFromFirebase(attempt + 1); }, 300);
+                return;
+            }
+            const fb = window._firebase;
+            fb.get(fb.ref(fb.db, 'adminSettings/uiGatePassword')).then(function(snap){
+                if (snap.exists() && snap.val()) {
+                    ADMIN_PASSWORD = snap.val();
+                    localStorage.setItem(ADMIN_PASSWORD_KEY, ADMIN_PASSWORD);
+                }
+            }).catch(function(e){ console.warn('Admin password sync error:', e.message); });
+        })();
+
         // ==================== FIX A: CATEGORY TRANSLATIONS ====================
         // Add multilingual translations for all default categories
         const CATEGORY_TRANSLATIONS = {
@@ -2406,6 +2426,10 @@
             }
             ADMIN_PASSWORD = newPass;
             localStorage.setItem(ADMIN_PASSWORD_KEY, newPass);
+            try {
+                const fb = window._firebase;
+                if (fb) fb.set(fb.ref(fb.db, 'adminSettings/uiGatePassword'), newPass);
+            } catch (e) { console.warn('Could not sync new admin password to Firebase:', e.message); }
             document.getElementById('settingsCurrentPass').value = '';
             document.getElementById('settingsNewPass').value = '';
             document.getElementById('settingsConfirmPass').value = '';
@@ -5574,6 +5598,10 @@
                 // Update password
                 localStorage.setItem(ADMIN_PASSWORD_KEY, newPass);
                 ADMIN_PASSWORD = newPass;
+                try {
+                    const fb = window._firebase;
+                    if (fb) fb.set(fb.ref(fb.db, 'adminSettings/uiGatePassword'), newPass);
+                } catch (e) { console.warn('Could not sync recovered admin password to Firebase:', e.message); }
                 msg.textContent = '✅ Password reset successfully! You can now login with your new password.';
                 msg.className = 'text-center text-sm py-2 text-green-600';
                 setTimeout(() => { closeAdminForgotPass(); }, 2500);
