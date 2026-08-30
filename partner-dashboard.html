@@ -435,7 +435,7 @@
   // <script> below (which defines loadPartner) has already run by now.
   const urlCode = new URLSearchParams(location.search).get('code');
   if (urlCode) {
-    document.getElementById('codeInput').value = urlCode;
+    document.getElementById('codeInput').value = urlCode.replace(/\s+/g, '');
     if (window.loadPartner) window.loadPartner();
   }
 
@@ -618,7 +618,7 @@
   };
 
   async function loadPartner(){
-    const code = document.getElementById('codeInput').value.trim().toUpperCase();
+    const code = document.getElementById('codeInput').value.replace(/\s+/g, '').toUpperCase();
     if (!code) return;
     document.getElementById('err').textContent = '';
     try {
@@ -710,8 +710,12 @@
       const allProviders = provSnap.exists() ? Object.values(provSnap.val()) : [];
       const allSeekers    = seekSnap.exists() ? Object.values(seekSnap.val()) : [];
 
-      const myProviders = allProviders.filter(p => p.referredByPartner === code);
-      const mySeekers    = allSeekers.filter(s => s.referredByPartner === code);
+      // Normalize both sides before comparing — a stray space (e.g. from a
+      // URL-encoded '%20' in an old link) must never silently break this match.
+      function normalizeCode(c){ return (c || '').toString().replace(/\s+/g, '').toUpperCase(); }
+      const targetCode = normalizeCode(code);
+      const myProviders = allProviders.filter(p => normalizeCode(p.referredByPartner) === targetCode);
+      const mySeekers    = allSeekers.filter(s => normalizeCode(s.referredByPartner) === targetCode);
       const myVerified   = myProviders.filter(p => p.verified).length;
       window._realConversions = { providers: myProviders, seekers: mySeekers };
       renderClients();
