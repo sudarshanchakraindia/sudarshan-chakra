@@ -814,12 +814,54 @@
                     <input type="text" id="editName" maxlength="60" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="Your full name">
                 </div>
                 <div>
-                    <label class="block text-gray-700 text-sm font-medium mb-1">Primary Service</label>
-                    <input type="text" id="editService" maxlength="80" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="e.g. Plumber, Electrician, Cook...">
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Mobile Number *</label>
+                    <input type="tel" id="editMobile" maxlength="10" pattern="[0-9]{10}" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="10-digit mobile number">
+                </div>
+                <div class="border-t pt-4">
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Category</label>
+                    <select id="editCategory" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400 mb-2" onchange="updateEditSubcategories()"></select>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Subcategory</label>
+                    <select id="editSubcategory" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" onchange="updateEditServiceChips()"></select>
+                    <div id="editServiceTypeSection" class="mt-3" style="display:none">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">🔧 Services Offered <span class="text-xs text-gray-400 font-normal">(select all that apply)</span></label>
+                        <div id="editServiceChips" class="grid grid-cols-2 gap-2"></div>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-medium mb-1">Location / Area</label>
                     <input type="text" id="editLocation" maxlength="120" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="Your locality or area">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Pincode</label>
+                    <input type="text" id="editPincode" maxlength="6" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="6-digit pincode">
+                </div>
+                <div>
+                    <button type="button" onclick="updateMyLocationInEdit()" class="w-full border-2 border-dashed border-orange-300 rounded-xl py-2 text-orange-600 font-medium hover:bg-orange-50">📍 Update My Location (GPS)</button>
+                    <p id="editLocationStatus" class="text-xs text-gray-400 mt-1"></p>
+                </div>
+                <div class="border-t pt-4">
+                    <label class="block text-gray-700 text-sm font-medium mb-2">🗣️ Languages Spoken</label>
+                    <div id="editLanguageChips" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="English"><span>🇬🇧 English</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Hindi"><span>हिंदी</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Bengali"><span>বাংলা</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Gujarati"><span>ગુજરાતી</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Marathi"><span>मराठी</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Kannada"><span>ಕನ್ನಡ</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Telugu"><span>తెలుగు</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Malayalam"><span>മലയാളം</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Tamil"><span>தமிழ்</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Punjabi"><span>ਪੰਜਾਬੀ</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Urdu"><span>اردو</span></label>
+                        <label class="lang-chip"><input type="checkbox" name="editProviderLang" value="Odia"><span>ଓଡ଼ିଆ</span></label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-2">Service Area</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="border rounded-xl px-4 py-2 flex items-center gap-2 cursor-pointer"><input type="radio" name="editServiceArea" value="10km"> Within 10 km</label>
+                        <label class="border rounded-xl px-4 py-2 flex items-center gap-2 cursor-pointer"><input type="radio" name="editServiceArea" value="city"> Within City</label>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-medium mb-1">About / Bio</label>
@@ -841,6 +883,10 @@
                         <option value="all-days">All Days</option>
                         <option value="24x7">24×7 Available</option>
                     </select>
+                </div>
+                <div class="border-t pt-4">
+                    <h4 class="font-bold text-gray-800 mb-1">🪪 Identity Verification</h4>
+                    <div id="editIdVerifiedSection"></div>
                 </div>
                 <button onclick="saveProviderEdits()" class="w-full bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition">
                     💾 Save Changes
@@ -7407,18 +7453,166 @@ function toggleAdminCat(id, headerEl) {
         }
 
         // ==================== PHASE F: EDIT PROVIDER PROFILE ====================
+        function updateEditCategorySelect() {
+            const select = document.getElementById('editCategory');
+            if (select) {
+                select.innerHTML = `<option value="">Select Category</option>` +
+                    categories.map(cat => `<option value="${cat.id}">${getTranslated(cat.name)}</option>`).join('');
+            }
+        }
+
+        function updateEditSubcategories(keepSelection) {
+            const catId = document.getElementById('editCategory').value;
+            const subSelect = document.getElementById('editSubcategory');
+            const category = categories.find(c => c.id === catId);
+            if (category && category.subcategories) {
+                subSelect.innerHTML = `<option value="">Select Subcategory</option>` +
+                    category.subcategories.map((sub, idx) => `<option value="${idx}">${getTranslated(sub.name)}</option>`).join('');
+            } else {
+                subSelect.innerHTML = `<option value="">Select Subcategory</option>`;
+            }
+            if (!keepSelection) {
+                document.getElementById('editServiceChips').innerHTML = '';
+                document.getElementById('editServiceTypeSection').style.display = 'none';
+            }
+        }
+
+        function updateEditServiceChips(preSelectedIndices) {
+            const catId = document.getElementById('editCategory').value;
+            const subIdx = document.getElementById('editSubcategory').value;
+            const chipsContainer = document.getElementById('editServiceChips');
+            const section = document.getElementById('editServiceTypeSection');
+            const category = categories.find(c => c.id === catId);
+            const subcat = category && category.subcategories && category.subcategories[subIdx];
+            const selected = preSelectedIndices || [];
+
+            if (subcat && subcat.subsubcategories && subcat.subsubcategories.length > 0) {
+                chipsContainer.innerHTML = subcat.subsubcategories.map((subsub, idx) => {
+                    if (subsub.paused) return '';
+                    const name = getTranslated(subsub.name);
+                    const icon = subsub.icon ? (subsub.icon.startsWith('<') ? '' : subsub.icon + ' ') : '';
+                    const checked = selected.includes(String(idx)) ? 'checked' : '';
+                    return `<label class="service-chip" onclick="toggleChip(this)">
+                        <input type="checkbox" name="editProviderService" value="${idx}" data-name="${name}" ${checked}>
+                        <span>${icon}${name}</span>
+                    </label>`;
+                }).join('');
+                section.style.display = '';
+            } else {
+                chipsContainer.innerHTML = '';
+                section.style.display = 'none';
+            }
+        }
+
+        function updateMyLocationInEdit() {
+            const status = document.getElementById('editLocationStatus');
+            if (!navigator.geolocation) { status.textContent = 'Geolocation not supported by this browser.'; return; }
+            status.textContent = '📡 Getting your current location...';
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    document.getElementById('editProviderModal').dataset.newLat = pos.coords.latitude;
+                    document.getElementById('editProviderModal').dataset.newLng = pos.coords.longitude;
+                    status.textContent = '✅ Location updated — will be saved with your profile.';
+                },
+                (err) => { status.textContent = '❌ Could not get location: ' + err.message; },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        function previewEditIdDoc(input) {
+            if (!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('editProviderModal').dataset.newIdDoc = e.target.result;
+                const area = document.getElementById('editIdDocPreviewArea');
+                if (area) area.innerHTML = '<p class="text-green-600 font-medium text-sm">✅ New document selected — will be submitted for verification when you save.</p>';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function renderEditIdVerificationSection(myProvider) {
+            const container = document.getElementById('editIdVerifiedSection');
+            const iv = myProvider.idVerification;
+            delete document.getElementById('editProviderModal').dataset.newIdDoc;
+
+            if (iv && (iv.status === 'approved' || iv.status === 'pending')) {
+                const statusLabel = iv.status === 'approved'
+                    ? '<span class="text-green-600 font-medium">✅ Verified</span>'
+                    : '<span class="text-yellow-600 font-medium">⏳ Submitted — awaiting admin review</span>';
+                container.innerHTML = `<p class="text-sm">${statusLabel}</p><p class="text-xs text-gray-400 mt-1">Submitted document cannot be changed while under review or approved. Contact support if you need to update it.</p>`;
+                return;
+            }
+
+            const rejectedNote = (iv && iv.status === 'rejected')
+                ? '<p class="text-xs text-red-500 mb-2">Your previous submission was rejected' + (iv.rejectionReason ? (': ' + iv.rejectionReason) : '') + '. Please resubmit below.</p>'
+                : '<p class="text-xs text-gray-500 mb-2">You haven\'t submitted an ID for verification yet. Upload one to earn a ✅ Verified badge, seen only by admin.</p>';
+
+            container.innerHTML = `
+                ${rejectedNote}
+                <div class="grid md:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-1">ID Type</label>
+                        <select id="editIdType" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400">
+                            <option value="">Select ID Type</option>
+                            <option value="aadhaar">Aadhaar Card</option>
+                            <option value="driving">Driving License</option>
+                            <option value="voter">Voter ID</option>
+                            <option value="pan">PAN Card</option>
+                            <option value="passport">Passport</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-1">ID Number</label>
+                        <input type="text" id="editIdNumber" class="w-full border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-400" placeholder="Enter ID number">
+                    </div>
+                </div>
+                <label class="cursor-pointer block">
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-orange-400 hover:bg-orange-50 transition" id="editIdDocPreviewArea">
+                        <div class="text-3xl mb-1">📄</div>
+                        <div class="text-sm font-medium text-gray-600">Click to upload ID document</div>
+                        <div class="text-xs text-gray-400 mt-1">PNG, JPG — visible to admin only</div>
+                    </div>
+                    <input type="file" id="editIdDocInput" accept="image/*" class="hidden" onchange="previewEditIdDoc(this)">
+                </label>
+            `;
+        }
+
         function openEditProviderModal() {
             const myProvider = providers.find(p => p.ownerUid === firebaseUser?.uid);
             if (!myProvider) return;
             document.getElementById('editName').value        = myProvider.name || '';
-            document.getElementById('editService').value     = myProvider.service || '';
+            document.getElementById('editMobile').value      = myProvider.mobile || '';
             document.getElementById('editLocation').value    = myProvider.location || '';
+            document.getElementById('editPincode').value     = myProvider.pincode || '';
             document.getElementById('editBio').value         = myProvider.bio || '';
             document.getElementById('editRate').value        = myProvider.rate || '';
             document.getElementById('editWhatsapp').value    = myProvider.whatsapp || '';
             document.getElementById('editWorkingHours').value = myProvider.workingHours || 'mon-fri';
+            document.getElementById('editLocationStatus').textContent = '';
             const preview = document.getElementById('editPhotoPreview');
             preview.src = myProvider.photo || '';
+            delete document.getElementById('editProviderModal').dataset.newLat;
+            delete document.getElementById('editProviderModal').dataset.newLng;
+
+            // Category / Subcategory / Service types
+            updateEditCategorySelect();
+            document.getElementById('editCategory').value = myProvider.categoryId || '';
+            updateEditSubcategories(true);
+            document.getElementById('editSubcategory').value = myProvider.subcategoryIdx ?? '';
+            updateEditServiceChips((myProvider.subsubcategoryIndices || []).map(String));
+
+            // Languages
+            document.querySelectorAll('input[name="editProviderLang"]').forEach(cb => {
+                cb.checked = (myProvider.language || []).includes(cb.value);
+            });
+
+            // Service area
+            const areaVal = myProvider.serviceArea || '10km';
+            document.querySelectorAll('input[name="editServiceArea"]').forEach(r => { r.checked = (r.value === areaVal); });
+
+            // ID verification
+            renderEditIdVerificationSection(myProvider);
+
             document.getElementById('editProviderModal').classList.remove('hidden');
         }
 
@@ -7445,16 +7639,69 @@ function toggleAdminCat(id, headerEl) {
             if (!myProvider) return;
             const newName = document.getElementById('editName').value.trim();
             if (!newName) { showFirebaseStatus('Name cannot be empty', 'error'); return; }
+            const newMobile = document.getElementById('editMobile').value.trim();
+            if (!/^\d{10}$/.test(newMobile)) { showFirebaseStatus('Please enter a valid 10-digit mobile number', 'error'); return; }
+
+            const catId = document.getElementById('editCategory').value;
+            const subIdx = document.getElementById('editSubcategory').value;
+            const selectedServiceChips = Array.from(document.querySelectorAll('input[name="editProviderService"]:checked'));
+            const selectedServiceIndices = selectedServiceChips.map(cb => cb.value);
+            const selectedServiceNames = selectedServiceChips.map(cb => cb.dataset.name);
+
+            let serviceName = myProvider.service || 'General Service Provider';
+            if (selectedServiceNames.length > 0) {
+                serviceName = selectedServiceNames[0];
+            } else if (catId && subIdx !== '') {
+                const category = categories.find(c => c.id === catId);
+                const subcategory = category?.subcategories[subIdx];
+                if (subcategory) serviceName = getTranslated(subcategory.name);
+            }
+
+            const editedLangs = Array.from(document.querySelectorAll('input[name="editProviderLang"]:checked')).map(cb => cb.value);
+            const modal = document.getElementById('editProviderModal');
+
             const updates = {
                 name:         newName,
-                service:      document.getElementById('editService').value.trim() || myProvider.service,
+                mobile:       newMobile,
+                categoryId:   catId || null,
+                subcategoryIdx: subIdx !== '' ? subIdx : null,
+                subsubcategoryIndices: selectedServiceIndices.length > 0 ? selectedServiceIndices : null,
+                services:     selectedServiceNames.length > 0 ? selectedServiceNames : null,
+                service:      serviceName,
                 location:     document.getElementById('editLocation').value.trim() || myProvider.location,
+                pincode:      document.getElementById('editPincode').value.trim() || myProvider.pincode || null,
                 bio:          document.getElementById('editBio').value.trim() || null,
                 rate:         parseInt(document.getElementById('editRate').value) || myProvider.rate,
                 whatsapp:     document.getElementById('editWhatsapp').value || null,
                 workingHours: document.getElementById('editWorkingHours').value,
+                serviceArea:  document.querySelector('input[name="editServiceArea"]:checked')?.value || myProvider.serviceArea || '10km',
+                language:     editedLangs.length > 0 ? editedLangs : (myProvider.language || []),
                 photo:        document.getElementById('editPhotoPreview').src || myProvider.photo
             };
+
+            if (modal.dataset.newLat && modal.dataset.newLng) {
+                updates.lat = parseFloat(modal.dataset.newLat);
+                updates.lng = parseFloat(modal.dataset.newLng);
+            }
+
+            // New ID verification submission, only if the section was showing an upload form
+            const idTypeEl = document.getElementById('editIdType');
+            if (idTypeEl) {
+                const idType = idTypeEl.value;
+                const idNumber = document.getElementById('editIdNumber').value.trim();
+                const idDocData = modal.dataset.newIdDoc || null;
+                if (idType || idNumber || idDocData) {
+                    updates.idVerification = {
+                        type: idType || null,
+                        number: idNumber || null,
+                        document: idDocData || null,
+                        status: 'pending',
+                        submittedAt: new Date().toISOString()
+                    };
+                    updates.verified = false;
+                }
+            }
+
             await updateProviderInFirebase(myProvider.id, updates);
             document.getElementById('editProviderModal').classList.add('hidden');
             showFirebaseStatus('✅ Profile updated successfully!', 'success');
