@@ -2534,25 +2534,35 @@
         }
 
         async function approveIdVerification(providerId) {
-            await _firebase.update(_firebase.ref(_firebase.db, 'providers/' + providerId), {
-                verified: true,
-                'idVerification/status': 'approved',
-                'idVerification/reviewedAt': new Date().toISOString()
-            });
-            showFirebaseStatus('✅ Provider verified!', 'success');
-            loadIdVerifications();
+            try {
+                await _firebase.update(_firebase.ref(_firebase.db, 'providers/' + providerId), {
+                    verified: true,
+                    'idVerification/status': 'approved',
+                    'idVerification/reviewedAt': new Date().toISOString()
+                });
+                showFirebaseStatus('✅ Provider verified!', 'success');
+                loadIdVerifications();
+            } catch (e) {
+                console.error('Approve ID verification failed:', e);
+                alert('❌ Could not approve this verification.\n\n' + e.message + '\n\nIf this says "permission_denied", your admin session may not be signed in correctly — try logging out and back in, then try again.');
+            }
         }
 
         async function rejectIdVerification(providerId) {
             const reason = prompt('Reason for rejection (optional):') || '';
-            await _firebase.update(_firebase.ref(_firebase.db, 'providers/' + providerId), {
-                verified: false,
-                'idVerification/status': 'rejected',
-                'idVerification/rejectionReason': reason,
-                'idVerification/reviewedAt': new Date().toISOString()
-            });
-            showFirebaseStatus('ID verification rejected', 'info');
-            loadIdVerifications();
+            try {
+                await _firebase.update(_firebase.ref(_firebase.db, 'providers/' + providerId), {
+                    verified: false,
+                    'idVerification/status': 'rejected',
+                    'idVerification/rejectionReason': reason,
+                    'idVerification/reviewedAt': new Date().toISOString()
+                });
+                showFirebaseStatus('ID verification rejected', 'info');
+                loadIdVerifications();
+            } catch (e) {
+                console.error('Reject ID verification failed:', e);
+                alert('❌ Could not reject this verification.\n\n' + e.message + '\n\nIf this says "permission_denied", your admin session may not be signed in correctly — try logging out and back in, then try again.');
+            }
         }
 
         function shareProviderDetails(providerId) {
@@ -5507,7 +5517,13 @@
                 if (fb) await fb.set(fb.ref(fb.db, 'admins/' + cred.user.uid), true);
             } catch(e) { console.warn('Admin seed error:', e.message); }
         })
-                    .catch(e => console.warn('⚠️ Admin Firebase sign-in failed:', e.message));
+                    .catch(e => {
+                        console.warn('⚠️ Admin Firebase sign-in failed:', e.message);
+                        const banner = document.createElement('div');
+                        banner.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:99999; background:#DC2626; color:#fff; text-align:center; padding:12px; font-weight:700; font-size:14px;';
+                        banner.innerHTML = '⚠️ Admin write-access sign-in failed (' + e.message + '). You can view data, but actions like Approve/Reject/Delete/Edit will fail until this is fixed. <button onclick="this.parentElement.remove()" style="margin-left:12px; background:#fff; color:#DC2626; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-weight:700;">Dismiss</button>';
+                        document.body.prepend(banner);
+                    });
             } else {
                 alert('Incorrect password!');
             }
