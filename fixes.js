@@ -3290,19 +3290,39 @@ window.radheyStop = function() {
 
   const SKIP_FIELDS = ['id', 'ownerUid'];
 
+  function isImageDataUri(v){
+    return typeof v === 'string' && /^data:image\//.test(v);
+  }
+
   function formatValue(key, val){
     if (val === null || val === undefined || val === '') return '<span style="color:#aaa;">\u2014</span>';
     if (typeof val === 'boolean') return val ? '\u2705 Yes' : '\u274C No';
+    if (isImageDataUri(val)) {
+      return '<img src="' + val + '" style="max-width:220px; max-height:220px; border-radius:8px; border:1px solid #ddd; display:block; margin-top:4px;">';
+    }
     if (Array.isArray(val)) {
       const kLower = key.toLowerCase();
-      if (kLower.indexOf('portfolio') !== -1 || kLower.indexOf('photo') !== -1) {
+      if (kLower.indexOf('portfolio') !== -1 || kLower.indexOf('photo') !== -1 || val.some(isImageDataUri)) {
         return '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">' +
           val.map(function(url){ return '<img src="' + url + '" style="width:70px; height:70px; object-fit:cover; border-radius:8px; border:1px solid #ddd;">'; }).join('') +
           '</div>';
       }
       return val.length ? val.join(', ') : '<span style="color:#aaa;">\u2014</span>';
     }
-    if (typeof val === 'object') return '<pre style="font-size:11px; background:#f7f7f7; padding:6px; border-radius:6px; overflow-x:auto; white-space:pre-wrap;">' + JSON.stringify(val, null, 2) + '</pre>';
+    if (typeof val === 'object') {
+      // Render nested objects (e.g. idVerification: {type, number, document, status})
+      // as their own mini field list, instead of dumping raw JSON — so a nested
+      // base64 image still renders as an image, not a wall of text.
+      const nestedRows = Object.keys(val)
+        .filter(function(k){ return SKIP_FIELDS.indexOf(k) === -1; })
+        .map(function(k){
+          return '<div style="display:flex; padding:4px 0;">' +
+            '<div style="flex:0 0 120px; font-weight:600; font-size:12px; color:#7C4A1E;">' + humanLabel(k) + '</div>' +
+            '<div style="flex:1; font-size:12px; color:#1A1206; word-break:break-word;">' + formatValue(k, val[k]) + '</div>' +
+          '</div>';
+        }).join('');
+      return '<div style="background:#f9f5ef; border-radius:8px; padding:8px 10px; margin-top:4px;">' + (nestedRows || '<span style="color:#aaa;">\u2014</span>') + '</div>';
+    }
     if (/^\d{4}-\d{2}-\d{2}T/.test(String(val))) {
       const d = new Date(val);
       if (!isNaN(d)) return d.toLocaleString();
