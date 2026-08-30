@@ -120,6 +120,10 @@
   </div>
 
   <div id="app">
+    <div id="demoBanner" style="display:none; background:#1A0A00; color:#FFD98A; text-align:center; padding:10px 16px; font-size:13px; font-weight:700; position:sticky; top:0; z-index:50;">
+      🎬 DEMO MODE — this is sample data so you can explore the dashboard. Nothing here is saved or sent anywhere real.
+      <a href="share.html" style="color:#FF6B00; text-decoration:underline; margin-left:8px;">Ready to apply for real? →</a>
+    </div>
     <header>
       <div>
         <h1 id="hdrName">🔱 Partner Dashboard</h1>
@@ -294,7 +298,9 @@
           </div>
         </div>
 
-        <div class="lead-filter-row" style="margin-top:20px;">
+        <input type="text" id="leadSearchInput" placeholder="🔍 Search by name or mobile number..." oninput="setLeadSearch(this.value)" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin-top:20px; margin-bottom:12px;">
+
+        <div class="lead-filter-row">
           <button class="active" data-filter="all" onclick="setLeadFilter('all')">All</button>
           <button data-filter="not_contacted" onclick="setLeadFilter('not_contacted')">Not Contacted</button>
           <button data-filter="contacted" onclick="setLeadFilter('contacted')">Contacted</button>
@@ -308,7 +314,8 @@
       <!-- My Clients (converted / registered leads) -->
       <div class="card">
         <h2>🤝 My Clients</h2>
-        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Leads that have registered move here automatically. Stay in touch — a quick check-in message goes a long way.</p>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Everyone who has actually registered through you — verified automatically from real sign-ups, plus any leads you've manually marked Registered. Stay in touch — a quick check-in message goes a long way.</p>
+        <input type="text" id="clientSearchInput" placeholder="🔍 Search by name or mobile number..." oninput="setClientSearch(this.value)" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin-bottom:12px;">
         <div id="clientListEl"><div class="empty">Loading…</div></div>
       </div>
 
@@ -431,6 +438,14 @@
     document.getElementById('codeInput').value = urlCode;
     if (window.loadPartner) window.loadPartner();
   }
+
+  // Demo mode — ?demo=1 — lets a prospect explore the real dashboard UI with
+  // realistic sample data, with zero risk to real data: no writes ever reach
+  // Firebase while in this mode (every write action checks window._demoMode
+  // first and short-circuits to a local-only, in-memory version instead).
+  if (new URLSearchParams(location.search).get('demo') === '1' && window.enterDemoMode) {
+    window.enterDemoMode();
+  }
 </script>
 
 <script>
@@ -546,6 +561,62 @@
     navigator.clipboard.writeText(text).then(() => alert('✅ Link copied!'));
   }
 
+  window.enterDemoMode = async function(){
+    window._demoMode = true;
+
+    const demoPartner = {
+      name: 'Demo Partner',
+      city: 'Jodhpur',
+      phone: '9876500000',
+      pincode: '342001',
+      status: 'active',
+      appointedDate: new Date(Date.now() - 12 * 86400000).toISOString() // 12 days "in"
+    };
+
+    await showDashboard('DEMO-PREVIEW', demoPartner);
+
+    document.getElementById('demoBanner').style.display = 'block';
+
+    // Override the live (empty, since this code doesn't really exist) stats
+    // and history with realistic-looking sample figures, purely for display.
+    document.getElementById('statProviders').textContent = 14;
+    document.getElementById('statSeekers').textContent = 27;
+    document.getElementById('statVerified').textContent = 11;
+    document.getElementById('progressFillProviders').style.width = Math.round((14/33)*100) + '%';
+    document.getElementById('progressLabelProviders').textContent = '14 / 33';
+    document.getElementById('progressFillSeekers').style.width = Math.round((27/66)*100) + '%';
+    document.getElementById('progressLabelSeekers').textContent = '27 / 66';
+    document.getElementById('statDaysLeft').textContent = 18;
+
+    const payoutBody = document.getElementById('payoutBody');
+    if (payoutBody) {
+      const sample = [
+        { date: new Date(Date.now() - 3*86400000).toISOString(), amount: 415, note: 'Weekly convenience-fee share' },
+        { date: new Date(Date.now() - 10*86400000).toISOString(), amount: 302, note: 'Weekly convenience-fee share' },
+        { date: new Date(Date.now() - 17*86400000).toISOString(), amount: 150, note: 'Gold membership upgrade share (Rajesh Electricals)' }
+      ];
+      payoutBody.innerHTML = sample.map(p => `
+        <tr>
+          <td>${new Date(p.date).toLocaleDateString()}</td>
+          <td>₹${p.amount}</td>
+          <td>${p.note}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Seed sample leads + a converted client directly into the in-memory
+    // cache (never touches Firebase), so the Leads/Clients sections show
+    // something realistic instead of an empty state.
+    leadsCache = {
+      demo_lead_1: { businessName: 'Sharma Electricals', type: 'provider', category: '🏠 Home Services', phone: '9876543210', area: 'Ratanada', notes: 'Met at the hardware store — interested, said he\u2019ll join this week.', status: 'interested', addedAt: new Date(Date.now()-2*86400000).toISOString() },
+      demo_lead_2: { businessName: 'Priya Beauty Parlour', type: 'provider', category: '💄 Beauty & Wellness', phone: '9876500001', area: 'Shastri Nagar', notes: '', status: 'contacted', addedAt: new Date(Date.now()-1*86400000).toISOString() },
+      demo_lead_3: { businessName: 'Ankit (looking for a tutor)', type: 'seeker', category: '📚 Education & Skill Services', phone: '9876500002', area: 'Paota', notes: 'Needs a Class 10 Maths tutor', status: 'not_contacted', addedAt: new Date().toISOString() },
+      demo_client_1: { businessName: 'Rajesh Electricals', type: 'provider', category: '🏠 Home Services', phone: '9876500003', area: 'Sardarpura', status: 'registered', addedAt: new Date(Date.now()-8*86400000).toISOString() }
+    };
+    renderLeads();
+    renderClients();
+  };
+
   async function loadPartner(){
     const code = document.getElementById('codeInput').value.trim().toUpperCase();
     if (!code) return;
@@ -642,6 +713,8 @@
       const myProviders = allProviders.filter(p => p.referredByPartner === code);
       const mySeekers    = allSeekers.filter(s => s.referredByPartner === code);
       const myVerified   = myProviders.filter(p => p.verified).length;
+      window._realConversions = { providers: myProviders, seekers: mySeekers };
+      renderClients();
 
       document.getElementById('statProviders').textContent = myProviders.length;
       document.getElementById('statSeekers').textContent = mySeekers.length;
@@ -697,6 +770,14 @@
     not_interested: 'Not Interested'
   };
   let leadFilter = 'all';
+  let leadSearchTerm = '';
+  let clientSearchTerm = '';
+  window.setLeadSearch = function(v){ leadSearchTerm = v.trim().toLowerCase(); renderLeads(); };
+  window.setClientSearch = function(v){ clientSearchTerm = v.trim().toLowerCase(); renderClients(); };
+  function matchesSearch(term, ...fields){
+    if (!term) return true;
+    return fields.some(f => (f || '').toString().toLowerCase().includes(term));
+  }
   let leadsCache = {};
 
   window.setLeadFilter = function(filter){
@@ -718,6 +799,20 @@
 
     if (!name) { errEl.textContent = 'Please enter a business or person name.'; return; }
 
+    if (window._demoMode) {
+      const fakeId = 'demo_new_' + Date.now();
+      leadsCache[fakeId] = { businessName: name, type, category, phone, area, notes, status: 'not_contacted', addedAt: new Date().toISOString() };
+      document.getElementById('leadName').value = '';
+      document.getElementById('leadType').value = 'provider';
+      document.getElementById('leadCategory').value = '';
+      document.getElementById('leadPhone').value = '';
+      document.getElementById('leadArea').value = '';
+      document.getElementById('leadNotes').value = '';
+      renderLeads();
+      renderClients();
+      return;
+    }
+
     try {
       const leadRef = window._ppush(window._pref(window._pdb, 'partnerLeads/' + code));
       await window._pset(leadRef, {
@@ -738,6 +833,12 @@
   };
 
   window.updateLeadStatus = async function(leadId, newStatus){
+    if (window._demoMode) {
+      leadsCache[leadId].status = newStatus;
+      renderLeads();
+      renderClients();
+      return;
+    }
     const code = window._currentPartnerCode;
     try {
       await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId + '/status'), newStatus);
@@ -751,6 +852,12 @@
 
   window.removeLead = async function(leadId){
     if (!confirm('Remove this lead from your list?')) return;
+    if (window._demoMode) {
+      delete leadsCache[leadId];
+      renderLeads();
+      renderClients();
+      return;
+    }
     const code = window._currentPartnerCode;
     try {
       await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId), null);
@@ -786,6 +893,16 @@
     const lead = leadsCache[leadId];
     if (!lead) return;
     const message = buildLeadWhatsAppMessage(lead);
+
+    if (window._demoMode) {
+      alert('📲 In the real dashboard, WhatsApp would now open with this message pre-filled and ready to send to ' + (lead.businessName || 'this lead') + ':\n\n' + message);
+      if (lead.status === 'not_contacted') {
+        leadsCache[leadId].status = 'contacted';
+        renderLeads();
+      }
+      return;
+    }
+
     const waNumber = cleanPhoneForWhatsApp(lead.phone);
     const url = waNumber
       ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(message)
@@ -809,6 +926,7 @@
   };
 
   async function loadLeads(){
+    if (window._demoMode) return; // enterDemoMode seeds leadsCache directly — don't overwrite it
     const code = window._currentPartnerCode;
     const listEl = document.getElementById('leadListEl');
     try {
@@ -826,10 +944,11 @@
     // Registered leads graduate to "My Clients" below and no longer show here.
     const activeIds = Object.keys(leadsCache).filter(id => leadsCache[id].status !== 'registered');
     const ids = activeIds.sort((a,b) => (leadsCache[b].addedAt||'').localeCompare(leadsCache[a].addedAt||''));
-    const filtered = leadFilter === 'all' ? ids : ids.filter(id => leadsCache[id].status === leadFilter);
+    let filtered = leadFilter === 'all' ? ids : ids.filter(id => leadsCache[id].status === leadFilter);
+    filtered = filtered.filter(id => matchesSearch(leadSearchTerm, leadsCache[id].businessName, leadsCache[id].phone));
 
     if (filtered.length === 0) {
-      listEl.innerHTML = '<div class="empty">' + (ids.length === 0 ? 'No leads added yet — use the form above to add your first one.' : 'No leads match this filter.') + '</div>';
+      listEl.innerHTML = '<div class="empty">' + (ids.length === 0 ? 'No leads added yet — use the form above to add your first one.' : 'No leads match this filter or search.') + '</div>';
       return;
     }
 
@@ -1012,6 +1131,19 @@
     btn.disabled = true;
     btn.textContent = 'Importing…';
 
+    if (window._demoMode) {
+      toImport.forEach((lead, i) => {
+        leadsCache['demo_import_' + Date.now() + '_' + i] = { ...lead, status: 'not_contacted', addedAt: new Date().toISOString() };
+      });
+      toggleImportPanel(false);
+      renderLeads();
+      renderClients();
+      alert('✅ Imported ' + toImport.length + ' lead(s) into this demo. Find them in your Leads list below, all marked "Not Contacted." (In the real dashboard, these would be saved to your account.)');
+      btn.disabled = false;
+      btn.textContent = '✅ Import Leads';
+      return;
+    }
+
     try {
       for (const lead of toImport) {
         const leadRef = window._ppush(window._pref(window._pdb, 'partnerLeads/' + code));
@@ -1083,6 +1215,12 @@
     const client = leadsCache[clientId];
     if (!client) return;
     const message = buildClientCheckinMessage(client);
+
+    if (window._demoMode) {
+      alert('📲 In the real dashboard, WhatsApp would now open with this check-in message pre-filled for ' + (client.businessName || 'this client') + ':\n\n' + message);
+      return;
+    }
+
     const waNumber = cleanPhoneForWhatsApp(client.phone);
     const url = waNumber
       ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(message)
@@ -1092,6 +1230,12 @@
 
   window.moveClientBackToLeads = async function(clientId){
     if (!confirm('Move this back to your Leads list? Use this if it was marked Registered by mistake.')) return;
+    if (window._demoMode) {
+      leadsCache[clientId].status = 'interested';
+      renderLeads();
+      renderClients();
+      return;
+    }
     const code = window._currentPartnerCode;
     try {
       await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + clientId + '/status'), 'interested');
@@ -1103,34 +1247,84 @@
     }
   };
 
+  function normalizePhone(p){
+    if (!p) return '';
+    const digits = p.toString().replace(/\D/g, '');
+    return digits.length > 10 ? digits.slice(-10) : digits;
+  }
+
+  window.sendRealClientWhatsApp = function(type, phone, name){
+    const partnerName = window._currentPartnerName || 'your City Channel Partner';
+    const message = 'Namaste ' + name + ' \uD83D\uDE4F Just checking in \u2014 hope things are going well on SAARTHI! Let me know if you ever need any help or have questions.\n\n\u2014 ' + partnerName;
+    if (window._demoMode) {
+      alert('\uD83D\uDCF2 In the real dashboard, WhatsApp would now open with this check-in message pre-filled for ' + name + ':\n\n' + message);
+      return;
+    }
+    const waNumber = cleanPhoneForWhatsApp(phone);
+    const url = waNumber
+      ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(message)
+      : 'https://wa.me/?text=' + encodeURIComponent(message);
+    window.open(url, '_blank');
+  };
+
   function renderClients(){
     const listEl = document.getElementById('clientListEl');
     if (!listEl) return;
-    const ids = Object.keys(leadsCache)
-      .filter(id => leadsCache[id].status === 'registered')
-      .sort((a,b) => (leadsCache[b].addedAt||'').localeCompare(leadsCache[a].addedAt||''));
 
-    if (ids.length === 0) {
-      listEl.innerHTML = '<div class="empty">No clients yet — once a lead registers, they will show up here automatically.</div>';
+    const real = window._realConversions || { providers: [], seekers: [] };
+    const realEntries = [
+      ...real.providers.map(p => ({
+        source: 'real', type: 'provider', name: p.name, phone: p.mobile,
+        category: p.service || '', area: p.location || '',
+        verified: !!p.verified, date: p.registered || ''
+      })),
+      ...real.seekers.map(s => ({
+        source: 'real', type: 'seeker', name: s.name, phone: s.mobile,
+        category: '', area: s.location || '',
+        verified: false, date: s.registered || ''
+      }))
+    ];
+    const realPhones = new Set(realEntries.map(e => normalizePhone(e.phone)).filter(Boolean));
+
+    const manualIds = Object.keys(leadsCache).filter(id => leadsCache[id].status === 'registered');
+    const manualEntries = manualIds
+      .filter(id => !realPhones.has(normalizePhone(leadsCache[id].phone))) // don't double-list the same person
+      .map(id => ({
+        source: 'manual', id, type: leadsCache[id].type, name: leadsCache[id].businessName,
+        phone: leadsCache[id].phone, category: leadsCache[id].category || '', area: leadsCache[id].area || '',
+        verified: false, date: leadsCache[id].addedAt || ''
+      }));
+
+    let all = [...realEntries, ...manualEntries]
+      .filter(e => matchesSearch(clientSearchTerm, e.name, e.phone))
+      .sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+    if (all.length === 0) {
+      const nothingAtAll = realEntries.length === 0 && manualEntries.length === 0;
+      listEl.innerHTML = '<div class="empty">' + (nothingAtAll ? 'No clients yet \u2014 once someone registers through your link, they\u2019ll show up here automatically.' : 'No clients match your search.') + '</div>';
       return;
     }
 
-    listEl.innerHTML = ids.map(id => {
-      const l = leadsCache[id];
-      const typeLabel = l.type === 'seeker' ? '🔍 Seeker' : '🛠 Provider';
+    listEl.innerHTML = all.map(e => {
+      const typeLabel = e.type === 'seeker' ? '\uD83D\uDD0D Seeker' : '\uD83D\uDEE0 Provider';
+      const badge = e.source === 'real'
+        ? (e.verified ? '<span class="badge status-registered" style="align-self:flex-start;">\u2705 Verified & ID-Checked</span>' : '<span class="badge status-registered" style="align-self:flex-start;">\u2705 Verified Registration</span>')
+        : '<span class="badge" style="align-self:flex-start; background:#FFF3E0; color:#B8600A;">\uD83D\uDCDD Marked Registered</span>';
+      const safeName = (e.name || '').replace(/'/g, "\\'");
+      const actionButtons = e.source === 'real'
+        ? '<button onclick="sendRealClientWhatsApp(\'' + e.type + '\',\'' + (e.phone||'') + '\',\'' + safeName + '\')" style="background:#25D366; color:#fff;">\uD83D\uDCF2 Chat on WhatsApp</button>'
+        : '<button onclick="sendClientWhatsApp(\'' + e.id + '\')" style="background:#25D366; color:#fff;">\uD83D\uDCF2 Chat on WhatsApp</button>' +
+          '<button onclick="moveClientBackToLeads(\'' + e.id + '\')">\u21A9 Move back to Leads</button>';
       return `
         <div class="lead-item">
           <div class="lead-top">
             <div>
-              <div class="lead-name">${l.businessName} <span style="font-weight:400; font-size:11px; color:var(--dim);">(${typeLabel})</span></div>
-              <div class="lead-meta">${l.category || ''}${l.category && l.area ? ' · ' : ''}${l.area || ''}${l.phone ? ' · 📱 ' + l.phone : ''}</div>
+              <div class="lead-name">${e.name || 'Unnamed'} <span style="font-weight:400; font-size:11px; color:var(--dim);">(${typeLabel})</span></div>
+              <div class="lead-meta">${e.category || ''}${e.category && e.area ? ' · ' : ''}${e.area || ''}${e.phone ? ' · \uD83D\uDCF1 ' + e.phone : ''}</div>
             </div>
-            <span class="badge status-registered" style="align-self:flex-start;">✅ Registered</span>
+            ${badge}
           </div>
-          <div class="lead-actions">
-            <button onclick="sendClientWhatsApp('${id}')" style="background:#25D366; color:#fff;">📲 Chat on WhatsApp</button>
-            <button onclick="moveClientBackToLeads('${id}')">↩ Move back to Leads</button>
-          </div>
+          <div class="lead-actions">${actionButtons}</div>
         </div>
       `;
     }).join('');
