@@ -3244,3 +3244,225 @@ window.radheyStop = function() {
 
     console.log('[SC Phase2] Login modal reset/timeout fix loaded');
 })();
+
+/* =====================================================================
+ * PHASE 3: Admin — View Full Details + Edit for Providers & Seekers
+ * ---------------------------------------------------------------------
+ * Problem: the admin Users tab only ever showed a handful of summary
+ * fields per provider/seeker (name, phone, service, location, rating).
+ * Everything else submitted at registration — bio, portfolio photos,
+ * working hours, full category breakdown, WhatsApp number, languages,
+ * membership plan, etc. — was never visible anywhere in the admin panel,
+ * and there was no way to correct a submitted detail at all.
+ *
+ * Fix: adds a "👁 View" button (shows every field on the record, fully
+ * generic so it never hides new fields added later) and an "✏️ Edit"
+ * button (a focused form for the fields admins actually need to correct)
+ * to every row in both Providers Management and Seekers Management,
+ * without touching the original render functions directly.
+ * ===================================================================== */
+(function scAdminDetailsPatch(){
+  'use strict';
+
+  function ensureModal(){
+    if (document.getElementById('scAdminDetailModal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'scAdminDetailModal';
+    modal.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto;';
+    modal.innerHTML =
+      '<div style="background:#fff; border-radius:16px; max-width:640px; width:100%; padding:28px; position:relative;">' +
+        '<button id="scAdminModalClose" style="position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%; border:none; background:#f0f0f0; font-size:20px; cursor:pointer; line-height:1;">&times;</button>' +
+        '<div id="scAdminModalBody"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e){ if (e.target === modal) window.scCloseAdminModal(); });
+    document.getElementById('scAdminModalClose').addEventListener('click', window.scCloseAdminModal);
+  }
+
+  window.scCloseAdminModal = function(){
+    const modal = document.getElementById('scAdminDetailModal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  function humanLabel(key){
+    return key.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+  }
+
+  const SKIP_FIELDS = ['id', 'ownerUid'];
+
+  function formatValue(key, val){
+    if (val === null || val === undefined || val === '') return '<span style="color:#aaa;">\u2014</span>';
+    if (typeof val === 'boolean') return val ? '\u2705 Yes' : '\u274C No';
+    if (Array.isArray(val)) {
+      const kLower = key.toLowerCase();
+      if (kLower.indexOf('portfolio') !== -1 || kLower.indexOf('photo') !== -1) {
+        return '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">' +
+          val.map(function(url){ return '<img src="' + url + '" style="width:70px; height:70px; object-fit:cover; border-radius:8px; border:1px solid #ddd;">'; }).join('') +
+          '</div>';
+      }
+      return val.length ? val.join(', ') : '<span style="color:#aaa;">\u2014</span>';
+    }
+    if (typeof val === 'object') return '<pre style="font-size:11px; background:#f7f7f7; padding:6px; border-radius:6px; overflow-x:auto; white-space:pre-wrap;">' + JSON.stringify(val, null, 2) + '</pre>';
+    if (/^\d{4}-\d{2}-\d{2}T/.test(String(val))) {
+      const d = new Date(val);
+      if (!isNaN(d)) return d.toLocaleString();
+    }
+    return String(val);
+  }
+
+  window.scViewDetails = function(type, id){
+    ensureModal();
+    const arr = type === 'provider' ? (window.providers || []) : (window.seekers || []);
+    const rec = arr.find(function(x){ return x.id === id; });
+    if (!rec) { alert('Record not found \u2014 it may have just changed. Please refresh and try again.'); return; }
+
+    const rows = Object.keys(rec)
+      .filter(function(k){ return SKIP_FIELDS.indexOf(k) === -1; })
+      .sort()
+      .map(function(k){
+        return '<div style="display:flex; padding:8px 0; border-bottom:1px solid #f0f0f0;">' +
+          '<div style="flex:0 0 160px; font-weight:700; font-size:13px; color:#7C4A1E;">' + humanLabel(k) + '</div>' +
+          '<div style="flex:1; font-size:13px; color:#1A1206; word-break:break-word;">' + formatValue(k, rec[k]) + '</div>' +
+        '</div>';
+      }).join('');
+
+    document.getElementById('scAdminModalBody').innerHTML =
+      '<h2 style="font-size:20px; font-weight:800; margin-bottom:4px;">' + (rec.name || 'Unnamed') + '</h2>' +
+      '<p style="font-size:12px; color:#888; margin-bottom:16px;">' + (type === 'provider' ? 'Provider' : 'Seeker') + ' \u2014 full submitted details</p>' +
+      '<div>' + rows + '</div>' +
+      '<button onclick="scCloseAdminModal()" style="margin-top:20px; width:100%; padding:12px; border-radius:8px; border:none; background:#FF6B00; color:#fff; font-weight:700; cursor:pointer;">Close</button>';
+    document.getElementById('scAdminDetailModal').style.display = 'flex';
+  };
+
+  const EDIT_FIELDS = {
+    provider: [
+      { key: 'name', label: 'Full Name', type: 'text' },
+      { key: 'mobile', altKey: 'phone', label: 'Mobile Number', type: 'text' },
+      { key: 'whatsapp', label: 'WhatsApp Number', type: 'text' },
+      { key: 'service', altKey: 'service_name', label: 'Service / Category', type: 'text' },
+      { key: 'subcategory', label: 'Subcategory', type: 'text' },
+      { key: 'experience', altKey: 'experience_years', label: 'Experience (years)', type: 'number' },
+      { key: 'rate', altKey: 'rate_per_hour_inr', label: 'Rate (\u20b9/hr)', type: 'number' },
+      { key: 'location', altKey: 'city', label: 'Location / Address', type: 'text' },
+      { key: 'bio', label: 'About / Bio', type: 'textarea' },
+      { key: 'workingHours', label: 'Working Hours', type: 'text' },
+      { key: 'serviceArea', label: 'Service Area', type: 'text' }
+    ],
+    seeker: [
+      { key: 'name', label: 'Full Name', type: 'text' },
+      { key: 'mobile', label: 'Mobile Number', type: 'text' },
+      { key: 'whatsapp', label: 'WhatsApp Number', type: 'text' },
+      { key: 'location', label: 'Location / Address', type: 'text' }
+    ]
+  };
+
+  window.scEditDetails = function(type, id){
+    ensureModal();
+    const arr = type === 'provider' ? (window.providers || []) : (window.seekers || []);
+    const rec = arr.find(function(x){ return x.id === id; });
+    if (!rec) { alert('Record not found \u2014 please refresh and try again.'); return; }
+
+    const fields = EDIT_FIELDS[type];
+    const rowsHtml = fields.map(function(f){
+      const currentVal = rec[f.key] !== undefined ? rec[f.key] : (f.altKey ? rec[f.altKey] : '');
+      const safeVal = (currentVal === undefined || currentVal === null ? '' : currentVal).toString().replace(/"/g, '&quot;');
+      const inputHtml = f.type === 'textarea'
+        ? '<textarea id="scEdit_' + f.key + '" rows="3" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; font-size:13px;">' + safeVal + '</textarea>'
+        : '<input type="' + f.type + '" id="scEdit_' + f.key + '" value="' + safeVal + '" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; font-size:13px;">';
+      return '<div style="margin-bottom:12px;">' +
+        '<label style="display:block; font-size:12px; font-weight:700; color:#7C4A1E; margin-bottom:4px;">' + f.label + '</label>' +
+        inputHtml +
+      '</div>';
+    }).join('');
+
+    document.getElementById('scAdminModalBody').innerHTML =
+      '<h2 style="font-size:20px; font-weight:800; margin-bottom:4px;">Edit ' + (rec.name || 'Record') + '</h2>' +
+      '<p style="font-size:12px; color:#888; margin-bottom:16px;">' + (type === 'provider' ? 'Provider' : 'Seeker') + ' \u2014 saving updates the live listing immediately.</p>' +
+      '<div>' + rowsHtml + '</div>' +
+      '<div style="display:flex; gap:10px; margin-top:10px;">' +
+        '<button onclick="scSaveEdit(\'' + type + '\',\'' + id + '\')" style="flex:1; padding:12px; border-radius:8px; border:none; background:#2E7D32; color:#fff; font-weight:700; cursor:pointer;">\uD83D\uDCBE Save Changes</button>' +
+        '<button onclick="scCloseAdminModal()" style="padding:12px 20px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer;">Cancel</button>' +
+      '</div>' +
+      '<p id="scEditErr" style="color:#c0392b; font-size:12px; margin-top:8px;"></p>';
+    document.getElementById('scAdminDetailModal').style.display = 'flex';
+  };
+
+  window.scSaveEdit = async function(type, id){
+    const fields = EDIT_FIELDS[type];
+    const updates = {};
+    fields.forEach(function(f){
+      const el = document.getElementById('scEdit_' + f.key);
+      if (!el) return;
+      const val = el.value;
+      updates[f.key] = f.type === 'number' ? (Number(val) || 0) : val;
+      if (f.altKey) updates[f.altKey] = updates[f.key]; // keep legacy-named field in sync too
+    });
+
+    try {
+      const fn = type === 'provider' ? window.updateProviderInFirebase : window.updateSeekerInFirebase;
+      if (typeof fn !== 'function') throw new Error('Update function not available on this page yet');
+      const ok = await fn(id, updates);
+      if (ok) {
+        window.scCloseAdminModal();
+      } else {
+        const errEl = document.getElementById('scEditErr');
+        if (errEl) errEl.textContent = 'Save failed \u2014 check your connection and try again.';
+      }
+    } catch (e) {
+      const errEl = document.getElementById('scEditErr');
+      if (errEl) errEl.textContent = 'Save failed: ' + e.message;
+    }
+  };
+
+  // Inject View/Edit buttons into every row by wrapping the original render
+  // functions — the original rendering is untouched, we just add to its output.
+  function patchRenderFn(fnName, type, containerId){
+    if (typeof window[fnName] !== 'function') return false;
+    if (window[fnName].__scDetailsPatched) return true;
+    const orig = window[fnName];
+    const wrapped = function(list){
+      const result = orig.apply(this, arguments);
+      try {
+        const container = document.getElementById(containerId);
+        if (container && Array.isArray(list)) {
+          const actionGroups = container.querySelectorAll(':scope > div > div.flex.justify-between.items-start > div.flex.gap-2.ml-4');
+          list.forEach(function(rec, i){
+            const grp = actionGroups[i];
+            if (!grp || !rec || !rec.id) return;
+            const btnWrap = document.createElement('div');
+            btnWrap.style.cssText = 'display:flex; gap:6px; margin-right:6px;';
+            btnWrap.innerHTML =
+              '<button onclick="scViewDetails(\'' + type + '\',\'' + rec.id + '\')" style="background:#6b7280; color:#fff; padding:4px 10px; border-radius:6px; font-size:13px; border:none; cursor:pointer;" title="View full details">\uD83D\uDC41 View</button>' +
+              '<button onclick="scEditDetails(\'' + type + '\',\'' + rec.id + '\')" style="background:#2563eb; color:#fff; padding:4px 10px; border-radius:6px; font-size:13px; border:none; cursor:pointer;" title="Edit">\u270F\uFE0F Edit</button>';
+            grp.prepend(btnWrap);
+          });
+        }
+      } catch (e) { console.warn('scAdminDetailsPatch inject error:', e); }
+      return result;
+    };
+    wrapped.__scDetailsPatched = true;
+    window[fnName] = wrapped;
+    return true;
+  }
+
+  function scInit(){
+    ensureModal();
+    const ok1 = patchRenderFn('renderProvidersList', 'provider', 'providersListAdmin');
+    const ok2 = patchRenderFn('renderSeekersList', 'seeker', 'seekersListAdmin');
+    return ok1 && ok2;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', scInit);
+  } else {
+    scInit();
+  }
+  let tries = 0;
+  const iv = setInterval(function(){
+    tries++;
+    const done = scInit();
+    if (done || tries > 40) clearInterval(iv);
+  }, 250);
+
+  console.log('[SC Phase3] Admin View/Edit details patch loaded');
+})();
