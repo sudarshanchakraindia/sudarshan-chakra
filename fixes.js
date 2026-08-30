@@ -3310,11 +3310,61 @@ window.radheyStop = function() {
     return String(val);
   }
 
-  window.scViewDetails = function(type, id){
+  // providers/seekers in index.html are declared with `let` at the top of a
+  // classic <script> — those never attach to window, so we can't read them
+  // from here. Rather than depend on that, fetch the record fresh, directly
+  // from Firebase, via our own small secondary app instance (Firebase
+  // supports multiple named app instances safely side by side).
+  let _scDbPromise = null;
+  function scGetDb(){
+    if (_scDbPromise) return _scDbPromise;
+    _scDbPromise = Promise.all([
+      import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js')
+    ]).then(function(mods){
+      const appMod = mods[0], dbMod = mods[1];
+      const config = {
+        apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
+        authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
+        databaseURL: "https://sudarshan-chakra-b0ac1-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "sudarshan-chakra-b0ac1",
+        storageBucket: "sudarshan-chakra-b0ac1.firebasestorage.app",
+        messagingSenderId: "357210144411",
+        appId: "1:357210144411:web:b440a94cf78b04b58b103e"
+      };
+      const app = appMod.initializeApp(config, 'scAdminDetailsPatchApp');
+      const db = dbMod.getDatabase(app);
+      return { db: db, ref: dbMod.ref, get: dbMod.get };
+    });
+    return _scDbPromise;
+  }
+
+  async function scFetchRecord(type, id){
+    const path = (type === 'provider' ? 'providers/' : 'seekers/') + id;
+    const fb = await scGetDb();
+    const snap = await fb.get(fb.ref(fb.db, path));
+    if (!snap.exists()) return null;
+    const val = snap.val();
+    val.id = id;
+    return val;
+  }
+
+  window.scViewDetails = async function(type, id){
     ensureModal();
-    const arr = type === 'provider' ? (window.providers || []) : (window.seekers || []);
-    const rec = arr.find(function(x){ return x.id === id; });
-    if (!rec) { alert('Record not found \u2014 it may have just changed. Please refresh and try again.'); return; }
+    document.getElementById('scAdminModalBody').innerHTML = '<p style="text-align:center; padding:30px; color:#888;">Loading\u2026</p>';
+    document.getElementById('scAdminDetailModal').style.display = 'flex';
+
+    let rec;
+    try {
+      rec = await scFetchRecord(type, id);
+    } catch (e) {
+      document.getElementById('scAdminModalBody').innerHTML = '<p style="color:#c0392b;">Could not load this record: ' + e.message + '</p>';
+      return;
+    }
+    if (!rec) {
+      document.getElementById('scAdminModalBody').innerHTML = '<p style="color:#c0392b;">Record not found \u2014 it may have just been deleted.</p><button onclick="scCloseAdminModal()" style="margin-top:14px; width:100%; padding:12px; border-radius:8px; border:none; background:#FF6B00; color:#fff; font-weight:700; cursor:pointer;">Close</button>';
+      return;
+    }
 
     const rows = Object.keys(rec)
       .filter(function(k){ return SKIP_FIELDS.indexOf(k) === -1; })
@@ -3356,11 +3406,22 @@ window.radheyStop = function() {
     ]
   };
 
-  window.scEditDetails = function(type, id){
+  window.scEditDetails = async function(type, id){
     ensureModal();
-    const arr = type === 'provider' ? (window.providers || []) : (window.seekers || []);
-    const rec = arr.find(function(x){ return x.id === id; });
-    if (!rec) { alert('Record not found \u2014 please refresh and try again.'); return; }
+    document.getElementById('scAdminModalBody').innerHTML = '<p style="text-align:center; padding:30px; color:#888;">Loading\u2026</p>';
+    document.getElementById('scAdminDetailModal').style.display = 'flex';
+
+    let rec;
+    try {
+      rec = await scFetchRecord(type, id);
+    } catch (e) {
+      document.getElementById('scAdminModalBody').innerHTML = '<p style="color:#c0392b;">Could not load this record: ' + e.message + '</p>';
+      return;
+    }
+    if (!rec) {
+      document.getElementById('scAdminModalBody').innerHTML = '<p style="color:#c0392b;">Record not found \u2014 it may have just been deleted.</p><button onclick="scCloseAdminModal()" style="margin-top:14px; width:100%; padding:12px; border-radius:8px; border:none; background:#FF6B00; color:#fff; font-weight:700; cursor:pointer;">Close</button>';
+      return;
+    }
 
     const fields = EDIT_FIELDS[type];
     const rowsHtml = fields.map(function(f){
