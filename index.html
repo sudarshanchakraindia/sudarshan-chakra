@@ -1164,6 +1164,7 @@
                     <label class="block text-gray-700 font-medium mb-2">Pincode *</label>
                     <input type="text" id="seekerPincode" required maxlength="6" pattern="[0-9]{6}" placeholder="e.g. 342001" class="w-full px-4 py-2 border rounded-lg">
                 </div>
+                <p class="text-xs text-gray-400 mt-2">If a local City Channel Partner refers or assists you, your name and mobile number may be shared with them so they can help you get started and follow up if needed. Your details are never made public.</p>
                 
                 <div class="mt-4">
                     <div class="flex justify-between items-center mb-2">
@@ -5518,13 +5519,27 @@
             const submitBtnS = document.getElementById('seekerForm').querySelector('button[type="submit"]');
             if (submitBtnS) { submitBtnS.disabled = true; submitBtnS.textContent = '⏳ Saving...'; }
             
-            saveSeekerToFirebase(seeker).then(success => {
+            saveSeekerToFirebase(seeker).then(async success => {
                 if (submitBtnS) { submitBtnS.disabled = false; submitBtnS.textContent = t('registerNow') || 'Register Now'; }
                 
                 if (success) {
                     currentUser = seeker;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    
+
+                    // Give the referring partner (if any) a lightweight, name+mobile-only
+                    // view of this seeker — kept deliberately separate from the full
+                    // seeker record, which stays admin-only for privacy.
+                    if (seeker.referredByPartner) {
+                        try {
+                            await _firebase.set(_firebase.ref(_firebase.db, 'partnerSeekerRefs/' + seeker.referredByPartner + '/' + seeker.id), {
+                                name: seeker.name,
+                                mobile: seeker.mobile,
+                                location: seeker.location || '',
+                                registeredAt: seeker.registered
+                            });
+                        } catch (e) { console.warn('partnerSeekerRefs write failed (non-critical):', e.message); }
+                    }
+
                     document.getElementById('seekerSuccess').classList.remove('hidden');
                     document.getElementById('seekerForm').reset();
                     showFirebaseStatus('✅ Seeker registered successfully!', 'success');
@@ -6749,6 +6764,37 @@ function toggleAdminCat(id, headerEl) {
                         timestamp: Date.now() });
                 }
                 showFirebaseStatus('✅ Hire approved! Seeker & provider notified.', 'success');
+                // Give the relevant City Channel Partner(s) a lightweight, verified
+                // activity entry — written only here, at admin approval, so partners
+                // only ever see real, confirmed activity, never unverified claims.
+                try {
+                    const activityBase = {
+                        date: req.date || new Date().toLocaleDateString('en-IN'),
+                        amount: req.amount || 0,
+                        fee: req.fee || 0,
+                        type: req.type || 'hire_fee',
+                        service: req.service || '',
+                        approvedAt: new Date().toISOString()
+                    };
+                    if (req.seekerUid) {
+                        const seekerSnap = await _firebase.get(_firebase.ref(_firebase.db, `seekers/${req.seekerUid}`));
+                        const seekerPartner = seekerSnap.exists() ? seekerSnap.val().referredByPartner : null;
+                        if (seekerPartner) {
+                            await _firebase.set(_firebase.ref(_firebase.db, `partnerActivity/${seekerPartner}/${requestId}_seeker`), Object.assign({}, activityBase, {
+                                role: 'seeker', counterpartName: req.providerName || 'a provider'
+                            }));
+                        }
+                    }
+                    if (req.providerId) {
+                        const providerSnap = await _firebase.get(_firebase.ref(_firebase.db, `providers/${req.providerId}`));
+                        const providerPartner = providerSnap.exists() ? providerSnap.val().referredByPartner : null;
+                        if (providerPartner) {
+                            await _firebase.set(_firebase.ref(_firebase.db, `partnerActivity/${providerPartner}/${requestId}_provider`), Object.assign({}, activityBase, {
+                                role: 'provider', counterpartName: req.seekerName || 'a seeker'
+                            }));
+                        }
+                    }
+                } catch (e) { console.warn('partnerActivity write failed (non-critical):', e.message); }
                 loadAdminHireRequests();
             } catch(e) { alert('Error approving: ' + e.message); }
         }
