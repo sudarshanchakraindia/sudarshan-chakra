@@ -1168,19 +1168,38 @@
     }
 
     try {
-      for (const lead of toImport) {
-        const leadRef = window._ppush(window._pref(window._pdb, 'partnerLeads/' + code));
-        await window._pset(leadRef, {
-          ...lead,
-          status: 'not_contacted',
-          addedAt: new Date().toISOString()
+      let done = 0;
+      const results = await Promise.allSettled(toImport.map(lead => {
+        const writePromise = (async () => {
+          const leadRef = window._ppush(window._pref(window._pdb, 'partnerLeads/' + code));
+          await window._pset(leadRef, {
+            ...lead,
+            status: 'not_contacted',
+            addedAt: new Date().toISOString()
+          });
+        })();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timed out — check your connection')), 15000)
+        );
+        return Promise.race([writePromise, timeoutPromise]).finally(() => {
+          done++;
+          btn.textContent = 'Importing ' + done + ' of ' + toImport.length + '…';
         });
-      }
+      }));
+
+      const failed = results.filter(r => r.status === 'rejected').length;
+      const succeeded = results.length - failed;
+
       toggleImportPanel(false);
       loadLeads();
-      alert('✅ Imported ' + toImport.length + ' lead(s). Find them in your Leads list below, all marked "Not Contacted."');
+
+      if (failed === 0) {
+        alert('✅ Imported ' + succeeded + ' lead(s). Find them in your Leads list below, all marked "Not Contacted."');
+      } else {
+        alert('⚠️ Imported ' + succeeded + ' of ' + toImport.length + ' lead(s). ' + failed + ' row(s) failed — likely a connection issue. You can re-import the same file; already-imported rows will just appear as duplicates you can remove.');
+      }
     } catch (e) {
-      errEl.textContent = 'Import failed partway through: ' + e.message;
+      errEl.textContent = 'Import failed: ' + e.message;
       btn.disabled = false;
       btn.textContent = '✅ Import Leads';
     }
