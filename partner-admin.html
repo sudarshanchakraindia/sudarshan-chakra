@@ -44,6 +44,8 @@
   .action-row{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
   .action-row button{ font-size:12px; padding:7px 12px; border-radius:6px; border:none; cursor:pointer; font-weight:700; }
   .btn-send{ background:#1565C0; color:#fff; }
+  .btn-whatsapp{ background:#25D366; color:#fff; }
+  .btn-email{ background:#D44638; color:#fff; }
   .btn-approve{ background:#2E7D32; color:#fff; }
   .btn-reject{ background:#C62828; color:#fff; }
   .btn-copy{ background:#e0e0e0; color:var(--deep); }
@@ -419,6 +421,7 @@
         return;
       }
       const apps = snap.val();
+      window._appsCache = apps;
       const ids = Object.keys(apps).sort((a,b) => (apps[b].submittedAt||'').localeCompare(apps[a].submittedAt||''));
 
       const pendingActionCount = ids.filter(id => ['pending','docs_submitted'].includes(apps[id].status)).length;
@@ -446,10 +449,14 @@
     let actionsHtml = '';
     if (status === 'pending') {
       actionsHtml = `
-        <button class="btn-send" onclick="sendAgreement('${id}')">📩 Send Agreement Link</button>
+        <button class="btn-whatsapp" onclick="sendViaWhatsApp('${id}')">📱 Send via WhatsApp</button>
+        <button class="btn-email" onclick="sendViaEmail('${id}')">✉️ Send via Email</button>
+        <button class="btn-send" onclick="sendAgreement('${id}')">🔗 Just Copy Link</button>
         <button class="btn-reject" onclick="rejectApplication('${id}')">✖ Reject</button>`;
     } else if (status === 'agreement_sent') {
       actionsHtml = `
+        <button class="btn-whatsapp" onclick="sendViaWhatsApp('${id}')">📱 Resend via WhatsApp</button>
+        <button class="btn-email" onclick="sendViaEmail('${id}')">✉️ Resend via Email</button>
         <button class="btn-copy" onclick="copyAgreementLink('${id}')">🔗 Copy Agreement Link Again</button>
         <button class="btn-reject" onclick="rejectApplication('${id}')">✖ Reject</button>`;
     } else if (status === 'docs_submitted') {
@@ -474,6 +481,7 @@
         </div>
         ${a.about ? `<div class="app-about">${a.about}</div>` : ''}
         ${docsHtml}
+        ${a.agreementSentAt ? `<div class="app-meta" style="margin-top:6px;">📤 Agreement sent${a.agreementSentVia ? ' via ' + a.agreementSentVia : ''} on ${new Date(a.agreementSentAt).toLocaleString('en-IN')}</div>` : ''}
         ${a.consentGiven ? `<div class="app-meta" style="margin-top:6px;">✅ Consent given by "${a.consentSignatureName || ''}" on ${a.consentGivenAt ? new Date(a.consentGivenAt).toLocaleString('en-IN') : ''}</div>` : ''}
         <div class="action-row">${actionsHtml}</div>
       </div>
@@ -494,6 +502,68 @@
       loadApplications();
     } catch (e) {
       alert('❌ Failed: ' + e.code + ' — ' + e.message);
+    }
+  };
+
+  function formatIndianMobileForWhatsApp(mobile){
+    let digits = (mobile || '').replace(/\D/g, '');
+    if (digits.length === 10) digits = '91' + digits;
+    else if (digits.length === 11 && digits.startsWith('0')) digits = '91' + digits.slice(1);
+    return digits; // 12-digit, e.g. 919251115013
+  }
+
+  function agreementMessageText(name, link){
+    return `Namaste ${name || ''}!\n\nThank you for applying to become a Sudarshan Chakra India (SAARTHI) City Channel Partner.\n\nPlease read the agreement, give your consent, and upload your documents here:\n${link}\n\nThis link is unique to your application — please don't share it.\n\n- Team Sudarshan Chakra India`;
+  }
+
+  async function markAgreementSentIfPending(id, via){
+    const a = (window._appsCache || {})[id];
+    if (a && a.status === 'pending') {
+      await set(ref(db, 'partnerApplications/' + id + '/status'), 'agreement_sent');
+      await set(ref(db, 'partnerApplications/' + id + '/agreementSentAt'), new Date().toISOString());
+      await set(ref(db, 'partnerApplications/' + id + '/agreementSentVia'), via);
+    }
+  }
+
+  window.sendViaWhatsApp = async function(id){
+    const a = (window._appsCache || {})[id];
+    if (!a) return;
+    const number = formatIndianMobileForWhatsApp(a.mobile);
+    if (!number) { alert('⚠️ No valid mobile number on this application.'); return; }
+    const link = agreementLinkFor(id);
+    const text = agreementMessageText(a.fullName, link);
+    const waUrl = `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+
+    try {
+      await markAgreementSentIfPending(id, 'whatsapp');
+      window.open(waUrl, '_blank');
+      loadApplications();
+    } catch (e) {
+      alert('❌ Failed to update status: ' + e.code + ' — ' + e.message);
+      window.open(waUrl, '_blank'); // still let them send even if the status update failed
+    }
+  };
+
+  window.sendViaEmail = async function(id){
+    const a = (window._appsCache || {})[id];
+    if (!a) return;
+    if (!a.email) { alert('⚠️ No email address on this application.'); return; }
+    const link = agreementLinkFor(id);
+    const subject = 'Sudarshan Chakra India — City Channel Partner Agreement';
+    const body = agreementMessageText(a.fullName, link);
+    const mailUrl = `mailto:${a.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    try {
+      await markAgreementSentIfPending(id, 'email');
+      const a2 = document.createElement('a');
+      a2.href = mailUrl;
+      a2.click();
+      loadApplications();
+    } catch (e) {
+      alert('❌ Failed to update status: ' + e.code + ' — ' + e.message);
+      const a2 = document.createElement('a');
+      a2.href = mailUrl;
+      a2.click();
     }
   };
 
