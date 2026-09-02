@@ -327,6 +327,14 @@
         <div id="leadListEl"><div class="empty">Loading…</div></div>
       </div>
 
+      <!-- Message Templates picker (opened per-lead via "Templates" button) -->
+      <div class="card" id="templatesCard" style="display:none;">
+        <h2>💬 Message Templates — <span id="templatesForName"></span></h2>
+        <p style="font-size:12px; color:var(--dim); margin-top:-6px;">Pick a message, review it, then send. Nothing goes out until you click Send in WhatsApp yourself.</p>
+        <div id="templatesListEl"></div>
+        <button style="margin-top:10px; padding:10px 16px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer;" onclick="closeTemplates()">Close</button>
+      </div>
+
       <!-- My Clients (converted / registered leads) -->
       <div class="card">
         <h2>🤝 My Clients</h2>
@@ -964,6 +972,109 @@
     }
   };
 
+  const MESSAGE_TEMPLATES = [
+    {
+      id: 'intro_provider',
+      label: 'First message — Provider',
+      appliesTo: 'provider',
+      text: (l) => `Namaste ${l.businessName || ''} 🙏 I'm ${window._currentPartnerName || 'your City Channel Partner'}, City Channel Partner for SAARTHI in ${window._currentPartnerCity || 'your city'}. We're a new app connecting local service providers like you directly with customers — completely free to list, zero commission on what you earn. Takes 5 minutes to set up: ${window._currentRefLink || ''}\n\nHappy to help you get started if you have any questions!`
+    },
+    {
+      id: 'intro_seeker',
+      label: 'First message — Seeker',
+      appliesTo: 'seeker',
+      text: (l) => `Namaste ${l.businessName || ''} 🙏 Looking for a reliable service provider near you? SAARTHI connects you with verified local providers in ${window._currentPartnerCity || 'your city'} — free to browse, you only pay a small ₹51 fee when you actually book someone. Check it out: ${window._currentRefLink || ''}\n\n— ${window._currentPartnerName || 'your City Channel Partner'}, SAARTHI City Channel Partner`
+    },
+    {
+      id: 'followup',
+      label: 'Follow-up (no response yet)',
+      appliesTo: 'both',
+      text: (l) => `Namaste ${l.businessName || ''} 🙏 Just following up on my last message about SAARTHI — did you get a chance to look at it? Happy to answer any questions or walk you through it on a quick call. Link here again: ${window._currentRefLink || ''}\n\n— ${window._currentPartnerName || 'your City Channel Partner'}`
+    },
+    {
+      id: 'no_cost_reassurance',
+      label: 'Addressing "what\'s the catch?" — Provider',
+      appliesTo: 'provider',
+      text: (l) => `Namaste ${l.businessName || ''} — totally fair question! SAARTHI is free to list on, and we don't take any commission on the work you get — you keep 100% of what you earn. We only make money if seekers choose to pay a small optional convenience fee for verified bookings. No hidden charges for you. Link: ${window._currentRefLink || ''}\n\n— ${window._currentPartnerName || 'your City Channel Partner'}`
+    },
+    {
+      id: 'reminder_incomplete',
+      label: 'Reminder — started but didn\'t finish signup',
+      appliesTo: 'both',
+      text: (l) => `Namaste ${l.businessName || ''} 🙏 Noticed you started signing up on SAARTHI but haven't finished yet — it only takes a couple more minutes. Let me know if you got stuck anywhere or have a question, happy to help: ${window._currentRefLink || ''}\n\n— ${window._currentPartnerName || 'your City Channel Partner'}`
+    },
+    {
+      id: 'thank_you',
+      label: 'Thank you (after they register)',
+      appliesTo: 'both',
+      text: (l) => `Namaste ${l.businessName || ''} 🙏 Thank you for joining SAARTHI! If you need any help getting set up or have questions along the way, just message me anytime — I'm here to help.\n\n— ${window._currentPartnerName || 'your City Channel Partner'}`
+    }
+  ];
+
+  let templatesTargetLeadId = null;
+
+  window.openTemplates = function(leadId){
+    const lead = leadsCache[leadId];
+    if (!lead) return;
+    templatesTargetLeadId = leadId;
+
+    document.getElementById('templatesForName').textContent = lead.businessName || '';
+    const relevant = MESSAGE_TEMPLATES.filter(t => t.appliesTo === 'both' || t.appliesTo === lead.type);
+
+    document.getElementById('templatesListEl').innerHTML = relevant.map(t => {
+      const preview = t.text(lead).replace(/\n/g, ' ').slice(0, 110);
+      return `
+        <div style="border:1px solid #eee; border-radius:10px; padding:12px; margin-top:10px;">
+          <div style="font-weight:700; font-size:13px;">${t.label}</div>
+          <div style="font-size:12px; color:var(--dim); margin-top:4px;">${preview}…</div>
+          <button style="margin-top:8px; background:#25D366; color:#fff; border:none; padding:8px 14px; border-radius:8px; font-size:13px; cursor:pointer;" onclick="sendTemplateMessage('${t.id}')">📲 Send via WhatsApp</button>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('templatesCard').style.display = 'block';
+    document.getElementById('templatesCard').scrollIntoView({ behavior:'smooth' });
+  };
+
+  window.closeTemplates = function(){
+    templatesTargetLeadId = null;
+    document.getElementById('templatesCard').style.display = 'none';
+  };
+
+  window.sendTemplateMessage = async function(templateId){
+    const leadId = templatesTargetLeadId;
+    const lead = leadsCache[leadId];
+    const tpl = MESSAGE_TEMPLATES.find(t => t.id === templateId);
+    if (!lead || !tpl) return;
+
+    const message = tpl.text(lead);
+
+    if (window._demoMode) {
+      alert('📲 In the real dashboard, WhatsApp would now open with this message pre-filled and ready to send to ' + (lead.businessName || 'this lead') + ':\n\n' + message);
+      closeTemplates();
+      return;
+    }
+
+    const waNumber = cleanPhoneForWhatsApp(lead.phone);
+    const url = waNumber
+      ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(message)
+      : 'https://wa.me/?text=' + encodeURIComponent(message);
+    window.open(url, '_blank');
+    closeTemplates();
+
+    if (lead.status === 'not_contacted') {
+      const confirmed = confirm('Did the WhatsApp message actually send?\n\nClick OK only if you saw it go through in WhatsApp. Click Cancel if the number didn\u2019t work or you didn\u2019t send it — it will stay as "Not Contacted."');
+      if (confirmed) {
+        const code = window._currentPartnerCode;
+        try {
+          await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId + '/status'), 'contacted');
+          leadsCache[leadId].status = 'contacted';
+          renderLeads();
+        } catch (e) { /* non-critical, ignore */ }
+      }
+    }
+  };
+
   async function loadLeads(){
     if (window._demoMode) return; // enterDemoMode seeds leadsCache directly — don't overwrite it
     const code = window._currentPartnerCode;
@@ -1055,6 +1166,7 @@
           </div>
           <div class="lead-actions">
             <button onclick="sendLeadWhatsApp('${id}')" style="background:#25D366; color:#fff;">📲 WhatsApp</button>
+            <button onclick="openTemplates('${id}')" style="background:#5C3D8A; color:#fff;">📋 Templates</button>
             <button onclick="removeLead('${id}')">🗑 Remove</button>
           </div>
         </div>
