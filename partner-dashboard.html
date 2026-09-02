@@ -96,6 +96,23 @@
   .lead-item .lead-actions{ margin-top:8px; }
   .lead-item .lead-actions button{ font-size:11px; padding:5px 10px; border-radius:6px; border:none; cursor:pointer; background:#eee; color:var(--deep); }
 
+  /* Message Templates */
+  .template-item{ border:1px solid #f0e4d4; border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .template-item .template-title{ font-weight:700; font-size:14px; }
+  .template-item .template-body{ font-size:12px; color:var(--dim); margin-top:4px; white-space:pre-wrap; }
+  .template-item .template-actions{ margin-top:8px; display:flex; gap:6px; }
+  .template-item .template-actions button{ font-size:11px; padding:5px 10px; border-radius:6px; border:none; cursor:pointer; background:#eee; color:var(--deep); }
+
+  /* Template picker overlay (choosing a template to send to a specific lead/client) */
+  .tpl-picker-overlay{ display:none; position:fixed; inset:0; background:rgba(26,18,6,0.6); z-index:998; align-items:center; justify-content:center; padding:20px; }
+  .tpl-picker-overlay.open{ display:flex; }
+  .tpl-picker-box{ background:#fff; border-radius:16px; max-width:420px; width:100%; padding:20px; max-height:80vh; overflow-y:auto; }
+  .tpl-picker-box h3{ margin:0 0 12px; font-size:16px; color:var(--deep); }
+  .tpl-pick-item{ border:1px solid #f0e4d4; border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
+  .tpl-pick-item:hover{ background:#FFF8F0; border-color:var(--saffron); }
+  .tpl-pick-item .tpl-pick-title{ font-weight:700; font-size:13px; }
+  .tpl-pick-item .tpl-pick-preview{ font-size:11px; color:var(--dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
   /* Marketing & Client Materials */
   .material-item{ display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid #f0e4d4; border-radius:10px; padding:12px 14px; margin-bottom:10px; }
   .material-item .material-name{ font-weight:700; font-size:14px; }
@@ -256,6 +273,21 @@
         </div>
       </div>
 
+      <!-- Message Templates -->
+      <div class="card">
+        <h2>✉️ Message Templates</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Write your own messages once, then send them to any lead or client with one tap. Use <code>{name}</code> anywhere in your message — it'll be replaced automatically with that person's name.</p>
+
+        <div class="lead-form" style="grid-template-columns:1fr;">
+          <input type="text" id="templateTitle" placeholder="Template name (e.g. Follow-up after 1 week)">
+          <textarea id="templateBody" rows="3" placeholder="Write your message here... e.g. Namaste {name}! Just checking in — have you had a chance to look at SAARTHI?" style="padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; font-family:inherit; resize:vertical;"></textarea>
+        </div>
+        <button class="btn primary" style="width:100%;" onclick="addTemplate()">➕ Save Template</button>
+        <p id="templateErr" style="color:#c0392b; font-size:12px; margin-top:6px;"></p>
+
+        <div id="templateListEl" style="margin-top:16px;"><div class="empty">Loading…</div></div>
+      </div>
+
       <!-- Lead Tracker -->
       <div class="card">
         <h2>🎯 My Leads</h2>
@@ -325,14 +357,6 @@
         </div>
 
         <div id="leadListEl"><div class="empty">Loading…</div></div>
-      </div>
-
-      <!-- Message Templates picker (opened per-lead via "Templates" button) -->
-      <div class="card" id="templatesCard" style="display:none;">
-        <h2>💬 Message Templates — <span id="templatesForName"></span></h2>
-        <p style="font-size:12px; color:var(--dim); margin-top:-6px;">Pick a message, review it, then send. Nothing goes out until you click Send in WhatsApp yourself.</p>
-        <div id="templatesListEl"></div>
-        <button style="margin-top:10px; padding:10px 16px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer;" onclick="closeTemplates()">Close</button>
       </div>
 
       <!-- My Clients (converted / registered leads) -->
@@ -705,6 +729,7 @@
     renderMaterials();
     loadCategoryOptions();
     loadPartnerActivity();
+    loadTemplates();
 
     // Training videos for partners
     try {
@@ -972,106 +997,155 @@
     }
   };
 
-  const MESSAGE_TEMPLATES = [
-    {
-      id: 'intro_provider',
-      label: 'First message — Provider',
-      appliesTo: 'provider',
-      text: (l) => `Namaste ${l.businessName || ''} 🙏 I'm ${window._currentPartnerName || 'your City Channel Partner'}, City Channel Partner for SAARTHI in ${window._currentPartnerCity || 'your city'}. We're a new app connecting local service providers like you directly with customers — completely free to list, zero commission on what you earn. Takes 5 minutes to set up: ${window._currentRefLink || ''}\n\nHappy to help you get started if you have any questions!`
-    },
-    {
-      id: 'intro_seeker',
-      label: 'First message — Seeker',
-      appliesTo: 'seeker',
-      text: (l) => `Namaste ${l.businessName || ''} 🙏 Looking for a reliable service provider near you? SAARTHI connects you with verified local providers in ${window._currentPartnerCity || 'your city'} — free to browse, you only pay a small ₹51 fee when you actually book someone. Check it out: ${window._currentRefLink || ''}\n\n— ${window._currentPartnerName || 'your City Channel Partner'}, SAARTHI City Channel Partner`
-    },
-    {
-      id: 'followup',
-      label: 'Follow-up (no response yet)',
-      appliesTo: 'both',
-      text: (l) => `Namaste ${l.businessName || ''} 🙏 Just following up on my last message about SAARTHI — did you get a chance to look at it? Happy to answer any questions or walk you through it on a quick call. Link here again: ${window._currentRefLink || ''}\n\n— ${window._currentPartnerName || 'your City Channel Partner'}`
-    },
-    {
-      id: 'no_cost_reassurance',
-      label: 'Addressing "what\'s the catch?" — Provider',
-      appliesTo: 'provider',
-      text: (l) => `Namaste ${l.businessName || ''} — totally fair question! SAARTHI is free to list on, and we don't take any commission on the work you get — you keep 100% of what you earn. We only make money if seekers choose to pay a small optional convenience fee for verified bookings. No hidden charges for you. Link: ${window._currentRefLink || ''}\n\n— ${window._currentPartnerName || 'your City Channel Partner'}`
-    },
-    {
-      id: 'reminder_incomplete',
-      label: 'Reminder — started but didn\'t finish signup',
-      appliesTo: 'both',
-      text: (l) => `Namaste ${l.businessName || ''} 🙏 Noticed you started signing up on SAARTHI but haven't finished yet — it only takes a couple more minutes. Let me know if you got stuck anywhere or have a question, happy to help: ${window._currentRefLink || ''}\n\n— ${window._currentPartnerName || 'your City Channel Partner'}`
-    },
-    {
-      id: 'thank_you',
-      label: 'Thank you (after they register)',
-      appliesTo: 'both',
-      text: (l) => `Namaste ${l.businessName || ''} 🙏 Thank you for joining SAARTHI! If you need any help getting set up or have questions along the way, just message me anytime — I'm here to help.\n\n— ${window._currentPartnerName || 'your City Channel Partner'}`
+  // ── Message Templates ──
+  let templatesCache = {};
+  let editingTemplateId = null;
+
+  async function loadTemplates(){
+    const listEl = document.getElementById('templateListEl');
+    if (window._demoMode) {
+      templatesCache = {
+        demo_tpl_1: { title: 'Quick Intro', body: 'Namaste {name} 🙏 I’m your local SAARTHI City Channel Partner — happy to help you get set up, free and takes just a few minutes!' }
+      };
+      renderTemplates();
+      return;
     }
-  ];
+    try {
+      const code = window._currentPartnerCode;
+      const snap = await window._pget(window._pref(window._pdb, 'partnerTemplates/' + code));
+      templatesCache = snap.exists() ? snap.val() : {};
+      renderTemplates();
+    } catch (e) {
+      listEl.innerHTML = '<div class="empty">Could not load templates: ' + e.message + '</div>';
+    }
+  }
 
-  let templatesTargetLeadId = null;
-
-  window.openTemplates = function(leadId){
-    const lead = leadsCache[leadId];
-    if (!lead) return;
-    templatesTargetLeadId = leadId;
-
-    document.getElementById('templatesForName').textContent = lead.businessName || '';
-    const relevant = MESSAGE_TEMPLATES.filter(t => t.appliesTo === 'both' || t.appliesTo === lead.type);
-
-    document.getElementById('templatesListEl').innerHTML = relevant.map(t => {
-      const preview = t.text(lead).replace(/\n/g, ' ').slice(0, 110);
+  function renderTemplates(){
+    const listEl = document.getElementById('templateListEl');
+    const ids = Object.keys(templatesCache);
+    if (ids.length === 0) {
+      listEl.innerHTML = '<div class="empty">No templates yet — save your first one above.</div>';
+      return;
+    }
+    listEl.innerHTML = ids.map(id => {
+      const t = templatesCache[id];
       return `
-        <div style="border:1px solid #eee; border-radius:10px; padding:12px; margin-top:10px;">
-          <div style="font-weight:700; font-size:13px;">${t.label}</div>
-          <div style="font-size:12px; color:var(--dim); margin-top:4px;">${preview}…</div>
-          <button style="margin-top:8px; background:#25D366; color:#fff; border:none; padding:8px 14px; border-radius:8px; font-size:13px; cursor:pointer;" onclick="sendTemplateMessage('${t.id}')">📲 Send via WhatsApp</button>
+        <div class="template-item">
+          <div class="template-title">${t.title}</div>
+          <div class="template-body">${t.body}</div>
+          <div class="template-actions">
+            <button onclick="editTemplate('${id}')">✏️ Edit</button>
+            <button onclick="deleteTemplate('${id}')">🗑 Delete</button>
+          </div>
         </div>
       `;
     }).join('');
+  }
 
-    document.getElementById('templatesCard').style.display = 'block';
-    document.getElementById('templatesCard').scrollIntoView({ behavior:'smooth' });
-  };
-
-  window.closeTemplates = function(){
-    templatesTargetLeadId = null;
-    document.getElementById('templatesCard').style.display = 'none';
-  };
-
-  window.sendTemplateMessage = async function(templateId){
-    const leadId = templatesTargetLeadId;
-    const lead = leadsCache[leadId];
-    const tpl = MESSAGE_TEMPLATES.find(t => t.id === templateId);
-    if (!lead || !tpl) return;
-
-    const message = tpl.text(lead);
+  window.addTemplate = async function(){
+    const title = document.getElementById('templateTitle').value.trim();
+    const body = document.getElementById('templateBody').value.trim();
+    const errEl = document.getElementById('templateErr');
+    errEl.textContent = '';
+    if (!title || !body) { errEl.textContent = 'Please fill in both a name and a message.'; return; }
 
     if (window._demoMode) {
-      alert('📲 In the real dashboard, WhatsApp would now open with this message pre-filled and ready to send to ' + (lead.businessName || 'this lead') + ':\n\n' + message);
-      closeTemplates();
+      const id = editingTemplateId || ('demo_tpl_new_' + Date.now());
+      templatesCache[id] = { title, body };
+      editingTemplateId = null;
+      document.getElementById('templateTitle').value = '';
+      document.getElementById('templateBody').value = '';
+      renderTemplates();
       return;
     }
 
-    const waNumber = cleanPhoneForWhatsApp(lead.phone);
+    const code = window._currentPartnerCode;
+    try {
+      if (editingTemplateId) {
+        await window._pset(window._pref(window._pdb, 'partnerTemplates/' + code + '/' + editingTemplateId), { title, body });
+        editingTemplateId = null;
+      } else {
+        const tplRef = window._ppush(window._pref(window._pdb, 'partnerTemplates/' + code));
+        await window._pset(tplRef, { title, body });
+      }
+      document.getElementById('templateTitle').value = '';
+      document.getElementById('templateBody').value = '';
+      loadTemplates();
+    } catch (e) {
+      errEl.textContent = 'Could not save template: ' + e.message;
+    }
+  };
+
+  window.editTemplate = function(id){
+    const t = templatesCache[id];
+    if (!t) return;
+    document.getElementById('templateTitle').value = t.title;
+    document.getElementById('templateBody').value = t.body;
+    editingTemplateId = id;
+    document.getElementById('templateTitle').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  window.deleteTemplate = async function(id){
+    if (!confirm('Delete this template?')) return;
+    if (window._demoMode) {
+      delete templatesCache[id];
+      renderTemplates();
+      return;
+    }
+    const code = window._currentPartnerCode;
+    try {
+      await window._pset(window._pref(window._pdb, 'partnerTemplates/' + code + '/' + id), null);
+      delete templatesCache[id];
+      renderTemplates();
+    } catch (e) {
+      alert('Could not delete: ' + e.message);
+    }
+  };
+
+  // ── Template picker: choosing a saved template to send to a specific lead/client ──
+  window.openTemplatePicker = function(name, phone, leadIdForStatusUpdate){
+    window._tplPickerContext = { name: name || 'there', phone: phone || '', leadIdForStatusUpdate: leadIdForStatusUpdate || null };
+    const listEl = document.getElementById('tplPickerList');
+    const ids = Object.keys(templatesCache);
+    if (ids.length === 0) {
+      listEl.innerHTML = '<p style="font-size:13px; color:var(--dim);">You haven’t saved any templates yet. Add one in the Message Templates section above.</p>';
+    } else {
+      listEl.innerHTML = ids.map(id => {
+        const t = templatesCache[id];
+        return `<div class="tpl-pick-item" onclick="sendTemplateMessage('${id}')">
+          <div class="tpl-pick-title">${t.title}</div>
+          <div class="tpl-pick-preview">${t.body}</div>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('tplPickerOverlay').classList.add('open');
+  };
+
+  window.closeTemplatePicker = function(){
+    document.getElementById('tplPickerOverlay').classList.remove('open');
+  };
+
+  window.sendTemplateMessage = function(templateId){
+    const t = templatesCache[templateId];
+    const ctx = window._tplPickerContext;
+    if (!t || !ctx) return;
+    const message = t.body.split('{name}').join(ctx.name);
+    closeTemplatePicker();
+
+    if (window._demoMode) {
+      alert('📲 In the real dashboard, WhatsApp would now open with this message pre-filled for ' + ctx.name + ':\n\n' + message);
+      return;
+    }
+
+    const waNumber = cleanPhoneForWhatsApp(ctx.phone);
     const url = waNumber
       ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(message)
       : 'https://wa.me/?text=' + encodeURIComponent(message);
     window.open(url, '_blank');
-    closeTemplates();
 
-    if (lead.status === 'not_contacted') {
-      const confirmed = confirm('Did the WhatsApp message actually send?\n\nClick OK only if you saw it go through in WhatsApp. Click Cancel if the number didn\u2019t work or you didn\u2019t send it — it will stay as "Not Contacted."');
-      if (confirmed) {
-        const code = window._currentPartnerCode;
-        try {
-          await window._pset(window._pref(window._pdb, 'partnerLeads/' + code + '/' + leadId + '/status'), 'contacted');
-          leadsCache[leadId].status = 'contacted';
-          renderLeads();
-        } catch (e) { /* non-critical, ignore */ }
-      }
+    if (ctx.leadIdForStatusUpdate && leadsCache[ctx.leadIdForStatusUpdate] && leadsCache[ctx.leadIdForStatusUpdate].status === 'not_contacted') {
+      const confirmed = confirm('Did the WhatsApp message actually send?\n\nClick OK only if you saw it go through in WhatsApp. Click Cancel if not — it will stay as "Not Contacted."');
+      if (confirmed) updateLeadStatus(ctx.leadIdForStatusUpdate, 'contacted');
     }
   };
 
@@ -1166,7 +1240,7 @@
           </div>
           <div class="lead-actions">
             <button onclick="sendLeadWhatsApp('${id}')" style="background:#25D366; color:#fff;">📲 WhatsApp</button>
-            <button onclick="openTemplates('${id}')" style="background:#5C3D8A; color:#fff;">📋 Templates</button>
+            <button onclick="openTemplatePicker('${(l.businessName||'').replace(/'/g,"\\'")}','${l.phone||''}','${id}')">✉️ Templates</button>
             <button onclick="removeLead('${id}')">🗑 Remove</button>
           </div>
         </div>
@@ -1567,9 +1641,10 @@
         ? (e.verified ? '<span class="badge status-registered" style="align-self:flex-start;">\u2705 Verified & ID-Checked</span>' : '<span class="badge status-registered" style="align-self:flex-start;">\u2705 Verified Registration</span>')
         : '<span class="badge" style="align-self:flex-start; background:#FFF3E0; color:#B8600A;">\uD83D\uDCDD Marked Registered</span>';
       const safeName = (e.name || '').replace(/'/g, "\\'");
+      const tplBtn = '<button onclick="openTemplatePicker(\'' + safeName + '\',\'' + (e.phone||'') + '\')">\u2709\uFE0F Templates</button>';
       const actionButtons = e.source === 'real'
-        ? '<button onclick="sendRealClientWhatsApp(\'' + e.type + '\',\'' + (e.phone||'') + '\',\'' + safeName + '\')" style="background:#25D366; color:#fff;">\uD83D\uDCF2 Chat on WhatsApp</button>'
-        : '<button onclick="sendClientWhatsApp(\'' + e.id + '\')" style="background:#25D366; color:#fff;">\uD83D\uDCF2 Chat on WhatsApp</button>' +
+        ? '<button onclick="sendRealClientWhatsApp(\'' + e.type + '\',\'' + (e.phone||'') + '\',\'' + safeName + '\')" style="background:#25D366; color:#fff;">\uD83D\uDCF2 Chat on WhatsApp</button>' + tplBtn
+        : '<button onclick="sendClientWhatsApp(\'' + e.id + '\')" style="background:#25D366; color:#fff;">\uD83D\uDCF2 Chat on WhatsApp</button>' + tplBtn +
           '<button onclick="moveClientBackToLeads(\'' + e.id + '\')">\u21A9 Move back to Leads</button>';
       return `
         <div class="lead-item">
@@ -1586,5 +1661,14 @@
     }).join('');
   }
 </script>
+
+<div class="tpl-picker-overlay" id="tplPickerOverlay" onclick="if(event.target===this) closeTemplatePicker()">
+  <div class="tpl-picker-box">
+    <h3>✉️ Choose a message to send</h3>
+    <div id="tplPickerList"></div>
+    <button onclick="closeTemplatePicker()" style="width:100%; margin-top:6px; padding:10px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
 </body>
 </html>
