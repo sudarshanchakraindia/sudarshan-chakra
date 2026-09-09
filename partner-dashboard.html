@@ -501,6 +501,10 @@
   if (new URLSearchParams(location.search).get('demo') === '1' && window.enterDemoMode) {
     window.enterDemoMode();
   }
+
+  // Cosmetic-only gate for the SAARTHI invite button — real enforcement is
+  // server-side in the Cloud Function (checks X-Admin-Secret), not here.
+  window._saarthiAdminUnlocked = new URLSearchParams(location.search).get('admin') === 'JODHPUR 342001';
 </script>
 
 <script>
@@ -961,6 +965,37 @@
     return `Namaste ${leadName} 🙏 I'm ${partnerName}, City Channel Partner for SAARTHI in ${city}. We're a new app connecting local service providers like you directly with customers — completely free to list, zero commission on what you earn. Takes 5 minutes to set up: ${refLink}\n\nHappy to help you get started if you have any questions!`;
   }
 
+  window.sendSaarthiInvite = async function(leadId, btn){
+    const lead = leadsCache[leadId];
+    if (!lead || !window._saarthiAdminUnlocked) return;
+    if (!lead.phone) { alert('This lead has no phone number saved.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    try {
+      const res = await fetch('https://<your-region>-<your-project-id>.cloudfunctions.net/sendSaarthiInvite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Secret': 'REPLACE_WITH_STRONG_TOKEN_FROM_YOUR_SECRET_STORE',
+        },
+        body: JSON.stringify({
+          name: lead.businessName,
+          mobile: cleanPhoneForWhatsApp(lead.phone) || lead.phone,
+          language_preference: 'english', // no per-lead language field yet — wire one up if you need Hindi here
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      btn.textContent = '✓ Sent';
+    } catch (e) {
+      alert('Could not send invite: ' + e.message);
+      btn.textContent = '🔱 Send Official SAARTHI Invite (WhatsApp API)';
+      btn.disabled = false;
+    }
+  };
+
   window.sendLeadWhatsApp = async function(leadId){
     const lead = leadsCache[leadId];
     if (!lead) return;
@@ -1241,6 +1276,7 @@
           <div class="lead-actions">
             <button onclick="sendLeadWhatsApp('${id}')" style="background:#25D366; color:#fff;">📲 WhatsApp</button>
             <button onclick="openTemplatePicker('${(l.businessName||'').replace(/'/g,"\\'")}','${l.phone||''}','${id}')">✉️ Templates</button>
+            ${window._saarthiAdminUnlocked ? `<button onclick="sendSaarthiInvite('${id}', this)" style="background:#8B1E3F; color:#fff;">🔱 Send Official SAARTHI Invite (WhatsApp API)</button>` : ''}
             <button onclick="removeLead('${id}')">🗑 Remove</button>
           </div>
         </div>
