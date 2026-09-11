@@ -467,7 +467,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged }
+      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
   const firebaseConfig = {
     apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
     authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
@@ -483,7 +484,10 @@
   window._pref = ref;
   window._pget = get;
   window._pset = set;
-  window._ppush = push;
+  window._ppush = push;    const auth = getAuth(app);
+    window._pauth   = auth;
+    window._psignIn = () => signInWithPopup(auth, new GoogleAuthProvider());
+    onAuthStateChanged(auth, u => { window._puser = u || null; });
 
   // Auto-fill code from URL (?code=XYZ) if present, and auto-load.
   // Module scripts already execute after the DOM is parsed, so the plain
@@ -970,9 +974,16 @@
     if (!lead || !window._saarthiAdminUnlocked) return;
     if (!lead.phone) { alert('This lead has no phone number.'); return; }
 
-    const user = firebase.auth().currentUser;
-    if (!user) { alert('Session expired. Please log in again.'); return; }
-
+        let user = window._pauth && window._pauth.currentUser;
+    if (!user) {
+      try {
+        const cred = await window._psignIn();
+        user = cred.user;
+      } catch (e) {
+        alert('Sign-in needed to send invites: ' + (e.code || e.message));
+        return;
+      }
+    }
     const original = btn.textContent;
     btn.disabled = true;
     btn.textContent = 'Sending…';
