@@ -974,16 +974,13 @@
     if (!lead || !window._saarthiAdminUnlocked) return;
     if (!lead.phone) { alert('This lead has no phone number.'); return; }
 
-          let user = window._pauth && window._pauth.currentUser;
-    if (!user) {
-      try {
-        const cred = await window._psignIn();
-        user = cred.user;
-      } catch (e) {
-        alert('Sign-in needed to send invites: ' + (e.code || e.message));
-        return;
-      }
-    }
+    let user;
+    try {
+      user = await window._pRequireUser();
+    } catch (e) {
+      if (e.message !== 'cancelled') alert('Sign-in needed: ' + (e.code || e.message));
+      return;
+    }         
     const original = btn.textContent;
     btn.disabled = true;
     btn.textContent = 'Sending…';
