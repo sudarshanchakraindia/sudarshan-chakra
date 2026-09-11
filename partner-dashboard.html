@@ -467,7 +467,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged }
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
   const firebaseConfig = {
     apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -484,9 +484,9 @@
   window._pref = ref;
   window._pget = get;
   window._pset = set;
-  window._ppush = push;    const auth = getAuth(app);
+  window._ppush = push;        const auth = getAuth(app);
     window._pauth   = auth;
-    window._psignIn = () => signInWithPopup(auth, new GoogleAuthProvider());
+    window._psignIn = (email, pass) => signInWithEmailAndPassword(auth, email, pass);
     onAuthStateChanged(auth, u => { window._puser = u || null; });
 
   // Auto-fill code from URL (?code=XYZ) if present, and auto-load.
@@ -974,7 +974,7 @@
     if (!lead || !window._saarthiAdminUnlocked) return;
     if (!lead.phone) { alert('This lead has no phone number.'); return; }
 
-        let user = window._pauth && window._pauth.currentUser;
+          let user = window._pauth && window._pauth.currentUser;
     if (!user) {
       try {
         const cred = await window._psignIn();
@@ -1735,6 +1735,56 @@
     <button onclick="closeTemplatePicker()" style="width:100%; margin-top:6px; padding:10px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer;">Cancel</button>
   </div>
 </div>
+<script>
+(function () {
+  window._pRequireUser = function () {
+    return new Promise((resolve, reject) => {
+      const auth = window._pauth;
+      if (!auth) return reject(new Error('Auth not loaded — refresh the page.'));
+      if (auth.currentUser) return resolve(auth.currentUser);
 
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;';
+      wrap.innerHTML =
+        '<div style="background:#fff;border-radius:12px;padding:20px;max-width:340px;width:100%;font-family:system-ui,sans-serif;">' +
+        '<h3 style="margin:0 0 4px;font-size:17px;">Partner sign-in</h3>' +
+        '<p style="margin:0 0 14px;font-size:13px;color:#555;">WhatsApp invite bhejne ke liye login zaroori hai.</p>' +
+        '<input id="_pEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid #ccc;border-radius:7px;font-size:14px;box-sizing:border-box;">' +
+        '<input id="_pPass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;padding:9px;border:1px solid #ccc;border-radius:7px;font-size:14px;box-sizing:border-box;">' +
+        '<div id="_pErr" style="color:#c00;font-size:12px;min-height:16px;margin:6px 0;"></div>' +
+        '<div style="display:flex;gap:8px;">' +
+        '<button id="_pCancel" style="flex:1;padding:9px;border:1px solid #ccc;background:#f5f5f5;border-radius:7px;cursor:pointer;">Cancel</button>' +
+        '<button id="_pGo" style="flex:2;padding:9px;border:0;background:#8B1E3F;color:#fff;border-radius:7px;cursor:pointer;">Sign in</button>' +
+        '</div></div>';
+      document.body.appendChild(wrap);
+
+      const $ = id => wrap.querySelector('#' + id);
+      $('_pEmail').focus();
+      const close = () => wrap.remove();
+
+      $('_pCancel').onclick = () => { close(); reject(new Error('cancelled')); };
+
+      $('_pGo').onclick = async () => {
+        const em = $('_pEmail').value.trim();
+        const pw = $('_pPass').value;
+        if (!em || !pw) { $('_pErr').textContent = 'Email aur password dono bhariye.'; return; }
+        $('_pGo').disabled = true;
+        $('_pGo').textContent = 'Signing in…';
+        try {
+          const cred = await window._psignIn(em, pw);
+          close();
+          resolve(cred.user);
+        } catch (e) {
+          $('_pErr').textContent = e.code || e.message;
+          $('_pGo').disabled = false;
+          $('_pGo').textContent = 'Sign in';
+        }
+      };
+
+      $('_pPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('_pGo').click(); });
+    });
+  };
+})();
+</script>
 </body>
 </html>
