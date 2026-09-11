@@ -965,33 +965,52 @@
     return `Namaste ${leadName} 🙏 I'm ${partnerName}, City Channel Partner for SAARTHI in ${city}. We're a new app connecting local service providers like you directly with customers — completely free to list, zero commission on what you earn. Takes 5 minutes to set up: ${refLink}\n\nHappy to help you get started if you have any questions!`;
   }
 
-  window.sendSaarthiInvite = async function(leadId, btn){
+    window.sendSaarthiInvite = async function (leadId, btn) {
     const lead = leadsCache[leadId];
     if (!lead || !window._saarthiAdminUnlocked) return;
-    if (!lead.phone) { alert('This lead has no phone number saved.'); return; }
+    if (!lead.phone) { alert('This lead has no phone number.'); return; }
 
+    const user = firebase.auth().currentUser;
+    if (!user) { alert('Session expired. Please log in again.'); return; }
+
+    const original = btn.textContent;
     btn.disabled = true;
     btn.textContent = 'Sending…';
 
     try {
-      const res = await fetch('https://<your-region>-<your-project-id>.cloudfunctions.net/sendSaarthiInvite', {
+      const idToken = await user.getIdToken();
+
+      const res = await fetch('https://sendwhatsapptemplate-wrh5fpf55a-el.a.run.app', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Admin-Secret': 'REPLACE_WITH_STRONG_TOKEN_FROM_YOUR_SECRET_STORE',
+          'Authorization': 'Bearer ' + idToken
         },
         body: JSON.stringify({
-          name: lead.businessName,
-          mobile: cleanPhoneForWhatsApp(lead.phone) || lead.phone,
-          language_preference: 'english', // no per-lead language field yet — wire one up if you need Hindi here
-        }),
+          to: cleanPhoneForWhatsApp(lead.phone) || lead.phone,
+          template: 'saarthi_invite_hindi',
+          params: {
+            customer_name: String(lead.businessName || lead.name || 'ji').trim()
+          }
+        })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-      btn.textContent = '✓ Sent';
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('Not authorised. Log out, log in again, then retry.');
+        }
+        if (data.error === 'no_opt_in_on_record') {
+          throw new Error('No consent record for this number. Capture opt-in first.');
+        }
+        throw new Error(data.detail || data.error || ('Request failed ' + res.status));
+      }
+
+      btn.textContent = 'Sent ✓';
     } catch (e) {
       alert('Could not send invite: ' + e.message);
-      btn.textContent = '🔱 Send Official SAARTHI Invite (WhatsApp API)';
+      btn.textContent = original;
       btn.disabled = false;
     }
   };
