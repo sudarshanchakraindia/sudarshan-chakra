@@ -70,7 +70,7 @@
         // ==================== FIREBASE SETUP ====================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getDatabase, ref, set, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -91,7 +91,7 @@
 
         // Expose to global scope
         window._firebase = { db, ref, set, push, onValue, update, remove, get };
-        window._auth = { auth, RecaptchaVerifier, signInWithPhoneNumber, signInWithEmailAndPassword, signOut, onAuthStateChanged };
+        window._auth = { auth, RecaptchaVerifier, signInWithPhoneNumber, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged };
         window._firebaseReady = true;
 
         // ── City Channel Partner referral capture ───────────────────────────
@@ -1196,10 +1196,12 @@
             <div id="adminLogin" class="max-w-md mx-auto">
                 <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">🔐 Admin Login</h1>
                 <div class="bg-white rounded-xl shadow-md p-6">
-                    <input type="password" autocomplete="new-password" id="adminPassword" placeholder="Enter admin password" class="w-full px-4 py-2 border rounded-lg mb-4" onkeydown="if(event.key==='Enter') adminLogin()">
-                    <button onclick="adminLogin()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">Login</button>
+                    <input type="email" autocomplete="username" id="adminEmail" placeholder="Admin email" class="w-full px-4 py-2 border rounded-lg mb-3" onkeydown="if(event.key==='Enter') adminLogin()">
+                    <input type="password" autocomplete="current-password" id="adminPassword" placeholder="Admin password" class="w-full px-4 py-2 border rounded-lg mb-4" onkeydown="if(event.key==='Enter') adminLogin()">
+                    <button id="adminLoginBtn" onclick="adminLogin()" class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700">Login</button>
+                    <div id="adminLoginMsg" class="hidden"></div>
                     <div class="text-center mt-3">
-                        <button onclick="openAdminForgotPass()" class="text-purple-600 hover:text-purple-800 text-sm font-medium underline">🔑 Forgot Password?</button>
+                        <button onclick="sendAdminPasswordReset()" class="text-purple-600 hover:text-purple-800 text-sm font-medium underline">🔑 Forgot Password?</button>
                     </div>
                 </div>
             </div>
@@ -2311,8 +2313,9 @@
         
         const ADMIN_PASSWORD_KEY = 'sc_admin_password';
         let ADMIN_PASSWORD = localStorage.getItem(ADMIN_PASSWORD_KEY) || 'admin123';
-        const ADMIN_EMAIL = 'sudarshanchakraindia@gmail.com'; // Firebase admin email for DB auth
-        const ADMIN_FIREBASE_PASSWORD = 'MyActualPassword144@Crore'; // Set this to your sudarshanchakraindia@gmail.com Firebase password
+        // Admin identity is proved by Firebase Auth sign-in, not by anything stored here.
+        // Must match auth.token.email in the database rules.
+        const ADMIN_ALLOWED_EMAIL = 'sudarshanchakraindia@gmail.com';
 
         // The admin password above only lived in this one browser's localStorage,
         // so it silently reset to 'admin123' on any other browser, device, or
@@ -5560,33 +5563,73 @@
         let currentEditServiceIdx = null;
         let modalMode = 'add';
         
-        function adminLogin() {
+        async function adminLogin() {
+            const email = (document.getElementById('adminEmail').value || '').trim();
             const password = document.getElementById('adminPassword').value;
-           if (password === ADMIN_PASSWORD) { 
+            const msg = document.getElementById('adminLoginMsg');
+            const btn = document.getElementById('adminLoginBtn');
+            const show = (text, ok) => {
+                msg.textContent = text;
+                msg.className = 'text-center text-sm mt-3 ' + (ok ? 'text-green-600' : 'text-red-600');
+            };
+
+            if (!email || !password) return show('Enter your admin email and password.', false);
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Signing in…';
+            try {
+                const cred = await _auth.signInWithEmailAndPassword(_auth.auth, email, password);
+
+                if (cred.user.email !== ADMIN_ALLOWED_EMAIL) {
+                    await _auth.signOut(_auth.auth);
+                    return show('That account is not an admin.', false);
+                }
+
+                document.getElementById('adminPassword').value = '';
+                msg.className = 'hidden';
                 document.getElementById('adminLogin').classList.add('hidden');
                 document.getElementById('adminDashboard').classList.remove('hidden');
                 updateAdminStats();
-                showAdminTab('categories'); // Default tab
-                 loadAdminHomeStatsToggles();
-                // Sign in to Firebase so DB rules (auth != null && admins/uid.exists()) pass
-                _auth.signInWithEmailAndPassword(_auth.auth, ADMIN_EMAIL, ADMIN_FIREBASE_PASSWORD)
-                    .then(async (cred) => {
-            console.log('✅ Admin Firebase sign-in OK');
-            // Self-seed /admins/<uid> so DB rules pass (one-time bootstrap)
+                showAdminTab('categories');
+                loadAdminHomeStatsToggles();
+
+                // Self-seed /admins/<uid> so DB rules pass (one-time bootstrap)
+                try {
+                    const fb = window._firebase;
+                    if (fb) await fb.set(fb.ref(fb.db, 'admins/' + cred.user.uid), true);
+                } catch (e) { console.warn('Admin seed error:', e.message); }
+
+            } catch (e) {
+                const friendly = {
+                    'auth/invalid-credential':     'Wrong email or password — or this account has no password sign-in method (check Firebase Console → Authentication → Users).',
+                    'auth/wrong-password':         'Wrong password.',
+                    'auth/user-not-found':         'No Firebase Auth user with that email.',
+                    'auth/invalid-email':          'That email address is not valid.',
+                    'auth/too-many-requests':      'Too many attempts. Wait a few minutes, or reset the password.',
+                    'auth/operation-not-allowed':  'Email/Password sign-in is disabled — enable it in Firebase Console → Authentication → Sign-in method.',
+                    'auth/network-request-failed': 'Network problem reaching Firebase.'
+                }[e.code] || e.message;
+                console.warn('Admin sign-in failed:', e.code, e.message);
+                show('❌ ' + friendly, false);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Login';
+            }
+        }
+
+        async function sendAdminPasswordReset() {
+            const email = (document.getElementById('adminEmail').value || '').trim();
+            const msg = document.getElementById('adminLoginMsg');
+            const show = (text, ok) => {
+                msg.textContent = text;
+                msg.className = 'text-center text-sm mt-3 ' + (ok ? 'text-green-600' : 'text-red-600');
+            };
+            if (!email) return show('Enter your admin email first, then click Forgot Password.', false);
             try {
-                const fb = window._firebase;
-                if (fb) await fb.set(fb.ref(fb.db, 'admins/' + cred.user.uid), true);
-            } catch(e) { console.warn('Admin seed error:', e.message); }
-        })
-                    .catch(e => {
-                        console.warn('⚠️ Admin Firebase sign-in failed:', e.message);
-                        const banner = document.createElement('div');
-                        banner.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:99999; background:#DC2626; color:#fff; text-align:center; padding:12px; font-weight:700; font-size:14px;';
-                        banner.innerHTML = '⚠️ Admin write-access sign-in failed (' + e.message + '). You can view data, but actions like Approve/Reject/Delete/Edit will fail until this is fixed. <button onclick="this.parentElement.remove()" style="margin-left:12px; background:#fff; color:#DC2626; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-weight:700;">Dismiss</button>';
-                        document.body.prepend(banner);
-                    });
-            } else {
-                alert('Incorrect password!');
+                await _auth.sendPasswordResetEmail(_auth.auth, email);
+                show('✅ Reset link sent to ' + email + '. Check your inbox.', true);
+            } catch (e) {
+                show('❌ ' + (e.message || 'Could not send reset email.'), false);
             }
         }
         function adminLogout() {
