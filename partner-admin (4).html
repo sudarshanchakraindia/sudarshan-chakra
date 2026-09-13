@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage City Channel Partners — Admin</title>
+<style>
+  :root{ --saffron:#FF6B00; --gold:#F5A623; --deep:#1A1206; }
+  *{box-sizing:border-box;}
+  body{ margin:0; font-family:'Segoe UI',sans-serif; background:#FFF8F0; color:var(--deep); }
+  header{ background:linear-gradient(135deg,#1A0A00,#3D1A00); color:#fff; padding:16px 20px; }
+  .wrap{ padding:20px; max-width:900px; margin:0 auto; }
+  #gate{ max-width:340px; margin:80px auto; text-align:center; }
+  #gate input{ width:100%; padding:12px; font-size:15px; border:1px solid #ddd; border-radius:8px; margin:12px 0; }
+  #gate button{ width:100%; padding:12px; font-size:15px; font-weight:700; color:#fff; background:var(--saffron); border:none; border-radius:8px; cursor:pointer; }
+  #gate p.err{ color:#c0392b; font-size:13px; }
+  #app{ display:none; }
+  .card{ background:#fff; border-radius:12px; padding:18px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+  .card h2{ font-size:15px; margin:0 0 12px; }
+  label{ display:block; font-size:12px; font-weight:700; color:#7C4A1E; margin-bottom:4px; margin-top:10px; }
+  input, select{ width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+  .btn{ margin-top:14px; padding:10px 18px; border-radius:8px; border:none; font-weight:700; color:#fff; background:var(--saffron); cursor:pointer; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid #f0e4d4; }
+  th{ background:#FFF3E0; }
+  .row-actions button{ font-size:11px; padding:4px 8px; border-radius:6px; border:none; cursor:pointer; margin-right:4px; }
+  .link-btn{ background:#e0e0e0; }
+  .payout-btn{ background:#dcf7dc; }
+  .tabs{ display:flex; gap:8px; margin-bottom:16px; }
+  .tab-btn{ padding:10px 18px; border-radius:8px; border:none; font-weight:700; font-size:13px; background:#fff; color:var(--deep); cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.06); }
+  .tab-btn.active{ background:var(--saffron); color:#fff; }
+  .badge{ display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; }
+  .badge-pending{ background:#FFF3E0; color:#B8600A; }
+  .badge-agreement_sent{ background:#E3F2FD; color:#1565C0; }
+  .badge-docs_submitted{ background:#F3E5F5; color:#7B1FA2; }
+  .badge-approved{ background:#E8F5E9; color:#2E7D32; }
+  .badge-rejected{ background:#FFEBEE; color:#C62828; }
+  .app-card{ border:1px solid #f0e4d4; border-radius:10px; padding:14px; margin-bottom:12px; }
+  .app-card .app-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .app-card .app-meta{ font-size:12px; color:#7C4A1E; margin-top:4px; }
+  .app-card .app-about{ font-size:13px; margin-top:8px; background:#FFF8F0; padding:10px; border-radius:8px; white-space:pre-wrap; }
+  .app-card .docs-grid{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .app-card .docs-grid a{ font-size:12px; padding:6px 10px; background:#eee; border-radius:6px; text-decoration:none; color:var(--deep); }
+  .action-row{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+  .action-row button{ font-size:12px; padding:7px 12px; border-radius:6px; border:none; cursor:pointer; font-weight:700; }
+  .btn-send{ background:#1565C0; color:#fff; }
+  .btn-whatsapp{ background:#25D366; color:#fff; }
+  .btn-email{ background:#D44638; color:#fff; }
+  .btn-approve{ background:#2E7D32; color:#fff; }
+  .btn-reject{ background:#C62828; color:#fff; }
+  .btn-copy{ background:#e0e0e0; color:var(--deep); }
+  .manage-btn{ background:#5C3D8A; color:#fff; }
+  .agreement-badge{ display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; }
+  .agreement-badge.yes{ background:#E8F5E9; color:#2E7D32; }
+  .agreement-badge.no{ background:#FFEBEE; color:#C62828; }
+  .status-select{ padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px; width:100%; }
+  textarea{ width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px; font-family:inherit; resize:vertical; min-height:70px; }
+  .agreement-current{ font-size:13px; margin-top:8px; padding:10px; background:#FFF3E0; border-radius:8px; }
+  .agreement-current a{ color:#1565C0; font-weight:700; }
+  .upload-progress{ font-size:12px; color:#7C4A1E; margin-top:6px; }
+</style>
+</head>
+<body>
+
+  <div id="gate">
+    <h1>🔱 Admin Login</h1>
+    <p style="color:#7C4A1E; font-size:13px;">Sign in with your admin account password
+
+</p>
+    <input type="password" id="pw" placeholder="Admin password">
+    <button onclick="tryLogin()">Manage Partners</button>
+    <p class="err" id="err"></p>
+  </div>
+
+  <div id="app">
+    <header><h1 style="margin:0; font-size:18px;">🔱 City Channel Partners</h1></header>
+    <div class="wrap">
+
+      <div class="tabs">
+        <button class="tab-btn active" id="tabBtnPartners" onclick="switchTab('partners')">👥 Partners</button>
+        <button class="tab-btn" id="tabBtnApplications" onclick="switchTab('applications')">📋 Applications <span id="pendingCount"></span></button>
+      </div>
+
+      <div id="tabPartners">
+      <div class="card">
+        <h2>➕ Add New Partner</h2>
+        <label>Name</label>
+        <input id="newName" placeholder="Partner's full name">
+        <label>City</label>
+        <input id="newCity" placeholder="e.g. Jodhpur">
+        <label>Phone Number (shown on their marketing materials)</label>
+        <input id="newPhone" placeholder="e.g. 9251115013">
+        <label>Pincode (their city/area — used to auto-credit registrations even without their link)</label>
+        <input id="newPincode" placeholder="e.g. 342001" maxlength="6">
+        <label>Referral Code (unique, becomes their login + link)</label>
+        <input id="newCode" placeholder="e.g. JODHPUR01" style="text-transform:uppercase;">
+        <button class="btn" onclick="addPartner()">Add Partner</button>
+        <p id="addErr" style="color:#c0392b; font-size:13px; margin-top:8px;"></p>
+      </div>
+
+      <div class="card">
+        <h2>👥 All Partners</h2>
+        <table>
+          <thead><tr><th>Name</th><th>City</th><th>Pincode</th><th>Code</th><th>Status</th><th>Providers</th><th>Agreement</th><th></th></tr></thead>
+          <tbody id="partnerBody"><tr><td colspan="7">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card" id="payoutCard" style="display:none;">
+        <h2>💰 Log Payout — <span id="payoutForName"></span></h2>
+        <label>Amount (₹)</label>
+        <input id="payoutAmount" type="number">
+        <label>Note</label>
+        <input id="payoutNote" placeholder="e.g. September convenience fee share">
+        <button class="btn" onclick="submitPayout()">Log Payout</button>
+      </div>
+
+      <div class="card" id="manageCard" style="display:none;">
+        <h2>🗂️ Manage Partner — <span id="manageForName"></span></h2>
+
+        <label>Status</label>
+        <select id="manageStatus" class="status-select">
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+        </select>
+
+        <label>Internal Notes (not shown to partner)</label>
+        <textarea id="manageNotes" placeholder="e.g. Renewal due March 2027, met at expo, etc."></textarea>
+
+        <label>Signed Agreement (PDF or Word)</label>
+        <div id="manageAgreementCurrent" class="agreement-current" style="display:none;"></div>
+        <input type="file" id="manageAgreementFile" accept=".pdf,.doc,.docx">
+        <div class="upload-progress" id="manageUploadStatus"></div>
+
+        <button class="btn" onclick="saveManage()">Save</button>
+        <button class="btn" style="background:#999; margin-left:8px;" onclick="closeManage()">Cancel</button>
+        <p id="manageMsg" style="font-size:13px; margin-top:8px;"></p>
+      </div>
+      </div>
+
+      <div id="tabApplications" style="display:none;">
+        <div class="card">
+          <h2>📋 Partner Applications</h2>
+          <p style="font-size:12px; color:#7C4A1E; margin-top:-6px;">Review new applications, send the Agreement & ID upload link, then approve once documents are verified.</p>
+
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:12px 0;">
+            <label style="font-size:13px; font-weight:700; color:var(--soft); margin:0;">Sort by</label>
+            <select id="appSortSelect" class="status-select" style="width:auto;" onchange="renderApplicationsList()">
+              <option value="date_desc">Newest first</option>
+              <option value="date_asc">Oldest first</option>
+              <option value="mobile">Mobile number</option>
+              <option value="pincode">Pincode</option>
+              <option value="name">Name (A–Z)</option>
+            </select>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; margin:0;">
+              <input type="checkbox" id="appDupOnlyCheck" onchange="renderApplicationsList()">
+              Show duplicates only
+            </label>
+            <span id="dupSummary" style="font-size:12px; color:#c0392b; font-weight:700;"></span>
+          </div>
+
+          <div id="applicationsBody">Loading…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
+    authDomain: "sudarshan-chakra-b0ac1.firebaseapp.com",
+    databaseURL: "https://sudarshan-chakra-b0ac1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "sudarshan-chakra-b0ac1",
+    storageBucket: "sudarshan-chakra-b0ac1.firebasestorage.app",
+    messagingSenderId: "357210144411",
+    appId: "1:357210144411:web:b440a94cf78b04b58b103e"
+  };
+  const app     = initializeApp(firebaseConfig);
+  const db      = getDatabase(app);
+  const auth    = getAuth(app);
+  const storage = getStorage(app);
+
+  const ADMIN_EMAIL = 'sudarshanchakraindia@gmail.com';
+
+  // Sign in with the REAL Firebase Auth password for ADMIN_EMAIL, typed by the
+  // admin each time. Previously this page kept a separate "gate" password plus a
+  // hardcoded Firebase password in the source. Two problems with that: the file
+  // is served publicly from GitHub Pages, so the password was readable by
+  // anyone; and once the account password was changed the hardcoded copy went
+  // stale and every sign-in failed with auth/invalid-credential. One password
+  // now, stored nowhere, and it works on any browser or device.
+  window.tryLogin = async function(){
+    const entered = document.getElementById('pw').value;
+    const errEl   = document.getElementById('err');
+    if (!entered){ errEl.textContent = 'Enter your admin password.'; return; }
+    errEl.textContent = 'Signing in...';
+    try {
+      await signInWithEmailAndPassword(auth, ADMIN_EMAIL, entered);
+      errEl.textContent = '';
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('app').style.display  = 'block';
+      loadPartners();
+    } catch (e) {
+      const code = e.code || '';
+      errEl.textContent =
+        (code === 'auth/invalid-credential' || code === 'auth/wrong-password')
+          ? 'Wrong password for ' + ADMIN_EMAIL + '.'
+        : (code === 'auth/too-many-requests')
+          ? 'Too many attempts. Wait a few minutes and try again.'
+          : 'Sign-in failed: ' + (code || e.message);
+    }
+  };
+
+  window.addPartner = async function(){
+    const name = document.getElementById('newName').value.trim();
+    const city = document.getElementById('newCity').value.trim();
+    const phone = document.getElementById('newPhone').value.trim();
+    const pincode = document.getElementById('newPincode').value.trim();
+    const code = document.getElementById('newCode').value.trim().toUpperCase();
+    const errEl = document.getElementById('addErr');
+    errEl.style.color = '#c0392b';
+    errEl.textContent = '';
+    if (!name || !city || !phone || !pincode || !code) { errEl.textContent = 'All fields are required.'; return; }
+
+    try {
+      const existing = await get(ref(db, 'partners/' + code));
+      if (existing.exists()) { errEl.textContent = 'That code is already in use — pick a different one.'; return; }
+
+      const existingPincode = await get(ref(db, 'partnerPincodes/' + pincode));
+      if (existingPincode.exists() && existingPincode.val() !== code) {
+        errEl.textContent = 'That pincode is already assigned to partner ' + existingPincode.val() + '.';
+        return;
+      }
+
+      await set(ref(db, 'partners/' + code), {
+        name, city, phone, pincode, status: 'active',
+        appointedDate: new Date().toISOString()
+      });
+      await set(ref(db, 'partnerPincodes/' + pincode), code);
+
+      document.getElementById('newName').value = '';
+      document.getElementById('newCity').value = '';
+      document.getElementById('newPhone').value = '';
+      document.getElementById('newPincode').value = '';
+      document.getElementById('newCode').value = '';
+      errEl.style.color = '#1e7d1e';
+      errEl.textContent = '✅ Partner added successfully.';
+      loadPartners();
+    } catch (e) {
+      errEl.textContent = '❌ Save failed: ' + e.code + ' — ' + e.message;
+      console.error('addPartner error:', e);
+    }
+  };
+
+  window.copyPartnerLink = function(code){
+    const link = location.origin + location.pathname.replace('partner-admin.html', 'partner-dashboard.html') + '?code=' + code;
+    navigator.clipboard.writeText(link).then(() => alert('✅ Dashboard link copied:\n' + link));
+  };
+
+  let payoutTargetCode = null;
+  window.openPayout = function(code, name){
+    payoutTargetCode = code;
+    document.getElementById('payoutForName').textContent = name + ' (' + code + ')';
+    document.getElementById('payoutCard').style.display = 'block';
+    document.getElementById('payoutCard').scrollIntoView({ behavior:'smooth' });
+  };
+
+  window.submitPayout = async function(){
+    if (!payoutTargetCode) return;
+    const amount = Number(document.getElementById('payoutAmount').value);
+    const note   = document.getElementById('payoutNote').value.trim();
+    if (!amount) { alert('Enter an amount.'); return; }
+    try {
+      await push(ref(db, 'partnerPayouts/' + payoutTargetCode), {
+        amount, note, date: new Date().toISOString()
+      });
+      document.getElementById('payoutAmount').value = '';
+      document.getElementById('payoutNote').value = '';
+      document.getElementById('payoutCard').style.display = 'none';
+      alert('✅ Payout logged.');
+    } catch (e) {
+      alert('❌ Save failed: ' + e.code + ' — ' + e.message);
+      console.error('submitPayout error:', e);
+    }
+  };
+
+  // ── Manage Partner (status, notes, signed agreement file) ──
+  let manageTargetCode = null;
+
+  window.openManage = function(code){
+    const p = (window._partnersCache || {})[code];
+    if (!p) return;
+    manageTargetCode = code;
+
+    document.getElementById('manageForName').textContent = (p.name || '') + ' (' + code + ')';
+    document.getElementById('manageStatus').value = p.status || 'active';
+    document.getElementById('manageNotes').value = p.notes || '';
+    document.getElementById('manageAgreementFile').value = '';
+    document.getElementById('manageUploadStatus').textContent = '';
+    document.getElementById('manageMsg').textContent = '';
+
+    const currentEl = document.getElementById('manageAgreementCurrent');
+    if (p.agreementFileUrl) {
+      const uploadedDate = p.agreementUploadedAt ? new Date(p.agreementUploadedAt).toLocaleString('en-IN') : '—';
+      currentEl.style.display = 'block';
+      currentEl.innerHTML = `📄 <a href="${p.agreementFileUrl}" target="_blank">${p.agreementFileName || 'View current agreement'}</a>
+        <div style="color:#7C4A1E; margin-top:2px;">Uploaded ${uploadedDate}. Choosing a new file below will replace it.</div>`;
+    } else {
+      currentEl.style.display = 'block';
+      currentEl.innerHTML = `⚠️ No signed agreement on file yet.`;
+    }
+
+    document.getElementById('manageCard').style.display = 'block';
+    document.getElementById('manageCard').scrollIntoView({ behavior:'smooth' });
+  };
+
+  window.closeManage = function(){
+    manageTargetCode = null;
+    document.getElementById('manageCard').style.display = 'none';
+  };
+
+  window.saveManage = async function(){
+    if (!manageTargetCode) return;
+    const code = manageTargetCode;
+    const status = document.getElementById('manageStatus').value;
+    const notes = document.getElementById('manageNotes').value.trim();
+    const fileInput = document.getElementById('manageAgreementFile');
+    const file = fileInput.files[0];
+    const msg = document.getElementById('manageMsg');
+    const uploadStatus = document.getElementById('manageUploadStatus');
+    msg.textContent = '';
+
+    const ALLOWED_EXT = ['.pdf', '.doc', '.docx'];
+    if (file) {
+      const lower = file.name.toLowerCase();
+      const okExt = ALLOWED_EXT.some(ext => lower.endsWith(ext));
+      if (!okExt) { msg.textContent = '❌ Only PDF or Word files (.pdf, .doc, .docx) are allowed.'; msg.style.color = '#c0392b'; return; }
+      if (file.size > 15 * 1024 * 1024) { msg.textContent = '❌ File too large (max 15MB).'; msg.style.color = '#c0392b'; return; }
+    }
+
+    try {
+      await set(ref(db, 'partners/' + code + '/status'), status);
+      await set(ref(db, 'partners/' + code + '/notes'), notes);
+
+      if (file) {
+        uploadStatus.textContent = 'Uploading agreement…';
+        const path = `partnerAgreements/${code}/agreement_${Date.now()}_${file.name}`;
+        const storageRef = sref(storage, path);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        await set(ref(db, 'partners/' + code + '/agreementFileUrl'), url);
+        await set(ref(db, 'partners/' + code + '/agreementFileName'), file.name);
+        await set(ref(db, 'partners/' + code + '/agreementUploadedAt'), new Date().toISOString());
+        uploadStatus.textContent = '';
+      }
+
+      msg.style.color = '#1e7d1e';
+      msg.textContent = '✅ Saved.';
+      loadPartners();
+      setTimeout(() => { closeManage(); }, 700);
+    } catch (e) {
+      msg.style.color = '#c0392b';
+      msg.textContent = '❌ Save failed: ' + e.code + ' — ' + e.message;
+      uploadStatus.textContent = '';
+      console.error('saveManage error:', e);
+    }
+  };
+
+  async function loadPartners(){
+    try {
+      const [partnersSnap, providersSnap] = await Promise.all([
+        get(ref(db, 'partners')),
+        get(ref(db, 'providers'))
+      ]);
+      const partners = partnersSnap.exists() ? partnersSnap.val() : {};
+      const allProviders = providersSnap.exists() ? Object.values(providersSnap.val()) : [];
+
+      const body = document.getElementById('partnerBody');
+      const codes = Object.keys(partners);
+      if (codes.length === 0) {
+        body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:16px;">No partners added yet</td></tr>';
+        return;
+      }
+      window._partnersCache = partners;
+      body.innerHTML = codes.map(code => {
+        const p = partners[code];
+        const count = allProviders.filter(pr => pr.referredByPartner === code).length;
+        const hasAgreement = !!p.agreementFileUrl;
+        const agreementBadge = hasAgreement
+          ? '<span class="agreement-badge yes">✅ On file</span>'
+          : '<span class="agreement-badge no">⚠️ Missing</span>';
+        return `
+          <tr>
+            <td>${p.name || '—'}</td>
+            <td>${p.city || '—'}</td>
+            <td>${p.pincode || '—'}</td>
+            <td>${code}</td>
+            <td>${p.status || 'active'}</td>
+            <td>${count}</td>
+            <td>${agreementBadge}</td>
+            <td class="row-actions">
+              <button class="link-btn" onclick="copyPartnerLink('${code}')">Copy Link</button>
+              <button class="payout-btn" onclick="openPayout('${code}','${(p.name||'').replace(/'/g,"")}')">Log Payout</button>
+              <button class="manage-btn" onclick="openManage('${code}')">Manage</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (e) {
+      document.getElementById('partnerBody').innerHTML =
+        `<tr><td colspan="8" style="text-align:center; padding:16px; color:#c0392b;">❌ Load failed: ${e.code} — ${e.message}</td></tr>`;
+      console.error('loadPartners error:', e);
+    }
+  }
+
+  document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+
+  // ── Tabs ──
+  window.switchTab = function(tab){
+    document.getElementById('tabPartners').style.display = tab === 'partners' ? 'block' : 'none';
+    document.getElementById('tabApplications').style.display = tab === 'applications' ? 'block' : 'none';
+    document.getElementById('tabBtnPartners').classList.toggle('active', tab === 'partners');
+    document.getElementById('tabBtnApplications').classList.toggle('active', tab === 'applications');
+    if (tab === 'applications') loadApplications();
+  };
+
+  const STATUS_LABEL = {
+    pending: 'New Application',
+    agreement_sent: 'Agreement Sent — Awaiting Docs',
+    docs_submitted: 'Docs Submitted — Ready to Review',
+    approved: 'Approved',
+    rejected: 'Rejected'
+  };
+
+  async function loadApplications(){
+    const body = document.getElementById('applicationsBody');
+    body.innerHTML = 'Loading…';
+    try {
+      const snap = await get(ref(db, 'partnerApplications'));
+      if (!snap.exists()) {
+        body.innerHTML = '<p style="text-align:center; padding:16px; color:#7C4A1E;">No applications yet.</p>';
+        document.getElementById('pendingCount').textContent = '';
+        document.getElementById('dupSummary').textContent = '';
+        return;
+      }
+      const apps = snap.val();
+      window._appsCache = apps;
+
+      const ids = Object.keys(apps);
+      const pendingActionCount = ids.filter(id => ['pending','docs_submitted'].includes(apps[id].status)).length;
+      document.getElementById('pendingCount').textContent = pendingActionCount > 0 ? `(${pendingActionCount})` : '';
+
+      renderApplicationsList();
+    } catch (e) {
+      body.innerHTML = `<p style="color:#c0392b;">❌ Load failed: ${e.code} — ${e.message}</p>`;
+      console.error('loadApplications error:', e);
+    }
+  }
+
+  function normMobile(m){ return (m || '').replace(/\D/g, '').replace(/^91/, ''); } // last-10-digit compare, ignores +91 prefix
+  function normPincode(p){ return (p || '').toString().trim(); }
+
+  function findDuplicateMobiles(apps, ids){
+    const byMobile = {};
+    ids.forEach(id => {
+      const key = normMobile(apps[id].mobile);
+      if (!key) return;
+      (byMobile[key] = byMobile[key] || []).push(id);
+    });
+    const dupIds = new Set();
+    Object.values(byMobile).forEach(group => { if (group.length > 1) group.forEach(id => dupIds.add(id)); });
+    return { byMobile, dupIds };
+  }
+
+  window.renderApplicationsList = function(){
+    const apps = window._appsCache;
+    if (!apps) return;
+    const body = document.getElementById('applicationsBody');
+    let ids = Object.keys(apps);
+
+    const { byMobile, dupIds } = findDuplicateMobiles(apps, ids);
+
+    const dupCount = Object.values(byMobile).filter(g => g.length > 1).length;
+    document.getElementById('dupSummary').textContent = dupCount > 0
+      ? `⚠️ ${dupCount} mobile number${dupCount > 1 ? 's' : ''} appear in more than one application`
+      : '';
+
+    const showDupOnly = document.getElementById('appDupOnlyCheck').checked;
+    if (showDupOnly) ids = ids.filter(id => dupIds.has(id));
+
+    const sortMode = document.getElementById('appSortSelect').value;
+    ids.sort((a, b) => {
+      const A = apps[a], B = apps[b];
+      switch (sortMode) {
+        case 'date_asc':  return (A.submittedAt||'').localeCompare(B.submittedAt||'');
+        case 'mobile':    return normMobile(A.mobile).localeCompare(normMobile(B.mobile));
+        case 'pincode':   return normPincode(A.pincode).localeCompare(normPincode(B.pincode));
+        case 'name':      return (A.fullName||'').localeCompare(B.fullName||'');
+        case 'date_desc':
+        default:          return (B.submittedAt||'').localeCompare(A.submittedAt||'');
+      }
+    });
+
+    if (!ids.length) {
+      body.innerHTML = `<p style="text-align:center; padding:16px; color:#7C4A1E;">${showDupOnly ? 'No duplicate mobile numbers found.' : 'No applications yet.'}</p>`;
+      return;
+    }
+
+    body.innerHTML = ids.map(id => renderApplicationCard(id, apps[id], dupIds.has(id) ? byMobile[normMobile(apps[id].mobile)] : null)).join('');
+  };
+
+  function renderApplicationCard(id, a, dupGroupIds){
+    const status = a.status || 'pending';
+    const badge = `<span class="badge badge-${status}">${STATUS_LABEL[status] || status}</span>`;
+    const submitted = a.submittedAt ? new Date(a.submittedAt).toLocaleString('en-IN') : '—';
+
+    let docsHtml = '';
+    if (a.idDocs) {
+      docsHtml = '<div class="docs-grid">' + Object.entries(a.idDocs).map(([k,url]) =>
+        `<a href="${url}" target="_blank">📄 ${k}</a>`
+      ).join('') + '</div>';
+    }
+
+    let actionsHtml = '';
+    if (status === 'pending') {
+      actionsHtml = `
+        <button class="btn-whatsapp" onclick="sendViaWhatsApp('${id}')">📱 Send via WhatsApp</button>
+        <button class="btn-email" onclick="sendViaEmail('${id}')">✉️ Send via Email</button>
+        <button class="btn-send" onclick="sendAgreement('${id}')">🔗 Just Copy Link</button>
+        <button class="btn-reject" onclick="rejectApplication('${id}')">✖ Reject</button>`;
+    } else if (status === 'agreement_sent') {
+      actionsHtml = `
+        <button class="btn-whatsapp" onclick="sendViaWhatsApp('${id}')">📱 Resend via WhatsApp</button>
+        <button class="btn-email" onclick="sendViaEmail('${id}')">✉️ Resend via Email</button>
+        <button class="btn-copy" onclick="copyAgreementLink('${id}')">🔗 Copy Agreement Link Again</button>
+        <button class="btn-reject" onclick="rejectApplication('${id}')">✖ Reject</button>`;
+    } else if (status === 'docs_submitted') {
+      actionsHtml = `
+        <button class="btn-approve" onclick="approveApplication('${id}','${(a.fullName||'').replace(/'/g,"")}','${a.city||''}','${a.pincode||''}','${a.mobile||''}')">✅ Approve & Create Partner</button>
+        <button class="btn-reject" onclick="rejectApplication('${id}')">✖ Reject</button>`;
+    } else if (status === 'approved') {
+      actionsHtml = `<span style="font-size:12px; color:#2E7D32;">Partner code: <strong>${a.assignedCode || '—'}</strong></span>`;
+    } else if (status === 'rejected') {
+      actionsHtml = `<span style="font-size:12px; color:#C62828;">${a.rejectedReason ? 'Reason: ' + a.rejectedReason : ''}</span>`;
+    }
+
+    return `
+      <div class="app-card">
+        <div class="app-top">
+          <div>
+            <strong>${a.fullName || '—'}</strong> — ${a.city || '—'} (${a.pincode || '—'})
+            <div class="app-meta">📱 ${a.mobile || '—'} · ✉️ ${a.email || '—'} · Applied ${submitted}</div>
+            <div class="app-meta">Aadhaar: ${a.aadhaar || '—'} · PAN: ${a.pan || '—'}${a.social ? ' · Social: ' + a.social : ''}</div>
+          </div>
+          <div>${badge}</div>
+        </div>
+        ${a.about ? `<div class="app-about">${a.about}</div>` : ''}
+        ${docsHtml}
+        ${a.agreementSentAt ? `<div class="app-meta" style="margin-top:6px;">📤 Agreement sent${a.agreementSentVia ? ' via ' + a.agreementSentVia : ''} on ${new Date(a.agreementSentAt).toLocaleString('en-IN')}</div>` : ''}
+        ${dupGroupIds ? `<div style="margin-top:6px; padding:8px 10px; background:#FFEBEE; border-radius:8px; font-size:12px; color:#C62828; font-weight:700;">⚠️ Same mobile number appears in ${dupGroupIds.length} applications — possible duplicate lead</div>` : ''}
+        ${a.consentGiven ? `<div class="app-meta" style="margin-top:6px;">✅ Consent given by "${a.consentSignatureName || ''}" on ${a.consentGivenAt ? new Date(a.consentGivenAt).toLocaleString('en-IN') : ''}</div>` : ''}
+        <div class="action-row">${actionsHtml}</div>
+      </div>
+    `;
+  }
+
+  function agreementLinkFor(id){
+    return location.origin + location.pathname.replace('partner-admin.html', 'partner-agreement.html') + '?app=' + id;
+  }
+
+  window.sendAgreement = async function(id){
+    try {
+      await set(ref(db, 'partnerApplications/' + id + '/status'), 'agreement_sent');
+      await set(ref(db, 'partnerApplications/' + id + '/agreementSentAt'), new Date().toISOString());
+      const link = agreementLinkFor(id);
+      navigator.clipboard.writeText(link);
+      alert('✅ Status updated to "Agreement Sent".\n\nLink copied to clipboard — send this to the applicant:\n\n' + link);
+      loadApplications();
+    } catch (e) {
+      alert('❌ Failed: ' + e.code + ' — ' + e.message);
+    }
+  };
+
+  function formatIndianMobileForWhatsApp(mobile){
+    let digits = (mobile || '').replace(/\D/g, '');
+    if (digits.length === 10) digits = '91' + digits;
+    else if (digits.length === 11 && digits.startsWith('0')) digits = '91' + digits.slice(1);
+    return digits; // 12-digit, e.g. 919251115013
+  }
+
+  function agreementMessageText(name, link){
+    return `Namaste ${name || ''}!\n\nThank you for applying to become a Sudarshan Chakra India (SAARTHI) City Channel Partner.\n\nPlease read the agreement, give your consent, and upload your documents here:\n${link}\n\nThis link is unique to your application — please don't share it.\n\n- Team Sudarshan Chakra India`;
+  }
+
+  async function markAgreementSentIfPending(id, via){
+    const a = (window._appsCache || {})[id];
+    if (a && a.status === 'pending') {
+      await set(ref(db, 'partnerApplications/' + id + '/status'), 'agreement_sent');
+      await set(ref(db, 'partnerApplications/' + id + '/agreementSentAt'), new Date().toISOString());
+      await set(ref(db, 'partnerApplications/' + id + '/agreementSentVia'), via);
+    }
+  }
+
+  window.sendViaWhatsApp = async function(id){
+    const a = (window._appsCache || {})[id];
+    if (!a) return;
+    const number = formatIndianMobileForWhatsApp(a.mobile);
+    if (!number) { alert('⚠️ No valid mobile number on this application.'); return; }
+    const link = agreementLinkFor(id);
+    const text = agreementMessageText(a.fullName, link);
+    const waUrl = `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+
+    try {
+      await markAgreementSentIfPending(id, 'whatsapp');
+      window.open(waUrl, '_blank');
+      loadApplications();
+    } catch (e) {
+      alert('❌ Failed to update status: ' + e.code + ' — ' + e.message);
+      window.open(waUrl, '_blank'); // still let them send even if the status update failed
+    }
+  };
+
+  window.sendViaEmail = async function(id){
+    const a = (window._appsCache || {})[id];
+    if (!a) return;
+    if (!a.email) { alert('⚠️ No email address on this application.'); return; }
+    const link = agreementLinkFor(id);
+    const subject = 'Sudarshan Chakra India — City Channel Partner Agreement';
+    const body = agreementMessageText(a.fullName, link);
+    const mailUrl = `mailto:${a.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    try {
+      await markAgreementSentIfPending(id, 'email');
+      const a2 = document.createElement('a');
+      a2.href = mailUrl;
+      a2.click();
+      loadApplications();
+    } catch (e) {
+      alert('❌ Failed to update status: ' + e.code + ' — ' + e.message);
+      const a2 = document.createElement('a');
+      a2.href = mailUrl;
+      a2.click();
+    }
+  };
+
+  window.copyAgreementLink = function(id){
+    const link = agreementLinkFor(id);
+    navigator.clipboard.writeText(link);
+    alert('🔗 Link copied:\n\n' + link);
+  };
+
+  window.rejectApplication = async function(id){
+    const reason = prompt('Optional: reason for rejection (shown internally only)') || '';
+    if (!confirm('Reject this application?')) return;
+    try {
+      await set(ref(db, 'partnerApplications/' + id + '/status'), 'rejected');
+      await set(ref(db, 'partnerApplications/' + id + '/rejectedReason'), reason);
+      await set(ref(db, 'partnerApplications/' + id + '/rejectedAt'), new Date().toISOString());
+      loadApplications();
+    } catch (e) {
+      alert('❌ Failed: ' + e.code + ' — ' + e.message);
+    }
+  };
+
+  window.approveApplication = async function(id, name, city, pincode, mobile){
+    const suggested = (city || 'PARTNER').toUpperCase().replace(/[^A-Z0-9]/g,'') + (pincode || '');
+    const code = prompt('Assign a referral code for this partner (must be unique):', suggested);
+    if (!code) return;
+    const cleanCode = code.trim().toUpperCase();
+
+    try {
+      const existing = await get(ref(db, 'partners/' + cleanCode));
+      if (existing.exists()) { alert('That code is already in use — try again with a different one.'); return; }
+
+      const existingPincode = await get(ref(db, 'partnerPincodes/' + pincode));
+      if (existingPincode.exists() && existingPincode.val() !== cleanCode) {
+        alert('That pincode is already assigned to partner ' + existingPincode.val() + '.');
+        return;
+      }
+
+      await set(ref(db, 'partners/' + cleanCode), {
+        name, city, phone: mobile, pincode, status: 'active',
+        appointedDate: new Date().toISOString(),
+        sourceApplicationId: id
+      });
+      await set(ref(db, 'partnerPincodes/' + pincode), cleanCode);
+      await set(ref(db, 'partnerApplications/' + id + '/status'), 'approved');
+      await set(ref(db, 'partnerApplications/' + id + '/assignedCode'), cleanCode);
+      await set(ref(db, 'partnerApplications/' + id + '/approvedAt'), new Date().toISOString());
+
+      const dashLink = location.origin + location.pathname.replace('partner-admin.html', 'partner-dashboard.html') + '?code=' + cleanCode;
+      navigator.clipboard.writeText(dashLink);
+      alert('✅ Partner created with code ' + cleanCode + '.\n\nDashboard link copied — send this to them:\n\n' + dashLink);
+      loadApplications();
+      loadPartners();
+    } catch (e) {
+      alert('❌ Failed: ' + e.code + ' — ' + e.message);
+      console.error('approveApplication error:', e);
+    }
+  };
+</script>
+</body>
+</html>
