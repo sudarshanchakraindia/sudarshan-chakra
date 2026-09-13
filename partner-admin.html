@@ -192,12 +192,31 @@
   const ADMIN_FIREBASE_PASSWORD = 'MyActualPassword144@Crore';
 
   window.tryLogin = async function(){
+      // Gate password main admin dashboard (index.html) में बदलता है, जो उसे
+  // localStorage के साथ-साथ Firebase के adminSettings/uiGatePassword पर भी
+  // रखता है. यह page सिर्फ़ localStorage पढ़ता था, इसलिए दूसरे browser/device/
+  // incognito में चुपचाप 'admin123' पर गिर जाता था. अब live value Firebase से.
+  async function currentGatePassword(){
+    try {
+      const snap = await get(ref(db, 'adminSettings/uiGatePassword'));
+      if (snap.exists() && snap.val()) {
+        localStorage.setItem(ADMIN_PASSWORD_KEY, snap.val());
+        return snap.val();
+      }
+    } catch (e) { console.warn('Gate password sync failed:', e.message); }
+    return localStorage.getItem(ADMIN_PASSWORD_KEY) || 'admin123';
+  }
+
+  window.tryLogin = async function(){
     const entered  = document.getElementById('pw').value;
-    const expected = localStorage.getItem(ADMIN_PASSWORD_KEY) || 'admin123';
+    const errEl    = document.getElementById('err');
+    errEl.textContent = 'Checking...';
+    const expected = await currentGatePassword();
     if (entered !== expected){
-      document.getElementById('err').textContent = 'Incorrect password.';
+      errEl.textContent = 'Incorrect password.';
       return;
     }
+    errEl.textContent = '';
     try {
       await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_FIREBASE_PASSWORD);
       document.getElementById('gate').style.display = 'none';
