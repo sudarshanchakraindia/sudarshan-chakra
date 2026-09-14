@@ -734,7 +734,7 @@
 
     runCalculator();
     loadLeads();
-    renderMaterials();
+    renderMaterials().catch(e => console.warn('renderMaterials failed:', e));
     loadCategoryOptions();
     loadPartnerActivity();
     loadTemplates();
@@ -1573,29 +1573,58 @@
     }
   }
 
-  function renderMaterials(){
-    const listEl = document.getElementById('materialsList');
-    if (!listEl) return;
-    if (MARKETING_MATERIALS.length === 0) {
-      listEl.innerHTML = '<div class="empty">No materials available yet.</div>';
-      return;
-    }
-    listEl.innerHTML = MARKETING_MATERIALS.map(m => {
-      const url = location.origin + location.pathname.replace('partner-dashboard.html', m.file);
-      const shareText = 'Here\u2019s a quick guide to SAARTHI: ' + url;
-      return `
+  function escapeHtml(str){
+    return String(str == null ? '' : str).replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  function materialItemHtml(name, desc, url){
+    const shareText = 'Here\u2019s something from SAARTHI: ' + url;
+    return `
         <div class="material-item">
           <div>
-            <div class="material-name">${m.name}</div>
-            <div class="material-desc">${m.desc}</div>
+            <div class="material-name">${escapeHtml(name)}</div>
+            <div class="material-desc">${escapeHtml(desc)}</div>
           </div>
           <div class="material-actions">
-            <a class="material-open" href="${url}" target="_blank">📄 Open</a>
-            <a class="material-share" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank">📲 Share</a>
+            <a class="material-open" href="${encodeURI(url)}" target="_blank" rel="noopener">📄 Open</a>
+            <a class="material-share" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener">📲 Share</a>
           </div>
         </div>
       `;
-    }).join('');
+  }
+
+  // Built-in materials (shipped with the site) come first, then anything the
+  // central team has uploaded through partner-admin.html → Materials tab. That
+  // upload writes to marketingMaterials/ in the database, so new posters and
+  // guides appear here without this file being touched.
+  async function renderMaterials(){
+    const listEl = document.getElementById('materialsList');
+    if (!listEl) return;
+
+    const builtIn = MARKETING_MATERIALS.map(m =>
+      materialItemHtml(m.name, m.desc,
+        location.origin + location.pathname.replace('partner-dashboard.html', m.file)));
+
+    let uploaded = [];
+    try {
+      const snap = await window._pget(window._pref(window._pdb, 'marketingMaterials'));
+      if (snap.exists()) {
+        uploaded = Object.values(snap.val() || {})
+          .filter(m => m && m.url)
+          .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0))
+          .map(m => materialItemHtml(m.name || m.fileName || 'Material', m.desc || '', m.url));
+      }
+    } catch (e) {
+      // The built-in materials below are still worth showing, so a failed fetch
+      // is logged rather than blanking the section.
+      console.warn('Could not load uploaded materials:', e.code || e.message);
+    }
+
+    const all = uploaded.concat(builtIn);
+    listEl.innerHTML = all.length
+      ? all.join('')
+      : '<div class="empty">No materials available yet.</div>';
   }
 
   function buildClientCheckinMessage(client){
