@@ -583,9 +583,9 @@
         const label = TYPE_ICON[m.type] || TYPE_ICON.link;
         const src = m.url || '';
         const thumb = isImg(src) || isImg(m.fileName)
-          ? `<img src="${encodeURI(src)}" alt="" style="width:54px; height:54px; object-fit:cover; border-radius:8px; flex-shrink:0;">`
+          ? `<img src="${escapeHtml(src)}" alt="" style="width:54px; height:54px; object-fit:cover; border-radius:8px; flex-shrink:0;">`
           : (isVid(src) || isVid(m.fileName)
-              ? `<video src="${encodeURI(src)}" muted playsinline preload="metadata" style="width:54px; height:54px; object-fit:cover; border-radius:8px; flex-shrink:0;"></video>`
+              ? `<video src="${escapeHtml(src)}" muted playsinline preload="metadata" style="width:54px; height:54px; object-fit:cover; border-radius:8px; flex-shrink:0;"></video>`
               : `<span style="width:54px; height:54px; border-radius:8px; background:#FFF3E0; display:inline-flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">📄</span>`);
         return `
           <div class="agreement-current" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -599,7 +599,7 @@
             </div>
             </div>
             <div style="display:flex; gap:8px; flex-shrink:0;">
-              <a href="${encodeURI(m.url || '#')}" target="_blank" rel="noopener">Open</a>
+              <a href="${escapeHtml(m.url || '#')}" target="_blank" rel="noopener">Open</a>
               <a href="#" style="color:#c0392b;" onclick="event.preventDefault(); deleteMaterial('${m.key}', '${escapeHtml(m.storagePath || '')}', '${escapeHtml((m.name || '').replace(/'/g, ''))}')">Remove</a>
             </div>
           </div>`;
