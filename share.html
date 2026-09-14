@@ -985,6 +985,7 @@ document.addEventListener('keydown', (e) => {
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -996,6 +997,15 @@ document.addEventListener('keydown', (e) => {
     appId: "1:357210144411:web:b440a94cf78b04b58b103e"
   };
   const app = initializeApp(firebaseConfig);
+
+  // Sign in anonymously so the database can require an authenticated caller.
+  // Nobody types anything — Firebase issues a throwaway identity on page load.
+  // Every database call below waits for this, otherwise the first read can
+  // fire while the user is still anonymous-less and come back permission-denied.
+  const authReady = signInAnonymously(getAuth(app))
+    .catch(e => { console.warn('Anonymous sign-in failed:', e.code || e.message); });
+  window._authReady = authReady;
+
   const db = getDatabase(app);
 
   window.submitPartnerApplication = async function (e) {

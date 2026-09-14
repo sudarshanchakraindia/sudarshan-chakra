@@ -281,6 +281,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -292,6 +293,13 @@
     appId: "1:357210144411:web:b440a94cf78b04b58b103e"
   };
   const app = initializeApp(firebaseConfig);
+
+  // Same reason as the partner dashboard: this page is opened with just a
+  // referral code, so an anonymous sign-in gives it an identity and lets the
+  // database require an authenticated caller instead of public reads.
+  window._pAuthReady = signInAnonymously(getAuth(app))
+    .catch(e => { console.warn('Anonymous sign-in failed:', e.code || e.message); });
+
   const db  = getDatabase(app);
   window._pdb = db;
   window._pref = ref;
@@ -347,6 +355,8 @@
   }
 
   async function loadPartner(){
+    // Wait for the anonymous sign-in, or this first read races it.
+    await window._pAuthReady;
     const code = document.getElementById('codeInput').value.trim().toUpperCase();
     if (!code) return;
     document.getElementById('err').textContent = '';

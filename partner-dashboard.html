@@ -467,7 +467,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signInAnonymously }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
   const firebaseConfig = {
     apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -489,13 +489,26 @@
     window._psignIn = (email, pass) => signInWithEmailAndPassword(auth, email, pass);
     onAuthStateChanged(auth, u => { window._puser = u || null; });
 
+  // A partner opens this page with only their referral code — no account, no
+  // password. Signing in anonymously gives the page a throwaway identity so the
+  // database can demand an authenticated caller instead of being world-readable.
+  // Nothing is shown to the partner. If someone is already signed in properly
+  // (the admin, for the WhatsApp gateway), that session is left alone.
+  window._pAuthReady = auth.currentUser
+    ? Promise.resolve(auth.currentUser)
+    : signInAnonymously(auth).catch(e => {
+        console.warn('Anonymous sign-in failed:', e.code || e.message);
+      });
+
   // Auto-fill code from URL (?code=XYZ) if present, and auto-load.
   // Module scripts already execute after the DOM is parsed, so the plain
   // <script> below (which defines loadPartner) has already run by now.
   const urlCode = new URLSearchParams(location.search).get('code');
   if (urlCode) {
     document.getElementById('codeInput').value = urlCode.replace(/\s+/g, '');
-    if (window.loadPartner) window.loadPartner();
+    // Wait for the anonymous sign-in above, or the first read races it and
+    // comes back permission-denied.
+    window._pAuthReady.then(() => { if (window.loadPartner) window.loadPartner(); });
   }
 
   // Demo mode — ?demo=1 — lets a prospect explore the real dashboard UI with
@@ -1767,7 +1780,9 @@
     return new Promise((resolve, reject) => {
       const auth = window._pauth;
       if (!auth) return reject(new Error('Auth not loaded — refresh the page.'));
-      if (auth.currentUser) return resolve(auth.currentUser);
+      // An anonymous session does not carry the partner/admin custom claims the
+      // send endpoint checks, so it must not short-circuit the sign-in prompt.
+      if (auth.currentUser && !auth.currentUser.isAnonymous) return resolve(auth.currentUser);
 
       const wrap = document.createElement('div');
       wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;';

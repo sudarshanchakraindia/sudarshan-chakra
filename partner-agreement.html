@@ -151,6 +151,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
   const firebaseConfig = {
@@ -163,6 +164,15 @@
     appId: "1:357210144411:web:b440a94cf78b04b58b103e"
   };
   const app = initializeApp(firebaseConfig);
+
+  // Sign in anonymously so the database can require an authenticated caller.
+  // Nobody types anything — Firebase issues a throwaway identity on page load.
+  // Every database call below waits for this, otherwise the first read can
+  // fire while the user is still anonymous-less and come back permission-denied.
+  const authReady = signInAnonymously(getAuth(app))
+    .catch(e => { console.warn('Anonymous sign-in failed:', e.code || e.message); });
+  window._authReady = authReady;
+
   const db = getDatabase(app);
   const storage = getStorage(app);
 
@@ -174,6 +184,7 @@
   async function init(){
     if (!appId) return showInvalid();
     try {
+      await authReady;
       const snap = await get(ref(db, 'partnerApplications/' + appId));
       if (!snap.exists()) return showInvalid();
       const data = snap.val();
