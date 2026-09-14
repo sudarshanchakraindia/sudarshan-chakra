@@ -79,6 +79,7 @@
       <div class="tabs">
         <button class="tab-btn active" id="tabBtnPartners" onclick="switchTab('partners')">👥 Partners</button>
         <button class="tab-btn" id="tabBtnApplications" onclick="switchTab('applications')">📋 Applications <span id="pendingCount"></span></button>
+        <button class="tab-btn" id="tabBtnMaterials" onclick="switchTab('materials')">🎨 Materials</button>
       </div>
 
       <div id="tabPartners">
@@ -163,15 +164,40 @@
         </div>
       </div>
 
+      <div id="tabMaterials" style="display:none;">
+        <div class="card">
+          <h2>🎨 Marketing Materials</h2>
+          <p style="font-size:12px; color:#7C4A1E; margin-top:-6px;">Whatever you add here shows up straight away in every City Channel Partner's dashboard, under "Marketing &amp; Client Materials" — no code changes needed.</p>
+
+          <label>Name (as partners will see it)</label>
+          <input id="matName" placeholder="e.g. Diwali Offer Poster (Hindi)">
+
+          <label>Short description</label>
+          <input id="matDesc" placeholder="e.g. Share with providers during the festive campaign">
+
+          <label>File (PDF, PNG, JPG — up to about 10 MB)</label>
+          <input type="file" id="matFile" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx">
+
+          <button onclick="addMaterial()" style="margin-top:12px;">⬆️ Add Material</button>
+          <p class="upload-progress" id="matStatus"></p>
+          <p class="err" id="matErr"></p>
+        </div>
+
+        <div class="card">
+          <h2>📚 Current Materials</h2>
+          <div id="materialsAdminList">Loading…</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getDatabase, ref, get, set, push, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
   import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+  import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDr0jgOBiQ59F8CFZK0dnqgkG3ljjJu3P4",
@@ -424,12 +450,125 @@
 
   // ── Tabs ──
   window.switchTab = function(tab){
-    document.getElementById('tabPartners').style.display = tab === 'partners' ? 'block' : 'none';
+    document.getElementById('tabPartners').style.display     = tab === 'partners' ? 'block' : 'none';
     document.getElementById('tabApplications').style.display = tab === 'applications' ? 'block' : 'none';
+    document.getElementById('tabMaterials').style.display    = tab === 'materials' ? 'block' : 'none';
     document.getElementById('tabBtnPartners').classList.toggle('active', tab === 'partners');
     document.getElementById('tabBtnApplications').classList.toggle('active', tab === 'applications');
+    document.getElementById('tabBtnMaterials').classList.toggle('active', tab === 'materials');
     if (tab === 'applications') loadApplications();
+    if (tab === 'materials') loadMaterialsAdmin();
   };
+
+  // ── Marketing materials ───────────────────────────────────────────────
+  // Files go to Firebase Storage under marketingMaterials/, and a small record
+  // (name, description, download URL) goes to the database at the same path.
+  // partner-dashboard.html reads that list, so adding a poster here is enough —
+  // the partner dashboards pick it up on their next load.
+  const MAX_MATERIAL_BYTES = 10 * 1024 * 1024;
+
+  function escapeHtml(str){
+    return String(str == null ? '' : str).replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  window.addMaterial = async function(){
+    const name = document.getElementById('matName').value.trim();
+    const desc = document.getElementById('matDesc').value.trim();
+    const file = document.getElementById('matFile').files[0];
+    const status = document.getElementById('matStatus');
+    const err = document.getElementById('matErr');
+    err.textContent = ''; status.textContent = '';
+
+    if (!name)  { err.textContent = 'Give the material a name.'; return; }
+    if (!file)  { err.textContent = 'Choose a file to upload.'; return; }
+    if (file.size > MAX_MATERIAL_BYTES) {
+      err.textContent = 'That file is ' + (file.size / 1048576).toFixed(1) + ' MB — keep it under 10 MB.';
+      return;
+    }
+
+    try {
+      status.textContent = 'Uploading…';
+      const key = 'm_' + Date.now();
+      const path = `marketingMaterials/${key}/${file.name}`;
+      const storageRef = sref(storage, path);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+
+      await set(ref(db, 'marketingMaterials/' + key), {
+        name, desc,
+        fileName: file.name,
+        storagePath: path,
+        url,
+        sizeBytes: file.size,
+        uploadedAt: new Date().toISOString()
+      });
+
+      document.getElementById('matName').value = '';
+      document.getElementById('matDesc').value = '';
+      document.getElementById('matFile').value = '';
+      status.textContent = '✅ Added — partners can see it now.';
+      loadMaterialsAdmin();
+      setTimeout(() => { status.textContent = ''; }, 4000);
+    } catch (e) {
+      status.textContent = '';
+      err.textContent = '❌ Upload failed: ' + (e.code || '') + ' ' + e.message;
+      console.error('addMaterial error:', e);
+    }
+  };
+
+  window.deleteMaterial = async function(key, storagePath, name){
+    if (!confirm('Remove "' + name + '" from every partner dashboard?')) return;
+    try {
+      await remove(ref(db, 'marketingMaterials/' + key));
+      // The database record is what partners read, so it is removed first. If the
+      // stored file itself will not delete, the material has still disappeared
+      // from their dashboards — so that failure is logged, not shown as an error.
+      if (storagePath) {
+        try { await deleteObject(sref(storage, storagePath)); }
+        catch (e) { console.warn('Storage file not deleted:', e.code || e.message); }
+      }
+      loadMaterialsAdmin();
+    } catch (e) {
+      document.getElementById('matErr').textContent = '❌ Could not remove: ' + (e.code || e.message);
+    }
+  };
+
+  async function loadMaterialsAdmin(){
+    const box = document.getElementById('materialsAdminList');
+    box.innerHTML = 'Loading…';
+    try {
+      const snap = await get(ref(db, 'marketingMaterials'));
+      const data = snap.exists() ? snap.val() : {};
+      const rows = Object.entries(data)
+        .map(([key, m]) => ({ key, ...m }))
+        .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0));
+
+      if (!rows.length) {
+        box.innerHTML = '<p style="font-size:13px; color:#7C4A1E;">Nothing added yet. Partners still see the built-in guides and posters that ship with the site.</p>';
+        return;
+      }
+
+      box.innerHTML = rows.map(m => {
+        const size = m.sizeBytes ? (m.sizeBytes / 1048576).toFixed(1) + ' MB' : '';
+        const when = m.uploadedAt ? new Date(m.uploadedAt).toLocaleDateString('en-IN') : '';
+        return `
+          <div class="agreement-current" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:700;">${escapeHtml(m.name)}</div>
+              <div style="font-size:12px; color:#7C4A1E;">${escapeHtml(m.desc || '')}</div>
+              <div style="font-size:11px; color:#9a7a5a; margin-top:3px;">${escapeHtml(m.fileName || '')} ${size} ${when ? '· ' + when : ''}</div>
+            </div>
+            <div style="display:flex; gap:8px; flex-shrink:0;">
+              <a href="${encodeURI(m.url || '#')}" target="_blank" rel="noopener">Open</a>
+              <a href="#" style="color:#c0392b;" onclick="event.preventDefault(); deleteMaterial('${m.key}', '${escapeHtml(m.storagePath || '')}', '${escapeHtml((m.name || '').replace(/'/g, ''))}')">Remove</a>
+            </div>
+          </div>`;
+      }).join('');
+    } catch (e) {
+      box.innerHTML = '<p class="err">Could not load materials: ' + escapeHtml(e.code || e.message) + '</p>';
+    }
+  }
 
   const STATUS_LABEL = {
     pending: 'New Application',
