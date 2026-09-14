@@ -124,6 +124,50 @@
   .lead-filter-row{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
   .lead-filter-row button{ font-size:12px; padding:6px 12px; border-radius:20px; border:1px solid #f0e4d4; background:#fff; cursor:pointer; color:var(--dim); }
   .lead-filter-row button.active{ background:var(--saffron); color:#fff; border-color:var(--saffron); }
+
+  /* ── Collapsible cards (added: long lists shouldn't force endless scrolling) ── */
+  .card-toggle{ display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; user-select:none; }
+  .card-toggle .card-toggle-right{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .card-toggle .chev{ font-size:13px; color:var(--dim); transition:transform .15s; }
+  .card.collapsed .card-body{ display:none; }
+  .card.collapsed .card-toggle .chev{ transform:rotate(-90deg); }
+  .count-pill{ font-size:12px; font-weight:700; background:#FFF3E0; color:#B8600A; border-radius:20px; padding:3px 10px; }
+
+  /* Compact lead/client rows — tap a row to open its details */
+  .lead-head{ display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .lead-head .lead-line{ flex:1; min-width:0; }
+  .lead-head .lead-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lead-item .row-chev{ color:var(--dim); font-size:12px; display:inline-block; transition:transform .15s; }
+  .lead-item:not(.collapsed) .row-chev{ transform:rotate(90deg); }
+  .lead-item .lead-body{ margin-top:10px; }
+  .lead-item.collapsed .lead-body{ display:none; }
+  .list-tools{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .list-tools button{ font-size:12px; padding:6px 10px; border-radius:20px; border:1px solid #f0e4d4; background:#fff; cursor:pointer; color:var(--dim); }
+  #backToTop{ position:fixed; right:16px; bottom:16px; z-index:900; display:none; width:46px; height:46px; border-radius:50%; border:none; background:var(--saffron); color:#fff; font-size:20px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.25); }
+
+  /* Marketing material gallery — posters, flyers, reels and documents */
+  .mat-filter-row{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .mat-filter-row button{ font-size:12px; padding:6px 12px; border-radius:20px; border:1px solid #f0e4d4; background:#fff; cursor:pointer; color:var(--dim); }
+  .mat-filter-row button.active{ background:var(--saffron); color:#fff; border-color:var(--saffron); }
+  .mat-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .mat-card{ border:1px solid #f0e4d4; border-radius:12px; overflow:hidden; background:#fff; display:flex; flex-direction:column; }
+  .mat-thumb{ height:120px; background:#FFF3E0; display:flex; align-items:center; justify-content:center; font-size:32px; overflow:hidden; cursor:pointer; }
+  .mat-thumb img, .mat-thumb video{ width:100%; height:100%; object-fit:cover; }
+  .mat-info{ padding:8px 10px; flex:1; }
+  .mat-info .mat-name{ font-size:12.5px; font-weight:700; line-height:1.3; }
+  .mat-info .mat-desc{ font-size:11px; color:var(--dim); margin-top:3px; }
+  .mat-type{ display:inline-block; font-size:10px; font-weight:700; border-radius:20px; padding:2px 8px; background:#FFF3E0; color:#B8600A; margin-bottom:5px; }
+  .mat-actions{ display:flex; gap:6px; padding:8px 10px; border-top:1px solid #f7ecdd; }
+  .mat-actions a, .mat-actions button{ flex:1; text-align:center; font-size:11px; font-weight:700; padding:7px 4px; border-radius:6px; text-decoration:none; border:none; cursor:pointer; }
+  .mat-open{ background:#eee; color:var(--deep); }
+  .mat-share{ background:#25D366; color:#fff; }
+  .mat-del{ background:#FFEBEE; color:#C62828; flex:0 0 auto !important; }
+
+  /* Attachment chip on a message template */
+  .tpl-attach{ display:flex; align-items:center; gap:8px; font-size:12px; margin:8px 0; background:#FFF8F0; border:1px dashed #f0d9bd; border-radius:8px; padding:6px 8px; }
+  .tpl-attach img, .tpl-attach video{ width:40px; height:40px; object-fit:cover; border-radius:6px; flex-shrink:0; }
+  .tpl-attach .tpl-attach-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
+  .tpl-attach button{ font-size:11px; padding:4px 8px; border-radius:6px; border:none; background:#eee; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -274,14 +318,16 @@
       </div>
 
       <!-- Message Templates -->
-      <div class="card">
+      <div class="card" id="templatesCard">
         <h2>✉️ Message Templates</h2>
-        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Write your own messages once, then send them to any lead or client with one tap. Use <code>{name}</code> anywhere in your message — it'll be replaced automatically with that person's name.</p>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Write your own messages once, then send them to any lead or client with one tap. Use <code>{name}</code> anywhere in your message — it'll be replaced automatically with that person's name. चाहें तो हर टेम्पलेट के साथ एक पोस्टर, फ्लायर या रील भी अटैच कर सकते हैं।</p>
 
         <div class="lead-form" style="grid-template-columns:1fr;">
           <input type="text" id="templateTitle" placeholder="Template name (e.g. Follow-up after 1 week)">
           <textarea id="templateBody" rows="3" placeholder="Write your message here... e.g. Namaste {name}! Just checking in — have you had a chance to look at SAARTHI?" style="padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; font-family:inherit; resize:vertical;"></textarea>
         </div>
+        <div id="tplAttachRow"></div>
+        <button type="button" class="btn ghost" style="width:100%; margin-bottom:8px;" onclick="openMaterialChooser()">📎 पोस्टर / फ्लायर / रील अटैच करें</button>
         <button class="btn primary" style="width:100%;" onclick="addTemplate()">➕ Save Template</button>
         <p id="templateErr" style="color:#c0392b; font-size:12px; margin-top:6px;"></p>
 
@@ -289,7 +335,7 @@
       </div>
 
       <!-- Lead Tracker -->
-      <div class="card">
+      <div class="card" id="leadsCard">
         <h2>🎯 My Leads</h2>
         <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Keep track of local businesses you've spotted — while walking around, browsing Google Maps, or hearing about them locally. Add them here so you don't lose track, and move them through the pipeline as you follow up.</p>
 
@@ -334,7 +380,7 @@
 
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
           <label style="font-size:13px; font-weight:700; margin:0;">Sort by</label>
-          <select id="leadSortSelect" onchange="renderLeads()" style="padding:8px; border:1px solid #ddd; border-radius:8px; font-size:13px;">
+          <select id="leadSortSelect" onchange="resetLeadPaging()" style="padding:8px; border:1px solid #ddd; border-radius:8px; font-size:13px;">
             <option value="date_desc">Newest first</option>
             <option value="date_asc">Oldest first</option>
             <option value="mobile">Mobile number</option>
@@ -356,11 +402,16 @@
           <button data-filter="not_interested" onclick="setLeadFilter('not_interested')">Not Interested</button>
         </div>
 
+        <div class="list-tools">
+          <button onclick="expandAllLeads(true)">⬇ सब खोलें</button>
+          <button onclick="expandAllLeads(false)">⬆ सब बंद करें</button>
+          <span id="leadCountInfo" style="font-size:12px; color:var(--dim);"></span>
+        </div>
         <div id="leadListEl"><div class="empty">Loading…</div></div>
       </div>
 
       <!-- My Clients (converted / registered leads) -->
-      <div class="card">
+      <div class="card" id="clientsCard">
         <h2>🤝 My Clients</h2>
         <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Everyone who has actually registered through you — verified automatically from real sign-ups, plus any leads you've manually marked Registered. Stay in touch — a quick check-in message goes a long way.</p>
         <input type="text" id="clientSearchInput" placeholder="🔍 Search by name or mobile number..." oninput="setClientSearch(this.value)" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin-bottom:12px;">
@@ -368,16 +419,46 @@
       </div>
 
       <!-- Training Videos -->
-      <div class="card">
+      <div class="card" id="trainingCard">
         <h2>🎥 Training Videos</h2>
         <div id="trainingVideoList"><div class="empty">Loading…</div></div>
       </div>
 
       <!-- Marketing & Client Materials -->
-      <div class="card">
-        <h2>📄 Marketing & Client Materials</h2>
-        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Ready-to-share documents for the providers and seekers you onboard — download, print, or share the link directly on WhatsApp.</p>
-        <div id="materialsList"></div>
+      <div class="card" id="materialsCard">
+        <h2>🎨 Marketing Material</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">पोस्टर, फ्लायर, रील और डॉक्युमेंट — सब एक जगह। सीधे WhatsApp पर भेजें, या अपने मैसेज टेम्पलेट में अटैच करें।</p>
+
+        <div class="mat-filter-row" id="matFilterRow">
+          <button class="active" data-mat="all" onclick="setMaterialFilter('all')">All</button>
+          <button data-mat="poster" onclick="setMaterialFilter('poster')">🖼️ Posters</button>
+          <button data-mat="flyer" onclick="setMaterialFilter('flyer')">📋 Flyers</button>
+          <button data-mat="reel" onclick="setMaterialFilter('reel')">🎬 Reels / Video</button>
+          <button data-mat="document" onclick="setMaterialFilter('document')">📄 Documents</button>
+        </div>
+
+        <div id="materialsList"><div class="empty">Loading…</div></div>
+
+        <button id="matAddToggle" style="width:100%; margin-top:14px; padding:10px; border-radius:8px; border:1px dashed #ccc; background:#FAFAFA; color:var(--dim); font-size:13px; cursor:pointer;" onclick="toggleMyMaterialPanel()">➕ अपना पोस्टर / फ्लायर / रील जोड़ें</button>
+
+        <div id="myMaterialPanel" style="display:none; margin-top:14px; border:1px solid #f0e4d4; border-radius:10px; padding:14px; background:#FFFDF9;">
+          <p style="font-size:12px; color:var(--dim); margin:0 0 10px;">आपका अपना मटेरियल सिर्फ़ आपको दिखेगा। फ़ाइल अपलोड करें, या YouTube / Instagram रील का लिंक पेस्ट करें।</p>
+          <div class="lead-form" style="grid-template-columns:1fr;">
+            <input type="text" id="myMatName" placeholder="नाम (जैसे: Diwali offer poster)">
+            <select id="myMatType" style="padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+              <option value="poster">🖼️ Poster</option>
+              <option value="flyer">📋 Flyer</option>
+              <option value="reel">🎬 Reel / Video</option>
+              <option value="document">📄 Document</option>
+            </select>
+            <input type="text" id="myMatDesc" placeholder="छोटा विवरण (optional)">
+            <input type="file" id="myMatFile" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx" style="font-size:13px;">
+            <input type="text" id="myMatLink" placeholder="या लिंक पेस्ट करें (https://…)">
+          </div>
+          <button class="btn primary" style="width:100%;" onclick="addMyMaterial(this)">💾 सेव करें</button>
+          <p id="myMatStatus" style="font-size:12px; color:#2E7D32; margin-top:6px;"></p>
+          <p id="myMatErr" style="color:#c0392b; font-size:12px; margin-top:2px;"></p>
+        </div>
       </div>
 
       <!-- FAQ / education -->
@@ -412,14 +493,14 @@
       </div>
 
       <!-- My Portal Activity -->
-      <div class="card">
+      <div class="card" id="activityCard">
         <h2>📊 My Portal Activity</h2>
         <p style="font-size:13px; color:var(--dim); margin-top:-6px;">Real, admin-verified activity from people you've referred — every entry here is a payment that's actually gone through, not just a claim.</p>
         <div id="activityListEl"><div class="empty">Loading…</div></div>
       </div>
 
       <!-- Payout history -->
-      <div class="card">
+      <div class="card" id="payoutCard">
         <h2>💰 Payout History</h2>
         <table>
           <thead><tr><th>Date</th><th>Amount</th><th>Note</th></tr></thead>
@@ -444,16 +525,6 @@
         <p style="font-size:12px; color:var(--dim); margin-top:10px;">Instagram doesn't support direct web sharing — tap "Share My Poster" on your phone and pick Instagram from the share menu that pops up.</p>
       </div>
 
-      <!-- Marketing materials -->
-      <div class="card">
-        <h2>🎨 Other Marketing Materials</h2>
-        <div class="material-list">
-          <a href="saarthi_promo_poster.png" target="_blank">🖼️ SAARTHI Promo Poster (generic)</a>
-          <a href="sudarshan_chakra_reel.html" target="_blank">🎬 Promo Reel (video script/animation)</a>
-          <a href="flyer_020426_updated_qr.jpg" target="_blank">📋 Community Flyer (generic)</a>
-        </div>
-      </div>
-
       <!-- Support -->
       <div class="card">
         <h2>🙋 Need Help?</h2>
@@ -467,6 +538,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signInAnonymously }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
   const firebaseConfig = {
@@ -484,7 +556,15 @@
   window._pref = ref;
   window._pget = get;
   window._pset = set;
-  window._ppush = push;        const auth = getAuth(app);
+  window._ppush = push;
+  // Storage is used by the partner's own marketing-material uploads.
+  const storage = getStorage(app);
+  window._pstorage        = storage;
+  window._psref           = sref;
+  window._puploadBytes    = uploadBytes;
+  window._pgetDownloadURL = getDownloadURL;
+  window._pdeleteObject   = deleteObject;
+        const auth = getAuth(app);
     window._pauth   = auth;
     window._psignIn = (email, pass) => signInWithEmailAndPassword(auth, email, pass);
     onAuthStateChanged(auth, u => { window._puser = u || null; });
@@ -691,6 +771,8 @@
     };
     renderLeads();
     renderClients();
+    renderMaterials().catch(e => console.warn('renderMaterials failed:', e));
+    initCollapsibleCards();
   };
 
   async function loadPartner(){
@@ -748,6 +830,7 @@
     runCalculator();
     loadLeads();
     renderMaterials().catch(e => console.warn('renderMaterials failed:', e));
+    initCollapsibleCards();
     loadCategoryOptions();
     loadPartnerActivity();
     loadTemplates();
@@ -865,7 +948,7 @@
   let leadFilter = 'all';
   let leadSearchTerm = '';
   let clientSearchTerm = '';
-  window.setLeadSearch = function(v){ leadSearchTerm = v.trim().toLowerCase(); renderLeads(); };
+  window.setLeadSearch = function(v){ leadSearchTerm = v.trim().toLowerCase(); leadsShown = LEAD_PAGE; renderLeads(); };
   window.setClientSearch = function(v){ clientSearchTerm = v.trim().toLowerCase(); renderClients(); };
   function matchesSearch(term, ...fields){
     if (!term) return true;
@@ -876,6 +959,7 @@
   window.setLeadFilter = function(filter){
     leadFilter = filter;
     document.querySelectorAll('.lead-filter-row button').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+    leadsShown = LEAD_PAGE;
     renderLeads();
   };
 
@@ -1095,9 +1179,84 @@
     }
   }
 
+  // A template is a saved message. It can also carry one piece of media — a
+  // poster, flyer, reel or document — so the words and the artwork go out
+  // together. WhatsApp's web link can only carry text, so media travels two
+  // ways: as a link inside the message (works everywhere), or through the
+  // phone's share sheet with the real file attached (works on mobile).
+  let pendingTplMedia = null;   // staged for the next save: { url, type, name, fileName }
+
+  function tplMediaThumb(media){
+    const meta = MAT_TYPE_META[media.type] || MAT_TYPE_META.link;
+    if (media.url && isImageUrl(media.url, media.fileName)) return '<img src="' + encodeURI(media.url) + '" alt="">';
+    if (media.url && isVideoUrl(media.url, media.fileName)) return '<video src="' + encodeURI(media.url) + '" muted playsinline preload="metadata"></video>';
+    return '<span style="font-size:22px;">' + meta.icon + '</span>';
+  }
+
+  function tplMediaChipHtml(media, removable){
+    if (!media || !media.url) return '';
+    return '<div class="tpl-attach">' + tplMediaThumb(media) +
+      '<span class="tpl-attach-name">' + escapeHtml(media.name || 'Attachment') + '</span>' +
+      (removable ? '<button type="button" onclick="clearTplMedia()">✖ हटाएँ</button>' : '') +
+      '</div>';
+  }
+
+  function renderTplAttach(){
+    const row = document.getElementById('tplAttachRow');
+    if (row) row.innerHTML = tplMediaChipHtml(pendingTplMedia, true);
+  }
+
+  window.clearTplMedia = function(){ pendingTplMedia = null; renderTplAttach(); };
+
+  // ── Choosing which material to attach ──
+  window.openMaterialChooser = async function(){
+    const box = document.getElementById('matChooserList');
+    document.getElementById('matChooserOverlay').classList.add('open');
+    box.innerHTML = '<p style="font-size:13px; color:var(--dim);">Loading…</p>';
+    if (!materialsCache.length) {
+      try { await renderMaterials(); } catch (e) { console.warn('material load failed:', e); }
+    }
+    const items = materialsCache.map((m, i) => {
+      const meta = MAT_TYPE_META[m.type] || MAT_TYPE_META.link;
+      return `<div class="tpl-pick-item" onclick="pickMaterialForTemplate(${i})">
+          <div class="tpl-pick-title">${meta.icon} ${escapeHtml(m.name)}</div>
+          <div class="tpl-pick-preview">${meta.label}${m.scope === 'mine' ? ' · मेरा' : ''}</div>
+        </div>`;
+    }).join('');
+    box.innerHTML = (items || '<p style="font-size:13px; color:var(--dim);">अभी कोई मटेरियल नहीं है — Marketing Material सेक्शन से जोड़ें।</p>') +
+      `<div class="tpl-pick-item" onclick="pickTemplateLink()">
+         <div class="tpl-pick-title">🔗 कोई और लिंक पेस्ट करें</div>
+         <div class="tpl-pick-preview">YouTube / Instagram रील या कोई भी URL</div>
+       </div>`;
+  };
+
+  window.closeMaterialChooser = function(){
+    document.getElementById('matChooserOverlay').classList.remove('open');
+  };
+
+  window.pickMaterialForTemplate = function(idx){
+    const m = materialsCache[idx];
+    if (!m) return;
+    pendingTplMedia = { url: m.url, type: m.type, name: m.name, fileName: m.fileName || '' };
+    closeMaterialChooser();
+    renderTplAttach();
+  };
+
+  window.pickTemplateLink = function(){
+    const url = prompt('लिंक पेस्ट करें (https://…)');
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url.trim())) { alert('लिंक https:// से शुरू होना चाहिए।'); return; }
+    const name = prompt('इसका नाम क्या रखें?', 'Reel / Link') || 'Link';
+    pendingTplMedia = { url: url.trim(), type: guessMaterialType(url, ''), name: name, fileName: '' };
+    closeMaterialChooser();
+    renderTplAttach();
+  };
+
+  // ── The saved template list ──
   function renderTemplates(){
     const listEl = document.getElementById('templateListEl');
     const ids = Object.keys(templatesCache);
+    updateCountPill('templates', ids.length);
     if (ids.length === 0) {
       listEl.innerHTML = '<div class="empty">No templates yet — save your first one above.</div>';
       return;
@@ -1106,8 +1265,9 @@
       const t = templatesCache[id];
       return `
         <div class="template-item">
-          <div class="template-title">${t.title}</div>
-          <div class="template-body">${t.body}</div>
+          <div class="template-title">${escapeHtml(t.title)}</div>
+          <div class="template-body">${escapeHtml(t.body)}</div>
+          ${tplMediaChipHtml(t.media, false)}
           <div class="template-actions">
             <button onclick="editTemplate('${id}')">✏️ Edit</button>
             <button onclick="deleteTemplate('${id}')">🗑 Delete</button>
@@ -1122,14 +1282,23 @@
     const body = document.getElementById('templateBody').value.trim();
     const errEl = document.getElementById('templateErr');
     errEl.textContent = '';
-    if (!title || !body) { errEl.textContent = 'Please fill in both a name and a message.'; return; }
+    if (!title || !body) { errEl.textContent = 'Give the template a name and a message.'; return; }
+
+    const rec = { title, body };
+    if (pendingTplMedia && pendingTplMedia.url) rec.media = pendingTplMedia;
+
+    const clearForm = () => {
+      document.getElementById('templateTitle').value = '';
+      document.getElementById('templateBody').value = '';
+      pendingTplMedia = null;
+      renderTplAttach();
+    };
 
     if (window._demoMode) {
       const id = editingTemplateId || ('demo_tpl_new_' + Date.now());
-      templatesCache[id] = { title, body };
+      templatesCache[id] = rec;
       editingTemplateId = null;
-      document.getElementById('templateTitle').value = '';
-      document.getElementById('templateBody').value = '';
+      clearForm();
       renderTemplates();
       return;
     }
@@ -1137,14 +1306,13 @@
     const code = window._currentPartnerCode;
     try {
       if (editingTemplateId) {
-        await window._pset(window._pref(window._pdb, 'partnerTemplates/' + code + '/' + editingTemplateId), { title, body });
+        await window._pset(window._pref(window._pdb, 'partnerTemplates/' + code + '/' + editingTemplateId), rec);
         editingTemplateId = null;
       } else {
         const tplRef = window._ppush(window._pref(window._pdb, 'partnerTemplates/' + code));
-        await window._pset(tplRef, { title, body });
+        await window._pset(tplRef, rec);
       }
-      document.getElementById('templateTitle').value = '';
-      document.getElementById('templateBody').value = '';
+      clearForm();
       loadTemplates();
     } catch (e) {
       errEl.textContent = 'Could not save template: ' + e.message;
@@ -1156,6 +1324,8 @@
     if (!t) return;
     document.getElementById('templateTitle').value = t.title;
     document.getElementById('templateBody').value = t.body;
+    pendingTplMedia = t.media || null;
+    renderTplAttach();
     editingTemplateId = id;
     document.getElementById('templateTitle').scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
@@ -1173,7 +1343,7 @@
       delete templatesCache[id];
       renderTemplates();
     } catch (e) {
-      alert('Could not delete: ' + e.message);
+      document.getElementById('templateErr').textContent = 'Could not delete: ' + e.message;
     }
   };
 
@@ -1187,9 +1357,17 @@
     } else {
       listEl.innerHTML = ids.map(id => {
         const t = templatesCache[id];
-        return `<div class="tpl-pick-item" onclick="sendTemplateMessage('${id}')">
-          <div class="tpl-pick-title">${t.title}</div>
-          <div class="tpl-pick-preview">${t.body}</div>
+        const media = t.media;
+        return `<div class="tpl-pick-item">
+          <div onclick="sendTemplateMessage('${id}')">
+            <div class="tpl-pick-title">${escapeHtml(t.title)}</div>
+            <div class="tpl-pick-preview">${escapeHtml(t.body)}</div>
+            ${media ? `<div style="font-size:11px; color:#B8600A; font-weight:700; margin-top:4px;">📎 ${escapeHtml(media.name || 'Attachment')}</div>` : ''}
+          </div>
+          ${media ? `<div style="display:flex; gap:6px; margin-top:8px;">
+            <button onclick="event.stopPropagation(); sendTemplateMessage('${id}')" style="flex:1; font-size:11px; font-weight:700; padding:7px 4px; border:none; border-radius:6px; background:#25D366; color:#fff; cursor:pointer;">💬 लिंक के साथ भेजें</button>
+            <button onclick="event.stopPropagation(); sendTemplateWithFile('${id}')" style="flex:1; font-size:11px; font-weight:700; padding:7px 4px; border:none; border-radius:6px; background:#eee; color:var(--deep); cursor:pointer;">📎 फ़ाइल अटैच करके</button>
+          </div>` : ''}
         </div>`;
       }).join('');
     }
@@ -1200,28 +1378,68 @@
     document.getElementById('tplPickerOverlay').classList.remove('open');
   };
 
+  function buildTemplateMessage(t, name, withMediaLink){
+    let message = t.body.split('{name}').join(name);
+    if (withMediaLink && t.media && t.media.url) {
+      message += '\n\n' + (t.media.name ? t.media.name + ': ' : '') + t.media.url;
+    }
+    return message;
+  }
+
+  function openWhatsAppWith(phone, message){
+    const waNumber = cleanPhoneForWhatsApp(phone);
+    const url = waNumber
+      ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(message)
+      : 'https://wa.me/?text=' + encodeURIComponent(message);
+    window.open(url, '_blank');
+  }
+
+  function confirmLeadContacted(ctx){
+    if (ctx.leadIdForStatusUpdate && leadsCache[ctx.leadIdForStatusUpdate] && leadsCache[ctx.leadIdForStatusUpdate].status === 'not_contacted') {
+      const confirmed = confirm('Did the WhatsApp message actually send?\n\nClick OK only if you saw it go through in WhatsApp. Click Cancel if not — it will stay as "Not Contacted."');
+      if (confirmed) updateLeadStatus(ctx.leadIdForStatusUpdate, 'contacted');
+    }
+  }
+
+  // Link mode: opens that person's chat with the message (and the material's
+  // link) already typed out.
   window.sendTemplateMessage = function(templateId){
     const t = templatesCache[templateId];
     const ctx = window._tplPickerContext;
     if (!t || !ctx) return;
-    const message = t.body.split('{name}').join(ctx.name);
+    const message = buildTemplateMessage(t, ctx.name, true);
     closeTemplatePicker();
 
     if (window._demoMode) {
       alert('📲 In the real dashboard, WhatsApp would now open with this message pre-filled for ' + ctx.name + ':\n\n' + message);
       return;
     }
+    openWhatsAppWith(ctx.phone, message);
+    confirmLeadContacted(ctx);
+  };
 
-    const waNumber = cleanPhoneForWhatsApp(ctx.phone);
-    const url = waNumber
-      ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(message)
-      : 'https://wa.me/?text=' + encodeURIComponent(message);
-    window.open(url, '_blank');
+  // File mode: hands the poster/reel itself to the phone's share sheet, so the
+  // partner picks WhatsApp and the contact there. If the file cannot be fetched
+  // (desktop browser, or storage blocking cross-origin reads), it falls back to
+  // link mode rather than failing.
+  window.sendTemplateWithFile = async function(templateId){
+    const t = templatesCache[templateId];
+    const ctx = window._tplPickerContext;
+    if (!t || !ctx || !t.media || !t.media.url) return;
+    const messagePlain = buildTemplateMessage(t, ctx.name, false);
+    closeTemplatePicker();
 
-    if (ctx.leadIdForStatusUpdate && leadsCache[ctx.leadIdForStatusUpdate] && leadsCache[ctx.leadIdForStatusUpdate].status === 'not_contacted') {
-      const confirmed = confirm('Did the WhatsApp message actually send?\n\nClick OK only if you saw it go through in WhatsApp. Click Cancel if not — it will stay as "Not Contacted."');
-      if (confirmed) updateLeadStatus(ctx.leadIdForStatusUpdate, 'contacted');
+    if (window._demoMode) {
+      alert('📲 असली डैशबोर्ड में यहाँ फ़ोन का शेयर मेन्यू खुलता है — मैसेज के साथ "' + (t.media.name || 'फ़ाइल') + '" अटैच होकर।');
+      return;
     }
+
+    const shared = await shareFileOrLink(t.media.url, t.media.fileName || t.media.name, messagePlain);
+    if (!shared) {
+      alert('इस डिवाइस पर फ़ाइल सीधे अटैच नहीं हो सकी — WhatsApp लिंक के साथ खुल रहा है। चाहें तो Marketing Material सेक्शन से फ़ाइल डाउनलोड करके भेज सकते हैं।');
+      openWhatsAppWith(ctx.phone, buildTemplateMessage(t, ctx.name, true));
+    }
+    confirmLeadContacted(ctx);
   };
 
   async function loadLeads(){
@@ -1257,6 +1475,18 @@
     const listEl = document.getElementById('leadListEl');
     // Registered leads graduate to "My Clients" below and no longer show here.
     const activeIds = Object.keys(leadsCache).filter(id => leadsCache[id].status !== 'registered');
+    updateCountPill('leads', activeIds.length);
+
+    // First visit with a big list: start the section folded, so the rest of the
+    // dashboard is reachable without scrolling through hundreds of rows. Once
+    // the partner opens or closes it themselves, that choice wins from then on.
+    if (!leadsAutoCollapsed) {
+      leadsAutoCollapsed = true;
+      if (activeIds.length > 30 && lsGet('sc_collapse_leads') === null) {
+        const card = document.getElementById('leadsCard');
+        if (card) card.classList.add('collapsed');
+      }
+    }
 
     const { byPhone, dupIds } = findDuplicateLeadPhones(activeIds);
     const dupCount = Object.values(byPhone).filter(g => g.length > 1).length;
@@ -1291,54 +1521,374 @@
       return;
     }
 
-    listEl.innerHTML = filtered.map(id => {
+    const visible = filtered.slice(0, leadsShown);
+    const info = document.getElementById('leadCountInfo');
+    if (info) info.textContent = visible.length + ' / ' + filtered.length + ' लीड्स दिख रही हैं';
+
+    // Each row starts folded: one line per lead, tap to open the details and the
+    // action buttons. That keeps a 700-lead list scannable.
+    listEl.innerHTML = visible.map(id => {
       const l = leadsCache[id];
-      const statusOptions = Object.keys(LEAD_STATUS_LABEL).map(s =>
-        `<option value="${s}" ${s === l.status ? 'selected' : ''}>${LEAD_STATUS_LABEL[s]}</option>`
+      const statusOptions = Object.keys(LEAD_STATUS_LABEL).map(st =>
+        `<option value="${st}" ${st === l.status ? 'selected' : ''}>${LEAD_STATUS_LABEL[st]}</option>`
       ).join('');
       const typeLabel = l.type === 'seeker' ? '🔍 Seeker' : '🛠 Provider';
       const dupBadge = dupIds.has(id)
         ? `<div style="margin-top:6px; padding:6px 10px; background:#FFEBEE; border-radius:8px; font-size:11px; color:#C62828; font-weight:700;">⚠️ Same mobile appears in ${byPhone[normLeadPhone(l.phone)].length} leads</div>`
         : '';
+      const dupDot = dupIds.has(id) ? ' <span title="duplicate mobile" style="color:#C62828;">⚠️</span>' : '';
       return `
-        <div class="lead-item">
-          <div class="lead-top">
-            <div>
-              <div class="lead-name">${l.businessName} <span style="font-weight:400; font-size:11px; color:var(--dim);">(${typeLabel})</span></div>
-              <div class="lead-meta">${l.category || ''}${l.category && l.area ? ' · ' : ''}${l.area || ''}${l.phone ? ' · 📱 ' + l.phone : ''}</div>
-              ${l.notes ? `<div class="lead-meta" style="margin-top:4px;">${l.notes}</div>` : ''}
-              ${dupBadge}
+        <div class="lead-item collapsed" id="leadRow_${id}">
+          <div class="lead-head" onclick="toggleLeadRow('${id}')">
+            <span class="row-chev">▸</span>
+            <div class="lead-line">
+              <div class="lead-name">${escapeHtml(l.businessName || 'Unnamed')}${dupDot} <span style="font-weight:400; font-size:11px; color:var(--dim);">(${typeLabel})</span></div>
+              <div class="lead-meta">${l.phone ? '📱 ' + escapeHtml(l.phone) : ''}${l.phone && l.area ? ' · ' : ''}${escapeHtml(l.area || '')}</div>
             </div>
-            <select class="lead-status-select status-${l.status}" onchange="updateLeadStatus('${id}', this.value)">
-              ${statusOptions}
-            </select>
+            <span class="badge status-${l.status}" style="font-size:11px; padding:4px 10px; border-radius:20px; white-space:nowrap;">${LEAD_STATUS_LABEL[l.status] || ''}</span>
           </div>
-          <div class="lead-actions">
-            <button onclick="sendLeadWhatsApp('${id}')" style="background:#25D366; color:#fff;">📲 WhatsApp</button>
-            <button onclick="openTemplatePicker('${(l.businessName||'').replace(/'/g,"\\'")}','${l.phone||''}','${id}')">✉️ Templates</button>
-            ${window._saarthiAdminUnlocked ? `<button onclick="sendSaarthiInvite('${id}', this)" style="background:#8B1E3F; color:#fff;">🔱 Send Official SAARTHI Invite (WhatsApp API)</button>` : ''}
-            <button onclick="removeLead('${id}')">🗑 Remove</button>
+          <div class="lead-body">
+            <div class="lead-meta">${escapeHtml(l.category || '')}${l.category && l.area ? ' · ' : ''}${escapeHtml(l.area || '')}</div>
+            ${l.notes ? `<div class="lead-meta" style="margin-top:4px;">${escapeHtml(l.notes)}</div>` : ''}
+            ${dupBadge}
+            <div style="margin-top:8px;">
+              <select class="lead-status-select status-${l.status}" onchange="updateLeadStatus('${id}', this.value)">
+                ${statusOptions}
+              </select>
+            </div>
+            <div class="lead-actions">
+              <button onclick="sendLeadWhatsApp('${id}')" style="background:#25D366; color:#fff;">📲 WhatsApp</button>
+              <button onclick="openTemplatePicker('${(l.businessName||'').replace(/'/g,"\\'")}','${l.phone||''}','${id}')">✉️ Templates</button>
+              ${window._saarthiAdminUnlocked ? `<button onclick="sendSaarthiInvite('${id}', this)" style="background:#8B1E3F; color:#fff;">🔱 Send Official SAARTHI Invite (WhatsApp API)</button>` : ''}
+              <button onclick="removeLead('${id}')">🗑 Remove</button>
+            </div>
           </div>
         </div>
       `;
-    }).join('');
+    }).join('') + (filtered.length > visible.length
+      ? `<button class="btn ghost" style="width:100%; margin-top:10px;" onclick="loadMoreLeads()">⬇️ और ${Math.min(LEAD_PAGE, filtered.length - visible.length)} लीड्स दिखाएँ</button>`
+      : '');
   }
 
-  // ── Marketing & Client Materials ──
-  // Static list for now — add new entries here as more documents are created.
-  // "file" is the filename as uploaded to the repo root (same folder as this dashboard).
+  // ── Marketing & Client Materials ─────────────────────────────────────────
+  // A material is anything a partner can hand to a lead: a poster, a flyer, a
+  // reel/video, or a document. Three sources feed one gallery —
+  //   built-in   : files shipped with the site (list below)
+  //   central    : uploaded by the team in partner-admin.html → Materials tab
+  //   mine       : uploaded by this partner, visible only to them
+  // Everything carries a "type" so it can be previewed, filtered, shared on
+  // WhatsApp, and attached to a message template.
   const MARKETING_MATERIALS = [
     {
       name: 'Client Quick Start & Success Guide (English)',
       desc: 'Give this to every provider or seeker you onboard — explains how SAARTHI works and how to get the most out of it.',
-      file: 'Client_Quick_Start_Success_Guide.pdf'
+      file: 'Client_Quick_Start_Success_Guide.pdf',
+      type: 'document'
     },
     {
       name: 'क्विक स्टार्ट और सक्सेस गाइड (हिंदी)',
       desc: 'वही गाइड, हिंदी में — जिन क्लाइंट्स को हिंदी ज़्यादा सहज लगे, उन्हें यह भेजें।',
-      file: 'Client_Quick_Start_Success_Guide_Hindi.pdf'
+      file: 'Client_Quick_Start_Success_Guide_Hindi.pdf',
+      type: 'document'
+    },
+    {
+      name: 'SAARTHI Promo Poster (generic)',
+      desc: 'हर जगह चलने वाला प्रोमो पोस्टर — WhatsApp स्टेटस, ग्रुप या प्रिंट के लिए।',
+      file: 'saarthi_promo_poster.png',
+      type: 'poster'
+    },
+    {
+      name: 'Community Flyer (generic)',
+      desc: 'गली-मोहल्ले में बाँटने या दुकानों पर लगाने वाला फ्लायर, QR सहित।',
+      file: 'flyer_020426_updated_qr.jpg',
+      type: 'flyer'
+    },
+    {
+      name: 'Promo Reel',
+      desc: 'छोटा प्रोमो रील — WhatsApp स्टेटस और Instagram के लिए।',
+      file: 'sudarshan_chakra_reel.html',
+      type: 'reel'
     }
   ];
+
+  const MAT_TYPE_META = {
+    poster:   { label: 'Poster',   icon: '🖼️' },
+    flyer:    { label: 'Flyer',    icon: '📋' },
+    reel:     { label: 'Reel',     icon: '🎬' },
+    video:    { label: 'Video',    icon: '📹' },
+    document: { label: 'Document', icon: '📄' },
+    link:     { label: 'Link',     icon: '🔗' }
+  };
+
+  function matPath(u){ return (u || '').toString().toLowerCase().split('?')[0]; }
+  function isImageUrl(url, name){ return /\.(png|jpe?g|webp|gif|svg)$/.test(matPath(name)) || /\.(png|jpe?g|webp|gif|svg)$/.test(matPath(url)); }
+  function isVideoUrl(url, name){ return /\.(mp4|webm|mov|m4v)$/.test(matPath(name)) || /\.(mp4|webm|mov|m4v)$/.test(matPath(url)); }
+
+  // Older records were saved before materials had a type, so their kind is read
+  // back off the file name instead.
+  function guessMaterialType(url, fileName){
+    const p = matPath(fileName) + ' ' + matPath(url);
+    if (/\.(mp4|webm|mov|m4v|avi)/.test(p)) return 'reel';
+    if (/(youtube\.com|youtu\.be|instagram\.com|fb\.watch)/.test(p)) return 'reel';
+    if (/\.(png|jpe?g|webp|gif|svg)/.test(p)) return 'poster';
+    if (/\.(pdf|docx?|pptx?|xlsx?)/.test(p)) return 'document';
+    if (/\.html?/.test(p)) return 'reel';
+    return 'link';
+  }
+
+  let materialsCache = [];        // [{ id, name, desc, url, type, fileName, scope }]
+  let materialFilter = 'all';
+
+  window.setMaterialFilter = function(f){
+    materialFilter = f;
+    document.querySelectorAll('#matFilterRow button').forEach(b => b.classList.toggle('active', b.dataset.mat === f));
+    paintMaterials();
+  };
+
+  function matCardHtml(m, idx){
+    const meta = MAT_TYPE_META[m.type] || MAT_TYPE_META.link;
+    // A thumbnail that fails to load (expired link, blocked file) falls back to
+    // the type icon rather than showing a broken image.
+    const fallback = 'this.outerHTML=\'<span>' + meta.icon + '</span>\'';
+    let thumb = '<span>' + meta.icon + '</span>';
+    if (m.url && isImageUrl(m.url, m.fileName)) {
+      thumb = '<img src="' + encodeURI(m.url) + '" alt="" loading="lazy" onerror="' + fallback + '">';
+    } else if (m.url && isVideoUrl(m.url, m.fileName)) {
+      thumb = '<video src="' + encodeURI(m.url) + '" muted playsinline preload="metadata" onerror="' + fallback + '"></video>';
+    }
+    const mine = m.scope === 'mine';
+    return `
+      <div class="mat-card">
+        <div class="mat-thumb" onclick="openMaterial(${idx})">${thumb}</div>
+        <div class="mat-info">
+          <span class="mat-type">${meta.icon} ${meta.label}${mine ? ' · मेरा' : ''}</span>
+          <div class="mat-name">${escapeHtml(m.name)}</div>
+          ${m.desc ? `<div class="mat-desc">${escapeHtml(m.desc)}</div>` : ''}
+        </div>
+        <div class="mat-actions">
+          <a class="mat-open" href="${encodeURI(m.url || '#')}" target="_blank" rel="noopener">Open</a>
+          <button class="mat-share" onclick="shareMaterial(${idx})">Share</button>
+          ${mine ? `<button class="mat-del" onclick="deleteMyMaterial('${m.id}')">🗑</button>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function paintMaterials(){
+    const listEl = document.getElementById('materialsList');
+    if (!listEl) return;
+    updateCountPill('materials', materialsCache.length);
+
+    const wanted = materialFilter === 'reel' ? ['reel', 'video'] : [materialFilter];
+    const rows = materialsCache
+      .map((m, i) => ({ m, i }))
+      .filter(x => materialFilter === 'all' || wanted.indexOf(x.m.type) !== -1);
+
+    listEl.innerHTML = rows.length
+      ? '<div class="mat-grid">' + rows.map(x => matCardHtml(x.m, x.i)).join('') + '</div>'
+      : '<div class="empty">इस तरह का कोई मटेरियल अभी नहीं है।</div>';
+  }
+
+  window.openMaterial = function(idx){
+    const m = materialsCache[idx];
+    if (m && m.url) window.open(m.url, '_blank', 'noopener');
+  };
+
+  // Sharing the actual file is what partners want on a phone — WhatsApp then
+  // attaches the poster or reel itself. The file has to be fetched first, which
+  // only works if the storage bucket allows cross-origin reads, so any failure
+  // falls back quietly to sharing the link.
+  async function shareFileOrLink(url, fileName, text){
+    if (navigator.share) {
+      try {
+        const res = await fetch(url, { mode: 'cors' });
+        if (res.ok) {
+          const blob = await res.blob();
+          const file = new File([blob], fileName || 'material', { type: blob.type || 'application/octet-stream' });
+          if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], text: text || '' });
+            return true;
+          }
+        }
+      } catch (e) {
+        if (e && e.name === 'AbortError') return true;   // partner closed the share sheet
+        console.warn('File share unavailable, falling back to link:', e && e.message);
+      }
+    }
+    return false;
+  }
+
+  window.shareMaterial = async function(idx){
+    const m = materialsCache[idx];
+    if (!m || !m.url) return;
+    const text = (m.name ? m.name + '\n' : '') + m.url;
+    const shared = await shareFileOrLink(m.url, m.fileName || m.name, m.name || '');
+    if (shared) return;
+    if (navigator.share) {
+      try { await navigator.share({ text: text }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  };
+
+  async function buildMaterialsCache(){
+    const base = location.origin + location.pathname.replace('partner-dashboard.html', '');
+    const out = MARKETING_MATERIALS.map((m, i) => ({
+      id: 'builtin_' + i, name: m.name, desc: m.desc, url: base + m.file,
+      fileName: m.file, type: m.type || guessMaterialType(m.file, m.file), scope: 'builtin'
+    }));
+
+    // Central team uploads (partner-admin.html → Materials tab)
+    try {
+      const snap = await window._pget(window._pref(window._pdb, 'marketingMaterials'));
+      if (snap.exists()) {
+        Object.entries(snap.val() || {})
+          .filter(([, m]) => m && m.url)
+          // ascending here: each record is unshifted, so the newest ends up on top
+          .sort((a, b) => new Date(a[1].uploadedAt || 0) - new Date(b[1].uploadedAt || 0))
+          .forEach(([key, m]) => out.unshift({
+            id: key, name: m.name || m.fileName || 'Material', desc: m.desc || '', url: m.url,
+            fileName: m.fileName || '', type: m.type || guessMaterialType(m.url, m.fileName), scope: 'central'
+          }));
+      }
+    } catch (e) {
+      // The built-in materials are still worth showing, so a failed fetch is
+      // logged rather than blanking the section.
+      console.warn('Could not load central materials:', e.code || e.message);
+    }
+
+    // This partner's own uploads
+    const code = window._currentPartnerCode;
+    if (code && !window._demoMode) {
+      try {
+        const mine = await window._pget(window._pref(window._pdb, 'partnerMaterials/' + code));
+        if (mine.exists()) {
+          Object.entries(mine.val() || {})
+            .filter(([, m]) => m && m.url)
+            .sort((a, b) => new Date(a[1].addedAt || 0) - new Date(b[1].addedAt || 0))
+            .forEach(([key, m]) => out.unshift({
+              id: key, name: m.name || m.fileName || 'My material', desc: m.desc || '', url: m.url,
+              fileName: m.fileName || '', storagePath: m.storagePath || '',
+              type: m.type || guessMaterialType(m.url, m.fileName), scope: 'mine'
+            }));
+        }
+      } catch (e) {
+        console.warn('Could not load my materials:', e.code || e.message);
+      }
+    }
+    materialsCache = out;
+  }
+
+  async function renderMaterials(){
+    await buildMaterialsCache();
+    paintMaterials();
+  }
+
+  // ── The partner's own material uploads ───────────────────────────────────
+  const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+  const MAX_VIDEO_BYTES = 30 * 1024 * 1024;
+
+  window.toggleMyMaterialPanel = function(force){
+    const panel = document.getElementById('myMaterialPanel');
+    const open = typeof force === 'boolean' ? force : panel.style.display === 'none';
+    panel.style.display = open ? 'block' : 'none';
+    document.getElementById('matAddToggle').textContent = open ? '✖ बंद करें' : '➕ अपना पोस्टर / फ्लायर / रील जोड़ें';
+  };
+
+  window.addMyMaterial = async function(btn){
+    const name   = document.getElementById('myMatName').value.trim();
+    const desc   = document.getElementById('myMatDesc').value.trim();
+    const type   = document.getElementById('myMatType').value;
+    const link   = document.getElementById('myMatLink').value.trim();
+    const file   = document.getElementById('myMatFile').files[0];
+    const errEl  = document.getElementById('myMatErr');
+    const statEl = document.getElementById('myMatStatus');
+    errEl.textContent = ''; statEl.textContent = '';
+
+    if (!name) { errEl.textContent = 'मटेरियल का नाम लिखें।'; return; }
+    if (!file && !link) { errEl.textContent = 'फ़ाइल चुनें या लिंक पेस्ट करें।'; return; }
+    if (link && !/^https?:\/\//i.test(link)) { errEl.textContent = 'लिंक https:// से शुरू होना चाहिए।'; return; }
+    if (file) {
+      const cap = file.type.indexOf('video') === 0 ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+      if (file.size > cap) {
+        errEl.textContent = 'फ़ाइल ' + (file.size / 1048576).toFixed(1) + ' MB की है — ' + (cap / 1048576) + ' MB से छोटी रखें।';
+        return;
+      }
+    }
+
+    const clearForm = () => {
+      document.getElementById('myMatName').value = '';
+      document.getElementById('myMatDesc').value = '';
+      document.getElementById('myMatLink').value = '';
+      document.getElementById('myMatFile').value = '';
+    };
+
+    if (window._demoMode) {
+      materialsCache.unshift({ id: 'demo_' + Date.now(), name, desc, type,
+        url: link || 'saarthi_promo_poster.png', fileName: file ? file.name : '', scope: 'mine' });
+      clearForm(); paintMaterials();
+      statEl.textContent = '✅ डेमो में जुड़ गया (असली डैशबोर्ड में यह सेव होता है)।';
+      return;
+    }
+
+    const code = window._currentPartnerCode;
+    if (!code) { errEl.textContent = 'पहले अपना पार्टनर कोड डालकर डैशबोर्ड खोलें।'; return; }
+
+    if (btn) { btn.disabled = true; }
+    try {
+      const id = 'pm_' + Date.now();
+      const rec = { name, desc, type, addedAt: new Date().toISOString() };
+
+      if (file) {
+        statEl.textContent = 'अपलोड हो रहा है…';
+        const path = 'partnerMaterials/' + code + '/' + id + '_' + file.name;
+        const storageRef = window._psref(window._pstorage, path);
+        await window._puploadBytes(storageRef, file);
+        rec.url = await window._pgetDownloadURL(storageRef);
+        rec.fileName = file.name;
+        rec.storagePath = path;
+        rec.sizeBytes = file.size;
+      } else {
+        rec.url = link;
+        rec.fileName = '';
+      }
+
+      await window._pset(window._pref(window._pdb, 'partnerMaterials/' + code + '/' + id), rec);
+      clearForm();
+      statEl.textContent = '✅ जुड़ गया — अब इसे शेयर या टेम्पलेट में अटैच कर सकते हैं।';
+      await renderMaterials();
+      setTimeout(() => { statEl.textContent = ''; }, 5000);
+    } catch (e) {
+      statEl.textContent = '';
+      errEl.textContent = '❌ सेव नहीं हो पाया: ' + (e.code || '') + ' ' + e.message;
+      console.error('addMyMaterial error:', e);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  };
+
+  window.deleteMyMaterial = async function(id){
+    const m = materialsCache.find(x => x.id === id);
+    if (!m) return;
+    if (!confirm('"' + m.name + '" हटाना है?')) return;
+    if (window._demoMode) {
+      materialsCache = materialsCache.filter(x => x.id !== id);
+      paintMaterials();
+      return;
+    }
+    const code = window._currentPartnerCode;
+    try {
+      await window._pset(window._pref(window._pdb, 'partnerMaterials/' + code + '/' + id), null);
+      // The database record is what the gallery reads, so it goes first. A file
+      // that refuses to delete is logged, not shown as an error.
+      if (m.storagePath) {
+        try { await window._pdeleteObject(window._psref(window._pstorage, m.storagePath)); }
+        catch (e) { console.warn('Storage file not deleted:', e.code || e.message); }
+      }
+      await renderMaterials();
+    } catch (e) {
+      document.getElementById('myMatErr').textContent = '❌ हट नहीं पाया: ' + (e.code || e.message);
+    }
+  };
 
   // ── Lead category dropdown — pulled from the app's real category list ──
   // ── CSV / Excel Lead Import ──
@@ -1586,58 +2136,95 @@
     }
   }
 
+  // ── Collapsible cards ───────────────────────────────────────────────────
+  // A partner with 500-700 leads should not have to scroll past all of them to
+  // reach the next section. Every long section becomes a card that folds shut,
+  // and the open/shut choice is remembered on that device.
+  function lsGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+
+  const COLLAPSIBLE_CARDS = [
+    { id: 'templatesCard', key: 'templates' },
+    { id: 'leadsCard',     key: 'leads'     },
+    { id: 'clientsCard',   key: 'clients'   },
+    { id: 'materialsCard', key: 'materials' },
+    { id: 'trainingCard',  key: 'training'  },
+    { id: 'activityCard',  key: 'activity'  },
+    { id: 'payoutCard',    key: 'payout'    }
+  ];
+
+  function makeCardCollapsible(cardId, key){
+    const card = document.getElementById(cardId);
+    if (!card || card.dataset.collapsible === '1') return;
+    const h2 = card.querySelector('h2');
+    if (!h2) return;
+
+    // Everything below the heading moves into one wrapper that can be hidden.
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    let n = h2.nextSibling;
+    while (n) { const next = n.nextSibling; body.appendChild(n); n = next; }
+    card.appendChild(body);
+
+    const right = document.createElement('span');
+    right.className = 'card-toggle-right';
+    right.innerHTML = '<span class="count-pill" id="pill_' + key + '" style="display:none;"></span><span class="chev">\u25BE</span>';
+    h2.classList.add('card-toggle');
+    h2.appendChild(right);
+    h2.addEventListener('click', function(){ toggleCard(cardId, key); });
+
+    if (lsGet('sc_collapse_' + key) === '1') card.classList.add('collapsed');
+    card.dataset.collapsible = '1';
+  }
+
+  window.toggleCard = function(cardId, key){
+    const card = document.getElementById(cardId);
+    if (!card) return;
+    card.classList.toggle('collapsed');
+    lsSet('sc_collapse_' + key, card.classList.contains('collapsed') ? '1' : '0');
+  };
+
+  function updateCountPill(key, count){
+    const pill = document.getElementById('pill_' + key);
+    if (!pill) return;
+    pill.textContent = count;
+    pill.style.display = count ? 'inline-block' : 'none';
+  }
+
+  window.initCollapsibleCards = function(){
+    COLLAPSIBLE_CARDS.forEach(c => makeCardCollapsible(c.id, c.key));
+    const btn = document.getElementById('backToTop');
+    if (btn && !btn.dataset.wired) {
+      window.addEventListener('scroll', function(){
+        btn.style.display = window.scrollY > 600 ? 'block' : 'none';
+      });
+      btn.dataset.wired = '1';
+    }
+  };
+
+  // ── Lead list paging ────────────────────────────────────────────────────
+  // Painting 700 rows at once is slow on a cheap phone, so the list grows in
+  // batches instead.
+  const LEAD_PAGE = 50;
+  let leadsShown = LEAD_PAGE;
+  let leadsAutoCollapsed = false;
+  window.resetLeadPaging = function(){ leadsShown = LEAD_PAGE; renderLeads(); };
+  window.loadMoreLeads   = function(){ leadsShown += LEAD_PAGE; renderLeads(); };
+
+  window.toggleLeadRow = function(id){
+    const row = document.getElementById('leadRow_' + id);
+    if (row) row.classList.toggle('collapsed');
+  };
+
+  window.expandAllLeads = function(open){
+    document.querySelectorAll('#leadListEl .lead-item').forEach(el => {
+      el.classList.toggle('collapsed', !open);
+    });
+  };
+
   function escapeHtml(str){
     return String(str == null ? '' : str).replace(/[&<>"']/g, c =>
       ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-  }
-
-  function materialItemHtml(name, desc, url){
-    const shareText = 'Here\u2019s something from SAARTHI: ' + url;
-    return `
-        <div class="material-item">
-          <div>
-            <div class="material-name">${escapeHtml(name)}</div>
-            <div class="material-desc">${escapeHtml(desc)}</div>
-          </div>
-          <div class="material-actions">
-            <a class="material-open" href="${encodeURI(url)}" target="_blank" rel="noopener">📄 Open</a>
-            <a class="material-share" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener">📲 Share</a>
-          </div>
-        </div>
-      `;
-  }
-
-  // Built-in materials (shipped with the site) come first, then anything the
-  // central team has uploaded through partner-admin.html → Materials tab. That
-  // upload writes to marketingMaterials/ in the database, so new posters and
-  // guides appear here without this file being touched.
-  async function renderMaterials(){
-    const listEl = document.getElementById('materialsList');
-    if (!listEl) return;
-
-    const builtIn = MARKETING_MATERIALS.map(m =>
-      materialItemHtml(m.name, m.desc,
-        location.origin + location.pathname.replace('partner-dashboard.html', m.file)));
-
-    let uploaded = [];
-    try {
-      const snap = await window._pget(window._pref(window._pdb, 'marketingMaterials'));
-      if (snap.exists()) {
-        uploaded = Object.values(snap.val() || {})
-          .filter(m => m && m.url)
-          .sort((a, b) => new Date(b.uploadedAt || 0) - new Date(a.uploadedAt || 0))
-          .map(m => materialItemHtml(m.name || m.fileName || 'Material', m.desc || '', m.url));
-      }
-    } catch (e) {
-      // The built-in materials below are still worth showing, so a failed fetch
-      // is logged rather than blanking the section.
-      console.warn('Could not load uploaded materials:', e.code || e.message);
-    }
-
-    const all = uploaded.concat(builtIn);
-    listEl.innerHTML = all.length
-      ? all.join('')
-      : '<div class="empty">No materials available yet.</div>';
   }
 
   function buildClientCheckinMessage(client){
@@ -1734,6 +2321,8 @@
       .filter(e => matchesSearch(clientSearchTerm, e.name, e.phone))
       .sort((a,b) => (b.date||'').localeCompare(a.date||''));
 
+    updateCountPill('clients', all.length);
+
     if (all.length === 0) {
       const nothingAtAll = realEntries.length === 0 && manualEntries.length === 0;
       listEl.innerHTML = '<div class="empty">' + (nothingAtAll ? 'No clients yet \u2014 once someone registers through your link, they\u2019ll show up here automatically.' : 'No clients match your search.') + '</div>';
@@ -1766,6 +2355,16 @@
     }).join('');
   }
 </script>
+
+<button id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="ऊपर जाएँ">↑</button>
+
+<div class="tpl-picker-overlay" id="matChooserOverlay" onclick="if(event.target===this) closeMaterialChooser()">
+  <div class="tpl-picker-box">
+    <h3>📎 कौन सा मटेरियल अटैच करना है?</h3>
+    <div id="matChooserList"></div>
+    <button onclick="closeMaterialChooser()" style="width:100%; margin-top:6px; padding:10px; border-radius:8px; border:1px solid #ccc; background:#fff; cursor:pointer;">Cancel</button>
+  </div>
+</div>
 
 <div class="tpl-picker-overlay" id="tplPickerOverlay" onclick="if(event.target===this) closeTemplatePicker()">
   <div class="tpl-picker-box">
