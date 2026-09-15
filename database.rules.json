@@ -54,7 +54,97 @@
     },
     "adminSettings": {
       ".read": true,
-      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.uid === 'zGO0bKaEoHYuA7ClTLKh5irfU2C3')"
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')"
+    },
+    "adminConfig": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')"
+    },
+    "marketingMaterials": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')"
+    },
+    "partnerMaterials": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "trainingVideos": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')"
+    },
+    "partners": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      "$code": {
+        ".read": "auth != null"
+      }
+    },
+    "partnerPincodes": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')"
+    },
+    "partnerApplications": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      "$applicationId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "partnerLeads": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "partnerTemplates": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "partnerPayouts": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      "$code": {
+        ".read": "auth != null"
+      }
+    },
+    "partnerSeekerRefs": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "partnerActivity": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "qrScans": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.token.email === 'sudarshanchakraindia@gmail.com')",
+      "$scanId": {
+        ".write": "!data.exists()"
+      }
+    },
+    "notifications": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null"
+      }
     }
   }
 }
