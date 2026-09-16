@@ -35,7 +35,7 @@
 
   <div id="gate">
     <h1>🔱 Admin Login</h1>
-    <p style="color:#7C4A1E; font-size:13px;">Same password as your main admin dashboard</p>
+    <p style="color:#7C4A1E; font-size:13px;">Sign in with your admin account password</p>
     <input type="password" id="pw" placeholder="Admin password">
     <button onclick="tryLogin()">Manage Training Videos</button>
     <p class="err" id="err"></p>
@@ -94,9 +94,7 @@
   const db   = getDatabase(app);
   const auth = getAuth(app);
 
-  const ADMIN_PASSWORD_KEY = 'sc_admin_password';
   const ADMIN_EMAIL = 'sudarshanchakraindia@gmail.com';
-  const ADMIN_FIREBASE_PASSWORD = 'MyActualPassword144@Crore';
 
   // Accepts a normal Loom share link (loom.com/share/ID) or an already-embed
   // link (loom.com/embed/ID) and always returns the embeddable form.
@@ -105,20 +103,28 @@
     return m ? m[1] : null;
   }
 
+  // Sign in with the REAL Firebase Auth password for ADMIN_EMAIL, typed by the
+  // admin each time. No gate password and no hardcoded password in this public
+  // file - one password, stored nowhere, works on any browser or device.
   window.tryLogin = async function(){
-    const entered  = document.getElementById('pw').value;
-    const expected = localStorage.getItem(ADMIN_PASSWORD_KEY) || 'admin123';
-    if (entered !== expected){
-      document.getElementById('err').textContent = 'Incorrect password.';
-      return;
-    }
+    const entered = document.getElementById('pw').value;
+    const errEl   = document.getElementById('err');
+    if (!entered){ errEl.textContent = 'Enter your admin password.'; return; }
+    errEl.textContent = 'Signing in...';
     try {
-      await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_FIREBASE_PASSWORD);
+      await signInWithEmailAndPassword(auth, ADMIN_EMAIL, entered);
+      errEl.textContent = '';
       document.getElementById('gate').style.display = 'none';
       document.getElementById('app').style.display  = 'block';
       loadVideos('provider');
     } catch (e) {
-      document.getElementById('err').textContent = 'Firebase sign-in failed: ' + e.message;
+      const code = e.code || '';
+      errEl.textContent =
+        (code === 'auth/invalid-credential' || code === 'auth/wrong-password')
+          ? 'Wrong password for ' + ADMIN_EMAIL + '.'
+        : (code === 'auth/too-many-requests')
+          ? 'Too many attempts. Wait a few minutes and try again.'
+          : 'Sign-in failed: ' + (code || e.message);
     }
   };
 
