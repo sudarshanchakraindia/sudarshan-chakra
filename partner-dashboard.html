@@ -2559,9 +2559,18 @@
 
   function leadDisplayName(l){ return String(l.businessName || l.name || 'ji').trim() || 'ji'; }
 
+  // Meta rejects long template variables ("Translated text too long"). Google Maps
+  // names are often SEO-stuffed ("X - Best Agency in Agra | SEO | ..."), so keep
+  // only the first part before | / ( - : , and cap it at 40 characters.
+  function waParamName(l){
+    let n = leadDisplayName(l).split(/\s*[|/(\[–—:,]\s*|\s+-\s+/)[0].replace(/\s+/g, ' ').trim();
+    if (n.length > 40) { n = n.slice(0, 41); n = /\s/.test(n) ? n.replace(/\s+\S*$/, '').trim() : n.slice(0, 40); }
+    return n || 'ji';
+  }
+
   function buildApiPayload(lead){
     const to = cleanPhoneForWhatsApp(lead.phone) || lead.phone;
-    const name = leadDisplayName(lead);
+    const name = apiState.mode === 'template' ? waParamName(lead) : leadDisplayName(lead);
     if (apiState.mode === 'template') {
       const t = apiTpl();
       const payload = { to, template: t.name, params: { [t.nameParam]: name } };
