@@ -163,6 +163,25 @@
   .mat-share{ background:#25D366; color:#fff; }
   .mat-del{ background:#FFEBEE; color:#C62828; flex:0 0 auto !important; }
 
+
+  /* WhatsApp API sender panel */
+  .api-panel{ background:#FFF8F0; border:1px solid #f0d9bd; border-radius:12px; padding:12px; margin:12px 0; }
+  .api-panel select, .api-panel input[type=number]{ width:100%; padding:8px; border:1px solid #ddd; border-radius:8px; font-size:13px; background:#fff; box-sizing:border-box; }
+  .api-head{ font-weight:800; font-size:15px; margin-bottom:8px; }
+  .api-tabs{ display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+  .api-tabs button{ flex:1; min-width:140px; padding:8px; border-radius:8px; border:1px solid #e0c9a8; background:#fff; font-size:12px; font-weight:700; cursor:pointer; }
+  .api-tabs button.active{ background:#8B1E3F; color:#fff; border-color:#8B1E3F; }
+  .api-lbl{ display:block; font-size:12px; font-weight:700; margin:8px 0 4px; }
+  .api-note{ font-size:11px; color:var(--dim); margin-top:6px; }
+  .api-warn{ font-size:12px; color:#8a4b00; background:#FFF1D6; border-radius:8px; padding:6px 8px; margin-top:8px; }
+  .api-row{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .api-row > *{ flex:1; min-width:120px; }
+  .api-check{ display:flex; gap:6px; align-items:center; font-size:12px; margin-top:8px; }
+  .api-summary{ font-size:13px; margin-top:8px; }
+  .api-bar{ height:10px; background:#eee; border-radius:6px; overflow:hidden; margin-top:10px; }
+  .api-bar div{ height:100%; background:#25D366; transition:width .3s; }
+  .api-stats{ font-size:12px; margin:6px 0; font-weight:700; }
+  .api-fails{ font-size:12px; margin-top:6px; max-height:200px; overflow:auto; }
   /* Attachment chip on a message template */
   .tpl-attach{ display:flex; align-items:center; gap:8px; font-size:12px; margin:8px 0; background:#FFF8F0; border:1px dashed #f0d9bd; border-radius:8px; padding:6px 8px; }
   .tpl-attach img, .tpl-attach video{ width:40px; height:40px; object-fit:cover; border-radius:6px; flex-shrink:0; }
@@ -401,6 +420,8 @@
           <button data-filter="interested" onclick="setLeadFilter('interested')">Interested</button>
           <button data-filter="not_interested" onclick="setLeadFilter('not_interested')">Not Interested</button>
         </div>
+
+        <div id="apiSendPanel" class="api-panel" style="display:none;"></div>
 
         <div class="list-tools">
           <button onclick="expandAllLeads(true)">⬇ सब खोलें</button>
@@ -1066,60 +1087,6 @@
     return `Namaste ${leadName} 🙏 I'm ${partnerName}, City Channel Partner for SAARTHI in ${city}. We're a new app connecting local service providers like you directly with customers — completely free to list, zero commission on what you earn. Takes 5 minutes to set up: ${refLink}\n\nHappy to help you get started if you have any questions!`;
   }
 
-    window.sendSaarthiInvite = async function (leadId, btn) {
-    const lead = leadsCache[leadId];
-    if (!lead || !window._saarthiAdminUnlocked) return;
-    if (!lead.phone) { alert('This lead has no phone number.'); return; }
-
-    let user;
-    try {
-      user = await window._pRequireUser();
-    } catch (e) {
-      if (e.message !== 'cancelled') alert('Sign-in needed: ' + (e.code || e.message));
-      return;
-    }         
-    const original = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
-
-    try {
-      const idToken = await user.getIdToken();
-
-      const res = await fetch('https://sendwhatsapptemplate-wrh5fpf55a-el.a.run.app', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + idToken
-        },
-        body: JSON.stringify({
-          to: cleanPhoneForWhatsApp(lead.phone) || lead.phone,
-          template: 'saarthi_invite_hindi',
-          params: {
-            customer_name: String(lead.businessName || lead.name || 'ji').trim()
-          }
-        })
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          throw new Error('Not authorised. Log out, log in again, then retry.');
-        }
-        if (data.error === 'no_opt_in_on_record') {
-          throw new Error('No consent record for this number. Capture opt-in first.');
-        }
-        throw new Error(data.detail || data.error || ('Request failed ' + res.status));
-      }
-
-      btn.textContent = 'Sent ✓';
-    } catch (e) {
-      alert('Could not send invite: ' + e.message);
-      btn.textContent = original;
-      btn.disabled = false;
-    }
-  };
-
   window.sendLeadWhatsApp = async function(leadId){
     const lead = leadsCache[leadId];
     if (!lead) return;
@@ -1559,7 +1526,7 @@
             <div class="lead-actions">
               <button onclick="sendLeadWhatsApp('${id}')" style="background:#25D366; color:#fff;">📲 WhatsApp</button>
               <button onclick="openTemplatePicker('${(l.businessName||'').replace(/'/g,"\\'")}','${l.phone||''}','${id}')">✉️ Templates</button>
-              ${window._saarthiAdminUnlocked ? `<button onclick="sendSaarthiInvite('${id}', this)" style="background:#8B1E3F; color:#fff;">🔱 Send Official SAARTHI Invite (WhatsApp API)</button>` : ''}
+              ${window._saarthiAdminUnlocked ? `<button onclick="sendSaarthiInvite('${id}', this)" style="background:#8B1E3F; color:#fff;">🔱 API से भेजें${l.lastApiSend ? ' (फिर)' : ''}</button>` : ''}
               <button onclick="removeLead('${id}')">🗑 Remove</button>
             </div>
           </div>
@@ -2405,6 +2372,365 @@
       `;
     }).join('');
   }
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── WhatsApp API sender: choose what to send, then send to one or many ──
+  // ══════════════════════════════════════════════════════════════════════════
+  // WhatsApp only lets a business start a chat with a Meta-approved template.
+  // So there are two ways to send here:
+  //   1. template : an approved template, optionally with a poster/flyer as its
+  //                 image header (the template itself must have an IMAGE header)
+  //   2. session  : a dashboard message template (+ its attachment) sent as a
+  //                 normal message — WhatsApp delivers this ONLY to people who
+  //                 messaged our number in the last 24 hours.
+  const WA_API_URL = 'https://sendwhatsapptemplate-wrh5fpf55a-el.a.run.app';
+
+  // Add new templates here once Meta approves them. `nameParam` must match the
+  // approved template's variable name exactly. header:'image' means the template
+  // was created with an IMAGE header, so a poster/flyer must be picked.
+  const WA_API_TEMPLATES = [
+    { name: 'saarthi_invite_hindi', label: '🔱 SAARTHI Invite (हिंदी)', nameParam: 'customer_name', header: 'none' },
+    { name: 'become_exclusive_city_channel_partner', label: '🔱 Exclusive City Channel Partner (English)', nameParam: 'custmer_name', header: 'none' },
+    { name: 'saarthi_poster_invite_hindi', label: '🖼️ पोस्टर/फ्लायर के साथ Invite (हिंदी)', nameParam: 'customer_name', header: 'image', pendingApproval: true }
+  ];
+
+  const WA_GAP_MS = 2000;            // pause between two messages
+  const WA_MAX_CONSECUTIVE_FAILS = 5; // stop the run if this many fail in a row
+
+  const apiState = {
+    mode: 'template',        // 'template' | 'session'
+    tplName: WA_API_TEMPLATES[0].name,
+    mediaId: '',             // materialsCache id, '' = none / template default
+    myTplId: '',             // dashboard template id (session mode)
+    statusFilter: 'not_contacted',
+    limit: 50,
+    resend: false,
+    running: false,
+    stop: false
+  };
+
+  function apiTpl(){ return WA_API_TEMPLATES.find(t => t.name === apiState.tplName) || WA_API_TEMPLATES[0]; }
+
+  // Meta fetches the file itself, so it must be a public jpg/png (image header)
+  function waImageOk(m){ return !!(m && m.url && (/\.(png|jpe?g)$/.test(matPath(m.fileName)) || /\.(png|jpe?g)$/.test(matPath(m.url)))); }
+  function waMediaKind(m){
+    if (!m || !m.url) return '';
+    if (waImageOk(m)) return 'image';
+    if (isVideoUrl(m.url, m.fileName) && /\.mp4/.test(matPath(m.fileName) + matPath(m.url))) return 'video';
+    if (/\.pdf/.test(matPath(m.fileName) + ' ' + matPath(m.url))) return 'document';
+    return '';
+  }
+  function findMaterial(id){ return (materialsCache || []).find(m => m.id === id); }
+
+  function apiMaterialOptions(onlyImages){
+    const list = (materialsCache || []).filter(m => onlyImages ? waImageOk(m) : !!waMediaKind(m));
+    return list.map(m => {
+      const meta = MAT_TYPE_META[m.type] || MAT_TYPE_META.link;
+      return `<option value="${escapeHtml(m.id)}" ${m.id === apiState.mediaId ? 'selected' : ''}>${meta.icon} ${escapeHtml(m.name)}</option>`;
+    }).join('');
+  }
+
+  window.renderApiSendPanel = function(){
+    const el = document.getElementById('apiSendPanel');
+    if (!el) return;
+    if (!window._saarthiAdminUnlocked) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    if (apiState.running) return; // don't rebuild the form mid-run
+
+    const t = apiTpl();
+    const tplOptions = WA_API_TEMPLATES.map(x =>
+      `<option value="${x.name}" ${x.name === apiState.tplName ? 'selected' : ''}>${x.label}${x.pendingApproval ? ' — (Meta approval बाकी)' : ''}</option>`).join('');
+    const myTplOptions = Object.entries(templatesCache || {}).map(([id, x]) =>
+      `<option value="${id}" ${id === apiState.myTplId ? 'selected' : ''}>${escapeHtml(x.title || 'Template')}${x.media ? ' 📎' : ''}</option>`).join('');
+
+    let body = '';
+    if (apiState.mode === 'template') {
+      body = `
+        <label class="api-lbl">Approved template</label>
+        <select onchange="apiSet('tplName', this.value)">${tplOptions}</select>
+        ${t.header === 'image' ? `
+          <label class="api-lbl">पोस्टर / फ्लायर चुनें (सिर्फ़ JPG/PNG)</label>
+          <select onchange="apiSet('mediaId', this.value)">
+            <option value="">— चुनें —</option>${apiMaterialOptions(true)}
+          </select>` : `
+          <div class="api-note">इस template में फोटो नहीं है। पोस्टर भेजना हो तो "पोस्टर/फ्लायर के साथ" वाला template चुनें।</div>`}
+        ${t.pendingApproval ? `<div class="api-warn">⚠️ ये template अभी Meta पर approve होना बाकी है (IMAGE header वाला)। approve होने तक ये भेजा नहीं जा सकेगा।</div>` : ''}
+        <div class="api-note">नाम अपने-आप lead के नाम से भर जाएगा। message का text वही जाएगा जो Meta पर approved है।</div>`;
+    } else {
+      body = `
+        <label class="api-lbl">मेरा Message Template</label>
+        <select onchange="apiSet('myTplId', this.value)">
+          <option value="">— चुनें —</option>${myTplOptions}
+        </select>
+        <label class="api-lbl">अटैचमेंट</label>
+        <select onchange="apiSet('mediaId', this.value)">
+          <option value="">Template वाला अटैचमेंट (अगर हो)</option>
+          <option value="__none" ${apiState.mediaId === '__none' ? 'selected' : ''}>कोई अटैचमेंट नहीं</option>
+          ${apiMaterialOptions(false)}
+        </select>
+        <div class="api-warn">⚠️ WhatsApp का नियम: ये message सिर्फ़ उन्हीं को पहुँचेगा जिन्होंने पिछले 24 घंटे में हमारे number पर message किया हो। नए leads के लिए ऊपर वाला "Approved template" इस्तेमाल करें।</div>`;
+    }
+
+    el.innerHTML = `
+      <div class="api-head">📤 WhatsApp API से भेजें</div>
+      <div class="api-tabs">
+        <button class="${apiState.mode === 'template' ? 'active' : ''}" onclick="apiSet('mode','template')">🔱 Approved Template</button>
+        <button class="${apiState.mode === 'session' ? 'active' : ''}" onclick="apiSet('mode','session')">✉️ मेरा Template (24 घं. वाले)</button>
+      </div>
+      ${body}
+      <div class="api-row">
+        <div>
+          <label class="api-lbl">किन leads को</label>
+          <select onchange="apiSet('statusFilter', this.value)">
+            ${['not_contacted','contacted','interested','all'].map(s => `<option value="${s}" ${s === apiState.statusFilter ? 'selected' : ''}>${s === 'all' ? 'सभी (Registered छोड़कर)' : LEAD_STATUS_LABEL[s]}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="api-lbl">आज कितने (max)</label>
+          <input type="number" min="1" max="250" value="${apiState.limit}" onchange="apiSet('limit', this.value)">
+        </div>
+      </div>
+      <label class="api-check"><input type="checkbox" ${apiState.resend ? 'checked' : ''} onchange="apiSet('resend', this.checked)"> जिन्हें यही message पहले भेजा जा चुका है, उन्हें फिर भेजें</label>
+      <div class="api-summary" id="apiSummary"></div>
+      <div class="api-row">
+        <button class="btn primary" onclick="startBulkApiSend()">📤 Bulk Send शुरू करें</button>
+        <button class="btn ghost" onclick="refreshApiPanel()">🔄 Refresh</button>
+      </div>
+      <div class="api-note">हर lead के अंदर "🔱 API से भेजें" बटन भी यही चुना हुआ message भेजता है।</div>
+      <div id="apiProgress"></div>`;
+    updateApiSummary();
+  };
+
+  window.apiSet = function(key, val){
+    if (key === 'limit') val = Math.max(1, Math.min(250, parseInt(val, 10) || 1));
+    if (key === 'mode' || key === 'tplName') apiState.mediaId = '';
+    apiState[key] = val;
+    renderApiSendPanel();
+  };
+
+  window.refreshApiPanel = async function(){
+    try { await buildMaterialsCache(); } catch (e) {}
+    renderApiSendPanel();
+  };
+
+  // What gets sent, as a short key — used to avoid sending the same thing twice
+  function apiCampaignKey(){
+    if (apiState.mode === 'template') return 'tpl:' + apiState.tplName + (apiState.mediaId ? ':' + apiState.mediaId : '');
+    return 'my:' + apiState.myTplId + ':' + (apiState.mediaId || 'default');
+  }
+
+  // Returns an error text if the current choice can't be sent, else ''
+  function apiChoiceProblem(){
+    if (apiState.mode === 'template') {
+      const t = apiTpl();
+      if (t.header === 'image' && !findMaterial(apiState.mediaId)) return 'पहले पोस्टर/फ्लायर चुनें।';
+    } else {
+      if (!templatesCache[apiState.myTplId]) return 'पहले अपना Message Template चुनें।';
+    }
+    return '';
+  }
+
+  function apiRecipients(){
+    const key = apiCampaignKey();
+    const seen = new Set();
+    return Object.keys(leadsCache)
+      .filter(id => {
+        const l = leadsCache[id];
+        if (!l || l.status === 'registered') return false;
+        if (apiState.statusFilter !== 'all' && l.status !== apiState.statusFilter) return false;
+        const ph = normLeadPhone(l.phone);
+        if (ph.length < 10 || seen.has(ph)) return false;   // no phone / duplicate number
+        if (!apiState.resend && l.lastApiSend && l.lastApiSend.key === key) return false;
+        seen.add(ph);
+        return true;
+      })
+      .sort((a, b) => (leadsCache[a].addedAt || '').localeCompare(leadsCache[b].addedAt || ''));
+  }
+
+  function updateApiSummary(){
+    const el = document.getElementById('apiSummary');
+    if (!el) return;
+    const all = apiRecipients();
+    const n = Math.min(all.length, apiState.limit);
+    const problem = apiChoiceProblem();
+    el.innerHTML = problem
+      ? `<span style="color:#c0392b;">${problem}</span>`
+      : `<b>${n}</b> leads को भेजा जाएगा (कुल ${all.length} योग्य) · लगभग ${Math.ceil(n * WA_GAP_MS / 60000)} मिनट`;
+  }
+
+  function leadDisplayName(l){ return String(l.businessName || l.name || 'ji').trim() || 'ji'; }
+
+  function buildApiPayload(lead){
+    const to = cleanPhoneForWhatsApp(lead.phone) || lead.phone;
+    const name = leadDisplayName(lead);
+    if (apiState.mode === 'template') {
+      const t = apiTpl();
+      const payload = { to, template: t.name, params: { [t.nameParam]: name } };
+      if (t.header === 'image') payload.headerImage = findMaterial(apiState.mediaId).url;
+      return payload;
+    }
+    const tpl = templatesCache[apiState.myTplId];
+    const text = buildTemplateMessage(tpl, name, false);
+    let media = null;
+    if (apiState.mediaId === '__none') media = null;
+    else if (apiState.mediaId) media = findMaterial(apiState.mediaId);
+    else if (tpl.media && tpl.media.url) media = { url: tpl.media.url, fileName: tpl.media.name || '', name: tpl.media.name || '' };
+    const kind = waMediaKind(media);
+    if (kind === 'image') return { to, type: 'image', link: media.url, caption: text };
+    if (kind === 'video') return { to, type: 'video', link: media.url, caption: text };
+    if (kind === 'document') return { to, type: 'document', link: media.url, caption: text, filename: (media.fileName || media.name || 'SAARTHI.pdf').split('/').pop() };
+    if (media && media.url) return { to, type: 'text', text: text + '\n\n' + media.url };
+    return { to, type: 'text', text };
+  }
+
+  function friendlyApiError(status, data){
+    const raw = JSON.stringify(data || {});
+    const err = data && data.error;
+    if (err === 'no_opt_in_on_record') return { msg: 'opt-in नहीं है या इन्होंने STOP/BAND लिखा था', fatal: false };
+    if (err === 'outside_24h_window') return { msg: '24 घंटे की window बंद — इसे Approved Template से भेजें', fatal: false };
+    if (err === 'invalid_mobile_number') return { msg: 'mobile number सही नहीं है', fatal: false };
+    if (err === 'wrong_gateway') return { msg: 'आपके account को इस gateway से भेजने की अनुमति नहीं है', fatal: true };
+    if (err === 'server_misconfigured') return { msg: 'Server पर WhatsApp token सेट नहीं है', fatal: true };
+    if (/header_image|media_link/.test(err || '')) return { msg: 'पोस्टर/फाइल का link मान्य नहीं (सिर्फ़ Firebase Storage या GitHub Pages की JPG/PNG)', fatal: true };
+    if (status === 401 || (status === 403 && /claim|auth|token|permission/i.test(raw))) return { msg: 'Login/permission नहीं है — logout करके फिर login करें।', fatal: true };
+    if (/131047|re-engagement|24 ?hour/i.test(raw)) return { msg: '24 घंटे की window बंद — इसे Approved Template से भेजें', fatal: false };
+    if (/131026|undeliverable|not a valid whatsapp|not on whatsapp/i.test(raw)) return { msg: 'ये number WhatsApp पर नहीं है', fatal: false };
+    if (/template_not_allowed|unknown template|132001|does not exist/i.test(raw)) return { msg: 'Template approved/allowed नहीं है', fatal: true };
+    if (/130429|131056|131048|rate|limit|spam/i.test(raw) || status === 429) return { msg: 'Meta limit/spam रोक — आज के लिए रोक दिया', fatal: true };
+    if (/131042|payment/i.test(raw)) return { msg: 'Meta billing/payment की समस्या', fatal: true };
+    return { msg: (data && (data.metaMessage || data.detail || data.error)) || ('Error ' + status), fatal: false };
+  }
+
+  async function sendApiOne(leadId, user){
+    const lead = leadsCache[leadId];
+    if (window._demoMode) {
+      await new Promise(r => setTimeout(r, 300));
+      return { ok: true };
+    }
+    const idToken = await user.getIdToken();
+    const res = await fetch(WA_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify(buildApiPayload(lead))
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return Object.assign({ ok: false }, friendlyApiError(res.status, data));
+    return { ok: true, data };
+  }
+
+  async function markApiSent(leadId){
+    const lead = leadsCache[leadId];
+    if (!lead) return;
+    const rec = { key: apiCampaignKey(), at: new Date().toISOString() };
+    lead.lastApiSend = rec;
+    const promote = lead.status === 'not_contacted';
+    if (promote) lead.status = 'contacted';
+    if (window._demoMode) return;
+    const base = 'partnerLeads/' + window._currentPartnerCode + '/' + leadId;
+    try {
+      await window._pset(window._pref(window._pdb, base + '/lastApiSend'), rec);
+      if (promote) await window._pset(window._pref(window._pdb, base + '/status'), 'contacted');
+    } catch (e) { console.warn('could not save send status', e); }
+  }
+
+  async function apiGetUser(){
+    if (window._demoMode) return null;
+    try { return await window._pRequireUser(); }
+    catch (e) {
+      if (e.message !== 'cancelled') alert('Sign-in needed: ' + (e.code || e.message));
+      return undefined;
+    }
+  }
+
+  // Single lead — uses whatever is chosen in the panel
+  window.sendSaarthiInvite = async function(leadId, btn){
+    const lead = leadsCache[leadId];
+    if (!lead || !window._saarthiAdminUnlocked) return;
+    if (!lead.phone) { alert('This lead has no phone number.'); return; }
+    const problem = apiChoiceProblem();
+    if (problem) { alert(problem + '\n\n(My Leads के ऊपर "📤 WhatsApp API से भेजें" में चुनें)'); return; }
+    const user = await apiGetUser();
+    if (user === undefined) return;
+    const original = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      const r = await sendApiOne(leadId, user);
+      if (!r.ok) throw new Error(r.msg);
+      await markApiSent(leadId);
+      btn.textContent = 'Sent ✓';
+      setTimeout(() => { renderLeads(); updateApiSummary(); }, 800);
+    } catch (e) {
+      alert('नहीं भेज सके: ' + e.message);
+      btn.textContent = original; btn.disabled = false;
+    }
+  };
+
+  window.startBulkApiSend = async function(){
+    if (apiState.running) return;
+    const problem = apiChoiceProblem();
+    if (problem) { alert(problem); return; }
+    const ids = apiRecipients().slice(0, apiState.limit);
+    if (!ids.length) { alert('भेजने के लिए कोई योग्य lead नहीं मिली।'); return; }
+
+    const what = apiState.mode === 'template'
+      ? apiTpl().label + (apiTpl().header === 'image' ? ' + ' + (findMaterial(apiState.mediaId) || {}).name : '')
+      : (templatesCache[apiState.myTplId].title || 'My template');
+    if (!confirm(`${ids.length} leads को भेजना है:\n\n${what}\n\nलगभग ${Math.ceil(ids.length * WA_GAP_MS / 60000)} मिनट लगेंगे। इस दौरान ये tab खुला रखें।\n\nशुरू करें?`)) return;
+
+    const user = await apiGetUser();
+    if (user === undefined) return;
+
+    apiState.running = true; apiState.stop = false;
+    const prog = document.getElementById('apiProgress');
+    let sent = 0, failed = 0, streak = 0;
+    const failures = [];
+    const paint = (done, note) => {
+      const pct = Math.round(done / ids.length * 100);
+      prog.innerHTML = `
+        <div class="api-bar"><div style="width:${pct}%"></div></div>
+        <div class="api-stats">✅ ${sent} भेजे · ❌ ${failed} fail · ${done}/${ids.length}${note ? ' · ' + note : ''}</div>
+        ${apiState.running ? '<button class="btn ghost" onclick="stopBulkApiSend()">⏹ रोकें</button>' : ''}
+        ${failures.length ? `<details class="api-fails" ${apiState.running ? '' : 'open'}><summary>Fail हुए (${failures.length})</summary>${failures.map(f => `<div>• ${escapeHtml(f.name)} (${escapeHtml(f.phone)}) — ${escapeHtml(f.msg)}</div>`).join('')}</details>` : ''}`;
+    };
+    paint(0, 'शुरू…');
+
+    let i = 0, stopNote = '';
+    for (; i < ids.length; i++) {
+      if (apiState.stop) { stopNote = 'आपने रोका'; break; }
+      const id = ids[i], lead = leadsCache[id];
+      if (!lead || !lead.phone) { paint(i + 1); continue; }   // removed during the run
+      let r;
+      try { r = await sendApiOne(id, user); }
+      catch (e) { r = { ok: false, msg: 'Network: ' + e.message, fatal: false }; }
+      if (r.ok) { sent++; streak = 0; try { await markApiSent(id); } catch (e) {} }
+      else {
+        failed++; streak++;
+        failures.push({ name: leadDisplayName(lead), phone: lead.phone || '', msg: r.msg });
+        if (r.fatal) { stopNote = 'रुका: ' + r.msg; i++; break; }
+        if (streak >= WA_MAX_CONSECUTIVE_FAILS) { stopNote = `लगातार ${streak} fail — रोक दिया, कारण देखें`; i++; break; }
+      }
+      paint(i + 1);
+      if (i < ids.length - 1) await new Promise(res => setTimeout(res, WA_GAP_MS));
+    }
+    apiState.running = false;
+    paint(Math.min(i, ids.length), stopNote || 'पूरा हुआ ✓');
+    renderLeads();
+    updateApiSummary();
+  };
+
+  window.stopBulkApiSend = function(){ apiState.stop = true; };
+
+  // Keep the panel in step with leads/templates/materials as they load
+  (function hookApiPanel(){
+    const _renderLeads = renderLeads;
+    renderLeads = function(){ _renderLeads.apply(this, arguments); if (!apiState.running) updateApiSummary(); };
+    const _renderTemplates = renderTemplates;
+    renderTemplates = function(){ _renderTemplates.apply(this, arguments); renderApiSendPanel(); };
+    const _paintMaterials = paintMaterials;
+    paintMaterials = function(){ _paintMaterials.apply(this, arguments); renderApiSendPanel(); };
+  })();
+
+  renderApiSendPanel();
+
 </script>
 
 <button id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="ऊपर जाएँ">↑</button>
