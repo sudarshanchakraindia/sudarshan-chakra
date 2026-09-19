@@ -585,21 +585,46 @@
   window._puploadBytes    = uploadBytes;
   window._pgetDownloadURL = getDownloadURL;
   window._pdeleteObject   = deleteObject;
-        const auth = getAuth(app);
-    window._pauth   = auth;
-    window._psignIn = (email, pass) => signInWithEmailAndPassword(auth, email, pass);
-    onAuthStateChanged(auth, u => { window._puser = u || null; });
+  const auth = getAuth(app);
+  window._pauth   = auth;
+  window._psignIn = (email, pass) => signInWithEmailAndPassword(auth, email, pass);
+  onAuthStateChanged(auth, u => { window._puser = u || null; });
 
   // A partner opens this page with only their referral code — no account, no
   // password. Signing in anonymously gives the page a throwaway identity so the
   // database can demand an authenticated caller instead of being world-readable.
   // Nothing is shown to the partner. If someone is already signed in properly
   // (the admin, for the WhatsApp gateway), that session is left alone.
-  window._pAuthReady = auth.currentUser
-    ? Promise.resolve(auth.currentUser)
-    : signInAnonymously(auth).catch(e => {
-        console.warn('Anonymous sign-in failed:', e.code || e.message);
-      });
+  //
+  // Signing in ONCE at load is not enough. Firebase keeps one auth session per
+  // origin, shared by every tab, so the main app signing a seeker or admin out
+  // in another tab clears this page's session too. After that every read and
+  // write comes back permission_denied while the page still looks perfectly
+  // normal — the partner types a template, presses Save, and is told
+  // "Permission denied" for no visible reason. So the session is re-established
+  // on demand, immediately before each database call, instead of only at load.
+  let _authPending = null;
+  window._pEnsureAuth = function(){
+    if (auth.currentUser) return Promise.resolve(auth.currentUser);
+    if (!_authPending) {
+      _authPending = signInAnonymously(auth)
+        .then(c => c.user)
+        .catch(e => { console.warn('Anonymous sign-in failed:', e.code || e.message); return null; })
+        .finally(() => { _authPending = null; });
+    }
+    return _authPending;
+  };
+  window._pAuthReady = window._pEnsureAuth();
+
+  // Every database and storage call on this page goes through these wrappers,
+  // so the guard above covers the whole dashboard at once — templates, leads,
+  // payouts, activity and marketing uploads alike. push() only generates a key
+  // locally, so it needs no session.
+  window._pget = async (r)          => { await window._pEnsureAuth(); return get(r); };
+  window._pset = async (r, v)       => { await window._pEnsureAuth(); return set(r, v); };
+  window._puploadBytes    = async (r, d, m) => { await window._pEnsureAuth(); return uploadBytes(r, d, m); };
+  window._pgetDownloadURL = async (r)       => { await window._pEnsureAuth(); return getDownloadURL(r); };
+  window._pdeleteObject   = async (r)       => { await window._pEnsureAuth(); return deleteObject(r); };
 
   // Auto-fill code from URL (?code=XYZ) if present, and auto-load.
   // Module scripts already execute after the DOM is parsed, so the plain
