@@ -2898,6 +2898,27 @@
 
   function crmWindowOpen(c){ return Number(c.windowExpiresAt || 0) > Date.now(); }
 
+  // Partner code do shaklon me milta hai aur dono chal rahi hain:
+  //   dashboard ka code  -> "JODHPUR342001"  (loadPartner space hata deta hai)
+  //   server ka claim    -> "JODHPUR 342001" (GATEWAY = city + ' ' + pincode)
+  // waContacts me server wali shakl likhi hoti hai, isliye dono aazmate hain.
+  function crmCodeCandidates(){
+    const out = [];
+    const add = v => {
+      v = String(v || '').trim();
+      if (!v) return;
+      [v, v.toUpperCase()].forEach(x => { if (out.indexOf(x) === -1) out.push(x); });
+    };
+    const raw = String(window._currentPartnerCode || '');
+    add(raw);
+    const m = raw.match(/^(.*?)\s*(\d{6})$/);          // pincode se pehle space
+    if (m && m[1]) { add(m[1].trim() + ' ' + m[2]); add(m[1].trim() + m[2]); }
+    add(new URLSearchParams(location.search).get('admin'));
+    return out;
+  }
+
+  function crmNormCode(v){ return String(v || '').replace(/\s+/g, '').toUpperCase(); }
+
   window.loadCrm = async function(){
     const el = document.getElementById('crmListEl');
     const code = window._currentPartnerCode;
@@ -2909,20 +2930,45 @@
     }
 
     el.innerHTML = '<div class="empty">Loading…</div>';
+    crmCache = {};
+    let how = '';
     try {
       await window._pEnsureAuth();
-      const q = window._pquery(
-        window._pref(window._pdb, 'waContacts'),
-        window._porderByChild('partnerCode'),
-        window._pequalTo(code)
-      );
-      const snap = await window._pget(q);
-      crmCache = snap.exists() ? (snap.val() || {}) : {};
+
+      // 1. Har sambhav code par index-backed query — tez, 100k par bhi
+      for (const cand of crmCodeCandidates()) {
+        const q = window._pquery(
+          window._pref(window._pdb, 'waContacts'),
+          window._porderByChild('partnerCode'),
+          window._pequalTo(cand)
+        );
+        const snap = await window._pget(q);
+        if (snap.exists()) {
+          Object.assign(crmCache, snap.val() || {});
+          how = how ? how + ', ' + cand : cand;
+        }
+      }
+
+      // 2. Kuch nahi mila to poora node padhkar khud milaan — purane record
+      //    jinme partnerCode hai hi nahi, wo yahan pakde jaate hain.
+      if (!Object.keys(crmCache).length) {
+        const snap = await window._pget(window._pref(window._pdb, 'waContacts'));
+        const all = snap.exists() ? (snap.val() || {}) : {};
+        const want = crmNormCode(code);
+        const admin = !!window._saarthiAdminUnlocked;
+        Object.keys(all).forEach(k => {
+          const pc = crmNormCode(all[k] && all[k].partnerCode);
+          if (pc === want || (!pc && admin)) crmCache[k] = all[k];
+        });
+        how = 'पूरा scan (' + Object.keys(crmCache).length + '/' + Object.keys(all).length + ')';
+      }
     } catch (e) {
       console.warn('CRM load failed', e);
       el.innerHTML = '<div class="empty">CRM नहीं खुल सका: ' + escapeHtml(e.message || String(e)) + '</div>';
       return;
     }
+
+    window._crmHow = how;
     crmShown = CRM_PAGE;
     renderCrmCampaigns();
     renderCrm();
@@ -2988,9 +3034,10 @@
 
     const note = document.getElementById('crmNote');
     if (note) {
+      const how = window._crmHow ? ' \u00b7 मिलान: ' + escapeHtml(window._crmHow) : '';
       note.innerHTML = 'ℹ️ "पढ़ा" वही दिखता है जिनके WhatsApp में blue-tick चालू है। ' +
         'जिन्होंने बंद रखा है वो पढ़ने के बाद भी "पहुँचा" में ही रहेंगे — इसलिए असली पैमाना ' +
-        '<b>जवाब दिया</b> और <b>जुड़ गए</b> हैं।';
+        '<b>जवाब दिया</b> और <b>जुड़ गए</b> हैं।' + how;
     }
 
     let rows = crmFilter === 'all' ? all.slice() : all.filter(c => c._stage === crmFilter);
