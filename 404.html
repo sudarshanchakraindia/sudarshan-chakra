@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>पेज नहीं मिला — Sudarshan Chakra India</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --saffron:#FF6B00; --deep-saffron:#E55200; --gold:#F5A623;
+    --cream:#FFF8F0; --deep:#1A1206; --mid:#4A2C0A; --soft:#7C4A1E;
+    --white:#FFFFFF; --green:#138808;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'DM Sans',system-ui,sans-serif;
+    background:linear-gradient(160deg,var(--cream) 0%,#FFEFDC 100%);
+    color:var(--deep); min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:32px 16px; line-height:1.6;
+  }
+  .card{
+    width:100%; max-width:520px; background:var(--white);
+    border-radius:20px; padding:40px 28px;
+    box-shadow:0 18px 50px rgba(74,44,10,.14);
+    border-top:5px solid var(--saffron); text-align:center;
+  }
+  .chakra{font-size:44px;line-height:1;margin-bottom:14px}
+  h1{
+    font-family:'Playfair Display',serif; font-size:26px; font-weight:900;
+    color:var(--mid); margin-bottom:10px; letter-spacing:-.01em;
+  }
+  .lead{font-size:16px;color:var(--soft);margin-bottom:8px}
+  .reason{
+    font-size:14px; color:var(--soft); background:var(--cream);
+    border-radius:12px; padding:14px 16px; margin:20px 0 24px; text-align:right;
+    direction:ltr; text-align:center;
+  }
+  .reason b{color:var(--mid)}
+  .btns{display:flex;flex-direction:column;gap:12px;margin-bottom:22px}
+  a.btn{
+    display:block; padding:15px 20px; border-radius:12px;
+    font-weight:600; font-size:16px; text-decoration:none;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  a.btn:active{transform:translateY(1px)}
+  .primary{
+    background:linear-gradient(135deg,var(--saffron),var(--deep-saffron));
+    color:var(--white); box-shadow:0 8px 20px rgba(255,107,0,.32);
+  }
+  .secondary{
+    background:var(--white); color:var(--mid);
+    border:2px solid rgba(124,74,30,.22);
+  }
+  .countdown{
+    font-size:13px;color:var(--soft);margin-bottom:20px;min-height:20px
+  }
+  .countdown b{color:var(--saffron)}
+  .foot{
+    border-top:1px solid rgba(124,74,30,.14); padding-top:18px;
+    font-size:13px; color:var(--soft);
+  }
+  .foot a{color:var(--deep-saffron);text-decoration:none;font-weight:600}
+  .tried{
+    font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px;
+    color:#9A7B5C; word-break:break-all; margin-top:12px;
+  }
+  @media (max-width:420px){ .card{padding:32px 20px} h1{font-size:22px} }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="chakra">🔱</div>
+  <h1 id="headline">पेज नहीं मिला</h1>
+  <p class="lead" id="lead">लगता है लिंक टूट गया है — अक्सर WhatsApp में कॉपी होते समय ऐसा हो जाता है।</p>
+
+  <div class="reason" id="reason" hidden></div>
+
+  <p class="countdown" id="countdown"></p>
+
+  <div class="btns">
+    <a class="btn primary" id="go" href="share.html">🔱 SAARTHI — Partner बनें</a>
+    <a class="btn secondary" href="./">🚀 ऐप खोलें</a>
+  </div>
+
+  <div class="foot">
+    मदद चाहिए? <a href="tel:+919251115013">9251115013</a> · <a href="tel:+919414055013">9414055013</a>
+    <div class="tried" id="tried"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // GitHub Pages serves this file for ANY path it cannot find under the site.
+  // The commonest cause by far is a shared link that picked up stray characters
+  // on its way through WhatsApp — a non-breaking space, a trailing "contact:",
+  // a capital letter. The real page is almost always obvious from the wreckage,
+  // so rather than leaving a prospect at a dead end we work out what they meant
+  // and send them there.
+
+  var BASE  = '/sudarshan-chakra/';
+  var PAGES = ['share','index','franchise','partner-dashboard','partner-agreement',
+               'info','privacy','gratitude','join'];
+
+  var path = decodeURIComponent(location.pathname || '');
+  var tail = path.indexOf(BASE) === 0 ? path.slice(BASE.length) : path.replace(/^\/+/,'');
+
+  // Strip everything that cannot be part of a real filename here: the junk that
+  // gets glued on (spaces, %C2%A0, "contact:9251115013") dies at this step.
+  var slug = tail.toLowerCase()
+                 .split(/[^a-z0-9._-]/)[0]   // stop at the first stray character
+                 .replace(/\.html?$/,'')     // compare names, not extensions
+                 .replace(/[^a-z0-9-]/g,'');
+
+  var match = null;
+  if (slug) {
+    if (PAGES.indexOf(slug) >= 0)      match = slug;
+    else if (slug.indexOf('share')   === 0) match = 'share';
+    else if (slug.indexOf('join')    === 0) match = 'share';
+    else if (slug.indexOf('partner') === 0) match = 'partner-dashboard';
+    else if (slug.indexOf('franch')  === 0) match = 'franchise';
+  }
+  if (match === 'join')  match = 'share';
+  if (match === 'index') match = '';
+
+  var triedEl = document.getElementById('tried');
+  if (tail) triedEl.textContent = 'आपने खोला: ' + tail.slice(0, 120);
+
+  if (match !== null) {
+    // The query string carries the partner's referral code — it must survive.
+    var dest = (match === '' ? './' : match + '.html') + (location.search || '') + (location.hash || '');
+    var label = (match === 'share' || match === '')
+      ? 'सही पेज' : match.replace(/-/g,' ');
+
+    document.getElementById('go').href = dest;
+    document.getElementById('reason').hidden = false;
+    document.getElementById('reason').innerHTML =
+      'कोई बात नहीं — <b>आप सही जगह ही आए हैं</b>।<br>हम आपको असली पेज पर भेज रहे हैं।';
+
+    var n = 3, cd = document.getElementById('countdown');
+    cd.innerHTML = '<b>' + n + '</b> सेकंड में अपने-आप खुल रहा है…';
+    var t = setInterval(function(){
+      n--;
+      if (n <= 0) { clearInterval(t); location.replace(dest); return; }
+      cd.innerHTML = '<b>' + n + '</b> सेकंड में अपने-आप खुल रहा है…';
+    }, 1000);
+  } else {
+    document.getElementById('reason').hidden = false;
+    document.getElementById('reason').innerHTML =
+      'नीचे दिए बटन से आप सीधे सही पेज पर पहुँच सकते हैं।';
+  }
+})();
+</script>
+</body>
+</html>
