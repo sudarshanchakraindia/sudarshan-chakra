@@ -187,6 +187,25 @@
   .tpl-attach img, .tpl-attach video{ width:40px; height:40px; object-fit:cover; border-radius:6px; flex-shrink:0; }
   .tpl-attach .tpl-attach-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
   .tpl-attach button{ font-size:11px; padding:4px 8px; border-radius:6px; border:none; background:#eee; cursor:pointer; }
+
+  /* Campaign CRM - WhatsApp outreach ka nateeja */
+  .crm-funnel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px; margin-bottom:14px; }
+  .crm-tile{ border:1px solid #f0e4d4; border-radius:10px; padding:10px 6px; background:#fff; cursor:pointer; text-align:center; }
+  .crm-tile.active{ border-color:var(--saffron); background:#FFF8F0; }
+  .crm-tile .crm-n{ font-size:20px; font-weight:800; line-height:1.1; }
+  .crm-tile .crm-l{ font-size:11px; color:var(--dim); margin-top:3px; }
+  .crm-row{ border:1px solid #f0e4d4; border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+  .crm-top{ display:flex; align-items:center; gap:8px; }
+  .crm-name{ font-weight:700; font-size:14px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .crm-badge{ font-size:10px; font-weight:800; border-radius:20px; padding:3px 9px; white-space:nowrap; flex-shrink:0; }
+  .crm-meta{ font-size:12px; color:var(--dim); margin-top:4px; }
+  .crm-reply{ font-size:12.5px; background:#F3FBF3; border-left:3px solid #1e7d1e; border-radius:6px; padding:6px 8px; margin-top:6px; white-space:pre-wrap; word-break:break-word; }
+  .crm-acts{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; align-items:center; }
+  .crm-acts a, .crm-acts button{ font-size:11.5px; font-weight:700; padding:6px 12px; border-radius:6px; text-decoration:none; border:none; cursor:pointer; }
+  .crm-wa{ background:#25D366; color:#fff; }
+  .crm-ghost{ background:#eee; color:var(--deep); }
+  .crm-open{ font-size:11px; font-weight:700; color:#1e7d1e; }
+  .crm-shut{ font-size:11px; color:var(--dim); }
 </style>
 </head>
 <body>
@@ -431,6 +450,27 @@
         <div id="leadListEl"><div class="empty">Loading…</div></div>
       </div>
 
+      <!-- Campaign CRM - bheje hue WhatsApp messages ka nateeja -->
+      <div class="card" id="crmCard">
+        <h2>📈 Campaign CRM</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">आपके भेजे हुए WhatsApp मैसेज का क्या हुआ — किस तक पहुँचा, किसने पढ़ा, किसने जवाब दिया, किसने मना किया। किसी भी खाने पर दबाकर सिर्फ़ वैसे लोग देखिए।</p>
+
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+          <select id="crmCampaignSelect" onchange="setCrmCampaign(this.value)" style="flex:1; min-width:180px; padding:8px; border:1px solid #ddd; border-radius:8px; font-size:13px;">
+            <option value="all">सभी campaigns</option>
+          </select>
+          <button class="btn ghost" style="padding:8px 14px;" onclick="loadCrm()">🔄 ताज़ा करें</button>
+          <button class="btn ghost" style="padding:8px 14px;" onclick="exportCrmCsv()">⬇ CSV</button>
+        </div>
+
+        <div id="crmFunnel" class="crm-funnel"></div>
+
+        <input type="text" id="crmSearchInput" placeholder="🔍 नाम या नंबर से ढूँढ़ें..." oninput="setCrmSearch(this.value)" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin-bottom:12px;">
+
+        <p id="crmNote" style="font-size:11.5px; color:var(--dim); margin:0 0 10px;"></p>
+        <div id="crmListEl"><div class="empty">कोड डालने पर लोड होगा…</div></div>
+      </div>
+
       <!-- My Clients (converted / registered leads) -->
       <div class="card" id="clientsCard">
         <h2>🤝 My Clients</h2>
@@ -558,7 +598,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getDatabase, ref, get, set, push, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
   import { getStorage, ref as sref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signInAnonymously }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -578,6 +618,11 @@
   window._pget = get;
   window._pset = set;
   window._ppush = push;
+  // Campaign CRM waContacts ko partnerCode se query karta hai, poora node nahi
+  // padhta - 100k leads par bhi tez rahega (index database.rules.json me hai).
+  window._pquery        = query;
+  window._porderByChild = orderByChild;
+  window._pequalTo      = equalTo;
   // Storage is used by the partner's own marketing-material uploads.
   const storage = getStorage(app);
   window._pstorage        = storage;
@@ -875,6 +920,7 @@
 
     runCalculator();
     loadLeads();
+    loadCrm().catch(e => console.warn('loadCrm failed:', e));
     renderMaterials().catch(e => console.warn('renderMaterials failed:', e));
     initCollapsibleCards();
     loadCategoryOptions();
@@ -2189,6 +2235,7 @@
   const COLLAPSIBLE_CARDS = [
     { id: 'templatesCard', key: 'templates' },
     { id: 'leadsCard',     key: 'leads'     },
+    { id: 'crmCard',       key: 'crm'       },
     { id: 'clientsCard',   key: 'clients'   },
     { id: 'materialsCard', key: 'materials' },
     { id: 'trainingCard',  key: 'training'  },
@@ -2593,7 +2640,24 @@
     return n || 'ji';
   }
 
-  function buildApiPayload(lead){
+  // Har batch ko ek campaignId milta hai. Server ise waMessages aur campaigns
+  // me likhta hai, aur CRM ka funnel usi se banta hai. Tareekh IST ki hai.
+  function apiCampaignId(){
+    const istDay = new Date(Date.now() + 19800000).toISOString().slice(0, 10);
+    const base = apiState.mode === 'template'
+      ? apiState.tplName
+      : ('my_' + (apiState.myTplId || 'tpl'));
+    return base + '_' + istDay;
+  }
+
+  function buildApiPayload(lead, leadId){
+    const payload = buildApiPayloadBase(lead);
+    payload.campaignId = apiCampaignId();
+    if (leadId) payload.leadId = leadId;
+    return payload;
+  }
+
+  function buildApiPayloadBase(lead){
     const to = cleanPhoneForWhatsApp(lead.phone) || lead.phone;
     const name = apiState.mode === 'template' ? waParamName(lead) : leadDisplayName(lead);
     if (apiState.mode === 'template') {
@@ -2644,7 +2708,7 @@
     const res = await fetch(WA_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
-      body: JSON.stringify(buildApiPayload(lead))
+      body: JSON.stringify(buildApiPayload(lead, leadId))
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return Object.assign({ ok: false }, friendlyApiError(res.status, data));
@@ -2763,7 +2827,302 @@
     paintMaterials = function(){ _paintMaterials.apply(this, arguments); renderApiSendPanel(); };
   })();
 
+  /* ══════════════════════════════════════════════════════════════════════
+     Campaign CRM — bheje hue WhatsApp messages ka nateeja
+     ----------------------------------------------------------------------
+     Data khud se nahi banta: Cloud Functions bharti hain.
+       recordSent()          -> waContacts/{phone}  (bhejte hi)
+       webhook ke statuses   -> delivered / read / failed
+       webhook ke messages   -> reply, aur STOP par optOut
+     Ye page sirf padhta hai - kuch likhta nahi.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  const CRM_STAGE_META = {
+    joined:    { label: 'जुड़ गए',       bg:'#DCF7DC', fg:'#1E7D1E' },
+    replied:   { label: 'जवाब दिया',     bg:'#DCF7DC', fg:'#1E7D1E' },
+    read:      { label: 'पढ़ा',          bg:'#DBEFFB', fg:'#0B5F80' },
+    delivered: { label: 'पहुँचा',        bg:'#FFF3CD', fg:'#8A6D1A' },
+    sent:      { label: 'भेजा',          bg:'#F0F0F0', fg:'#555555' },
+    failed:    { label: 'नहीं पहुँचा',    bg:'#FFEBEE', fg:'#C62828' },
+    opted_out: { label: 'मना किया',      bg:'#FFEBEE', fg:'#C62828' }
+  };
+  // Upar se neeche = sabse zyada kaam ka pehle. Yahi list funnel ka order bhi hai.
+  const CRM_ORDER = ['joined', 'replied', 'read', 'delivered', 'sent', 'failed', 'opted_out'];
+
+  const CRM_PAGE = 100;
+  let crmCache    = {};
+  let crmLeadIdx  = {};
+  let crmFilter   = 'all';
+  let crmCampaign = 'all';
+  let crmSearch   = '';
+  let crmShown    = CRM_PAGE;
+
+  function crmLast10(p){ const d = String(p || '').replace(/\D/g, ''); return d.slice(-10); }
+
+  // leadsCache me lead ka apna pipeline status hai (interested / registered).
+  // Wahi hamara bharosemand "jud gaye" signal hai - WhatsApp ye nahi batata.
+  function buildCrmLeadIndex(){
+    crmLeadIdx = {};
+    Object.keys(leadsCache || {}).forEach(id => {
+      const l = leadsCache[id];
+      const ph = crmLast10(l && l.phone);
+      if (ph.length === 10) crmLeadIdx[ph] = Object.assign({ _id: id }, l);
+    });
+  }
+
+  function crmStageOf(c){
+    if (c.optOut || c.stage === 'opted_out') return 'opted_out';
+    const lead = crmLeadIdx[crmLast10(c.phone)];
+    // "Jud gaye" ka matlab: lead ab client ban chuki hai (My Clients me hai).
+    // Sirf "interested" par nishaan lagana kaafi nahi - wo manual marker hai.
+    if (lead && lead.status === 'registered') return 'joined';
+    if (c.replyCount > 0 || c.stage === 'replied') return 'replied';
+    if (c.stage === 'failed') return 'failed';
+    if (c.lastReadAt) return 'read';
+    if (c.lastDeliveredAt) return 'delivered';
+    return 'sent';
+  }
+
+  function crmAgo(ts){
+    const n = Number(ts) || 0;
+    if (!n) return '—';
+    const mins = Math.floor((Date.now() - n) / 60000);
+    if (mins < 1)  return 'अभी';
+    if (mins < 60) return mins + ' मिनट पहले';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + ' घंटे पहले';
+    const days = Math.floor(hrs / 24);
+    if (days === 1) return 'कल';
+    return days + ' दिन पहले';
+  }
+
+  function crmWindowOpen(c){ return Number(c.windowExpiresAt || 0) > Date.now(); }
+
+  window.loadCrm = async function(){
+    const el = document.getElementById('crmListEl');
+    const code = window._currentPartnerCode;
+    if (!el) return;
+    if (!code) { el.innerHTML = '<div class="empty">पहले अपना partner code डालिए।</div>'; return; }
+    if (window._demoMode) {
+      el.innerHTML = '<div class="empty">Demo mode में CRM नहीं दिखता — ये असली भेजे हुए मैसेज का हिसाब है।</div>';
+      return;
+    }
+
+    el.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      await window._pEnsureAuth();
+      const q = window._pquery(
+        window._pref(window._pdb, 'waContacts'),
+        window._porderByChild('partnerCode'),
+        window._pequalTo(code)
+      );
+      const snap = await window._pget(q);
+      crmCache = snap.exists() ? (snap.val() || {}) : {};
+    } catch (e) {
+      console.warn('CRM load failed', e);
+      el.innerHTML = '<div class="empty">CRM नहीं खुल सका: ' + escapeHtml(e.message || String(e)) + '</div>';
+      return;
+    }
+    crmShown = CRM_PAGE;
+    renderCrmCampaigns();
+    renderCrm();
+  };
+
+  function crmRows(){
+    buildCrmLeadIndex();
+    const term = crmSearch;
+    return Object.keys(crmCache).map(k => {
+      const c = Object.assign({}, crmCache[k]);
+      if (!c.phone) c.phone = k;
+      c._stage = crmStageOf(c);
+      return c;
+    }).filter(c => {
+      if (crmCampaign !== 'all' && c.lastCampaignId !== crmCampaign) return false;
+      if (!term) return true;
+      return (String(c.name || '').toLowerCase().indexOf(term) !== -1) ||
+             (String(c.phone || '').indexOf(term) !== -1);
+    });
+  }
+
+  function renderCrmCampaigns(){
+    const sel = document.getElementById('crmCampaignSelect');
+    if (!sel) return;
+    const seen = {};
+    Object.keys(crmCache).forEach(k => {
+      const id = crmCache[k].lastCampaignId;
+      if (id) seen[id] = (seen[id] || 0) + 1;
+    });
+    const ids = Object.keys(seen).sort().reverse();
+    sel.innerHTML = '<option value="all">सभी campaigns (' + Object.keys(crmCache).length + ')</option>' +
+      ids.map(id => '<option value="' + escapeHtml(id) + '"' + (id === crmCampaign ? ' selected' : '') + '>' +
+        escapeHtml(id) + ' — ' + seen[id] + '</option>').join('');
+  }
+
+  window.setCrmCampaign = function(v){ crmCampaign = v; crmShown = CRM_PAGE; renderCrm(); };
+  window.setCrmSearch   = function(v){ crmSearch = String(v || '').trim().toLowerCase(); crmShown = CRM_PAGE; renderCrm(); };
+  window.setCrmFilter   = function(v){ crmFilter = v; crmShown = CRM_PAGE; renderCrm(); };
+  window.showMoreCrm    = function(){ crmShown += CRM_PAGE; renderCrm(); };
+
+  function renderCrm(){
+    const el = document.getElementById('crmListEl');
+    const fun = document.getElementById('crmFunnel');
+    if (!el || !fun) return;
+
+    const all = crmRows();
+    updateCountPill('crm', all.length);
+
+    // Funnel ki ginti campaign ke hisaab se hoti hai, stage filter se pehle
+    const counts = {};
+    CRM_ORDER.forEach(k => counts[k] = 0);
+    all.forEach(c => { counts[c._stage] = (counts[c._stage] || 0) + 1; });
+
+    fun.innerHTML =
+      '<div class="crm-tile' + (crmFilter === 'all' ? ' active' : '') + '" onclick="setCrmFilter(\'all\')">' +
+        '<div class="crm-n">' + all.length + '</div><div class="crm-l">सब</div></div>' +
+      CRM_ORDER.map(k => {
+        const m = CRM_STAGE_META[k];
+        return '<div class="crm-tile' + (crmFilter === k ? ' active' : '') + '" onclick="setCrmFilter(\'' + k + '\')">' +
+          '<div class="crm-n" style="color:' + m.fg + ';">' + (counts[k] || 0) + '</div>' +
+          '<div class="crm-l">' + m.label + '</div></div>';
+      }).join('');
+
+    const note = document.getElementById('crmNote');
+    if (note) {
+      note.innerHTML = 'ℹ️ "पढ़ा" वही दिखता है जिनके WhatsApp में blue-tick चालू है। ' +
+        'जिन्होंने बंद रखा है वो पढ़ने के बाद भी "पहुँचा" में ही रहेंगे — इसलिए असली पैमाना ' +
+        '<b>जवाब दिया</b> और <b>जुड़ गए</b> हैं।';
+    }
+
+    let rows = crmFilter === 'all' ? all.slice() : all.filter(c => c._stage === crmFilter);
+
+    // Sabse kaam ka upar: jud gaye / jawab diya, phir naye bheje hue
+    const rank = {}; CRM_ORDER.forEach((k, i) => rank[k] = i);
+    rows.sort((a, b) => {
+      const d = (rank[a._stage] || 9) - (rank[b._stage] || 9);
+      if (d) return d;
+      return (Number(b.lastInboundAt || b.lastSentAt || 0)) - (Number(a.lastInboundAt || a.lastSentAt || 0));
+    });
+
+    if (!rows.length) {
+      el.innerHTML = '<div class="empty">' +
+        (Object.keys(crmCache).length
+          ? 'इस खाने में कोई नहीं है।'
+          : 'अभी कोई रिकॉर्ड नहीं। "📤 WhatsApp API से भेजें" से मैसेज भेजिए — नतीजा यहाँ अपने आप आ जाएगा।') +
+        '</div>';
+      return;
+    }
+
+    const shown = rows.slice(0, crmShown);
+    el.innerHTML = shown.map(crmRowHtml).join('') +
+      (rows.length > crmShown
+        ? '<button class="btn ghost" style="width:100%; margin-top:8px;" onclick="showMoreCrm()">और ' +
+          Math.min(CRM_PAGE, rows.length - crmShown) + ' दिखाएँ (कुल ' + rows.length + ')</button>'
+        : '');
+  }
+
+  function crmRowHtml(c){
+    const m = CRM_STAGE_META[c._stage] || CRM_STAGE_META.sent;
+    const phone = String(c.phone || '');
+    const wa = 'https://wa.me/' + phone.replace(/\D/g, '');
+    const lead = crmLeadIdx[crmLast10(phone)];
+    const name = c.name || (lead && (lead.businessName || lead.name)) || phone;
+
+    let meta = 'भेजा: ' + crmAgo(c.lastSentAt);
+    if (c.lastDeliveredAt) meta += ' · पहुँचा: ' + crmAgo(c.lastDeliveredAt);
+    if (c.lastReadAt)      meta += ' · पढ़ा: ' + crmAgo(c.lastReadAt);
+    if (c.lastCampaignId)  meta += ' · ' + escapeHtml(c.lastCampaignId);
+
+    let reply = '';
+    if (c.lastInboundText) {
+      reply = '<div class="crm-reply">“' + escapeHtml(String(c.lastInboundText).slice(0, 400)) + '”' +
+        '<div style="font-size:11px; color:var(--dim); margin-top:3px;">' + crmAgo(c.lastInboundAt) +
+        (c.replyCount > 1 ? ' · कुल ' + c.replyCount + ' जवाब' : '') + '</div></div>';
+    }
+
+    let acts;
+    if (c._stage === 'opted_out') {
+      acts = '<div class="crm-acts"><span style="font-size:11.5px; color:#C62828; font-weight:700;">' +
+        '⛔ इन्होंने मना किया है — दोबारा मैसेज न भेजें</span></div>';
+    } else {
+      const win = crmWindowOpen(c)
+        ? '<span class="crm-open">🟢 24 घंटे की खिड़की खुली है</span>'
+        : '<span class="crm-shut">खिड़की बंद — template ही भेजा जा सकता है</span>';
+      acts = '<div class="crm-acts">' +
+        '<a class="crm-wa" href="' + wa + '" target="_blank" rel="noopener">💬 WhatsApp खोलें</a>' +
+        (lead ? '<button class="crm-ghost" onclick="crmJumpToLead(\'' + lead._id + '\')">🎯 lead देखें</button>' : '') +
+        win + '</div>';
+    }
+
+    let failNote = '';
+    if (c._stage === 'failed' && (c.lastErrorTitle || c.lastErrorCode)) {
+      failNote = '<div class="crm-meta" style="color:#C62828;">⚠ ' +
+        escapeHtml(String(c.lastErrorTitle || ('Error ' + c.lastErrorCode))) + '</div>';
+    }
+
+    return '<div class="crm-row">' +
+      '<div class="crm-top">' +
+        '<span class="crm-name">' + escapeHtml(String(name)) + '</span>' +
+        '<span class="crm-badge" style="background:' + m.bg + '; color:' + m.fg + ';">' + m.label + '</span>' +
+      '</div>' +
+      '<div class="crm-meta">' + escapeHtml(phone) + ' · ' + meta + '</div>' +
+      failNote + reply + acts +
+    '</div>';
+  }
+
+  // CRM se seedha us lead tak - My Leads khol kar, uski row par le jaata hai
+  window.crmJumpToLead = function(leadId){
+    const card = document.getElementById('leadsCard');
+    if (card) card.classList.remove('collapsed');
+    if (typeof setLeadFilter === 'function') setLeadFilter('all');
+    setTimeout(function(){
+      const row = document.getElementById('leadRow_' + leadId);
+      if (row) {
+        row.classList.remove('collapsed');
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.style.outline = '2px solid var(--saffron)';
+        setTimeout(function(){ row.style.outline = ''; }, 2500);
+      } else if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+  };
+
+  window.exportCrmCsv = function(){
+    const rows = crmFilter === 'all' ? crmRows() : crmRows().filter(c => c._stage === crmFilter);
+    if (!rows.length) { alert('निर्यात के लिए कुछ नहीं है।'); return; }
+    const head = ['Name', 'Phone', 'Stage', 'Campaign', 'SentAt', 'DeliveredAt', 'ReadAt', 'Replies', 'LastReply', 'OptOut'];
+    const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const iso = t => (Number(t) ? new Date(Number(t)).toISOString() : '');
+    const csv = [head.map(esc).join(',')].concat(rows.map(c => [
+      c.name || '', c.phone || '', (CRM_STAGE_META[c._stage] || {}).label || c._stage,
+      c.lastCampaignId || '', iso(c.lastSentAt), iso(c.lastDeliveredAt), iso(c.lastReadAt),
+      c.replyCount || 0, c.lastInboundText || '', c.optOut ? 'YES' : ''
+    ].map(esc).join(','))).join('\r\n');
+
+    // BOM lagane se Excel Hindi aur emoji sahi dikhata hai
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'campaign-crm-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  };
+
+  // Bulk send khatam hote hi CRM apne aap taaza ho jaaye. Meta ke delivered/read
+  // events thode secondon baad aate hain, isliye ek chhota intezaar.
+  (function hookCrmRefresh(){
+    if (typeof window.startBulkApiSend !== 'function') return;
+    const _bulk = window.startBulkApiSend;
+    window.startBulkApiSend = async function(){
+      const r = await _bulk.apply(this, arguments);
+      setTimeout(function(){ if (window.loadCrm) window.loadCrm(); }, 8000);
+      return r;
+    };
+  })();
+
+
   renderApiSendPanel();
+  if (window._currentPartnerCode && window.loadCrm) window.loadCrm();
 
 </script>
 
