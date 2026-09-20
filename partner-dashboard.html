@@ -460,6 +460,7 @@
             <option value="all">सभी campaigns</option>
           </select>
           <button class="btn ghost" style="padding:8px 14px;" onclick="loadCrm()">🔄 ताज़ा करें</button>
+          <button class="btn ghost" style="padding:8px 14px;" onclick="loadCrm(true)" title="partnerCode के बिना वाले रिकॉर्ड भी ढूँढता है">🔎 पूरा scan</button>
           <button class="btn ghost" style="padding:8px 14px;" onclick="exportCrmCsv()">⬇ CSV</button>
         </div>
 
@@ -919,8 +920,11 @@
     document.getElementById('fbShareBtn').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(refLink);
 
     runCalculator();
-    loadLeads();
-    loadCrm().catch(e => console.warn('loadCrm failed:', e));
+    // CRM leadsCache par nirbhar hai (naam, "jud gaye", phone-milaan), isliye
+    // leads pehle - warna pehli baar khaali ya adhoora dikhta hai.
+    loadLeads()
+      .then(function(){ return loadCrm(); })
+      .catch(e => console.warn('leads/CRM load failed:', e));
     renderMaterials().catch(e => console.warn('renderMaterials failed:', e));
     initCollapsibleCards();
     loadCategoryOptions();
@@ -2919,7 +2923,7 @@
 
   function crmNormCode(v){ return String(v || '').replace(/\s+/g, '').toUpperCase(); }
 
-  window.loadCrm = async function(){
+  window.loadCrm = async function(force){
     const el = document.getElementById('crmListEl');
     const code = window._currentPartnerCode;
     if (!el) return;
@@ -2951,16 +2955,23 @@
 
       // 2. Kuch nahi mila to poora node padhkar khud milaan — purane record
       //    jinme partnerCode hai hi nahi, wo yahan pakde jaate hain.
-      if (!Object.keys(crmCache).length) {
+      if (force || !Object.keys(crmCache).length) {
         const snap = await window._pget(window._pref(window._pdb, 'waContacts'));
         const all = snap.exists() ? (snap.val() || {}) : {};
         const want = crmNormCode(code);
         const admin = !!window._saarthiAdminUnlocked;
+        buildCrmLeadIndex();
+        let picked = 0;
         Object.keys(all).forEach(k => {
-          const pc = crmNormCode(all[k] && all[k].partnerCode);
-          if (pc === want || (!pc && admin)) crmCache[k] = all[k];
+          const row = all[k] || {};
+          const pc = crmNormCode(row.partnerCode);
+          // partnerCode sirf bhejte waqt likha jaata hai. Agar koi khud message
+          // kare (ya record dobara bana ho) to wo khaali rehta hai - is liye
+          // apni lead list ke number se bhi milaan karte hain.
+          const mine = !!crmLeadIdx[crmLast10(row.phone || k)];
+          if (pc === want || mine || (!pc && admin)) { crmCache[k] = row; picked++; }
         });
-        how = 'पूरा scan (' + Object.keys(crmCache).length + '/' + Object.keys(all).length + ')';
+        how = 'पूरा scan — ' + picked + '/' + Object.keys(all).length;
       }
     } catch (e) {
       console.warn('CRM load failed', e);
