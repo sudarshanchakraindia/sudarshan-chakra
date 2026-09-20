@@ -145,6 +145,43 @@
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null"
       }
+    },
+    "waMessages": {
+      ".read": "auth != null",
+      ".write": false,
+      ".indexOn": [
+        "campaignId",
+        "to",
+        "status",
+        "sentAt"
+      ]
+    },
+    "waContacts": {
+      ".read": "auth != null",
+      ".write": false,
+      ".indexOn": [
+        "stage",
+        "optOut",
+        "partnerCode",
+        "lastCampaignId",
+        "lastSentAt"
+      ]
+    },
+    "waInbox": {
+      ".read": "auth != null",
+      ".write": false,
+      ".indexOn": [
+        "from",
+        "ts"
+      ]
+    },
+    "campaigns": {
+      ".read": "auth != null",
+      ".write": false,
+      ".indexOn": [
+        "createdAt",
+        "partnerCode"
+      ]
     }
   }
 }
