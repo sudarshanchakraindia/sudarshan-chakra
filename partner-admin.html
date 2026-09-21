@@ -301,6 +301,71 @@
     navigator.clipboard.writeText(link).then(() => alert('✅ Dashboard link copied:\n' + link));
   };
 
+  // ── Send the partner their dashboard link + code (after approval) ──
+  function dashboardLinkFor(code){
+    return location.origin + location.pathname.replace('partner-admin.html', 'partner-dashboard.html') + '?code=' + encodeURIComponent(code);
+  }
+
+  // Finds a partner's details from the partners list, or from their application.
+  function partnerContact(code, appId){
+    const p = (window._partnersCache || {})[code] || {};
+    const apps = window._appsCache || {};
+    let a = appId ? apps[appId] : null;
+    if (!a && p.sourceApplicationId) a = apps[p.sourceApplicationId];
+    if (!a) a = Object.values(apps).find(x => x.assignedCode === code) || {};
+    return {
+      name:   p.name  || a.fullName || '',
+      mobile: p.phone || a.mobile   || '',
+      email:  p.email || a.email    || '',
+      appId:  appId || p.sourceApplicationId || Object.keys(apps).find(k => apps[k].assignedCode === code) || ''
+    };
+  }
+
+  function dashboardMessageText(name, code){
+    const link = dashboardLinkFor(code);
+    return `Namaste ${name || ''}!\n\nCongratulations! 🎉 Aapki application approve ho gayi hai — aap ab Sudarshan Chakra India (SAARTHI) ke City Channel Partner hain.\n\n🔑 Aapka Partner Code: ${code}\n\n📊 Apna Partner Dashboard yahan kholiye:\n${link}\n\n(Agar link se seedha na khule, to dashboard page par apna Partner Code ${code} daal kar "Open" dabaiye.)\n\nDashboard mein aapko milega: aapka referral link & QR code, personalised poster, marketing material, leads aur aapki kamai ki jaankari.\n\nYe code sirf aapke liye hai — kisi aur ke saath share na karein.\n\n- Team Sudarshan Chakra India`;
+  }
+
+  async function markDashboardSent(appId, via){
+    if (!appId) return;
+    try {
+      await set(ref(db, 'partnerApplications/' + appId + '/dashboardSentAt'), new Date().toISOString());
+      await set(ref(db, 'partnerApplications/' + appId + '/dashboardSentVia'), via);
+    } catch (e) { console.warn('Could not record dashboard sent:', e.code || e.message); }
+  }
+
+  window.sendDashboardWhatsApp = async function(code, appId){
+    const c = partnerContact(code, appId);
+    const number = formatIndianMobileForWhatsApp(c.mobile);
+    if (!number) { alert('⚠️ Is partner ka valid mobile number nahi mila.'); return; }
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(dashboardMessageText(c.name, code))}`, '_blank');
+    await markDashboardSent(c.appId, 'whatsapp');
+    loadApplications();
+  };
+
+  window.sendDashboardEmail = function(code, appId){
+    const c = partnerContact(code, appId);
+    if (!c.email) { alert('⚠️ Is partner ka email address nahi mila. WhatsApp se bhejiye.'); return; }
+    const subject = 'Welcome! Your Sudarshan Chakra India Partner Dashboard & Code (' + code + ')';
+    const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1'
+      + '&to=' + encodeURIComponent(c.email)
+      + '&su=' + encodeURIComponent(subject)
+      + '&body=' + encodeURIComponent(dashboardMessageText(c.name, code));
+    const win = window.open(gmailUrl, '_blank');
+    if (!win) { alert('⚠️ Browser ne popup block kar diya. Popups allow karein, ya "Copy Dashboard Message" use karein.'); return; }
+    setTimeout(async () => {
+      if (!confirm('Kya aapne Gmail mein ' + c.email + ' ko dashboard email SEND kar diya?')) return;
+      await markDashboardSent(c.appId, 'email');
+      loadApplications();
+    }, 800);
+  };
+
+  window.copyDashboardMessage = function(code){
+    const c = partnerContact(code);
+    navigator.clipboard.writeText(dashboardMessageText(c.name, code));
+    alert('✅ Message copy ho gaya (code + dashboard link). Ab kahin bhi paste karke bhej dijiye.');
+  };
+
   let payoutTargetCode = null;
   window.openPayout = function(code, name){
     payoutTargetCode = code;
@@ -351,7 +416,20 @@
         <div style="color:#7C4A1E; margin-top:2px;">Uploaded ${uploadedDate}. Choosing a new file below will replace it.</div>`;
     } else {
       currentEl.style.display = 'block';
-      currentEl.innerHTML = `⚠️ No signed agreement on file yet.`;
+      currentEl.innerHTML = `⚠️ No signed agreement file uploaded yet.`;
+    }
+
+    const online = onlineAgreementFor(p);
+    if (online) {
+      const when = online.consentGivenAt ? new Date(online.consentGivenAt).toLocaleString('en-IN') : '—';
+      const docs = online.idDocs
+        ? Object.entries(online.idDocs).map(([k, url]) => `<a href="${url}" target="_blank" style="margin-right:10px;">📄 ${k}</a>`).join('')
+        : '';
+      currentEl.innerHTML += `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #e5c9a0;">
+          ✅ Agreement accepted online by "<strong>${escapeHtml(online.consentSignatureName || '')}</strong>" on ${when}
+          ${docs ? `<div style="margin-top:6px;">${docs}</div>` : ''}
+          <div style="color:#7C4A1E; margin-top:4px; font-size:12px;">A signed PDF/Word copy is optional — upload one below only if you also have a physical copy.</div>
+        </div>`;
     }
 
     document.getElementById('manageCard').style.display = 'block';
@@ -410,12 +488,29 @@
     }
   };
 
+  // Returns the online consent record for a partner, if they signed the
+  // agreement through the application flow (copied onto the partner at
+  // approval, or found on their source application for older partners).
+  function onlineAgreementFor(p){
+    if (p.consentGiven) {
+      return { consentSignatureName: p.consentSignatureName, consentGivenAt: p.consentGivenAt, idDocs: p.idDocs };
+    }
+    const a = p.sourceApplicationId ? (window._appsCache || {})[p.sourceApplicationId] : null;
+    return (a && a.consentGiven) ? a : null;
+  }
+
   async function loadPartners(){
     try {
-      const [partnersSnap, providersSnap] = await Promise.all([
+      const [partnersSnap, providersSnap, appsSnap] = await Promise.all([
         get(ref(db, 'partners')),
-        get(ref(db, 'providers'))
+        get(ref(db, 'providers')),
+        get(ref(db, 'partnerApplications'))
       ]);
+      // Partners who came through the online application signed the agreement
+      // on partner-agreement.html. That consent (and their ID documents) is
+      // saved on partnerApplications/<id>, not on partners/<code>, so the
+      // partner row looks it up through sourceApplicationId.
+      window._appsCache = appsSnap.exists() ? appsSnap.val() : (window._appsCache || {});
       const partners = partnersSnap.exists() ? partnersSnap.val() : {};
       const allProviders = providersSnap.exists() ? Object.values(providersSnap.val()) : [];
 
@@ -430,9 +525,12 @@
         const p = partners[code];
         const count = allProviders.filter(pr => pr.referredByPartner === code).length;
         const hasAgreement = !!p.agreementFileUrl;
+        const srcApp = onlineAgreementFor(p);
         const agreementBadge = hasAgreement
           ? '<span class="agreement-badge yes">✅ On file</span>'
-          : '<span class="agreement-badge no">⚠️ Missing</span>';
+          : srcApp
+            ? '<span class="agreement-badge yes">✅ Signed online</span>'
+            : '<span class="agreement-badge no">⚠️ Missing</span>';
         return `
           <tr>
             <td>${p.name || '—'}</td>
@@ -444,6 +542,8 @@
             <td>${agreementBadge}</td>
             <td class="row-actions">
               <button class="link-btn" onclick="copyPartnerLink('${code}')">Copy Link</button>
+              <button class="link-btn" style="background:#25D366; color:#fff;" onclick="sendDashboardWhatsApp('${code}')">WhatsApp</button>
+              <button class="link-btn" style="background:#D44638; color:#fff;" onclick="sendDashboardEmail('${code}')">Email</button>
               <button class="payout-btn" onclick="openPayout('${code}','${(p.name||'').replace(/'/g,"")}')">Log Payout</button>
               <button class="manage-btn" onclick="openManage('${code}')">Manage</button>
             </td>
@@ -724,7 +824,12 @@
         <button class="btn-approve" onclick="approveApplication('${id}','${(a.fullName||'').replace(/'/g,"")}','${a.city||''}','${a.pincode||''}','${a.mobile||''}')">✅ Approve & Create Partner</button>
         <button class="btn-reject" onclick="rejectApplication('${id}')">✖ Reject</button>`;
     } else if (status === 'approved') {
-      actionsHtml = `<span style="font-size:12px; color:#2E7D32;">Partner code: <strong>${a.assignedCode || '—'}</strong></span>`;
+      const pc = a.assignedCode || '';
+      actionsHtml = `<div style="width:100%; font-size:12px; color:#2E7D32;">Partner code: <strong>${pc || '—'}</strong>${a.dashboardSentAt ? ` · 📤 Dashboard sent${a.dashboardSentVia ? ' via ' + a.dashboardSentVia : ''} on ${new Date(a.dashboardSentAt).toLocaleString('en-IN')}` : ''}</div>
+        ${pc ? `
+        <button class="btn-whatsapp" onclick="sendDashboardWhatsApp('${pc}','${id}')">📱 Send Dashboard via WhatsApp</button>
+        <button class="btn-email" onclick="sendDashboardEmail('${pc}','${id}')">✉️ Send Dashboard via Email</button>
+        <button class="btn-copy" onclick="copyDashboardMessage('${pc}')">🔗 Copy Dashboard Message</button>` : ''}`;
     } else if (status === 'rejected') {
       actionsHtml = `<span style="font-size:12px; color:#C62828;">${a.rejectedReason ? 'Reason: ' + a.rejectedReason : ''}</span>`;
     }
@@ -881,11 +986,20 @@
         return;
       }
 
-      await set(ref(db, 'partners/' + cleanCode), {
+      const srcApp = (window._appsCache || {})[id] || {};
+      const partnerRecord = {
         name, city, phone: mobile, pincode, status: 'active',
         appointedDate: new Date().toISOString(),
         sourceApplicationId: id
-      });
+      };
+      if (srcApp.email) partnerRecord.email = srcApp.email;
+      if (srcApp.consentGiven) {
+        partnerRecord.consentGiven = true;
+        partnerRecord.consentSignatureName = srcApp.consentSignatureName || '';
+        partnerRecord.consentGivenAt = srcApp.consentGivenAt || '';
+      }
+      if (srcApp.idDocs) partnerRecord.idDocs = srcApp.idDocs;
+      await set(ref(db, 'partners/' + cleanCode), partnerRecord);
       await set(ref(db, 'partnerPincodes/' + pincode), cleanCode);
       await set(ref(db, 'partnerApplications/' + id + '/status'), 'approved');
       await set(ref(db, 'partnerApplications/' + id + '/assignedCode'), cleanCode);
