@@ -812,20 +812,38 @@
     const link = agreementLinkFor(id);
     const subject = 'Sudarshan Chakra India — City Channel Partner Agreement';
     const body = agreementMessageText(a.fullName, link);
-    const mailUrl = `mailto:${a.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    // Opens Gmail's compose window (signed in as the admin) with To, Subject and
+    // Body filled in. A mailto: link depended on a desktop mail app being set as
+    // the default — when none was, nothing opened, yet the status still flipped
+    // to "Agreement Sent". Now the tab opens first (inside the click, so the
+    // popup is not blocked) and the status is saved only after the admin
+    // confirms they pressed Send in Gmail.
+    const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1'
+      + '&to=' + encodeURIComponent(a.email)
+      + '&su=' + encodeURIComponent(subject)
+      + '&body=' + encodeURIComponent(body);
 
-    try {
-      await markAgreementSentIfPending(id, 'email');
-      const a2 = document.createElement('a');
-      a2.href = mailUrl;
-      a2.click();
-      loadApplications();
-    } catch (e) {
-      alert('❌ Failed to update status: ' + e.code + ' — ' + e.message);
-      const a2 = document.createElement('a');
-      a2.href = mailUrl;
-      a2.click();
+    const win = window.open(gmailUrl, '_blank');
+    if (!win) {
+      alert('⚠️ Browser ne popup block kar diya. Is site ke liye popups allow karein, ya "Copy Agreement Link" use karke Gmail se manually bhejein.');
+      return;
     }
+
+    setTimeout(async () => {
+      const sent = confirm('Kya aapne Gmail mein ' + a.email + ' ko email SEND kar diya?\n\nOK = haan, bhej diya (status update hoga)\nCancel = abhi nahi bheja');
+      if (!sent) return;
+      try {
+        if (a.status === 'pending') {
+          await markAgreementSentIfPending(id, 'email');
+        } else {
+          await set(ref(db, 'partnerApplications/' + id + '/agreementSentAt'), new Date().toISOString());
+          await set(ref(db, 'partnerApplications/' + id + '/agreementSentVia'), 'email');
+        }
+        loadApplications();
+      } catch (e) {
+        alert('❌ Failed to update status: ' + e.code + ' — ' + e.message);
+      }
+    }, 800);
   };
 
   window.copyAgreementLink = function(id){
