@@ -1499,6 +1499,12 @@
   }
 
   function normLeadPhone(p){ return (p || '').replace(/\D/g, '').replace(/^91/, ''); } // last-10-digit compare, ignores +91 prefix
+  // WhatsApp only works on mobiles: an Indian mobile is 10 digits starting 6-9.
+  // Landlines like "0141 402 8447" (STD code) fail at Meta, so skip them up front.
+  function isMobileNumber(p){
+    const d = (p || '').replace(/\D/g, '').slice(-10);
+    return /^[6-9]\d{9}$/.test(d);
+  }
   function extractPincode(area){ const m = (area || '').match(/\b(\d{6})\b/); return m ? m[1] : ''; }
 
   function findDuplicateLeadPhones(ids){
@@ -2605,7 +2611,9 @@
     return '';
   }
 
+  let apiSkippedLandline = 0;
   function apiRecipients(){
+    apiSkippedLandline = 0;
     const key = apiCampaignKey();
     const seen = new Set();
     return Object.keys(leadsCache)
@@ -2615,6 +2623,7 @@
         if (apiState.statusFilter !== 'all' && l.status !== apiState.statusFilter) return false;
         const ph = normLeadPhone(l.phone);
         if (ph.length < 10 || seen.has(ph)) return false;   // no phone / duplicate number
+        if (!isMobileNumber(l.phone)) { apiSkippedLandline++; return false; } // landline — WhatsApp can't deliver
         if (!apiState.resend && l.lastApiSend && l.lastApiSend.key === key) return false;
         seen.add(ph);
         return true;
@@ -2630,7 +2639,8 @@
     const problem = apiChoiceProblem();
     el.innerHTML = problem
       ? `<span style="color:#c0392b;">${problem}</span>`
-      : `<b>${n}</b> leads को भेजा जाएगा (कुल ${all.length} योग्य) · लगभग ${Math.ceil(n * WA_GAP_MS / 60000)} मिनट`;
+      : `<b>${n}</b> leads को भेजा जाएगा (कुल ${all.length} योग्य) · लगभग ${Math.ceil(n * WA_GAP_MS / 60000)} मिनट`
+        + (apiSkippedLandline ? `<br><span style="color:#888;font-size:12px;">${apiSkippedLandline} landline numbers छोड़ दिए (WhatsApp सिर्फ mobile पर जाता है)</span>` : '');
   }
 
   function leadDisplayName(l){ return String(l.businessName || l.name || 'ji').trim() || 'ji'; }
