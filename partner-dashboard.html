@@ -204,6 +204,7 @@
   .crm-acts a, .crm-acts button{ font-size:11.5px; font-weight:700; padding:6px 12px; border-radius:6px; text-decoration:none; border:none; cursor:pointer; }
   .crm-wa{ background:#25D366; color:#fff; }
   .crm-ghost{ background:#eee; color:var(--deep); }
+  .crm-flyer{ background:var(--saffron, #FF7A00); color:#fff; }
   .crm-open{ font-size:11px; font-weight:700; color:#1e7d1e; }
   .crm-shut{ font-size:11px; color:var(--dim); }
 </style>
@@ -2853,7 +2854,8 @@
 
   const CRM_STAGE_META = {
     joined:    { label: 'जुड़ गए',       bg:'#DCF7DC', fg:'#1E7D1E' },
-    replied:   { label: 'जवाब दिया',     bg:'#DCF7DC', fg:'#1E7D1E' },
+    replied_human: { label: 'असली जवाब',  bg:'#DCF7DC', fg:'#1E7D1E' },
+    replied_auto:  { label: 'Auto-reply',  bg:'#EFEAF7', fg:'#5B3F8C' },
     read:      { label: 'पढ़ा',          bg:'#DBEFFB', fg:'#0B5F80' },
     delivered: { label: 'पहुँचा',        bg:'#FFF3CD', fg:'#8A6D1A' },
     sent:      { label: 'भेजा',          bg:'#F0F0F0', fg:'#555555' },
@@ -2861,7 +2863,7 @@
     opted_out: { label: 'मना किया',      bg:'#FFEBEE', fg:'#C62828' }
   };
   // Upar se neeche = sabse zyada kaam ka pehle. Yahi list funnel ka order bhi hai.
-  const CRM_ORDER = ['joined', 'replied', 'read', 'delivered', 'sent', 'failed', 'opted_out'];
+  const CRM_ORDER = ['joined', 'replied_human', 'replied_auto', 'read', 'delivered', 'sent', 'failed', 'opted_out'];
 
   const CRM_PAGE = 100;
   let crmCache    = {};
@@ -2890,11 +2892,180 @@
     // "Jud gaye" ka matlab: lead ab client ban chuki hai (My Clients me hai).
     // Sirf "interested" par nishaan lagana kaafi nahi - wo manual marker hai.
     if (lead && lead.status === 'registered') return 'joined';
-    if (c.replyCount > 0 || c.stage === 'replied') return 'replied';
+    if (c.replyCount > 0 || c.stage === 'replied') return crmReplyKind(c, lead) === 'auto' ? 'replied_auto' : 'replied_human';
     if (c.stage === 'failed') return 'failed';
     if (c.lastReadAt) return 'read';
     if (c.lastDeliveredAt) return 'delivered';
     return 'sent';
+  }
+
+  /* ── Auto-reply pehchaan ─────────────────────────────────────────────
+     Bahut se businesses ka WhatsApp khud "Thank you for contacting..." bhej
+     deta hai. Isse 24 ghante ki khidki to khulti hai, par kisi insaan ne
+     ruchi nahi dikhayi. Pehchaan ke teen sanket:
+       1. text me aam auto-reply wale shabd
+       2. jawab bhejne ke 90 second ke andar aaya (insaan itna tez kam hi likhta hai)
+       3. haath se lagaya nishaan (partner "ये असली जवाब है" / "ये auto है" dabaye)
+     Haath wala nishaan sabse upar maana jaata hai. */
+  const CRM_AUTO_PATTERNS = [
+    /thank(s| you)[^.!?]{0,40}(contact|reach|messag|writing|connect|getting in touch|choosing|interest)/i,
+    /(we|our team)[^.!?]{0,40}(get back|respond|reply|revert|contact you|reach you)/i,
+    /(let us know|tell us) how (we|can we)[^.!?]{0,20}help/i,
+    /how (can|may) (we|i) (help|assist)/i,
+    /(welcome to|greetings from|official (whatsapp|account))/i,
+    /(business|office|working) hours|currently (away|unavailable|closed)|out of (the )?office/i,
+    /(this is an? )?(automated|auto[- ]?generated|auto[- ]?reply)/i,
+    /my ?self [^.!?]{0,60}(owner|founder|ceo|director)/i,
+    /we (provide|offer|specialize|are a)[^.!?]{0,80}(services|solutions|agency|company)/i,
+    /(visit|check out) (our|us)[^.!?]{0,30}(website|site|page)|https?:\/\/\S+\s*$/i,
+    /(धन्यवाद|शुक्रिया)[^।!?]{0,40}(संपर्क|मैसेज|message)/,
+    /हम (जल्द|शीघ्र)[^।!?]{0,30}(संपर्क|जवाब)/
+  ];
+  // Chhote, insaani jawab — ye mile to auto nahi maante
+  const CRM_HUMAN_PATTERNS = [
+    /^(yes|yess|yeah|ok|okay|haan|han|ha|ji|hmm|interested|details?|send|call me|price|rate|kitna|kaise|kaun|who)\b/i,
+    /^(हाँ|हां|हा|जी|ठीक|भेजो|भेजिए|बताइए|बताओ|कितना|कैसे|कौन|रुचि)/,
+    /\b(interested|more details|call me|what is|how much|charges?|fees?|joining|kya hai|batao|bataiye)\b/i,
+    /(क्या है|कितने|कितना|बताइए|जानकारी|रुचि है|कॉल करें|कॉल कीजिए)/
+  ];
+  const CRM_KIND_LS = 'crmReplyKindOverride_v1';
+  function crmKindOverrides(){ try { return JSON.parse(localStorage.getItem(CRM_KIND_LS) || '{}') || {}; } catch (e) { return {}; } }
+
+  function crmReplyKind(c, lead){
+    const ph = crmLast10(c.phone);
+    if (lead && (lead.replyKind === 'auto' || lead.replyKind === 'human')) return lead.replyKind;
+    const ov = crmKindOverrides()[ph];
+    if (ov === 'auto' || ov === 'human') return ov;
+    const t = String(c.lastInboundText || '').trim();
+    if (!t) return 'human';                              // photo/voice — insaan ne bheja hoga
+    const auto = CRM_AUTO_PATTERNS.some(r => r.test(t));
+    const human = t.length <= 120 && CRM_HUMAN_PATTERNS.some(r => r.test(t));
+    if (human && !auto) return 'human';
+    if (auto) return 'auto';
+    // text se pata nahi chala — to samay dekho
+    const sent = Number(c.lastSentAt || 0), inb = Number(c.lastInboundAt || 0);
+    if (sent && inb && inb >= sent && inb - sent < 90000 && (c.replyCount || 1) <= 2) return 'auto';
+    return 'human';
+  }
+
+  window.crmSetReplyKind = async function(key, kind){
+    const c = crmCache[key] || {};
+    const ph = crmLast10(c.phone || key);
+    const lead = crmLeadIdx[ph];
+    const ov = crmKindOverrides(); ov[ph] = kind;
+    try { localStorage.setItem(CRM_KIND_LS, JSON.stringify(ov)); } catch (e) {}
+    if (lead && lead._id && leadsCache[lead._id]) {
+      leadsCache[lead._id].replyKind = kind;
+      if (!window._demoMode) {
+        try {
+          await window._pset(window._pref(window._pdb, 'partnerLeads/' + window._currentPartnerCode + '/' + lead._id + '/replyKind'), kind);
+        } catch (e) { console.warn('replyKind save failed', e); }
+      }
+    }
+    renderCrm();
+  };
+
+  /* ── API se flyer bhejna (sirf khuli 24 ghante ki khidki me) ─────────
+     Ye message hamare API number se jaata hai, na ki partner ke phone se.
+     Ek contact ko ek hi baar flyer — dobara bhejne par poochha jaata hai. */
+  const CRM_FLYER_LS = 'crmFlyerSent_v1';
+  function crmFlyerLog(){ try { return JSON.parse(localStorage.getItem(CRM_FLYER_LS) || '{}') || {}; } catch (e) { return {}; } }
+  function crmFlyerSentAt(c){
+    const ph = crmLast10(c.phone);
+    const lead = crmLeadIdx[ph];
+    if (lead && lead.lastFlyerSend && lead.lastFlyerSend.at) return lead.lastFlyerSend.at;
+    return crmFlyerLog()[ph] || '';
+  }
+
+  window.crmOpenFlyer = async function(key){
+    const c = Object.assign({}, crmCache[key] || {});
+    if (!c.phone) c.phone = key;
+    if (!window._saarthiAdminUnlocked) { alert('API से भेजना सिर्फ़ admin gateway से खुलता है।'); return; }
+    if (!crmWindowOpen(c)) { alert('24 घंटे की खिड़की बंद हो चुकी है। अब सिर्फ़ Approved Template भेजा जा सकता है।'); return; }
+    if (c.optOut) { alert('इन्होंने मना किया है — मैसेज न भेजें।'); return; }
+    if (!(materialsCache || []).length) { try { await buildMaterialsCache(); } catch (e) {} }
+    const imgs = (materialsCache || []).filter(m => waImageOk(m));
+    if (!imgs.length) { alert('कोई JPG/PNG पोस्टर/फ्लायर नहीं मिला। पहले partner-admin → Materials में अपलोड करें।'); return; }
+
+    const lead = crmLeadIdx[crmLast10(c.phone)];
+    const nm = lead ? waParamName(lead) : (String(c.name || '').split(/\s*[|/(\[–—:,]\s*|\s+-\s+/)[0].trim() || 'ji');
+    const prev = crmFlyerSentAt(c);
+    const kind = crmReplyKind(c, lead);
+    const defCaption = 'नमस्ते ' + nm + ' जी 🙏\nजवाब देने के लिए धन्यवाद। ये रहा SAARTHI offer का पूरा विवरण।\n\nरुचि हो तो "हाँ" लिखिए — हम आपको कॉल करेंगे।\nआगे मैसेज नहीं चाहिए तो STOP लिखिए।';
+
+    let box = document.getElementById('crmFlyerModal');
+    if (box) box.remove();
+    box = document.createElement('div');
+    box.id = 'crmFlyerModal';
+    box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    box.innerHTML =
+      '<div style="background:#fff;border-radius:12px;max-width:440px;width:100%;max-height:90vh;overflow:auto;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.25);">' +
+        '<div style="font-weight:800;font-size:16px;margin-bottom:4px;">📤 API से flyer भेजें</div>' +
+        '<div style="font-size:12.5px;color:#555;margin-bottom:10px;">' + escapeHtml(String(c.name || c.phone)) + ' · ' + escapeHtml(String(c.phone)) + '<br>ये हमारे WhatsApp API नंबर से जाएगा (आपके फ़ोन से नहीं)।</div>' +
+        (kind === 'auto' ? '<div style="background:#EFEAF7;color:#5B3F8C;font-size:12px;padding:8px;border-radius:6px;margin-bottom:8px;">ℹ️ इनका जवाब auto-reply लगता है — किसी इंसान ने अभी रुचि नहीं दिखाई। एक flyer ठीक है, इससे ज़्यादा न भेजें।</div>' : '') +
+        (prev ? '<div style="background:#FFF3CD;color:#8A6D1A;font-size:12px;padding:8px;border-radius:6px;margin-bottom:8px;">⚠️ इन्हें पहले ही flyer भेजा जा चुका है (' + escapeHtml(crmAgo(Date.parse(prev))) + ')। बार-बार भेजने से block/report का ख़तरा बढ़ता है।</div>' : '') +
+        '<label style="font-size:12px;font-weight:700;">पोस्टर / फ्लायर</label>' +
+        '<select id="crmFlyerSel" style="width:100%;padding:8px;margin:4px 0 10px;border:1px solid #ddd;border-radius:6px;">' +
+          imgs.map(m => '<option value="' + escapeHtml(m.id) + '">' + escapeHtml(m.name || m.fileName || 'Poster') + '</option>').join('') +
+        '</select>' +
+        '<label style="font-size:12px;font-weight:700;">साथ का message (caption)</label>' +
+        '<textarea id="crmFlyerCap" rows="6" maxlength="1000" style="width:100%;padding:8px;margin:4px 0 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;">' + escapeHtml(defCaption) + '</textarea>' +
+        '<div id="crmFlyerMsg" style="font-size:12.5px;margin-bottom:8px;"></div>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button class="btn ghost" onclick="document.getElementById(\'crmFlyerModal\').remove()">रद्द करें</button>' +
+          '<button class="btn primary" id="crmFlyerGo">📤 भेजें</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(box);
+    box.addEventListener('click', e => { if (e.target === box) box.remove(); });
+    document.getElementById('crmFlyerGo').onclick = () => crmSendFlyer(key, c, lead);
+  };
+
+  async function crmSendFlyer(key, c, lead){
+    const btn = document.getElementById('crmFlyerGo');
+    const msg = document.getElementById('crmFlyerMsg');
+    const mat = findMaterial(document.getElementById('crmFlyerSel').value);
+    const caption = String(document.getElementById('crmFlyerCap').value || '').trim();
+    if (!mat) { msg.innerHTML = '<span style="color:#c0392b;">फ्लायर चुनें।</span>'; return; }
+    btn.disabled = true; btn.textContent = 'भेज रहे हैं…';
+    try {
+      const user = await apiGetUser();
+      if (user === undefined) { btn.disabled = false; btn.textContent = '📤 भेजें'; return; }
+      const payload = { to: String(c.phone).replace(/\D/g, ''), type: 'image', link: mat.url, caption };
+      if (c.lastCampaignId) payload.campaignId = c.lastCampaignId;
+      if (lead && lead._id) payload.leadId = lead._id;
+      let ok = true, err = null;
+      if (!window._demoMode) {
+        const res = await fetch(WA_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await user.getIdToken()) },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { ok = false; err = friendlyApiError(res.status, data); }
+      }
+      if (!ok) {
+        msg.innerHTML = '<span style="color:#c0392b;">❌ ' + escapeHtml(err.msg) + '</span>';
+        btn.disabled = false; btn.textContent = '📤 फिर कोशिश करें';
+        return;
+      }
+      const at = new Date().toISOString();
+      const log = crmFlyerLog(); log[crmLast10(c.phone)] = at;
+      try { localStorage.setItem(CRM_FLYER_LS, JSON.stringify(log)); } catch (e) {}
+      if (lead && lead._id && leadsCache[lead._id]) {
+        const rec = { at, materialId: mat.id };
+        leadsCache[lead._id].lastFlyerSend = rec;
+        if (!window._demoMode) {
+          try { await window._pset(window._pref(window._pdb, 'partnerLeads/' + window._currentPartnerCode + '/' + lead._id + '/lastFlyerSend'), rec); }
+          catch (e) { console.warn('flyer log save failed', e); }
+        }
+      }
+      msg.innerHTML = '<span style="color:#1e7d1e;">✅ भेज दिया</span>';
+      setTimeout(() => { const b = document.getElementById('crmFlyerModal'); if (b) b.remove(); renderCrm(); }, 900);
+    } catch (e) {
+      msg.innerHTML = '<span style="color:#c0392b;">❌ ' + escapeHtml(e.message || String(e)) + '</span>';
+      btn.disabled = false; btn.textContent = '📤 फिर कोशिश करें';
+    }
   }
 
   function crmAgo(ts){
@@ -3000,6 +3171,7 @@
     const term = crmSearch;
     return Object.keys(crmCache).map(k => {
       const c = Object.assign({}, crmCache[k]);
+      c._key = k;
       if (!c.phone) c.phone = k;
       c._stage = crmStageOf(c);
       return c;
@@ -3112,13 +3284,23 @@
       acts = '<div class="crm-acts"><span style="font-size:11.5px; color:#C62828; font-weight:700;">' +
         '⛔ इन्होंने मना किया है — दोबारा मैसेज न भेजें</span></div>';
     } else {
-      const win = crmWindowOpen(c)
+      const open = crmWindowOpen(c);
+      const win = open
         ? '<span class="crm-open">🟢 24 घंटे की खिड़की खुली है</span>'
         : '<span class="crm-shut">खिड़की बंद — template ही भेजा जा सकता है</span>';
+      const k = escapeHtml(JSON.stringify(String(c._key || phone)));
+      const flyerAt = crmFlyerSentAt(c);
+      const flyer = (open && window._saarthiAdminUnlocked)
+        ? '<button class="crm-flyer" onclick="crmOpenFlyer(' + k + ')">' + (flyerAt ? '🖼️ flyer भेजा ✓' : '🖼️ API से flyer भेजें') + '</button>'
+        : '';
+      let kindBtn = '';
+      if (c._stage === 'replied_auto')  kindBtn = '<button class="crm-ghost" title="ग़लती से auto माना गया हो तो" onclick="crmSetReplyKind(' + k + ',\'human\')">👤 ये असली जवाब है</button>';
+      if (c._stage === 'replied_human') kindBtn = '<button class="crm-ghost" title="ये मशीन का auto-reply हो तो" onclick="crmSetReplyKind(' + k + ',\'auto\')">🤖 ये auto है</button>';
       acts = '<div class="crm-acts">' +
-        '<a class="crm-wa" href="' + wa + '" target="_blank" rel="noopener">💬 WhatsApp खोलें</a>' +
+        flyer +
+        '<a class="crm-wa" href="' + wa + '" target="_blank" rel="noopener" title="आपके अपने फ़ोन/कंप्यूटर के WhatsApp से खुलेगा — API नंबर से नहीं">💬 WhatsApp खोलें (अपना नंबर)</a>' +
         (lead ? '<button class="crm-ghost" onclick="crmJumpToLead(\'' + lead._id + '\')">🎯 lead देखें</button>' : '') +
-        win + '</div>';
+        kindBtn + win + '</div>';
     }
 
     let failNote = '';
