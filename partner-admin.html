@@ -80,6 +80,7 @@
         <button class="tab-btn active" id="tabBtnPartners" onclick="switchTab('partners')">👥 Partners</button>
         <button class="tab-btn" id="tabBtnApplications" onclick="switchTab('applications')">📋 Applications <span id="pendingCount"></span></button>
         <button class="tab-btn" id="tabBtnMaterials" onclick="switchTab('materials')">🎨 Materials</button>
+        <button class="tab-btn" id="tabBtnLedger" onclick="switchTab('ledger')">💵 Fee Ledger</button>
       </div>
 
       <div id="tabPartners">
@@ -102,13 +103,14 @@
       <div class="card">
         <h2>👥 All Partners</h2>
         <table>
-          <thead><tr><th>Name</th><th>City</th><th>Pincode</th><th>Code</th><th>Status</th><th>Providers</th><th>Agreement</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>City</th><th>Territory Pincodes</th><th>Code</th><th>Status</th><th>Providers</th><th>Agreement</th><th>Fee Share</th><th></th></tr></thead>
           <tbody id="partnerBody"><tr><td colspan="7">Loading…</td></tr></tbody>
         </table>
       </div>
 
       <div class="card" id="payoutCard" style="display:none;">
         <h2>💰 Log Payout — <span id="payoutForName"></span></h2>
+        <p id="payoutDue" style="font-size:13px; color:#1e7d1e; font-weight:700; margin-top:-4px;"></p>
         <label>Amount (₹)</label>
         <input id="payoutAmount" type="number">
         <label>Note</label>
@@ -124,6 +126,10 @@
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
         </select>
+
+        <label>Territory Pincodes (exclusive — comma separated, e.g. 342001, 342003, 342005)</label>
+        <textarea id="managePins" rows="2" placeholder="342001, 342003"></textarea>
+        <p style="font-size:11px; color:#7C4A1E; margin:2px 0 0;">Each pincode can belong to only one partner. Hires of providers in these pincodes earn this partner 25% of the ₹51 portal fee.</p>
 
         <label>Internal Notes (not shown to partner)</label>
         <textarea id="manageNotes" placeholder="e.g. Renewal due March 2027, met at expo, etc."></textarea>
@@ -161,6 +167,26 @@
           </div>
 
           <div id="applicationsBody">Loading…</div>
+        </div>
+      </div>
+
+      <div id="tabLedger" style="display:none;">
+        <div class="card">
+          <h2>💵 Portal Fee &amp; Partner Share Ledger</h2>
+          <p style="font-size:12px; color:#7C4A1E; margin-top:-6px;">Every admin-approved hire. Portal fee ₹51 → 25% to the City Channel Partner whose territory has the hired provider's pincode, 75% to the company. Hires with no active partner in that pincode: 100% company.</p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:1; min-width:140px;"><label>Month</label><input type="month" id="ledgerMonth" onchange="renderLedger()"></div>
+            <div style="flex:1; min-width:160px;"><label>Partner</label><select id="ledgerPartner" onchange="renderLedger()"><option value="">All</option><option value="__none">No partner (company only)</option></select></div>
+            <button class="btn" style="margin-top:0;" onclick="loadLedger()">🔄 Reload</button>
+            <button class="btn" style="margin-top:0; background:#1e7d1e;" onclick="downloadLedgerCsv()">⬇️ CSV</button>
+          </div>
+          <div id="ledgerTotals" style="margin:14px 0; font-size:13px;"></div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Date</th><th>UTR</th><th>Provider / Service</th><th>Pincode</th><th>Partner</th><th>Fee</th><th>Partner 25%</th><th>Company</th><th>Tip</th><th>Charity</th><th>Paid</th></tr></thead>
+            <tbody id="ledgerBody"><tr><td colspan="11">Loading…</td></tr></tbody>
+          </table>
+          </div>
         </div>
       </div>
 
@@ -277,7 +303,7 @@
       }
 
       await set(ref(db, 'partners/' + code), {
-        name, city, phone, pincode, status: 'active',
+        name, city, phone, pincode, pincodes: { [pincode]: true }, status: 'active',
         appointedDate: new Date().toISOString()
       });
       await set(ref(db, 'partnerPincodes/' + pincode), code);
@@ -370,6 +396,10 @@
   window.openPayout = function(code, name){
     payoutTargetCode = code;
     document.getElementById('payoutForName').textContent = name + ' (' + code + ')';
+    const money = (window._partnerMoney || {})[code];
+    const dueEl = document.getElementById('payoutDue');
+    if (dueEl) dueEl.textContent = money ? `Earned ${inr(money.earned)} · Paid ${inr(money.paid)} · Balance due ${inr(money.due)}` : '';
+    if (money && money.due > 0) document.getElementById('payoutAmount').value = Math.round(money.due * 100) / 100;
     document.getElementById('payoutCard').style.display = 'block';
     document.getElementById('payoutCard').scrollIntoView({ behavior:'smooth' });
   };
@@ -387,6 +417,7 @@
       document.getElementById('payoutNote').value = '';
       document.getElementById('payoutCard').style.display = 'none';
       alert('✅ Payout logged.');
+      loadPartners();
     } catch (e) {
       alert('❌ Save failed: ' + e.code + ' — ' + e.message);
       console.error('submitPayout error:', e);
@@ -404,6 +435,7 @@
     document.getElementById('manageForName').textContent = (p.name || '') + ' (' + code + ')';
     document.getElementById('manageStatus').value = p.status || 'active';
     document.getElementById('manageNotes').value = p.notes || '';
+    document.getElementById('managePins').value = partnerPins(p).join(', ');
     document.getElementById('manageAgreementFile').value = '';
     document.getElementById('manageUploadStatus').textContent = '';
     document.getElementById('manageMsg').textContent = '';
@@ -460,9 +492,33 @@
       if (file.size > 15 * 1024 * 1024) { msg.textContent = '❌ File too large (max 15MB).'; msg.style.color = '#c0392b'; return; }
     }
 
+    // Territory pincodes — validate before saving anything
+    const rawPins = document.getElementById('managePins').value.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
+    const badPins = rawPins.filter(x => !/^[0-9]{6}$/.test(x));
+    if (badPins.length) { msg.textContent = '❌ Invalid pincode(s): ' + badPins.join(', '); msg.style.color = '#c0392b'; return; }
+    const newPins = [...new Set(rawPins)];
+    const oldPins = partnerPins((window._partnersCache || {})[code]);
+    try {
+      for (const pin of newPins) {
+        const owner = await get(ref(db, 'partnerPincodes/' + pin));
+        if (owner.exists() && owner.val() !== code) {
+          msg.textContent = '❌ Pincode ' + pin + ' already belongs to partner ' + owner.val() + '. Remove it there first.';
+          msg.style.color = '#c0392b';
+          return;
+        }
+      }
+    } catch (e) { msg.textContent = '❌ Pincode check failed: ' + e.message; msg.style.color = '#c0392b'; return; }
+
     try {
       await set(ref(db, 'partners/' + code + '/status'), status);
       await set(ref(db, 'partners/' + code + '/notes'), notes);
+      for (const pin of oldPins.filter(x => !newPins.includes(x))) {
+        const owner = await get(ref(db, 'partnerPincodes/' + pin));
+        if (owner.exists() && owner.val() === code) await remove(ref(db, 'partnerPincodes/' + pin));
+      }
+      for (const pin of newPins) await set(ref(db, 'partnerPincodes/' + pin), code);
+      await set(ref(db, 'partners/' + code + '/pincodes'), newPins.length ? Object.fromEntries(newPins.map(x => [x, true])) : null);
+      await set(ref(db, 'partners/' + code + '/pincode'), newPins[0] || null);
 
       if (file) {
         uploadStatus.textContent = 'Uploading agreement…';
@@ -499,13 +555,28 @@
     return (a && a.consentGiven) ? a : null;
   }
 
+  // A partner's exclusive territory = partners/<code>/pincodes {pin:true}
+  // (older records only have the single partners/<code>/pincode field).
+  function partnerPins(p){
+    const set = new Set(Object.keys((p && p.pincodes) || {}));
+    if (p && p.pincode) set.add(String(p.pincode));
+    return [...set].filter(x => /^[0-9]{6}$/.test(x)).sort();
+  }
+  window.partnerPins = partnerPins;
+
   async function loadPartners(){
     try {
-      const [partnersSnap, providersSnap, appsSnap] = await Promise.all([
+      const [partnersSnap, providersSnap, appsSnap, earnSnap, paySnap] = await Promise.all([
         get(ref(db, 'partners')),
         get(ref(db, 'providers')),
-        get(ref(db, 'partnerApplications'))
+        get(ref(db, 'partnerApplications')),
+        get(ref(db, 'partnerEarnings')).catch(() => null),
+        get(ref(db, 'partnerPayouts')).catch(() => null)
       ]);
+      const earnAll = earnSnap && earnSnap.exists() ? earnSnap.val() : {};
+      const payAll  = paySnap && paySnap.exists() ? paySnap.val() : {};
+      const sumOf = (obj, k) => Object.values(obj || {}).reduce((t, r) => t + (Number(r[k])||0), 0);
+      window._partnerMoney = {};
       // Partners who came through the online application signed the agreement
       // on partner-agreement.html. That consent (and their ID documents) is
       // saved on partnerApplications/<id>, not on partners/<code>, so the
@@ -517,13 +588,16 @@
       const body = document.getElementById('partnerBody');
       const codes = Object.keys(partners);
       if (codes.length === 0) {
-        body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:16px;">No partners added yet</td></tr>';
+        body.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:16px;">No partners added yet</td></tr>';
         return;
       }
       window._partnersCache = partners;
       body.innerHTML = codes.map(code => {
         const p = partners[code];
         const count = allProviders.filter(pr => pr.referredByPartner === code).length;
+        const earned = sumOf(earnAll[code], 'shareAmount'), paid = sumOf(payAll[code], 'amount');
+        window._partnerMoney[code] = { earned, paid, due: Math.max(0, earned - paid) };
+        const pins = partnerPins(p);
         const hasAgreement = !!p.agreementFileUrl;
         const srcApp = onlineAgreementFor(p);
         const agreementBadge = hasAgreement
@@ -535,11 +609,12 @@
           <tr>
             <td>${p.name || '—'}</td>
             <td>${p.city || '—'}</td>
-            <td>${p.pincode || '—'}</td>
+            <td style="max-width:160px;">${pins.length ? pins.join(', ') : '—'}</td>
             <td>${code}</td>
             <td>${p.status || 'active'}</td>
             <td>${count}</td>
             <td>${agreementBadge}</td>
+            <td style="white-space:nowrap; font-size:12px;">Earned ${inr(earned)}<br>Paid ${inr(paid)}<br><b>Due ${inr(Math.max(0, earned - paid))}</b></td>
             <td class="row-actions">
               <button class="link-btn" onclick="copyPartnerLink('${code}')">Copy Link</button>
               <button class="link-btn" style="background:#25D366; color:#fff;" onclick="sendDashboardWhatsApp('${code}')">WhatsApp</button>
@@ -552,7 +627,7 @@
       }).join('');
     } catch (e) {
       document.getElementById('partnerBody').innerHTML =
-        `<tr><td colspan="8" style="text-align:center; padding:16px; color:#c0392b;">❌ Load failed: ${e.code} — ${e.message}</td></tr>`;
+        `<tr><td colspan="9" style="text-align:center; padding:16px; color:#c0392b;">❌ Load failed: ${e.code} — ${e.message}</td></tr>`;
       console.error('loadPartners error:', e);
     }
   }
@@ -564,11 +639,72 @@
     document.getElementById('tabPartners').style.display     = tab === 'partners' ? 'block' : 'none';
     document.getElementById('tabApplications').style.display = tab === 'applications' ? 'block' : 'none';
     document.getElementById('tabMaterials').style.display    = tab === 'materials' ? 'block' : 'none';
+    document.getElementById('tabLedger').style.display       = tab === 'ledger' ? 'block' : 'none';
+    document.getElementById('tabBtnLedger').classList.toggle('active', tab === 'ledger');
     document.getElementById('tabBtnPartners').classList.toggle('active', tab === 'partners');
     document.getElementById('tabBtnApplications').classList.toggle('active', tab === 'applications');
     document.getElementById('tabBtnMaterials').classList.toggle('active', tab === 'materials');
     if (tab === 'applications') loadApplications();
     if (tab === 'materials') loadMaterialsAdmin();
+    if (tab === 'ledger') loadLedger();
+  };
+
+  // ── Fee ledger ─────────────────────────────────────────────────────────
+  // admin/feeLedger/<requestId> is written by the main app (index.html) when an
+  // admin approves a hire request. Read-only here.
+  let _ledgerRows = [];
+  const inr = n => '₹' + (Math.round((Number(n)||0)*100)/100).toLocaleString('en-IN');
+  window.loadLedger = async function(){
+    const body = document.getElementById('ledgerBody');
+    body.innerHTML = '<tr><td colspan="11">Loading…</td></tr>';
+    try {
+      const snap = await get(ref(db, 'admin/feeLedger'));
+      _ledgerRows = snap.exists() ? Object.values(snap.val()).sort((a,b) => (b.approvedAt||'').localeCompare(a.approvedAt||'')) : [];
+      const sel = document.getElementById('ledgerPartner');
+      const cur = sel.value;
+      const codes = [...new Set(_ledgerRows.map(r => r.partnerCode).filter(Boolean))].sort();
+      sel.innerHTML = '<option value="">All</option><option value="__none">No partner (company only)</option>' + codes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+      sel.value = cur;
+      renderLedger();
+    } catch (e) {
+      body.innerHTML = `<tr><td colspan="11" style="color:#c0392b;">❌ ${escapeHtml(e.code||'')} — ${escapeHtml(e.message)}<br>If this says PERMISSION_DENIED, publish the updated database.rules.json in Firebase.</td></tr>`;
+    }
+  };
+  function filteredLedger(){
+    const m = document.getElementById('ledgerMonth').value;      // "YYYY-MM"
+    const p = document.getElementById('ledgerPartner').value;
+    return _ledgerRows.filter(r => {
+      if (m && !(r.approvedAt||'').startsWith(m)) return false;
+      if (p === '__none') return !r.partnerCode || !r.partnerShare;
+      if (p) return r.partnerCode === p;
+      return true;
+    });
+  }
+  window.renderLedger = function(){
+    const rows = filteredLedger();
+    const sum = k => rows.reduce((t,r) => t + (Number(r[k])||0), 0);
+    document.getElementById('ledgerTotals').innerHTML =
+      `<b>${rows.length}</b> hires · Fees <b>${inr(sum('fee'))}</b> · Partner share <b style="color:#1e7d1e;">${inr(sum('partnerShare'))}</b> · Company <b>${inr(sum('companyShare'))}</b> · Tips ${inr(sum('tip'))} · Charity ${inr(sum('charity'))} · Total received ${inr(sum('amountPaid'))}`;
+    document.getElementById('ledgerBody').innerHTML = rows.length ? rows.map(r => `
+      <tr>
+        <td>${escapeHtml(r.approvedAt ? new Date(r.approvedAt).toLocaleDateString('en-IN') : (r.date||''))}</td>
+        <td style="font-family:monospace;">${escapeHtml(r.utr||'')}</td>
+        <td>${escapeHtml(r.providerName||'—')}<div style="font-size:11px; color:#7C4A1E;">${escapeHtml(r.service||'')}</div></td>
+        <td>${escapeHtml(r.providerPincode||'—')}</td>
+        <td>${escapeHtml(r.partnerCode||'—')}${r.partnerCode && !r.partnerShare ? '<div style="font-size:10px; color:#c0392b;">' + escapeHtml(r.partnerStatus||'') + ' — no share</div>' : ''}</td>
+        <td>${inr(r.fee)}</td><td><b>${inr(r.partnerShare)}</b></td><td>${inr(r.companyShare)}</td>
+        <td>${inr(r.tip)}</td><td>${inr(r.charity)}</td><td>${inr(r.amountPaid)}</td>
+      </tr>`).join('') : '<tr><td colspan="11" style="text-align:center;">No entries for this filter.</td></tr>';
+  };
+  window.downloadLedgerCsv = function(){
+    const rows = filteredLedger();
+    const cols = ['approvedAt','requestId','utr','seekerName','seekerPhone','providerName','service','providerPincode','partnerCode','fee','partnerSharePct','partnerShare','companyShare','tip','charity','walletDiscount','amountPaid'];
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g,'""') + '"';
+    const csv = [cols.join(',')].concat(rows.map(r => cols.map(c => q(r[c])).join(','))).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' }));
+    a.download = 'fee_ledger_' + (document.getElementById('ledgerMonth').value || 'all') + '.csv';
+    a.click();
   };
 
   // ── Marketing materials ───────────────────────────────────────────────
@@ -988,7 +1124,7 @@
 
       const srcApp = (window._appsCache || {})[id] || {};
       const partnerRecord = {
-        name, city, phone: mobile, pincode, status: 'active',
+        name, city, phone: mobile, pincode, pincodes: { [pincode]: true }, status: 'active',
         appointedDate: new Date().toISOString(),
         sourceApplicationId: id
       };
