@@ -562,6 +562,25 @@
         <div id="activityListEl"><div class="empty">Loading…</div></div>
       </div>
 
+      <!-- Territory earnings (25% of ₹51 portal fee on every verified hire in my pincodes) -->
+      <div class="card" id="earningsCard">
+        <h2>💵 My Territory Earnings</h2>
+        <p style="font-size:13px; color:var(--dim); margin-top:-6px;">You earn <b>25% of the ₹51 portal fee (₹12.75)</b> on every admin-verified hire of a provider located in your territory pincodes.</p>
+        <p style="font-size:13px; margin:6px 0 12px;">📍 Your pincodes: <b id="territoryPins">—</b></p>
+        <div class="stats" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:12px;">
+          <div class="stat"><b id="earnTotal">₹0</b><span>Total earned</span></div>
+          <div class="stat"><b id="earnPaid">₹0</b><span>Paid to you</span></div>
+          <div class="stat"><b id="earnDue">₹0</b><span>Balance due</span></div>
+          <div class="stat"><b id="earnCount">0</b><span>Verified hires</span></div>
+        </div>
+        <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Date</th><th>Service / Provider</th><th>Pincode</th><th>Fee</th><th>Your share</th></tr></thead>
+          <tbody id="earningsBody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+        </table>
+        </div>
+      </div>
+
       <!-- Payout history -->
       <div class="card" id="payoutCard">
         <h2>💰 Payout History</h2>
@@ -1029,6 +1048,49 @@
       }
     } catch (e) {
       document.getElementById('payoutBody').innerHTML = '<tr><td colspan="3" class="empty">Could not load payout history</td></tr>';
+    }
+
+    loadTerritoryEarnings(code, partner);
+  }
+
+  async function loadTerritoryEarnings(code, partner){
+    const body = document.getElementById('earningsBody');
+    if (!body) return;
+    const inr = n => '₹' + (Math.round((Number(n)||0) * 100) / 100).toLocaleString('en-IN');
+    const pins = partner && partner.pincodes ? Object.keys(partner.pincodes) : (partner && partner.pincode ? [partner.pincode] : []);
+    document.getElementById('territoryPins').textContent = pins.length ? pins.sort().join(', ') : '—';
+    if (window._demoMode) {
+      document.getElementById('earnTotal').textContent = inr(12.75 * 9);
+      document.getElementById('earnPaid').textContent = inr(12.75 * 6);
+      document.getElementById('earnDue').textContent = inr(12.75 * 3);
+      document.getElementById('earnCount').textContent = 9;
+      body.innerHTML = [['Electrical Repair','Sharma Electricals'],['Plumber','Raju Plumbing'],['AC Repair & Servicing','Cool Care']].map((r,i) =>
+        `<tr><td>${new Date(Date.now()-(i+1)*86400000).toLocaleDateString('en-IN')}</td><td>${r[0]}<div style="font-size:11px; color:var(--dim);">${r[1]}</div></td><td>342001</td><td>₹51</td><td><b>₹12.75</b></td></tr>`).join('');
+      return;
+    }
+    try {
+      const [eSnap, pSnap] = await Promise.all([
+        window._pget(window._pref(window._pdb, 'partnerEarnings/' + code)),
+        window._pget(window._pref(window._pdb, 'partnerPayouts/' + code))
+      ]);
+      const rows = eSnap.exists() ? Object.values(eSnap.val()).sort((a,b) => (b.approvedAt||'').localeCompare(a.approvedAt||'')) : [];
+      const earned = rows.reduce((t, r) => t + (Number(r.shareAmount)||0), 0);
+      const paid = pSnap.exists() ? Object.values(pSnap.val()).reduce((t, r) => t + (Number(r.amount)||0), 0) : 0;
+      document.getElementById('earnTotal').textContent = inr(earned);
+      document.getElementById('earnPaid').textContent = inr(paid);
+      document.getElementById('earnDue').textContent = inr(Math.max(0, earned - paid));
+      document.getElementById('earnCount').textContent = rows.length;
+      const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      body.innerHTML = rows.length ? rows.map(r => `
+        <tr>
+          <td>${esc(r.date || (r.approvedAt ? new Date(r.approvedAt).toLocaleDateString('en-IN') : ''))}</td>
+          <td>${esc(r.service || '—')}<div style="font-size:11px; color:var(--dim);">${esc(r.providerName || '')}</div></td>
+          <td>${esc(r.providerPincode || '—')}</td>
+          <td>${inr(r.fee)}</td>
+          <td><b>${inr(r.shareAmount)}</b></td>
+        </tr>`).join('') : '<tr><td colspan="5" class="empty">No verified hires in your territory yet.</td></tr>';
+    } catch (e) {
+      body.innerHTML = '<tr><td colspan="5" class="empty">Could not load earnings: ' + e.message + '</td></tr>';
     }
   }
 
@@ -2204,12 +2266,12 @@
 
   function renderActivityRow(a){
     const typeLabel = { hire_fee: '💳 Convenience Fee', tip: '🎁 Tip', charity: '🤝 Charity Donation' }[a.type] || a.type;
-    const roleLabel = a.role === 'provider' ? 'Your provider was hired by' : 'Your seeker hired';
+    const roleLabel = a.role === 'territory' ? 'Provider in your territory hired:' : a.role === 'provider' ? 'Your provider was hired by' : 'Your seeker hired';
     return `
       <div class="lead-item">
         <div class="lead-top">
           <div>
-            <div class="lead-name">${typeLabel} — ₹${a.amount}</div>
+            <div class="lead-name">${typeLabel} — ₹${a.amount}${a.share ? ` · your share ₹${a.share}` : ''}</div>
             <div class="lead-meta">${roleLabel} ${a.counterpartName || 'someone'}${a.service ? ' · ' + a.service : ''}</div>
             <div class="lead-meta" style="margin-top:2px;">${a.date || ''}</div>
           </div>
