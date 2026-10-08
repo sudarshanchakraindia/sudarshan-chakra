@@ -2127,11 +2127,11 @@ window.radheyStop = function() {
                         const orig = window.showReferProviderModal;
                         window.showReferProviderModal = function() {
                                         orig.apply(this, arguments);
-                                        // After modal renders, fix the referral URL to use share.html
+                                        // After modal renders, fix the referral URL to use join.html (share.html is now the City Channel Partner page)
                                         setTimeout(() => {
                                                             const modal = document.getElementById('referProviderModal');
                                                             if (!modal) return;
-                                                            const shareBase = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/share.html';
+                                                            const shareBase = 'https://sudarshanchakraindia.github.io/sudarshan-chakra/join.html';
                                                             const uid = (window.firebaseUser && window.firebaseUser.uid) ? '?ref=' + window.firebaseUser.uid : '';
                                                             const shareUrl = shareBase + uid;
 
