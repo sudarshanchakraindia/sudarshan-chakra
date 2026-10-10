@@ -12,7 +12,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=Baloo+2:wght@600;700;800&family=Mukta:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=Baloo+2:wght@600;700;800&family=Mukta:wght@400;600&family=Baloo+Bhai+2:wght@600;700;800&family=Hind+Vadodara:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
   :root {
@@ -32,7 +32,7 @@
   html { scroll-behavior: smooth; }
 
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'DM Sans', 'Hind Vadodara', sans-serif;
     background: var(--cream);
     color: var(--deep);
     overflow-x: hidden;
@@ -109,9 +109,9 @@
   }
 
   .hero-eyebrow {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'DM Sans', 'Hind Vadodara', sans-serif;
     font-size: 12px; font-weight: 600;
-    letter-spacing: 3px; text-transform: uppercase;
+    letter-spacing: 0.5px; text-transform: uppercase;
     color: var(--gold);
     margin-bottom: 16px;
     position: relative; z-index: 1;
@@ -119,7 +119,7 @@
   }
 
   .hero-title {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', 'Baloo Bhai 2', serif;
     font-size: clamp(38px, 8vw, 72px);
     font-weight: 900;
     color: white;
@@ -137,7 +137,7 @@
   }
 
   .hero-hindi {
-    font-family: 'Baloo 2', cursive;
+    font-family: 'Baloo 2', 'Baloo Bhai 2', cursive;
     font-size: clamp(20px, 4vw, 32px);
     color: rgba(255,255,255,0.7);
     margin-bottom: 28px;
@@ -218,7 +218,7 @@
   .stat-item { padding: 8px 16px; }
   .stat-item + .stat-item { border-left: 1px solid rgba(255,255,255,0.3); }
   .stat-num {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', 'Baloo Bhai 2', serif;
     font-size: clamp(24px, 4vw, 36px); font-weight: 900;
     color: white; display: block;
   }
@@ -228,12 +228,12 @@
   section { padding: 80px 20px; }
   .section-inner { max-width: 960px; margin: 0 auto; }
   .section-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 3px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
     text-transform: uppercase; color: var(--saffron);
     margin-bottom: 12px;
   }
   .section-title {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', 'Baloo Bhai 2', serif;
     font-size: clamp(28px, 5vw, 44px); font-weight: 700;
     line-height: 1.2; margin-bottom: 16px; color: var(--deep);
   }
@@ -295,7 +295,7 @@
   .step-num {
     width: 44px; height: 44px; border-radius: 50%;
     background: linear-gradient(135deg, var(--saffron), var(--gold));
-    color: white; font-family: 'Playfair Display', serif;
+    color: white; font-family: 'Playfair Display', 'Baloo Bhai 2', serif;
     font-size: 18px; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
     margin: 0 auto 16px;
@@ -428,7 +428,7 @@
   .wallet-card.orange { background: linear-gradient(135deg, var(--saffron), #FF9500); }
   .wallet-card.green  { background: linear-gradient(135deg, #138808, #22c55e); }
   .wallet-card h3 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', 'Baloo Bhai 2', serif;
     font-size: 22px; font-weight: 700; margin-bottom: 12px;
   }
   .wallet-card p { font-size: 14px; line-height: 1.65; opacity: 0.9; font-weight: 300; }
@@ -445,13 +445,13 @@
     position: relative;
   }
   .quote-mark {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', 'Baloo Bhai 2', serif;
     font-size: 120px; line-height: 0.6;
     color: rgba(255,107,0,0.12); position: absolute;
     top: 24px; left: 32px; pointer-events: none;
   }
   .quote-text {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', 'Baloo Bhai 2', serif;
     font-size: clamp(18px, 3vw, 26px); font-style: italic;
     color: var(--deep); line-height: 1.55; margin-bottom: 24px;
     position: relative; z-index: 1;
@@ -475,7 +475,7 @@
     animation: spin 60s linear infinite;
   }
   .cta-section h2 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', 'Baloo Bhai 2', serif;
     font-size: clamp(28px, 5vw, 48px); font-weight: 900;
     color: white; margin-bottom: 16px; line-height: 1.2;
   }
@@ -537,10 +537,10 @@
   }
 
   /* ── BILINGUAL ADDITIONS ── */
-  body { font-family: 'DM Sans', 'Mukta', sans-serif; }
-  .hi { font-family: 'Baloo 2', 'Mukta', sans-serif; }
+  body { font-family: 'DM Sans', 'Mukta', 'Hind Vadodara', sans-serif; }
+  .hi { font-family: 'Baloo 2', 'Baloo Bhai 2', 'Mukta', 'Hind Vadodara', sans-serif; }
   .en-sub { display: block; font-size: 0.82em; opacity: 0.8; font-weight: 400; margin-top: 4px; }
-  .section-title .en-sub { font-family: 'Playfair Display', serif; font-size: 0.6em; opacity: 0.7; }
+  .section-title .en-sub { font-family: 'Playfair Display', 'Baloo Bhai 2', serif; font-size: 0.6em; opacity: 0.7; }
   .feature-title .en-sub, .step-title .en-sub, .vision-card h4 .en-sub { font-size: 0.85em; font-weight: 500; }
 
   .highlight-band {
@@ -549,8 +549,8 @@
     padding: 26px 20px;
     border-top: 3px solid var(--gold); border-bottom: 3px solid var(--gold);
   }
-  .highlight-band .hb-hi { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: clamp(20px, 4vw, 32px); color: var(--gold); line-height: 1.25; }
-  .highlight-band .hb-en { font-weight: 600; font-size: clamp(14px, 2.4vw, 19px); margin-top: 4px; letter-spacing: 1px; }
+  .highlight-band .hb-hi { font-family: 'Baloo 2', 'Baloo Bhai 2', sans-serif; font-weight: 800; font-size: clamp(20px, 4vw, 32px); color: var(--gold); line-height: 1.25; }
+  .highlight-band .hb-en { font-weight: 600; font-size: clamp(14px, 2.4vw, 19px); margin-top: 4px; letter-spacing: 0.3px; }
   .highlight-band .hb-note { font-size: 13px; opacity: 0.75; margin-top: 6px; }
 
   .audience-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -560,7 +560,7 @@
     box-shadow: 0 8px 32px rgba(122,74,30,0.06);
     display: flex; flex-direction: column; gap: 14px;
   }
-  .audience-card h3 { font-family: 'Baloo 2', sans-serif; font-size: 26px; color: var(--deep); line-height: 1.2; }
+  .audience-card h3 { font-family: 'Baloo 2', 'Baloo Bhai 2', sans-serif; font-size: 26px; color: var(--deep); line-height: 1.2; }
   .audience-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
   .audience-card li { font-size: 15px; color: var(--mid); line-height: 1.5; padding-left: 26px; position: relative; }
   .audience-card li::before { content: '✔'; position: absolute; left: 0; color: var(--green); font-weight: 700; }
@@ -574,11 +574,26 @@
   @media (max-width: 700px) {
     .audience-grid { grid-template-columns: 1fr; }
   }
+
+  /* ── Language-pair switcher ── */
+  .lang-switch { position: sticky; top: 0; z-index: 50; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;
+    padding: 8px 12px; background: rgba(26,18,6,0.92); backdrop-filter: blur(6px); }
+  .lang-switch button { font-family: 'Baloo 2', 'Baloo Bhai 2', sans-serif; font-weight: 700; font-size: 14px; line-height: 1.2;
+    padding: 7px 14px; border-radius: 999px; border: 1.5px solid rgba(245,166,35,0.6); background: transparent; color: #FFE7C2; cursor: pointer; }
+  .lang-switch button.active { background: var(--saffron); border-color: var(--saffron); color: white; }
+  @media (max-width: 420px) { .lang-switch button { font-size: 12.5px; padding: 6px 10px; } }
 </style>
 </head>
 <body>
 
 <div class="tricolor"></div>
+
+<!-- Language pair switcher: ?lang=hi-en | gu-en | hi-gu -->
+<nav class="lang-switch" aria-label="Language">
+  <button type="button" data-pair="hi-en">हिंदी + English</button>
+  <button type="button" data-pair="gu-en">ગુજરાતી + English</button>
+  <button type="button" data-pair="hi-gu">हिंदी + ગુજરાતી</button>
+</nav>
 
 <!-- ══ HERO ══ -->
 <section class="hero">
@@ -923,7 +938,7 @@
 function shareApp() {
   const shareData = {
     title: 'Sudarshan Chakra India 🇮🇳',
-    text: '🙏 भारत का अपना सर्विस ऐप — Sudarshan Chakra India\n\n✅ कोई ब्रोकर नहीं · कोई बिचौलिया नहीं\n✅ जुड़ना जीवनभर मुफ़्त — प्रोफ़ेशनल और ग्राहक दोनों के लिए\n✅ 500+ सेवाएँ · 12 भाषाएँ\n\nNo broker. No middleman. Lifetime free to join.',
+    text: SHARE_TEXT[currentPair] || SHARE_TEXT['hi-en'],
     url: location.href
   };
   if (navigator.share) {
@@ -966,6 +981,47 @@ document.querySelectorAll('.feature-card, .step, .vision-card, .wallet-card, .la
     a.href = u.toString();
   });
 })();
+
+// ── Language-pair switcher (hi-en default, gu-en, hi-gu) ──
+// Pick a pair with ?lang=gu-en in the link, e.g. join.html?lang=gu-en
+const GU_TEXT = {"🇮🇳 भारत के लिए · Proudly Made for Bharat": {"ge": "🇮🇳 ભારત માટે · Proudly Made for Bharat", "hg": "🇮🇳 भारत के लिए · ભારત માટે ગર્વથી બનાવેલ"}, "भारत का अपना सर्विस ऐप": {"ge": "ભારતની પોતાની સર્વિસ એપ"}, "घर, दुकान, दफ़्तर या फ़ैक्ट्री — हर काम के लिए": {"ge": "ઘર, દુકાન, ઓફિસ કે ફેક્ટરી — દરેક કામ માટે"}, "भरोसेमंद, कुशल लोकल प्रोफ़ेशनल": {"ge": "ભરોસાપાત્ર, કુશળ લોકલ પ્રોફેશનલ"}, "। प्लंबर से ट्यूटर तक, सेल्समैन से अकाउंटेंट तक — 500+ सेवाएँ, आपकी अपनी भाषा में।": {"ge": " મળશે. પ્લમ્બરથી ટ્યુટર સુધી, સેલ્સમેનથી એકાઉન્ટન્ટ સુધી — 500+ સેવાઓ, તમારી પોતાની ભાષામાં."}, "सही व्यक्ति आप ख़ुद चुनें — न कोई प्लेसमेंट एजेंसी, न लेबर कॉन्ट्रैक्टर।": {"ge": "યોગ્ય વ્યક્તિ તમે જાતે પસંદ કરો — ન કોઈ પ્લેસમેન્ટ એજન્સી, ન લેબર કોન્ટ્રાક્ટર."}, "Home, shop, office or factory —": {"hg": "ઘર, દુકાન, ઓફિસ કે ફેક્ટરી — દરેક કામ માટે"}, "trusted, skilled local professionals": {"hg": "ભરોસાપાત્ર, કુશળ લોકલ પ્રોફેશનલ"}, "for every need. From plumbers to tutors, salesmen to accountants — 500+ services, in your own language. Choose the right person yourself — no placement agency, no labour contractor.": {"hg": "મળશે. પ્લમ્બરથી ટ્યુટર સુધી, સેલ્સમેનથી એકાઉન્ટન્ટ સુધી — 500+ સેવાઓ, તમારી પોતાની ભાષામાં. યોગ્ય વ્યક્તિ તમે જાતે પસંદ કરો — ન કોઈ પ્લેસમેન્ટ એજન્સી, ન લેબર કોન્ટ્રાક્ટર."}, "🔍 सेवा खोजें · Find a Service": {"ge": "🔍 સેવા શોધો · Find a Service", "hg": "🔍 सेवा खोजें · સેવા શોધો"}, "🔧 सेवा दें, जुड़ें · Join as Provider": {"ge": "🔧 સેવા આપો, જોડાઓ · Join as Provider", "hg": "🔧 सेवा दें, जुड़ें · સેવા આપો, જોડાઓ"}, "और जानें · More": {"ge": "વધુ જાણો · More", "hg": "और जानें · વધુ જાણો"}, "कोई ब्रोकर नहीं · कोई बिचौलिया नहीं · जुड़ना जीवनभर मुफ़्त": {"ge": "કોઈ બ્રોકર નહીં · કોઈ વચેટિયો નહીં · જોડાવું જીવનભર મફત"}, "NO BROKER · NO MIDDLEMAN · LIFETIME FREE TO JOIN": {"hg": "કોઈ બ્રોકર નહીં · કોઈ વચેટિયો નહીં · જોડાવું જીવનભર મફત"}, "सेवा देने वालों और ग्राहकों – दोनों के लिए · For service providers & seekers": {"ge": "સેવા આપનારા અને ગ્રાહકો – બંને માટે · For service providers & seekers", "hg": "सेवा देने वालों और ग्राहकों – दोनों के लिए · સેવા આપનારા અને ગ્રાહકો – બંને માટે"}, "सेवाएँ · Services": {"ge": "સેવાઓ · Services", "hg": "सेवाएँ · સેવાઓ"}, "भारतीय भाषाएँ · Languages": {"ge": "ભારતીય ભાષાઓ · Languages", "hg": "भारतीय भाषाएँ · ભારતીય ભાષાઓ"}, "जुड़ने का शुल्क · To Join": {"ge": "જોડાવાની ફી · To Join", "hg": "जुड़ने का शुल्क · જોડાવાની ફી"}, "कमीशन · Commission": {"ge": "કમિશન · Commission", "hg": "कमीशन · કમિશન"}, "आपके लिए · For You": {"ge": "તમારા માટે · For You", "hg": "आपके लिए · તમારા માટે"}, "ग्राहक हों या प्रोफ़ेशनल —": {"ge": "ગ્રાહક હો કે પ્રોફેશનલ —"}, "सबके लिए फ़ायदा": {"ge": "સૌને ફાયદો"}, "Seeker or provider — everyone gains": {"hg": "ગ્રાહક હો કે પ્રોફેશનલ — સૌને ફાયદો"}, "🔍 सेवा चाहने वालों के लिए": {"ge": "🔍 સેવા ઇચ્છનારાઓ માટે"}, "For Service Seekers": {"hg": "સેવા ઇચ્છનારાઓ માટે"}, "अपने पिनकोड के पास के प्रोफ़ेशनल": {"ge": "તમારા પિનકોડની નજીકના પ્રોફેશનલ"}, "Professionals near your pincode": {"hg": "તમારા પિનકોડની નજીકના પ્રોફેશનલ"}, "प्रोफ़ाइल, फ़ोटो और असली रिव्यू देखकर चुनें": {"ge": "પ્રોફાઇલ, ફોટા અને સાચા રિવ્યૂ જોઈને પસંદ કરો"}, "Choose by profile, photos and real reviews": {"hg": "પ્રોફાઇલ, ફોટા અને સાચા રિવ્યૂ જોઈને પસંદ કરો"}, "प्रोफ़ेशनल से सीधे कॉल या WhatsApp पर बात": {"ge": "પ્રોફેશનલ સાથે સીધી કૉલ કે WhatsApp પર વાત"}, "Talk directly by call or WhatsApp": {"hg": "પ્રોફેશનલ સાથે સીધી કૉલ કે WhatsApp પર વાત"}, "बोलकर खोजें — RADHEY आपकी मदद करेगी": {"ge": "બોલીને શોધો — RADHEY તમારી મદદ કરશે"}, "Search by voice with RADHEY": {"hg": "બોલીને શોધો — RADHEY તમારી મદદ કરશે"}, "🔧 सेवा देने वालों के लिए": {"ge": "🔧 સેવા આપનારાઓ માટે"}, "For Service Providers": {"hg": "સેવા આપનારાઓ માટે"}, "जुड़ना जीवनभर मुफ़्त": {"ge": "જોડાવું જીવનભર મફત"}, "Lifetime free to join": {"hg": "જોડાવું જીવનભર મફત"}, "आपकी कमाई का 100% आपका — कोई कमीशन नहीं": {"ge": "તમારી કમાણીના 100% તમારા — કોઈ કમિશન નહીં"}, "Keep 100% of your earnings — zero commission": {"hg": "તમારી કમાણીના 100% તમારા — કોઈ કમિશન નહીં"}, "अपने इलाके के ग्राहक सीधे आप तक": {"ge": "તમારા વિસ્તારના ગ્રાહકો સીધા તમારી પાસે"}, "Local customers come straight to you": {"hg": "તમારા વિસ્તારના ગ્રાહકો સીધા તમારી પાસે"}, "पढ़ना-लिखना कम आता है? बोलकर रजिस्ट्रेशन करें": {"ge": "વાંચતાં-લખતાં ઓછું આવડે છે? બોલીને રજિસ્ટ્રેશન કરો"}, "Register by voice — no typing needed": {"hg": "બોલીને રજિસ્ટ્રેશન કરો — ટાઇપ કરવાની જરૂર નથી"}, "🔧 अभी जुड़ें · Join Now": {"ge": "🔧 હમણાં જ જોડાઓ · Join Now", "hg": "🔧 अभी जुड़ें · હમણાં જ જોડાઓ"}, "खास बातें · Key Features": {"ge": "ખાસ વાતો · Key Features", "hg": "खास बातें · ખાસ વાતો"}, "सब कुछ एक ही ऐप में": {"ge": "બધું જ એક જ એપમાં"}, "Everything you need, all in one app": {"hg": "બધું જ એક જ એપમાં"}, "सही प्रोफ़ेशनल ढूँढने से लेकर सुरक्षित भुगतान तक — सब आपकी भाषा में।": {"ge": "યોગ્ય પ્રોફેશનલ શોધવાથી લઈને સુરક્ષિત ચુકવણી સુધી — બધું તમારી ભાષામાં."}, "From finding the right professional to paying securely — all in your language.": {"hg": "યોગ્ય પ્રોફેશનલ શોધવાથી લઈને સુરક્ષિત ચુકવણી સુધી — બધું તમારી ભાષામાં."}, "RADHEY आवाज़ सहायक": {"ge": "RADHEY અવાજ સહાયક"}, "RADHEY Voice Assistant": {"hg": "RADHEY અવાજ સહાયક"}, "🎤 दबाएँ और बोलें — खोजें, रजिस्टर करें या मदद लें।": {"ge": "🎤 દબાવો અને બોલો — શોધો, રજિસ્ટર કરો કે મદદ મેળવો."}, "Tap and speak to search, register or get help hands-free.": {"hg": "દબાવો અને બોલો — શોધો, રજિસ્ટર કરો કે મદદ મેળવો."}, "वेरिफ़ाइड प्रोफ़ेशनल": {"ge": "વેરિફાઇડ પ્રોફેશનલ"}, "Verified Professionals": {"hg": "વેરિફાઇડ પ્રોફેશનલ"}, "Aadhaar, PAN या Voter ID से पहचान सत्यापित करने वालों को ✅ Verified बैज।": {"ge": "Aadhaar, PAN કે Voter ID થી ઓળખ ચકાસાવનારને ✅ Verified બેજ."}, "ID-verified providers earn a Verified badge.": {"hg": "ઓળખ ચકાસાયેલા પ્રોફેશનલને Verified બેજ મળે છે."}, "ऐप में चैट और कॉल": {"ge": "એપમાં ચેટ અને કૉલ"}, "In-App Chat & Call": {"hg": "એપમાં ચેટ અને કૉલ"}, "प्रोफ़ेशनल से सीधे चैट, कॉल या WhatsApp करें।": {"ge": "પ્રોફેશનલ સાથે સીધી ચેટ, કૉલ કે WhatsApp કરો."}, "Chat, call or WhatsApp providers directly.": {"hg": "પ્રોફેશનલ સાથે સીધી ચેટ, કૉલ કે WhatsApp કરો."}, "असली रिव्यू और रेटिंग": {"ge": "સાચા રિવ્યૂ અને રેટિંગ"}, "Real Reviews & Ratings": {"hg": "સાચા રિવ્યૂ અને રેટિંગ"}, "सिर्फ़ वही रिव्यू दे सकते हैं जिन्होंने सच में सेवा ली।": {"ge": "ફક્ત એ જ લોકો રિવ્યૂ આપી શકે છે જેમણે ખરેખર સેવા લીધી હોય."}, "Only users who actually interacted can review.": {"hg": "ફક્ત એ જ લોકો રિવ્યૂ આપી શકે છે જેમણે ખરેખર સેવા લીધી હોય."}, "UPI भुगतान": {"ge": "UPI ચુકવણી"}, "UPI Payments": {"hg": "UPI ચુકવણી"}, "PhonePe, GPay, Paytm या किसी भी UPI ऐप से।": {"ge": "PhonePe, GPay, Paytm કે કોઈ પણ UPI એપથી."}, "Pay with any UPI app.": {"hg": "કોઈ પણ UPI એપથી ચુકવણી કરો."}, "नक्शे पर प्रोफ़ेशनल": {"ge": "નકશા પર પ્રોફેશનલ"}, "Interactive Map View": {"hg": "નકશા પર પ્રોફેશનલ"}, "अपने पास के प्रोफ़ेशनल नक्शे पर देखें।": {"ge": "તમારી નજીકના પ્રોફેશનલ નકશા પર જુઓ."}, "See providers near you on a live map.": {"hg": "તમારી નજીકના પ્રોફેશનલ નકશા પર જુઓ."}, "काम की फ़ोटो": {"ge": "કામના ફોટા"}, "Portfolio Showcase": {"hg": "કામના ફોટા"}, "प्रोफ़ेशनल अपने काम की 10 तक फ़ोटो दिखा सकते हैं।": {"ge": "પ્રોફેશનલ પોતાના કામના 10 સુધી ફોટા બતાવી શકે છે."}, "Providers show up to 10 work photos.": {"hg": "પ્રોફેશનલ પોતાના કામના 10 સુધી ફોટા બતાવી શકે છે."}, "डाउनलोड की ज़रूरत नहीं": {"ge": "ડાઉનલોડની જરૂર નથી"}, "No Download Needed": {"hg": "ડાઉનલોડની જરૂર નથી"}, "सीधे फ़ोन की होम स्क्रीन पर इंस्टॉल करें।": {"ge": "સીધા ફોનની હોમ સ્ક્રીન પર ઇન્સ્ટોલ કરો."}, "Install straight to your home screen.": {"hg": "સીધા ફોનની હોમ સ્ક્રીન પર ઇન્સ્ટોલ કરો."}, "मुफ़्त प्रशिक्षण": {"ge": "મફત તાલીમ"}, "Free Skill Training": {"hg": "મફત કૌશલ્ય તાલીમ"}, "काम बढ़ाने और ऐप चलाने के वीडियो पाठ।": {"ge": "કામ વધારવા અને એપ ચલાવવાના વીડિયો પાઠ."}, "Video lessons to grow your work and use the app.": {"hg": "કામ વધારવા અને એપ ચલાવવાના વીડિયો પાઠ."}, "12 भाषाएँ · 12 Languages": {"ge": "12 ભાષાઓ · 12 Languages", "hg": "12 भाषाएँ · 12 ભાષાઓ"}, "अपनी भाषा में": {"ge": "પોતાની ભાષામાં"}, "Apni Bhasha Mein": {"hg": "પોતાની ભાષામાં"}, "पूरा ऐप आपकी भाषा में बदल जाता है — 🌏 दबाकर कभी भी भाषा बदलें।": {"ge": "આખી એપ તમારી ભાષામાં બદલાઈ જાય છે — 🌏 દબાવીને ગમે ત્યારે ભાષા બદલો."}, "The whole app switches to your language. Tap 🌏 anytime.": {"hg": "આખી એપ તમારી ભાષામાં બદલાઈ જાય છે — 🌏 દબાવીને ગમે ત્યારે ભાષા બદલો."}, "ग्राहकों के लिए · For Seekers": {"ge": "ગ્રાહકો માટે · For Seekers", "hg": "ग्राहकों के लिए · ગ્રાહકો માટે"}, "सेवा कैसे लें": {"ge": "સેવા કેવી રીતે લેવી"}, "How to hire": {"hg": "સેવા કેવી રીતે લેવી"}, "खोजें": {"ge": "શોધો"}, "Search": {"hg": "શોધો"}, "500+ सेवाओं में से चुनें या RADHEY को बोलकर बताएँ।": {"ge": "500+ સેવાઓમાંથી પસંદ કરો અથવા RADHEY ને બોલીને કહો."}, "Browse or just speak your need.": {"hg": "સેવાઓ જુઓ અથવા બોલીને તમારી જરૂર કહો."}, "चुनें": {"ge": "પસંદ કરો"}, "Choose": {"hg": "પસંદ કરો"}, "प्रोफ़ाइल, फ़ोटो, रेटिंग और दूरी देखकर चुनें।": {"ge": "પ્રોફાઇલ, ફોટા, રેટિંગ અને અંતર જોઈને પસંદ કરો."}, "Compare profiles, photos, ratings and distance.": {"hg": "પ્રોફાઇલ, ફોટા, રેટિંગ અને અંતર જોઈને પસંદ કરો."}, "जुड़ें": {"ge": "જોડાઓ"}, "Connect": {"hg": "જોડાઓ"}, "छोटा सा ₹51 portal शुल्क UPI से दें और प्रोफ़ेशनल से जुड़ें।": {"ge": "નાની ₹51 portal ફી UPI થી ચૂકવો અને પ્રોફેશનલ સાથે જોડાઓ."}, "Pay a small ₹51 portal fee by UPI to connect.": {"hg": "નાની ₹51 portal ફી UPI થી ચૂકવો અને પ્રોફેશનલ સાથે જોડાઓ."}, "सीधी बात": {"ge": "સીધી વાત"}, "Talk Directly": {"hg": "સીધી વાત"}, "कॉल या WhatsApp पर सीधे बात करें — कोई बिचौलिया नहीं।": {"ge": "કૉલ કે WhatsApp પર સીધી વાત કરો — કોઈ વચેટિયો નહીં."}, "Call or WhatsApp directly — no middleman.": {"hg": "કૉલ કે WhatsApp પર સીધી વાત કરો — કોઈ વચેટિયો નહીં."}, "रिव्यू दें": {"ge": "રિવ્યૂ આપો"}, "Review": {"hg": "રિવ્યૂ આપો"}, "ईमानदार रिव्यू दें और Wallet पॉइंट कमाएँ।": {"ge": "પ્રામાણિક રિવ્યૂ આપો અને Wallet પોઇન્ટ કમાઓ."}, "Leave a review and earn Wallet points.": {"hg": "પ્રામાણિક રિવ્યૂ આપો અને Wallet પોઇન્ટ કમાઓ."}, "प्रोफ़ेशनल के लिए · For Providers": {"ge": "પ્રોફેશનલ માટે · For Providers", "hg": "प्रोफ़ेशनल के लिए · પ્રોફેશનલ માટે"}, "3 आसान कदम में जुड़ें": {"ge": "3 સરળ પગલાંમાં જોડાઓ"}, "Join in 3 easy steps": {"hg": "3 સરળ પગલાંમાં જોડાઓ"}, "मोबाइल OTP से रजिस्टर": {"ge": "મોબાઇલ OTP થી રજિસ્ટર"}, "Register with OTP": {"hg": "મોબાઇલ OTP થી રજિસ્ટર"}, "ऐप खोलें और मोबाइल नंबर से लॉग-इन करें — या RADHEY से बोलकर।": {"ge": "એપ ખોલો અને મોબાઇલ નંબરથી લૉગ-ઇન કરો — અથવા RADHEY સાથે બોલીને."}, "Log in with your mobile — or register by voice.": {"hg": "એપ ખોલો અને મોબાઇલ નંબરથી લૉગ-ઇન કરો — અથવા RADHEY સાથે બોલીને."}, "सेवा और पिनकोड चुनें": {"ge": "સેવા અને પિનકોડ પસંદ કરો"}, "Pick Service & Pincode": {"hg": "સેવા અને પિનકોડ પસંદ કરો"}, "अपना काम, इलाका और काम की फ़ोटो जोड़ें।": {"ge": "તમારું કામ, વિસ્તાર અને કામના ફોટા ઉમેરો."}, "Add your work, area and photos.": {"hg": "તમારું કામ, વિસ્તાર અને કામના ફોટા ઉમેરો."}, "ग्राहक सीधे आपसे जुड़ें": {"ge": "ગ્રાહકો સીધા તમારી સાથે જોડાય"}, "Get Customers Directly": {"hg": "ગ્રાહકો સીધા તમારી સાથે જોડાય"}, "ग्राहक कॉल या WhatsApp पर — आपकी कमाई पूरी आपकी।": {"ge": "ગ્રાહકો કૉલ કે WhatsApp પર — તમારી કમાણી પૂરેપૂરી તમારી."}, "Customers reach you — you keep 100%.": {"hg": "ગ્રાહકો કૉલ કે WhatsApp પર — તમારી કમાણી પૂરેપૂરી તમારી."}, "हमारा सपना · Our Vision": {"ge": "અમારું સપનું · Our Vision", "hg": "हमारा सपना · અમારું સપનું"}, "हर हुनर, हर पेशे को सम्मान": {"ge": "દરેક હુનર, દરેક વ્યવસાયને સન્માન"}, "Respect for every skill, every profession": {"hg": "દરેક હુનર, દરેક વ્યવસાયને સન્માન"}, "हर हुनरमंद भारतीय को डिजिटल पहचान, नियमित कमाई और अपने शहर में, अपनी भाषा में ढूँढे जाने का सम्मान मिले।": {"ge": "દરેક હુનરમંદ ભારતીયને ડિજિટલ ઓળખ, નિયમિત કમાણી અને પોતાના શહેરમાં, પોતાની ભાષામાં શોધાવાનું સન્માન મળે."}, "Every skilled Indian deserves a digital identity, steady income and the dignity of being found.": {"hg": "દરેક હુનરમંદ ભારતીયને ડિજિટલ ઓળખ, નિયમિત કમાણી અને પોતાના શહેરમાં, પોતાની ભાષામાં શોધાવાનું સન્માન મળે."}, "पहले लोकल": {"ge": "પહેલાં લોકલ"}, "Hyperlocal First": {"hg": "પહેલાં લોકલ"}, "शहर, कस्बे और गाँव — हर मोहल्ले के प्रोफ़ेशनल के लिए।": {"ge": "શહેર, કસબા અને ગામ — દરેક મહોલ્લાના પ્રોફેશનલ માટે."}, "Built for India's cities, towns and villages.": {"hg": "શહેર, કસબા અને ગામ — દરેક મહોલ્લાના પ્રોફેશનલ માટે."}, "शून्य कमीशन": {"ge": "શૂન્ય કમિશન"}, "Zero Commission": {"hg": "શૂન્ય કમિશન"}, "प्रोफ़ेशनल की कमाई में से हम कुछ नहीं लेते — सिर्फ़ ग्राहक से छोटा portal शुल्क।": {"ge": "પ્રોફેશનલની કમાણીમાંથી અમે કંઈ લેતા નથી — ફક્ત ગ્રાહક પાસેથી નાની portal ફી."}, "We never cut providers' earnings — only a small portal fee from seekers.": {"hg": "પ્રોફેશનલની કમાણીમાંથી અમે કંઈ લેતા નથી — ફક્ત ગ્રાહક પાસેથી નાની portal ફી."}, "हुनर विकास": {"ge": "હુનર વિકાસ"}, "Skill Development": {"hg": "કૌશલ્ય વિકાસ"}, "Wallet पॉइंट दान करके ज़रूरतमंद युवाओं के प्रशिक्षण में मदद करें।": {"ge": "Wallet પોઇન્ટ દાન કરીને જરૂરિયાતમંદ યુવાનોની તાલીમમાં મદદ કરો."}, "Donate Wallet points to fund training for youth in need.": {"hg": "Wallet પોઇન્ટ દાન કરીને જરૂરિયાતમંદ યુવાનોની તાલીમમાં મદદ કરો."}, "सुरक्षित समुदाय": {"ge": "સુરક્ષિત સમુદાય"}, "Safe Community": {"hg": "સુરક્ષિત સમુદાય"}, "ID सत्यापन, रिव्यू और Report सुविधा से हर लेन-देन सुरक्षित।": {"ge": "ID ચકાસણી, રિવ્યૂ અને Report સુવિધાથી દરેક વ્યવહાર સુરક્ષિત."}, "ID checks, reviews and reporting keep everyone safe.": {"hg": "ID ચકાસણી, રિવ્યૂ અને Report સુવિધાથી દરેક વ્યવહાર સુરક્ષિત."}, "इनाम और सेवा · Rewards & Impact": {"ge": "ઇનામ અને સેવા · Rewards & Impact", "hg": "इनाम और सेवा · ઇનામ અને સેવા"}, "इस्तेमाल करें, कमाएँ — और दान करें": {"ge": "ઉપયોગ કરો, કમાઓ — અને દાન કરો"}, "Earn while you use. Give while you earn.": {"hg": "ઉપયોગ કરો, કમાઓ — અને દાન કરો"}, "💰 Wallet और रिवॉर्ड पॉइंट": {"ge": "💰 Wallet અને રિવોર્ડ પોઇન્ટ"}, "रोज़ लॉग-इन, रिव्यू लिखने, दोस्तों को जोड़ने और बुकिंग पूरी करने पर पॉइंट कमाएँ।": {"ge": "રોજ લૉગ-ઇન, રિવ્યૂ લખવા, મિત્રોને જોડવા અને બુકિંગ પૂરી કરવા પર પોઇન્ટ કમાઓ."}, "Earn points for logins, reviews, referrals and completed bookings.": {"hg": "રોજ લૉગ-ઇન, રિવ્યૂ લખવા, મિત્રોને જોડવા અને બુકિંગ પૂરી કરવા પર પોઇન્ટ કમાઓ."}, "❤️ दान कार्यक्रम": {"ge": "❤️ દાન કાર્યક્રમ"}, "अपने Wallet पॉइंट दान करके ज़रूरतमंद युवाओं के हुनर प्रशिक्षण में मदद करें — 10 पॉइंट भी फ़र्क लाते हैं।": {"ge": "તમારા Wallet પોઇન્ટ દાન કરીને જરૂરિયાતમંદ યુવાનોની હુનર તાલીમમાં મદદ કરો — 10 પોઇન્ટ પણ ફરક લાવે છે."}, "Donate points to fund skill training — even 10 points help.": {"hg": "તમારા Wallet પોઇન્ટ દાન કરીને જરૂરિયાતમંદ યુવાનોની હુનર તાલીમમાં મદદ કરો — 10 પોઇન્ટ પણ ફરક લાવે છે."}, "आज ही जुड़ें — बिल्कुल मुफ़्त": {"ge": "આજે જ જોડાઓ — બિલકુલ મફત"}, "Join today — lifetime free to join": {"hg": "આજે જ જોડાઓ — જીવનભર મફત"}, "कोई ब्रोकर नहीं, कोई बिचौलिया नहीं। कोई ऐप डाउनलोड नहीं। 12 भाषाएँ।": {"ge": "કોઈ બ્રોકર નહીં, કોઈ વચેટિયો નહીં. કોઈ એપ ડાઉનલોડ નહીં. 12 ભાષાઓ."}, "No broker. No middleman. No download. 12 languages.": {"hg": "કોઈ બ્રોકર નહીં, કોઈ વચેટિયો નહીં. કોઈ એપ ડાઉનલોડ નહીં. 12 ભાષાઓ."}, "🔍 सेवा खोजें · Find a Professional": {"ge": "🔍 સેવા શોધો · Find a Professional", "hg": "🔍 सेवा खोजें · પ્રોફેશનલ શોધો"}, "🔧 अपना काम बढ़ाएँ · Grow Your Business": {"ge": "🔧 તમારું કામ વધારો · Grow Your Business", "hg": "🔧 अपना काम बढ़ाएँ · તમારું કામ વધારો"}, "भारत के लिए ❤️ से बना · Made with ❤️ for Bharat": {"ge": "ભારત માટે ❤️ થી બનાવેલ · Made with ❤️ for Bharat", "hg": "भारत के लिए ❤️ से बना · ભારત માટે ❤️ થી બનાવેલ"}, "कॉर्पोरेट कार्यालय · Corporate Office: B 62/C-1, Vinayak Vihar, Jodhpur, Rajasthan – 342008": {"ge": "કોર્પોરેટ ઓફિસ · Corporate Office: B 62/C-1, Vinayak Vihar, Jodhpur, Rajasthan – 342008", "hg": "कॉर्पोरेट कार्यालय · કોર્પોરેટ ઓફિસ: B 62/C-1, Vinayak Vihar, Jodhpur, Rajasthan – 342008"}};
+const SHARE_TEXT = {
+  'hi-en': '🙏 भारत का अपना सर्विस ऐप — Sudarshan Chakra India\n\n✅ कोई ब्रोकर नहीं · कोई बिचौलिया नहीं\n✅ जुड़ना जीवनभर मुफ़्त — प्रोफ़ेशनल और ग्राहक दोनों के लिए\n✅ 500+ सेवाएँ · 12 भाषाएँ\n\nNo broker. No middleman. Lifetime free to join.',
+  'gu-en': '🙏 ભારતની પોતાની સર્વિસ એપ — Sudarshan Chakra India\n\n✅ કોઈ બ્રોકર નહીં · કોઈ વચેટિયો નહીં\n✅ જોડાવું જીવનભર મફત — પ્રોફેશનલ અને ગ્રાહકો બંને માટે\n✅ 500+ સેવાઓ · 12 ભાષાઓ\n\nNo broker. No middleman. Lifetime free to join.',
+  'hi-gu': '🙏 भारत का अपना सर्विस ऐप — Sudarshan Chakra India\n\n✅ कोई ब्रोकर नहीं · कोई बिचौलिया नहीं\n✅ जुड़ना जीवनभर मुफ़्त — प्रोफ़ेशनल और ग्राहक दोनों के लिए\n\n✅ કોઈ બ્રોકર નહીં · કોઈ વચેટિયો નહીં\n✅ જોડાવું જીવનભર મફત · 500+ સેવાઓ · 12 ભાષાઓ'
+};
+let currentPair = 'hi-en';
+const langNodes = [];
+(function collect() {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) {
+    const p = n.parentNode && n.parentNode.nodeName;
+    if (p === 'SCRIPT' || p === 'STYLE') continue;
+    const key = n.nodeValue.replace(/\s+/g, ' ').trim();
+    if (key && GU_TEXT[key]) {
+      const lead = n.nodeValue.match(/^\s*/)[0], trail = n.nodeValue.match(/\s*$/)[0];
+      langNodes.push({ n, orig: n.nodeValue, lead, trail, t: GU_TEXT[key] });
+    }
+  }
+})();
+function setPair(pair) {
+  if (!['hi-en', 'gu-en', 'hi-gu'].includes(pair)) pair = 'hi-en';
+  currentPair = pair;
+  const k = pair === 'gu-en' ? 'ge' : pair === 'hi-gu' ? 'hg' : null;
+  langNodes.forEach(o => {
+    o.n.nodeValue = (k && o.t[k]) ? o.lead + o.t[k] + o.trail : o.orig;
+  });
+  document.documentElement.lang = pair === 'gu-en' ? 'gu' : 'hi';
+  document.querySelectorAll('.lang-switch button').forEach(b => b.classList.toggle('active', b.dataset.pair === pair));
+  try {
+    const u = new URL(location.href);
+    if (pair === 'hi-en') u.searchParams.delete('lang'); else u.searchParams.set('lang', pair);
+    history.replaceState(null, '', u.toString());
+  } catch (e) {}
+}
+document.querySelectorAll('.lang-switch button').forEach(b => b.addEventListener('click', () => setPair(b.dataset.pair)));
+setPair(new URLSearchParams(location.search).get('lang') || 'hi-en');
 </script>
 
 </body>
